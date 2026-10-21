@@ -6,6 +6,7 @@
 <title>Hendrix QMS</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 :root{
   --bg:#0a0a0a; --panel:#121212; --panel2:#181818; --line:#2a2a2a;
@@ -19,6 +20,7 @@ html,body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-sys
 button,input,select,textarea{font-family:inherit;font-size:14px}
 ::selection{background:var(--gold);color:#000}
 .brand{display:flex;align-items:center;gap:10px}
+.box .brand{justify-content:center}
 .brand-name{font-weight:800;letter-spacing:.22em;font-size:15px;background:var(--gold-grad);-webkit-background-clip:text;background-clip:text;color:transparent}
 .brand-sub{font-size:10px;letter-spacing:.3em;color:var(--muted);margin-top:-2px}
 /* shell */
@@ -153,6 +155,17 @@ const db={
   update:function(t,id,patch){return sb(t+'?id=eq.'+encodeURIComponent(id),{method:'PATCH',body:patch,prefer:'return=representation'});},
   remove:function(t,id){return sb(t+'?id=eq.'+encodeURIComponent(id),{method:'DELETE'});}
 };
+async function rpc(name,args){
+  const c=cfg();
+  const r=await fetch(c.url+'/rest/v1/rpc/'+name,{method:'POST',headers:{'apikey':c.key,'Authorization':'Bearer '+c.key,'Content-Type':'application/json'},body:JSON.stringify(args||{})});
+  const txt=await r.text();let j=null;try{j=txt?JSON.parse(txt):null;}catch(e){j=null;}
+  if(!r.ok){
+    const m=(j&&(j.message||j.hint))||txt||('Error '+r.status);
+    if(/Could not find the function|does not exist/i.test(m))throw new Error('Visitor setup is missing - run hendrix_step3.sql in Supabase.');
+    throw new Error(m);
+  }
+  return j;
+}
 function newId(p){return p+'-'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
 
 /* ---------- small UI pieces ---------- */
@@ -168,7 +181,8 @@ function Brand(){
   return el('div',{className:'brand'},el(Logo,{size:32}),el('div',null,el('div',{className:'brand-name'},'HENDRIX'),el('div',{className:'brand-sub'},'QUALITY MANAGEMENT')));
 }
 function Field(props){
-  return el('label',{className:'f'},el('span',null,props.label),props.children);
+  // plain=true uses a div: a label would turn taps on a canvas into clicks on its first button
+  return el(props.plain?'div':'label',{className:'f'},el('span',null,props.label),props.children);
 }
 function Modal(props){
   return el('div',{className:'mo',onClick:function(e){if(e.target===e.currentTarget&&props.onClose)props.onClose();}},
@@ -412,6 +426,195 @@ function Team(props){
       })))));
 }
 
+/* ---------- QR + signature helpers ---------- */
+function QrBox(props){
+  const ref=useRef(null);
+  useEffect(function(){
+    const host=ref.current;if(!host)return;
+    host.innerHTML='';
+    if(window.QRCode){try{new window.QRCode(host,{text:props.text,width:props.size||180,height:props.size||180,colorDark:'#000000',colorLight:'#ffffff',correctLevel:window.QRCode.CorrectLevel.M});}catch(e){host.textContent=props.text;}}
+    else host.textContent=props.text;
+  },[props.text,props.size]);
+  return el('div',{ref:ref,style:{background:'#fff',padding:10,borderRadius:8,display:'inline-block',lineHeight:0}});
+}
+function SignaturePad(props){
+  const cv=useRef(null);const drawing=useRef(false);
+  useEffect(function(){
+    const c=cv.current;if(!c)return;const ctx=c.getContext('2d');
+    ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.lineWidth=2.4;ctx.lineCap='round';ctx.strokeStyle='#111';
+  },[]);
+  function pos(e){const c=cv.current,r=c.getBoundingClientRect();return {x:(e.clientX-r.left)*c.width/r.width,y:(e.clientY-r.top)*c.height/r.height};}
+  function down(e){drawing.current=true;const ctx=cv.current.getContext('2d'),q=pos(e);ctx.beginPath();ctx.moveTo(q.x,q.y);try{cv.current.setPointerCapture(e.pointerId);}catch(x){}e.preventDefault();}
+  function move(e){if(!drawing.current)return;const ctx=cv.current.getContext('2d'),q=pos(e);ctx.lineTo(q.x,q.y);ctx.stroke();e.preventDefault();}
+  function up(){if(!drawing.current)return;drawing.current=false;props.onChange(cv.current.toDataURL('image/png'));}
+  function clear(){const c=cv.current,ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);props.onChange('');}
+  return el('div',null,
+    el('canvas',{ref:cv,width:600,height:180,style:{width:'100%',height:140,background:'#fff',borderRadius:8,touchAction:'none',display:'block'},onPointerDown:down,onPointerMove:move,onPointerUp:up,onPointerLeave:up}),
+    el('button',{className:'btn ghost sm',style:{marginTop:6},onClick:clear},'Clear signature'));
+}
+const PURPOSES=['Vendor / delivery','Contractor / maintenance','Inspector / regulator','Customer / buyer','Interview','Meeting','Tour','Other'];
+
+/* ---------- Visitor kiosk (no login). The license comes from the QR link; the database re-checks it. ---------- */
+function KioskVisitor(){
+  const q=new URLSearchParams(window.location.search);
+  const licId=q.get('lic')||'';
+  const[lic,setLic]=useState(null);
+  const[bad,setBad]=useState('');
+  const[tab,setTab]=useState('in');
+  const[f,setF]=useState({visitor_name:'',company:'',purpose:'',host:'',vehicle:'',signature:'',agree:false});
+  const[busy,setBusy]=useState(false);
+  const[err,setErr]=useState('');
+  const[done,setDone]=useState('');
+  const[open,setOpen]=useState([]);
+  useEffect(function(){
+    if(!cfg().ok){setBad('This kiosk is not connected to a database.');return;}
+    if(!licId){setBad('This QR code is not linked to a license. Please ask a manager for the correct code.');return;}
+    rpc('hx_kiosk_license',{p_lic:licId}).then(function(r){if(r&&r.id)setLic(r);else setBad('This QR code is not linked to an active license. Please ask a manager for the correct code.');}).catch(function(e){setBad(String(e.message||e));});
+  },[licId]);
+  function loadOpen(){rpc('hx_kiosk_open_visitors',{p_lic:licId}).then(function(r){setOpen(r||[]);}).catch(function(e){setErr(String(e.message||e));});}
+  useEffect(function(){if(lic&&tab==='out')loadOpen();},[lic,tab]);
+  async function signIn(){
+    setErr('');
+    if(!f.visitor_name.trim()){setErr('Please enter your name.');return;}
+    if(!f.purpose){setErr('Please choose the purpose of your visit.');return;}
+    if(!f.signature){setErr('Please sign in the box.');return;}
+    if(!f.agree){setErr('Please accept the facility rules.');return;}
+    setBusy(true);
+    try{
+      await rpc('hx_kiosk_visitor_in',{p_lic:licId,p:{visitor_name:f.visitor_name,company:f.company,purpose:f.purpose,host:f.host,vehicle:f.vehicle,signature:f.signature}});
+      setDone('Thank you, '+f.visitor_name.trim()+'. You are signed in. Please remember to sign out when you leave.');
+      setF({visitor_name:'',company:'',purpose:'',host:'',vehicle:'',signature:'',agree:false});
+    }catch(e){setErr(String(e.message||e));}
+    setBusy(false);
+  }
+  async function signOut(v){
+    setErr('');setBusy(true);
+    try{await rpc('hx_kiosk_visitor_out',{p_lic:licId,p_id:v.id});setDone('Goodbye, '+v.visitor_name+'. You are signed out.');loadOpen();}
+    catch(e){setErr(String(e.message||e));}
+    setBusy(false);
+  }
+  if(bad)return el('div',{className:'auth'},el('div',{className:'box'},el(Brand),el('div',{className:'msg err',style:{marginTop:18}},bad)));
+  if(!lic)return el('div',{className:'auth'},el(Brand));
+  const head=el('div',{style:{textAlign:'center',marginBottom:16}},
+    el(Brand),
+    el('div',{className:'k',style:{marginTop:16}},lic.state),
+    el('div',{style:{fontSize:20,fontWeight:700}},lic.name),
+    el('div',{className:'muted'},'License '+(lic.license_number||'-')));
+  if(done)return el('div',{className:'auth'},el('div',{className:'box'},head,el('div',{className:'msg ok',style:{fontSize:15}},done),
+    el('button',{className:'btn',style:{width:'100%'},onClick:function(){setDone('');}},'Done')));
+  return el('div',{className:'auth',style:{alignItems:'flex-start'}},el('div',{className:'box',style:{width:'min(560px,100%)'}},head,
+    el('div',{className:'row',style:{marginBottom:14}},
+      el('button',{className:'btn'+(tab==='in'?'':' ghost'),style:{flex:1},onClick:function(){setTab('in');setErr('');}},'Sign in'),
+      el('button',{className:'btn'+(tab==='out'?'':' ghost'),style:{flex:1},onClick:function(){setTab('out');setErr('');}},'Sign out')),
+    err&&el('div',{className:'msg err'},err),
+    tab==='in'?el('div',null,
+      el(Field,{label:'Full name'},el('input',{value:f.visitor_name,onChange:function(e){setF({...f,visitor_name:e.target.value});}})),
+      el(Field,{label:'Company'},el('input',{value:f.company,onChange:function(e){setF({...f,company:e.target.value});}})),
+      el(Field,{label:'Purpose of visit'},el('select',{style:{width:'100%'},value:f.purpose,onChange:function(e){setF({...f,purpose:e.target.value});}},el('option',{value:''},'Select...'),PURPOSES.map(function(x){return el('option',{key:x,value:x},x);}))),
+      el(Field,{label:'Who are you visiting?'},el('input',{value:f.host,onChange:function(e){setF({...f,host:e.target.value});}})),
+      el(Field,{label:'Vehicle plate (optional)'},el('input',{value:f.vehicle,onChange:function(e){setF({...f,vehicle:e.target.value});}})),
+      el(Field,{label:'Signature',plain:true},el(SignaturePad,{onChange:function(v){setF(function(p){return {...p,signature:v};});}})),
+      el('label',{style:{display:'flex',gap:8,alignItems:'flex-start',margin:'6px 0 14px'}},el('input',{type:'checkbox',style:{width:'auto',marginTop:4},checked:f.agree,onChange:function(e){setF({...f,agree:e.target.checked});}}),
+        el('span',{className:'muted'},'I will follow the facility rules, stay with my escort, and not take photos or touch product.')),
+      el('button',{className:'btn',style:{width:'100%',padding:'13px'},disabled:busy,onClick:signIn},busy?'Saving...':'Sign in'))
+    :el('div',null,
+      !open.length&&el('div',{className:'empty'},'Nobody is currently signed in.'),
+      open.map(function(v){return el('div',{key:v.id,className:'card',style:{padding:'12px 14px'}},el('div',{className:'row',style:{justifyContent:'space-between'}},
+        el('div',null,el('div',{style:{fontWeight:700}},v.visitor_name),el('div',{className:'muted',style:{fontSize:12}},'In at '+new Date(v.time_in).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}))),
+        el('button',{className:'btn sm',disabled:busy,onClick:function(){signOut(v);}},'Sign out')));}))));
+}
+
+/* ---------- Visitor Log (staff) ---------- */
+function VisitorLog(props){
+  const st=props.state,lic=props.license;
+  const[rows,setRows]=useState(null);
+  const[range,setRange]=useState('30');
+  const[q,setQ]=useState('');
+  const[err,setErr]=useState('');
+  const[modal,setModal]=useState(false);
+  const[copied,setCopied]=useState(false);
+  const[view,setView]=useState(null);
+  const licId=lic?lic.id:'';
+  const link=window.location.origin+window.location.pathname+'?kiosk=visitor&lic='+encodeURIComponent(licId);
+  const load=useCallback(function(){
+    if(!lic||!st){setRows([]);return;}
+    let qs='license_id=eq.'+encodeURIComponent(lic.id)+'&state_id=eq.'+encodeURIComponent(st.id)+'&select=*&order=time_in.desc&limit=1000';
+    if(range!=='all'){qs+='&time_in=gte.'+encodeURIComponent(new Date(Date.now()-parseInt(range,10)*86400000).toISOString());}
+    return db.get('hx_visitor_log',qs).then(function(r){
+      // defensive: only ever show rows of the active license
+      setRows((r||[]).filter(function(x){return x.license_id===lic.id;}));
+    }).catch(function(e){setErr(String(e.message||e));setRows([]);});
+  },[licId,range]);
+  useEffect(function(){setRows(null);setErr('');load();},[load]);
+  if(!lic||!st)return el('div',null,el('h1',null,'Visitor ',el('span',{className:'g'},'Log')),el('div',{className:'empty'},'Pick a state and a license at the top first. Every visitor log belongs to exactly one license.'));
+  async function outNow(r){setErr('');try{await db.update('hx_visitor_log',r.id,{time_out:new Date().toISOString()});load();}catch(e){setErr(String(e.message||e));}}
+  function fmt(t){return t?new Date(t).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'';}
+  const list=(rows||[]).filter(function(r){const t=(r.visitor_name+' '+r.company+' '+r.purpose+' '+r.host).toLowerCase();return !q||t.indexOf(q.toLowerCase())>=0;});
+  function csv(){
+    const esc=function(v){return '"'+String(v==null?'':v).replace(/"/g,'""')+'"';};
+    const lines=[['State','License','License #','Name','Company','Purpose','Host','Vehicle','Time in','Time out'].map(esc).join(',')];
+    list.forEach(function(r){lines.push([st.name,lic.name,lic.license_number,r.visitor_name,r.company,r.purpose,r.host,r.vehicle,r.time_in,r.time_out||''].map(esc).join(','));});
+    const b=new Blob([lines.join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='visitor_log_'+(lic.license_number||lic.id)+'.csv';document.body.appendChild(a);a.click();a.remove();
+  }
+  function printSign(){
+    const host=document.querySelector('#hxqr canvas'),img=document.querySelector('#hxqr img');
+    const src=host?host.toDataURL('image/png'):(img?img.src:'');
+    const w=window.open('','_blank');if(!w)return;
+    w.document.write('<html><head><title>Visitor sign-in</title></head><body style="font-family:Arial,sans-serif;text-align:center;padding:40px"><div style="font-size:18px;letter-spacing:3px;color:#555">'+esc2(st.name).toUpperCase()+'</div><div style="font-size:34px;font-weight:700;margin:6px 0">'+esc2(lic.name)+'</div><div style="font-size:20px;margin-bottom:24px">License '+esc2(lic.license_number||'')+'</div><img src="'+src+'" style="width:340px;height:340px"/><div style="font-size:26px;margin-top:20px;font-weight:700">Visitors: scan to sign in and out</div></body></html>');
+    w.document.close();setTimeout(function(){w.print();},400);
+  }
+  function esc2(x){return String(x==null?'':x).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,'Visitor ',el('span',{className:'g'},'Log')),el('div',{className:'sub'},st.name+'  \u00b7  '+lic.name+(lic.license_number?'  \u00b7  '+lic.license_number:''))),
+      el('div',{className:'row'},el('button',{className:'btn ghost',onClick:csv},'Export CSV'),el('button',{className:'btn',onClick:function(){setModal(true);}},'+ Manual entry'))),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'card gold'},el('div',{className:'row',style:{alignItems:'flex-start',gap:20}},
+      el('div',{id:'hxqr'},el(QrBox,{text:link,size:150})),
+      el('div',{style:{flex:1,minWidth:220}},
+        el('div',{className:'k'},'Kiosk QR for this license only'),
+        el('div',{style:{margin:'4px 0 8px'}},'Visitors scanning this code sign in to ',el('b',null,lic.name),' ('+st.name+'). It cannot save to any other license.'),
+        el('input',{readOnly:true,value:link,onFocus:function(e){e.target.select();}}),
+        el('div',{className:'row',style:{marginTop:8}},
+          el('button',{className:'btn sm',onClick:function(){try{navigator.clipboard.writeText(link);setCopied(true);setTimeout(function(){setCopied(false);},1500);}catch(e){}}},copied?'Copied':'Copy link'),
+          el('button',{className:'btn ghost sm',onClick:printSign},'Print QR sign'))))),
+    el('div',{className:'row',style:{margin:'4px 0 12px'}},
+      el('input',{style:{maxWidth:300},placeholder:'Search name, company, host...',value:q,onChange:function(e){setQ(e.target.value);}}),
+      el('select',{value:range,onChange:function(e){setRange(e.target.value);}},el('option',{value:'1'},'Last 24 hours'),el('option',{value:'7'},'Last 7 days'),el('option',{value:'30'},'Last 30 days'),el('option',{value:'365'},'Last year'),el('option',{value:'all'},'All time')),
+      el('span',{className:'muted'},rows?list.length+' entries':'Loading...')),
+    rows&&!list.length&&el('div',{className:'empty'},'No visitors in this period for '+lic.name+'.'),
+    list.length>0&&el('div',{className:'card',style:{overflowX:'auto'}},el('table',null,
+      el('thead',null,el('tr',null,['Time in','Name','Company','Purpose','Host','Vehicle','Time out',''].map(function(h,i){return el('th',{key:i},h);}))),
+      el('tbody',null,list.map(function(r){
+        return el('tr',{key:r.id},el('td',null,fmt(r.time_in)),el('td',null,r.visitor_name),el('td',null,r.company||'-'),el('td',null,r.purpose||'-'),el('td',null,r.host||'-'),el('td',null,r.vehicle||'-'),
+          el('td',null,r.time_out?fmt(r.time_out):el('span',{className:'badge'},'On site')),
+          el('td',{style:{textAlign:'right',whiteSpace:'nowrap'}},
+            r.signature&&el('button',{className:'btn ghost sm',style:{marginRight:6},onClick:function(){setView(r);}},'Signature'),
+            !r.time_out&&el('button',{className:'btn sm',onClick:function(){outNow(r);}},'Sign out')));
+      })))),
+    modal&&el(ManualVisitor,{st:st,lic:lic,onClose:function(){setModal(false);},onSaved:function(){setModal(false);load();}}),
+    view&&el(Modal,{title:view.visitor_name+' - signature',onClose:function(){setView(null);}},el('img',{src:view.signature,style:{width:'100%',background:'#fff',borderRadius:8}}),el('div',{className:'muted',style:{marginTop:8}},fmt(view.time_in))));
+}
+function ManualVisitor(props){
+  const[f,setF]=useState({visitor_name:'',company:'',purpose:'',host:'',vehicle:''});
+  const[err,setErr]=useState('');
+  async function save(){
+    setErr('');
+    try{
+      await db.insert('hx_visitor_log',{id:newId('vis'),state_id:props.st.id,license_id:props.lic.id,visitor_name:f.visitor_name.trim(),company:f.company.trim(),purpose:f.purpose,host:f.host.trim(),vehicle:f.vehicle.trim(),source:'manual'});
+      props.onSaved();
+    }catch(e){setErr(String(e.message||e));}
+  }
+  return el(Modal,{title:'Manual visitor entry - '+props.lic.name,onClose:props.onClose},
+    err&&el('div',{className:'msg err'},err),
+    el(Field,{label:'Full name'},el('input',{value:f.visitor_name,onChange:function(e){setF({...f,visitor_name:e.target.value});}})),
+    el(Field,{label:'Company'},el('input',{value:f.company,onChange:function(e){setF({...f,company:e.target.value});}})),
+    el(Field,{label:'Purpose'},el('select',{style:{width:'100%'},value:f.purpose,onChange:function(e){setF({...f,purpose:e.target.value});}},el('option',{value:''},'Select...'),PURPOSES.map(function(x){return el('option',{key:x,value:x},x);}))),
+    el(Field,{label:'Visiting'},el('input',{value:f.host,onChange:function(e){setF({...f,host:e.target.value});}})),
+    el(Field,{label:'Vehicle plate'},el('input',{value:f.vehicle,onChange:function(e){setF({...f,vehicle:e.target.value});}})),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:!f.visitor_name.trim(),onClick:save},'Save')));
+}
+
 /* ---------- App shell ---------- */
 function App(){
   const[,force]=useState(0);
@@ -489,6 +692,7 @@ function App(){
   if(isAdmin)nav.push({id:'team',label:'Team and Access'});
   let body;
   if(page==='locations')body=el(Locations,{profile:profile,states:states,licenses:licenses,reload:loadData,openRulebook:function(id){pickState(id);setPage('rulebook');}});
+  else if(page==='visitors')body=el(VisitorLog,{key:licId,state:st,license:lic});
   else if(page==='rulebook')body=el(Rulebook,{key:stateId,profile:profile,state:st,onCount:setRuleCount});
   else if(page==='team'&&isAdmin)body=el(Team,{profile:profile});
   else body=el(Dashboard,{profile:profile,states:states,licenses:licenses,state:st,license:lic,go:setPage,ruleCount:ruleCount});
@@ -513,11 +717,15 @@ function App(){
       el('div',{className:'grp'},'Hendrix'),
       nav.map(function(n){return el('button',{key:n.id,className:page===n.id?'on':'',onClick:function(){setPage(n.id);}},n.label);}),
       el('div',{className:'grp'},'Modules'),
-      ['Facility Logs','Batch Tracker','Testing','SOPs','QMS'].map(function(m){return el('button',{key:m,className:'soon',disabled:true},m,el('span',{className:'tag'},'Soon'));}))),
+      el('button',{className:page==='visitors'?'on':'',onClick:function(){setPage('visitors');}},'Visitor Log'),
+      ['Other Facility Logs','Batch Tracker','Testing','SOPs','QMS'].map(function(m){return el('button',{key:m,className:'soon',disabled:true},m,el('span',{className:'tag'},'Soon'));}))),
     el('div',{className:'main'},body));
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(el(App));
+{
+  const kq=new URLSearchParams(window.location.search).get('kiosk');
+  ReactDOM.createRoot(document.getElementById('root')).render(el(kq==='visitor'?KioskVisitor:App));
+}
 })();
 </script>
 </body>
