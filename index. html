@@ -248,8 +248,8 @@ function Dashboard(props){
       el('div',{className:'card gold'},el('div',{className:'k'},'Active license'),el('div',{className:'v'},lic?lic.name:'None'),
         el('div',{className:'muted',style:{marginTop:4}},lic?[lic.license_type,lic.license_number].filter(Boolean).join('  \u00b7  '):'Add one under Locations.'),
         el('div',{className:'muted',style:{marginTop:10}},licsOfState.length+' license'+(licsOfState.length===1?'':'s')+' in '+(st?st.name:'this state'))),
-      el('div',{className:'card gold'},el('div',{className:'k'},'State rulebook'),el('div',{className:'v'},((st&&st.rules)||[]).length+' rules'),
-        el('div',{className:'muted',style:{marginTop:4}},'Only '+(st?st.name:'this state')+"'s own rules are ever loaded here."))),
+      el('div',{className:'card gold'},el('div',{className:'k'},'State rulebook'),el('div',{className:'v'},(props.ruleCount===null||props.ruleCount===undefined?'...':props.ruleCount)+' rules'),
+        el('div',{className:'muted',style:{marginTop:4}},'Only '+(st?st.name:'this state')+"'s own rules are ever loaded here."),el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go('rulebook');}},'Open rulebook'))),
     !lic&&isAdmin&&el('div',{className:'empty',style:{marginBottom:14}},'This state has no license yet. ',el('a',{href:'#',style:{color:'var(--gold-hi)'},onClick:function(e){e.preventDefault();props.go('locations');}},'Add one')),
     el('div',{className:'card'},el('h3',null,'Coming next'),
       el('div',{className:'muted',style:{marginBottom:10}},'Modules are added one at a time and tested before the next. Each starts blank for every state and license.'),
@@ -276,29 +276,6 @@ function LicenseForm(props){
     el('div',{className:'row',style:{justifyContent:'flex-end'}},
       el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),
       el('button',{className:'btn',disabled:!f.name.trim(),onClick:function(){props.onSave({name:f.name.trim(),license_number:f.license_number.trim(),license_type:f.license_type.trim()});}},'Save')));
-}
-function RulebookEditor(props){
-  const st=props.state;
-  const[txt,setTxt]=useState((st.rules||[]).join('\n'));
-  const[busy,setBusy]=useState(false);
-  const[msg,setMsg]=useState('');
-  useEffect(function(){setTxt((st.rules||[]).join('\n'));},[st.id,st.rules]);
-  const dirty=txt!==(st.rules||[]).join('\n');
-  async function save(){
-    setBusy(true);setMsg('');
-    try{
-      const rules=txt.split('\n').map(function(s){return s.trim();}).filter(Boolean);
-      await db.update('hx_states',st.id,{rules:rules});
-      await props.reload();setMsg('Saved.');
-    }catch(e){setMsg('Error: '+String(e.message||e));}
-    setBusy(false);
-  }
-  return el('div',null,
-    el('div',{className:'k',style:{marginBottom:6}},st.name+' rulebook (one rule per line)'),
-    el('textarea',{value:txt,disabled:!props.canEdit,placeholder:'Starts blank. Add only the rules that apply to '+st.name+'.',onChange:function(e){setTxt(e.target.value);}}),
-    props.canEdit&&el('div',{className:'row',style:{marginTop:8}},
-      el('button',{className:'btn sm',disabled:busy||!dirty,onClick:save},busy?'Saving...':'Save rulebook'),
-      msg&&el('span',{className:'muted'},msg)));
 }
 function Locations(props){
   const isAdmin=props.profile.role==='admin';
@@ -337,12 +314,75 @@ function Locations(props){
                   el('button',{className:'btn ghost sm',onClick:function(){run(function(){return db.update('hx_licenses',l.id,{active:!l.active});});}},l.active?'Deactivate':'Activate'),
                   el('button',{className:'btn danger sm',onClick:function(){if(window.confirm('Delete license "'+l.name+'"?'))run(function(){return db.remove('hx_licenses',l.id);});}},'Delete'))));
             }))):el('div',{className:'muted'},'No licenses in this state yet.')),
-        el('div',{style:{marginTop:18}},el(RulebookEditor,{state:st,canEdit:isAdmin,reload:props.reload})));
+        el('div',{className:'row',style:{marginTop:16,justifyContent:'space-between'}},
+          el('div',{className:'muted'},'Laws and rules for '+st.name+' live in its own Rulebook.'),
+          el('button',{className:'btn ghost sm',onClick:function(){props.openRulebook(st.id);}},'Open '+st.name+' rulebook')));
     }),
     modal&&modal.t==='state'&&el(StateForm,{initial:modal.s,onClose:function(){setModal(null);},onSave:function(v){
       run(function(){return modal.s?db.update('hx_states',modal.s.id,v):db.insert('hx_states',{id:newId('st'),name:v.name,agency:v.agency,code:v.code,rules:[]});});}}),
     modal&&modal.t==='lic'&&el(LicenseForm,{stateName:modal.st.name,initial:modal.l,onClose:function(){setModal(null);},onSave:function(v){
       run(function(){return modal.l?db.update('hx_licenses',modal.l.id,v):db.insert('hx_licenses',{id:newId('lic'),state_id:modal.st.id,name:v.name,license_number:v.license_number,license_type:v.license_type,active:true});});}}));
+}
+
+/* ---------- Rulebook: every rule row carries its state; only the active state's rules are ever loaded ---------- */
+const RULE_CATS=['Licensing','Labeling','Packaging','Testing','Facility','Security','Recordkeeping','Training','Inventory / Tracking','Other'];
+function RuleForm(props){
+  const[f,setF]=useState(props.initial||{category:'Licensing',citation:'',title:'',body:''});
+  return el(Modal,{title:props.initial?'Edit rule':'Add a rule to '+props.stateName,onClose:props.onClose},
+    el(Field,{label:'Category'},el('input',{list:'hxcats',value:f.category,onChange:function(e){setF({...f,category:e.target.value});}}),
+      el('datalist',{id:'hxcats'},RULE_CATS.map(function(c){return el('option',{key:c,value:c});}))),
+    el(Field,{label:'Citation (section / rule number)'},el('input',{value:f.citation,placeholder:'e.g. the rule or statute number',onChange:function(e){setF({...f,citation:e.target.value});}})),
+    el(Field,{label:'Title'},el('input',{value:f.title,onChange:function(e){setF({...f,title:e.target.value});}})),
+    el(Field,{label:'Rule text / what it requires'},el('textarea',{value:f.body,onChange:function(e){setF({...f,body:e.target.value});}})),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},
+      el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),
+      el('button',{className:'btn',disabled:!f.title.trim(),onClick:function(){props.onSave({category:(f.category||'Other').trim()||'Other',citation:f.citation.trim(),title:f.title.trim(),body:f.body.trim()});}},'Save')));
+}
+function Rulebook(props){
+  const st=props.state;
+  const isAdmin=props.profile.role==='admin';
+  const[rules,setRules]=useState(null);
+  const[q,setQ]=useState('');
+  const[modal,setModal]=useState(null);
+  const[err,setErr]=useState('');
+  const sid=st?st.id:'';
+  const load=useCallback(function(){
+    if(!sid){setRules([]);return;}
+    return db.get('hx_rules','state_id=eq.'+encodeURIComponent(sid)+'&select=*&order=category,created_at').then(function(r){
+      // defensive: never show a rule that belongs to another state
+      const only=(r||[]).filter(function(x){return x.state_id===sid;});
+      setRules(only);props.onCount(only.length);
+    }).catch(function(e){setErr(String(e.message||e));setRules([]);});
+  },[sid]);
+  useEffect(function(){setRules(null);setErr('');load();},[load]);
+  async function run(fn){setErr('');try{await fn();await load();setModal(null);}catch(e){setErr(String(e.message||e));}}
+  if(!st)return el('div',null,el('h1',null,'Rulebook'),el('div',{className:'empty'},'Create a state first, then add its rules here.'));
+  const list=(rules||[]).filter(function(r){
+    const t=(r.title+' '+r.citation+' '+r.body+' '+r.category).toLowerCase();return !q||t.indexOf(q.toLowerCase())>=0;});
+  const cats=[];list.forEach(function(r){if(cats.indexOf(r.category)<0)cats.push(r.category);});
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,el('span',{className:'g'},st.name),' Rulebook'),
+        el('div',{className:'sub'},'Only '+st.name+"'s own rules appear here. Switching state loads that state's rules instead, and rules can never be moved between states.")),
+      isAdmin&&el('button',{className:'btn',onClick:function(){setModal({});}},'+ Add rule')),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{marginBottom:14}},el('input',{style:{maxWidth:340},placeholder:'Search '+st.name+' rules...',value:q,onChange:function(e){setQ(e.target.value);}}),
+      el('span',{className:'muted'},rules?(list.length+' of '+rules.length+' rules'):'Loading...')),
+    rules&&!rules.length&&el('div',{className:'empty'},'No rules in the '+st.name+' rulebook yet.'+(isAdmin?' Click "+ Add rule" to start. It begins completely blank.':'')),
+    cats.map(function(c){
+      return el('div',{key:c,className:'card gold'},el('div',{className:'k',style:{marginBottom:8}},c),
+        list.filter(function(r){return r.category===c;}).map(function(r){
+          return el('div',{key:r.id,style:{padding:'10px 0',borderTop:'1px solid #1d1d1d'}},
+            el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start',flexWrap:'nowrap'}},
+              el('div',null,el('div',{style:{fontWeight:700}},r.title),r.citation&&el('div',{className:'muted',style:{fontSize:12}},r.citation)),
+              isAdmin&&el('div',{className:'row',style:{flexWrap:'nowrap'}},
+                el('button',{className:'btn ghost sm',onClick:function(){setModal({r:r});}},'Edit'),
+                el('button',{className:'btn danger sm',onClick:function(){if(window.confirm('Delete this rule?'))run(function(){return db.remove('hx_rules',r.id);});}},'Delete'))),
+            r.body&&el('div',{style:{marginTop:6,whiteSpace:'pre-wrap',color:'var(--text)'}},r.body));
+        }));
+    }),
+    modal&&el(RuleForm,{stateName:st.name,initial:modal.r,onClose:function(){setModal(null);},onSave:function(v){
+      run(function(){return modal.r?db.update('hx_rules',modal.r.id,v):db.insert('hx_rules',{id:newId('rule'),state_id:st.id,category:v.category,citation:v.citation,title:v.title,body:v.body});});}}));
 }
 
 /* ---------- Team (admin) ---------- */
@@ -384,6 +424,13 @@ function App(){
   const[stateId,setStateId]=useState(lsGet('hx_state')||'');
   const[licId,setLicId]=useState(lsGet('hx_lic')||'');
   const[loadErr,setLoadErr]=useState('');
+  const[ruleCount,setRuleCount]=useState(null);
+  useEffect(function(){
+    if(phase!=='ready'||!stateId){setRuleCount(null);return;}
+    let dead=false;setRuleCount(null);
+    db.get('hx_rules','state_id=eq.'+encodeURIComponent(stateId)+'&select=id').then(function(r){if(!dead)setRuleCount((r||[]).length);}).catch(function(){if(!dead)setRuleCount(null);});
+    return function(){dead=true;};
+  },[phase,stateId]);
 
   const loadData=useCallback(async function(){
     const s=await db.get('hx_states','select=*&order=name');
@@ -438,12 +485,13 @@ function App(){
   }
   function pickLic(id){setLicId(id);lsSet('hx_lic',id);}
 
-  const nav=[{id:'home',label:'Dashboard'},{id:'locations',label:'States and Licenses'}];
+  const nav=[{id:'home',label:'Dashboard'},{id:'locations',label:'States and Licenses'},{id:'rulebook',label:(st?st.name+' ':'')+'Rulebook'}];
   if(isAdmin)nav.push({id:'team',label:'Team and Access'});
   let body;
-  if(page==='locations')body=el(Locations,{profile:profile,states:states,licenses:licenses,reload:loadData});
+  if(page==='locations')body=el(Locations,{profile:profile,states:states,licenses:licenses,reload:loadData,openRulebook:function(id){pickState(id);setPage('rulebook');}});
+  else if(page==='rulebook')body=el(Rulebook,{key:stateId,profile:profile,state:st,onCount:setRuleCount});
   else if(page==='team'&&isAdmin)body=el(Team,{profile:profile});
-  else body=el(Dashboard,{profile:profile,states:states,licenses:licenses,state:st,license:lic,go:setPage});
+  else body=el(Dashboard,{profile:profile,states:states,licenses:licenses,state:st,license:lic,go:setPage,ruleCount:ruleCount});
 
   return el('div',{className:'shell'},
     el('div',{className:'top'},
