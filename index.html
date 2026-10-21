@@ -60,8 +60,8 @@ input,select,textarea{background:#0f0f0f;color:var(--text);border:1px solid var(
 select{width:auto;min-width:150px}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 2px rgba(212,175,55,.18)}
 textarea{min-height:90px;resize:vertical}
-label.f{display:block;margin-bottom:12px}
-label.f span{display:block;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin-bottom:5px}
+label.f,div.f{display:block;margin-bottom:12px}
+label.f>span,div.f>span{display:block;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin-bottom:5px}
 .badge{display:inline-block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:2px 8px;border-radius:20px;border:1px solid var(--gold-lo);color:var(--gold-hi)}
 .badge.off{border-color:var(--line);color:var(--faint)}
 .msg{padding:9px 12px;border-radius:8px;margin:10px 0;font-size:13px}
@@ -75,6 +75,13 @@ td{padding:9px 10px;border-bottom:1px solid #1d1d1d;vertical-align:middle}
 .md h2{margin:0 0 14px;font-size:18px}
 .auth{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(ellipse at top,#1a1507 0,#0a0a0a 55%)}
 .auth .box{width:min(400px,100%);background:var(--panel);border:1px solid var(--line);border-top:2px solid var(--gold);border-radius:14px;padding:26px}
+.badge.ok{border-color:#23543a;color:#a6e6c4}
+.badge.bad{border-color:#5a2a26;color:#ffb4ac;background:#2a1513}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 18px}
+.tabs button{background:#111;border:1px solid var(--line);color:var(--muted);border-radius:20px;padding:6px 14px;cursor:pointer;font-size:13px}
+.tabs button.on{background:#17140a;border-color:var(--gold);color:var(--gold-hi)}
+.chk{display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid #1d1d1d}
+.btn.selbad{background:#5a2a26;color:#fff}
 .empty{border:1px dashed var(--gold-lo);border-radius:12px;padding:30px;text-align:center;color:var(--muted)}
 @media(max-width:820px){
   .shell{grid-template-columns:1fr}
@@ -143,7 +150,10 @@ async function sb(path,opt){
   let j=null;try{j=txt?JSON.parse(txt):null;}catch(e){j=null;}
   if(!r.ok){
     const m=(j&&(j.message||j.hint||j.details))||txt||('Error '+r.status);
-    if(/does not exist|schema cache|relation/i.test(m))throw new Error('Database tables are missing - run hendrix_setup.sql in the new Supabase project first.');
+    if(/schema cache|Could not find the table|relation .* does not exist/i.test(m)){
+      const step=/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
+      throw new Error('Database tables are missing - run '+step+' in the Hendrix Supabase project.');
+    }
     if(/row-level security|permission denied/i.test(m))throw new Error('Not allowed - only an approved admin can change this.');
     throw new Error(m);
   }
@@ -161,7 +171,7 @@ async function rpc(name,args){
   const txt=await r.text();let j=null;try{j=txt?JSON.parse(txt):null;}catch(e){j=null;}
   if(!r.ok){
     const m=(j&&(j.message||j.hint))||txt||('Error '+r.status);
-    if(/Could not find the function|does not exist/i.test(m))throw new Error('Visitor setup is missing - run hendrix_step3.sql in Supabase.');
+    if(/Could not find the function|does not exist/i.test(m))throw new Error('Kiosk setup is missing - run hendrix_step3.sql and hendrix_step4.sql in the Hendrix Supabase project.');
     throw new Error(m);
   }
   return j;
@@ -241,7 +251,7 @@ function LoginScreen(props){
 }
 
 /* ---------- Dashboard ---------- */
-const MODULES_SOON=['Facility Logs','Batch Tracker','Testing','Compliance Stickers','SOPs','QMS (Deviations, CAPAs, Audits)','Formulations','Time Clock and Badges','Production Planner'];
+const MODULES_SOON=['Batch Tracker','Testing','Compliance Stickers','SOPs','QMS (Deviations, CAPAs, Audits)','Formulations','Time Clock and Badges','Production Planner'];
 function Dashboard(props){
   const st=props.state,lic=props.license;
   const isAdmin=props.profile.role==='admin';
@@ -458,6 +468,7 @@ const PURPOSES=['Vendor / delivery','Contractor / maintenance','Inspector / regu
 function KioskVisitor(){
   const q=new URLSearchParams(window.location.search);
   const licId=q.get('lic')||'';
+  const stId=q.get('state')||'';
   const[lic,setLic]=useState(null);
   const[bad,setBad]=useState('');
   const[tab,setTab]=useState('in');
@@ -468,9 +479,9 @@ function KioskVisitor(){
   const[open,setOpen]=useState([]);
   useEffect(function(){
     if(!cfg().ok){setBad('This kiosk is not connected to a database.');return;}
-    if(!licId){setBad('This QR code is not linked to a license. Please ask a manager for the correct code.');return;}
-    rpc('hx_kiosk_license',{p_lic:licId}).then(function(r){if(r&&r.id)setLic(r);else setBad('This QR code is not linked to an active license. Please ask a manager for the correct code.');}).catch(function(e){setBad(String(e.message||e));});
-  },[licId]);
+    if(!licId||!stId){setBad('This QR code is missing its state or license. Please ask a manager for the current code.');return;}
+    rpc('hx_kiosk_check',{p_state:stId,p_lic:licId}).then(function(r){if(r&&r.id)setLic(r);else setBad('This QR code is not linked to an active license in this state. Please ask a manager for the correct code.');}).catch(function(e){setBad(String(e.message||e));});
+  },[licId,stId]);
   function loadOpen(){rpc('hx_kiosk_open_visitors',{p_lic:licId}).then(function(r){setOpen(r||[]);}).catch(function(e){setErr(String(e.message||e));});}
   useEffect(function(){if(lic&&tab==='out')loadOpen();},[lic,tab]);
   async function signIn(){
@@ -535,7 +546,7 @@ function VisitorLog(props){
   const[copied,setCopied]=useState(false);
   const[view,setView]=useState(null);
   const licId=lic?lic.id:'';
-  const link=window.location.origin+window.location.pathname+'?kiosk=visitor&lic='+encodeURIComponent(licId);
+  const link=window.location.origin+window.location.pathname+'?kiosk=visitor&state='+encodeURIComponent(st?st.id:'')+'&lic='+encodeURIComponent(licId);
   const load=useCallback(function(){
     if(!lic||!st){setRows([]);return;}
     let qs='license_id=eq.'+encodeURIComponent(lic.id)+'&state_id=eq.'+encodeURIComponent(st.id)+'&select=*&order=time_in.desc&limit=1000';
@@ -613,6 +624,365 @@ function ManualVisitor(props){
     el(Field,{label:'Visiting'},el('input',{value:f.host,onChange:function(e){setF({...f,host:e.target.value});}})),
     el(Field,{label:'Vehicle plate'},el('input',{value:f.vehicle,onChange:function(e){setF({...f,vehicle:e.target.value});}})),
     el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:!f.visitor_name.trim(),onClick:save},'Save')));
+}
+
+/* ---------- Facility Logs ----------
+   Eight logs, one table. Every list (areas, equipment, rooms, scales...) and every entry belongs to one license
+   inside one state; the database refuses anything else. Pass/fail limits are set per item by the admin. */
+function numOk(v){return v!==''&&v!=null&&!isNaN(parseFloat(v))&&isFinite(v);}
+function num(v){return parseFloat(v);}
+const FLAG_RES=['Fail','Flag'];
+const LOG_TYPES=[
+  {id:'sanitation',name:'Sanitation',list:'area',listName:'Areas',itemLabel:'Area',ruleCat:'Facility',
+    fields:[{k:'task',l:'Task',t:'select',o:['Daily cleaning','Deep cleaning','Pre-operation','Post-operation','Spill clean-up','Other'],req:1},
+      {k:'chemical',l:'Chemical / sanitizer',t:'text'},{k:'concentration',l:'Concentration (ppm or %)',t:'text'},
+      {k:'check',l:'Visual inspection',t:'select',o:['Pass','Fail'],req:1},{k:'notes',l:'Notes / corrective action',t:'area'}],
+    result:function(d){return d.check?(d.check==='Fail'?'Fail':'Pass'):'';}},
+  {id:'waste',name:'Waste',list:'waste_type',listName:'Waste types',itemLabel:'Waste type',ruleCat:'Facility',
+    fields:[{k:'package_id',l:'Package / batch / tag ID',t:'text'},{k:'weight',l:'Weight (g)',t:'num',req:1},
+      {k:'method',l:'Rendered unusable by',t:'select',o:['Ground and mixed with non-cannabis material','Compost','Incineration','Licensed waste hauler','Other'],req:1},
+      {k:'reason',l:'Reason for disposal',t:'text'},{k:'witness',l:'Witness',t:'text'},{k:'notes',l:'Notes',t:'area'}],
+    result:function(){return 'Logged';}},
+  {id:'pest',name:'Pest Control',list:'pest_station',listName:'Stations / traps',itemLabel:'Station',ruleCat:'Facility',notesKey:'action',
+    fields:[{k:'activity',l:'Activity',t:'select',o:['No activity','Activity found'],req:1},{k:'pest',l:'Pest type',t:'text'},{k:'action',l:'Action taken',t:'area'}],
+    result:function(d){return d.activity?(d.activity==='Activity found'?'Flag':'OK'):'';}},
+  {id:'equipment',name:'Equipment',list:'equipment',listName:'Equipment',itemLabel:'Equipment',ruleCat:'Facility',notesKey:'description',
+    fields:[{k:'activity',l:'Activity',t:'select',o:['Cleaning','Preventive maintenance','Repair','Inspection','Other'],req:1},
+      {k:'condition',l:'Condition after',t:'select',o:['Good','Needs attention','Out of service'],req:1},{k:'description',l:'Work done / notes',t:'area'}],
+    result:function(d){return d.condition?(d.condition==='Good'?'OK':'Flag'):'';}},
+  {id:'temperature',name:'Temperature',list:'temp_unit',listName:'Rooms / units',itemLabel:'Room / unit',ruleCat:'Facility',
+    spec:[{k:'min',l:'Min \u00b0F'},{k:'max',l:'Max \u00b0F'},{k:'hmin',l:'Min RH %'},{k:'hmax',l:'Max RH %'}],
+    fields:[{k:'temp',l:'Temperature (\u00b0F)',t:'num',req:1},{k:'humidity',l:'Relative humidity (%)',t:'num'},{k:'notes',l:'Corrective action / notes',t:'area'}],
+    result:function(d,it){
+      if(!numOk(d.temp))return '';
+      const s=(it&&it.spec)||{};let bad=false;
+      if(numOk(s.min)&&num(d.temp)<num(s.min))bad=true;
+      if(numOk(s.max)&&num(d.temp)>num(s.max))bad=true;
+      if(numOk(d.humidity)){if(numOk(s.hmin)&&num(d.humidity)<num(s.hmin))bad=true;if(numOk(s.hmax)&&num(d.humidity)>num(s.hmax))bad=true;}
+      return bad?'Fail':'Pass';}},
+  {id:'security',name:'Security',list:'security_point',listName:'Cameras, doors and alarms',itemLabel:'Camera / door / alarm',ruleCat:'Security',notesKey:'description',
+    fields:[{k:'status',l:'Status',t:'select',o:['Working','Issue found'],req:1},{k:'description',l:'Issue / action taken',t:'area'}],
+    result:function(d){return d.status?(d.status==='Working'?'OK':'Flag'):'';}},
+  {id:'security_inspection',name:'Security Inspection',list:'inspection_item',listName:'Checklist items',checklist:true,ruleCat:'Security',
+    fields:[{k:'notes',l:'Notes / corrective action',t:'area'}],
+    result:function(d,it,c){const v=Object.keys(c||{}).map(function(k){return c[k];});if(!v.length)return '';return v.indexOf('Fail')>=0?'Fail':'Pass';}},
+  {id:'scale',name:'Scale Calibration',list:'scale',listName:'Scales',itemLabel:'Scale',ruleCat:'Facility',
+    spec:[{k:'std',l:'Test weight (g)'},{k:'tol',l:'Tolerance \u00b1 (g)'}],
+    fields:[{k:'std',l:'Test weight used (g)',t:'num',req:1},{k:'reading',l:'Scale reading (g)',t:'num',req:1},{k:'notes',l:'Notes / corrective action',t:'area'}],
+    result:function(d,it){
+      if(!numOk(d.std)||!numOk(d.reading))return '';
+      const s=(it&&it.spec)||{};if(!numOk(s.tol))return 'Logged';
+      return Math.abs(num(d.reading)-num(d.std))<=num(s.tol)+1e-9?'Pass':'Fail';}}
+];
+function specText(def,spec){
+  spec=spec||{};
+  if(def.id==='temperature'){
+    const t=[];
+    if(numOk(spec.min)||numOk(spec.max))t.push((numOk(spec.min)?spec.min:'-')+' to '+(numOk(spec.max)?spec.max:'-')+' \u00b0F');
+    if(numOk(spec.hmin)||numOk(spec.hmax))t.push((numOk(spec.hmin)?spec.hmin:'-')+' to '+(numOk(spec.hmax)?spec.hmax:'-')+' % RH');
+    return t.length?'Allowed: '+t.join(', '):'No range set (admin can add one)';
+  }
+  if(def.id==='scale'){
+    return (numOk(spec.std)?'Test weight '+spec.std+' g':'No test weight set')+(numOk(spec.tol)?', tolerance \u00b1'+spec.tol+' g':', no tolerance set (admin can add one)');
+  }
+  return '';
+}
+function ResultBadge(props){
+  const r=props.r||'';if(!r)return null;
+  const cls=(r==='Pass'||r==='OK')?' ok':FLAG_RES.indexOf(r)>=0?' bad':'';
+  return el('span',{className:'badge'+cls},r);
+}
+function entrySummary(def,r){
+  const d=r.data||{};
+  if(def.checklist){
+    const c=d.checks||[];const f=c.filter(function(x){return x.res==='Fail';});
+    return c.length+' items: '+c.filter(function(x){return x.res==='Pass';}).length+' pass, '+f.length+' fail'+(f.length?' ('+f.map(function(x){return x.name;}).join(', ')+')':'')+(d.notes?'  \u00b7  '+d.notes:'');
+  }
+  return def.fields.filter(function(f){return d[f.k]!==undefined&&d[f.k]!=='';}).map(function(f){return f.l.replace(/ \(.*\)$/,'')+': '+d[f.k];}).join('  \u00b7  ');
+}
+function esc3(x){return String(x==null?'':x).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function printQrSign(boxId,stName,lic,caption){
+  const c=document.querySelector('#'+boxId+' canvas'),img=document.querySelector('#'+boxId+' img');
+  const src=c?c.toDataURL('image/png'):(img?img.src:'');
+  const w=window.open('','_blank');if(!w)return;
+  w.document.write('<html><head><title>'+esc3(caption)+'</title></head><body style="font-family:Arial,sans-serif;text-align:center;padding:40px"><div style="font-size:18px;letter-spacing:3px;color:#555">'+esc3(stName).toUpperCase()+'</div><div style="font-size:34px;font-weight:700;margin:6px 0">'+esc3(lic.name)+'</div><div style="font-size:20px;margin-bottom:24px">License '+esc3(lic.license_number||'')+'</div><img src="'+src+'" style="width:340px;height:340px"/><div style="font-size:26px;margin-top:20px;font-weight:700">'+esc3(caption)+'</div></body></html>');
+  w.document.close();setTimeout(function(){w.print();},400);
+}
+
+/* The entry form: used by staff inside the app and by the QR kiosk */
+function LogForm(props){
+  const def=props.def,items=props.items||[];
+  const[itemId,setItemId]=useState('');
+  const[d,setD]=useState({});
+  const[checks,setChecks]=useState({});
+  const[name,setName]=useState(props.defaultName||'');
+  const[sig,setSig]=useState('');
+  const[sigKey,setSigKey]=useState(0);
+  const[err,setErr]=useState('');
+  const[busy,setBusy]=useState(false);
+  const item=items.find(function(i){return i.id===itemId;})||null;
+  const res=def.result(d,item||{spec:{}},checks);
+  const nk=def.notesKey||'notes';
+  const nkField=def.fields.find(function(f){return f.k===nk;});
+  const needNotes=FLAG_RES.indexOf(res)>=0;
+  if(!items.length)return el('div',{className:'empty'},'No '+def.listName.toLowerCase()+' are set up for this license yet. '+(props.kiosk?'Please ask a manager.':'An admin adds them with "Manage '+def.listName.toLowerCase()+'".'));
+  function pickItem(id){
+    setItemId(id);
+    const it=items.find(function(i){return i.id===id;});
+    if(def.id==='scale'&&it&&it.spec&&numOk(it.spec.std))setD(function(p){return {...p,std:String(it.spec.std)};});
+  }
+  async function submit(){
+    setErr('');
+    if(def.checklist){
+      const miss=items.filter(function(i){return !checks[i.id];});
+      if(miss.length){setErr('Answer every checklist item ('+miss.length+' left).');return;}
+    }else if(!item){setErr('Choose the '+def.itemLabel.toLowerCase()+'.');return;}
+    for(let i=0;i<def.fields.length;i++){
+      const f=def.fields[i],v=String(d[f.k]==null?'':d[f.k]).trim();
+      if(f.req&&!v){setErr(f.l+' is required.');return;}
+      if(f.t==='num'&&v&&!numOk(v)){setErr(f.l+' must be a number.');return;}
+    }
+    if(needNotes&&!String(d[nk]||'').trim()){setErr('Result is '+res+'. Fill in "'+(nkField?nkField.l:'Notes')+'" before saving.');return;}
+    if(!name.trim()){setErr('Enter your name.');return;}
+    if(props.kiosk&&!sig){setErr('Please sign in the box.');return;}
+    const data={};
+    def.fields.forEach(function(f){const v=String(d[f.k]==null?'':d[f.k]).trim();if(v)data[f.k]=f.t==='num'?num(v):v;});
+    if(def.checklist)data.checks=items.map(function(i){return {name:i.name,res:checks[i.id]};});
+    if(item&&item.spec&&Object.keys(item.spec).length)data.limits=item.spec; // snapshot of the limits in force at the time
+    setBusy(true);
+    try{
+      await props.onSubmit({item_id:item?item.id:'',item:item?item.name:'Full inspection',data:data,result:res||'Logged',performed_by:name.trim(),signature:sig});
+      setItemId('');setD({});setChecks({});setSig('');setSigKey(function(k){return k+1;});
+      if(props.kiosk)setName('');
+    }catch(e){setErr(String(e.message||e));}
+    setBusy(false);
+  }
+  function input(f){
+    const v=d[f.k]==null?'':d[f.k];
+    const set=function(e){const x=e.target.value;setD(function(p){return {...p,[f.k]:x};});};
+    if(f.t==='select')return el('select',{style:{width:'100%'},value:v,onChange:set},el('option',{value:''},'Select...'),f.o.map(function(o){return el('option',{key:o,value:o},o);}));
+    if(f.t==='area')return el('textarea',{value:v,style:{minHeight:70},onChange:set});
+    return el('input',{value:v,inputMode:f.t==='num'?'decimal':undefined,onChange:set});
+  }
+  return el('div',null,
+    err&&el('div',{className:'msg err'},err),
+    def.checklist?el('div',{style:{marginBottom:14}},el('div',{className:'k',style:{marginBottom:4}},'Checklist'),
+      items.map(function(i){return el('div',{key:i.id,className:'chk'},el('div',{style:{flex:1}},i.name),
+        ['Pass','Fail','N/A'].map(function(o){const on=checks[i.id]===o;
+          return el('button',{key:o,type:'button',className:'btn sm'+(on?(o==='Fail'?' selbad':''):' ghost'),onClick:function(){setChecks(function(p){return {...p,[i.id]:o};});}},o);}));}))
+    :el(Field,{label:def.itemLabel},
+      el('select',{style:{width:'100%'},value:itemId,onChange:function(e){pickItem(e.target.value);}},el('option',{value:''},'Select...'),items.map(function(i){return el('option',{key:i.id,value:i.id},i.name);})),
+      item&&specText(def,item.spec)&&el('div',{className:'muted',style:{fontSize:12,marginTop:4}},specText(def,item.spec))),
+    def.fields.map(function(f){return el(Field,{key:f.k,label:f.l+(f.k===nk&&needNotes?' (required)':'')},input(f));}),
+    res&&el('div',{className:'row',style:{margin:'0 0 12px'}},el('span',{className:'k'},'Result'),el(ResultBadge,{r:res})),
+    el(Field,{label:'Your name'},el('input',{value:name,onChange:function(e){setName(e.target.value);}})),
+    props.kiosk&&el(Field,{label:'Signature',plain:true},el(SignaturePad,{key:sigKey,onChange:function(v){setSig(v);}})),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},
+      props.onCancel&&el('button',{className:'btn ghost',onClick:props.onCancel},'Cancel'),
+      el('button',{className:'btn',style:props.kiosk?{width:'100%',padding:13}:null,disabled:busy,onClick:submit},busy?'Saving...':'Save entry')));
+}
+
+/* Admin: the areas / equipment / rooms / scales / checklist for one log, for one license */
+function ListManager(props){
+  const def=props.def,items=props.items;
+  const blank={name:'',spec:{}};
+  const[f,setF]=useState(blank);
+  const[editId,setEditId]=useState('');
+  const[err,setErr]=useState('');
+  async function run(fn){setErr('');try{await fn();await props.onChanged();}catch(e){setErr(String(e.message||e));}}
+  function save(){
+    const nm=f.name.trim();if(!nm)return;
+    const spec={};(def.spec||[]).forEach(function(s){const v=String(f.spec[s.k]==null?'':f.spec[s.k]).trim();if(v!=='')spec[s.k]=numOk(v)?num(v):v;});
+    run(async function(){
+      if(editId)await db.update('hx_log_lists',editId,{name:nm,spec:spec});
+      else await db.insert('hx_log_lists',{id:newId('li'),state_id:props.st.id,license_id:props.lic.id,list_key:def.list,name:nm,spec:spec,sort:items.length,active:true});
+      setF(blank);setEditId('');
+    });
+  }
+  return el(Modal,{title:def.listName+' - '+props.lic.name,onClose:props.onClose},
+    el('div',{className:'muted',style:{marginBottom:12}},'Used by the '+def.name+' log for this license only. Other licenses keep their own lists.'),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'card',style:{padding:12}},
+      el(Field,{label:editId?'Edit name':'Add '+(def.checklist?'checklist item':def.itemLabel.toLowerCase())},el('input',{value:f.name,onChange:function(e){setF({...f,name:e.target.value});},onKeyDown:function(e){if(e.key==='Enter')save();}})),
+      def.spec&&el('div',{className:'grid',style:{gridTemplateColumns:'repeat(2,1fr)',gap:8}},def.spec.map(function(s){
+        return el(Field,{key:s.k,label:s.l},el('input',{inputMode:'decimal',value:f.spec[s.k]==null?'':f.spec[s.k],onChange:function(e){const x=e.target.value;setF(function(p){return {...p,spec:{...p.spec,[s.k]:x}};});}}));})),
+      el('div',{className:'row',style:{justifyContent:'flex-end'}},
+        editId&&el('button',{className:'btn ghost sm',onClick:function(){setF(blank);setEditId('');}},'Cancel edit'),
+        el('button',{className:'btn sm',disabled:!f.name.trim(),onClick:save},editId?'Save changes':'+ Add'))),
+    !items.length?el('div',{className:'empty'},'Nothing added yet.'):
+    el('table',null,el('tbody',null,items.map(function(i){
+      return el('tr',{key:i.id},
+        el('td',null,el('div',{style:{fontWeight:600,opacity:i.active?1:.5}},i.name),specText(def,i.spec)&&el('div',{className:'muted',style:{fontSize:12}},specText(def,i.spec))),
+        el('td',{style:{textAlign:'right',whiteSpace:'nowrap'}},
+          el('button',{className:'btn ghost sm',onClick:function(){setEditId(i.id);setF({name:i.name,spec:{...(i.spec||{})}});}},'Edit'),' ',
+          el('button',{className:'btn ghost sm',onClick:function(){run(function(){return db.update('hx_log_lists',i.id,{active:!i.active});});}},i.active?'Hide':'Show'),' ',
+          el('button',{className:'btn danger sm',onClick:function(){if(window.confirm('Delete "'+i.name+'"? Past log entries keep its name.'))run(function(){return db.remove('hx_log_lists',i.id);});}},'Delete')));
+    }))));
+}
+
+function LogPanel(props){
+  const def=props.def,st=props.state,lic=props.license;
+  const isAdmin=props.profile.role==='admin';
+  const[items,setItems]=useState(null);
+  const[rows,setRows]=useState(null);
+  const[range,setRange]=useState('30');
+  const[q,setQ]=useState('');
+  const[err,setErr]=useState('');
+  const[modal,setModal]=useState(null);
+  const[copied,setCopied]=useState(false);
+  const[showRules,setShowRules]=useState(false);
+  const qrId='hxqr-'+def.id;
+  const link=window.location.origin+window.location.pathname+'?kiosk=log&type='+def.id+'&state='+encodeURIComponent(st.id)+'&lic='+encodeURIComponent(lic.id);
+  const loadItems=useCallback(function(){
+    return db.get('hx_log_lists','license_id=eq.'+encodeURIComponent(lic.id)+'&list_key=eq.'+def.list+'&select=*&order=sort,name')
+      .then(function(r){setItems((r||[]).filter(function(x){return x.license_id===lic.id&&x.state_id===st.id;}));})
+      .catch(function(e){setErr(String(e.message||e));setItems([]);});
+  },[lic.id,def.id]);
+  const loadRows=useCallback(function(){
+    let qs='license_id=eq.'+encodeURIComponent(lic.id)+'&state_id=eq.'+encodeURIComponent(st.id)+'&log_type=eq.'+def.id+'&select=id,state_id,license_id,item,item_id,data,result,performed_by,source,created_at&order=created_at.desc&limit=1000';
+    if(range!=='all')qs+='&created_at=gte.'+encodeURIComponent(new Date(Date.now()-parseInt(range,10)*86400000).toISOString());
+    return db.get('hx_facility_log',qs).then(function(r){setRows((r||[]).filter(function(x){return x.license_id===lic.id;}));})
+      .catch(function(e){setErr(String(e.message||e));setRows([]);});
+  },[lic.id,def.id,range]);
+  useEffect(function(){loadItems();},[loadItems]);
+  useEffect(function(){setRows(null);loadRows();},[loadRows]);
+  const active=(items||[]).filter(function(i){return i.active;});
+  const list=(rows||[]).filter(function(r){const t=(r.item+' '+r.performed_by+' '+r.result+' '+JSON.stringify(r.data||{})).toLowerCase();return !q||t.indexOf(q.toLowerCase())>=0;});
+  function fmt(t){return t?new Date(t).toLocaleString([],{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}):'';}
+  function csv(){
+    const e=function(v){return '"'+String(v==null?'':v).replace(/"/g,'""')+'"';};
+    const head=['State','License','License #','Log','Date / time',def.checklist?'Inspection':def.itemLabel].concat(def.fields.map(function(f){return f.l;}));
+    if(def.checklist)head.push('Checklist');
+    head.push('Result','Performed by','Source');
+    const lines=[head.map(e).join(',')];
+    list.forEach(function(r){const d=r.data||{};
+      const row=[st.name,lic.name,lic.license_number,def.name,r.created_at,r.item].concat(def.fields.map(function(f){return d[f.k];}));
+      if(def.checklist)row.push((d.checks||[]).map(function(c){return c.name+': '+c.res;}).join('; '));
+      row.push(r.result,r.performed_by,r.source);lines.push(row.map(e).join(','));});
+    const b=new Blob([lines.join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);
+    a.download=def.id+'_log_'+(lic.license_number||lic.id)+'.csv';document.body.appendChild(a);a.click();a.remove();
+  }
+  async function viewSig(r){
+    setErr('');
+    try{const x=await db.get('hx_facility_log','id=eq.'+encodeURIComponent(r.id)+'&select=signature');setModal({sig:(x&&x[0]&&x[0].signature)||'',r:r});}
+    catch(e){setErr(String(e.message||e));}
+  }
+  async function del(r){
+    if(!window.confirm('Delete this '+def.name+' entry? This cannot be undone.'))return;
+    setErr('');try{await db.remove('hx_facility_log',r.id);loadRows();}catch(e){setErr(String(e.message||e));}
+  }
+  async function addEntry(p){
+    await db.insert('hx_facility_log',{id:newId('fl'),state_id:st.id,license_id:lic.id,log_type:def.id,item_id:p.item_id||null,item:p.item,data:p.data,result:p.result,performed_by:p.performed_by,signature:p.signature||null,source:'app'});
+    setModal(null);loadRows();
+  }
+  const fails=(rows||[]).filter(function(r){return FLAG_RES.indexOf(r.result)>=0;}).length;
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start',marginBottom:10}},
+      el('div',null,el('h2',{style:{margin:0,fontSize:20}},def.name+' Log'),
+        el('div',{className:'muted'},items?(active.length+' '+def.listName.toLowerCase()+' set up'):'Loading...')),
+      el('div',{className:'row'},
+        isAdmin&&el('button',{className:'btn ghost',onClick:function(){setModal({lists:true});}},'Manage '+def.listName.toLowerCase()),
+        el('button',{className:'btn ghost',disabled:!list.length,onClick:csv},'Export CSV'),
+        el('button',{className:'btn',disabled:!active.length,onClick:function(){setModal({add:true});}},'+ New entry'))),
+    err&&el('div',{className:'msg err'},err),
+    items&&!items.length&&el('div',{className:'empty',style:{marginBottom:14}},
+      'This log is blank for '+lic.name+'. '+(isAdmin?'Start by adding the '+def.listName.toLowerCase()+' it covers.':'Ask an admin to add the '+def.listName.toLowerCase()+' it covers.'),
+      isAdmin&&el('div',{style:{marginTop:12}},el('button',{className:'btn',onClick:function(){setModal({lists:true});}},'Add '+def.listName.toLowerCase()))),
+    el('div',{className:'card gold'},el('div',{className:'row',style:{alignItems:'flex-start',gap:20}},
+      el('div',{id:qrId},el(QrBox,{text:link,size:130})),
+      el('div',{style:{flex:1,minWidth:220}},
+        el('div',{className:'k'},'Kiosk QR - '+def.name+' - this license only'),
+        el('div',{style:{margin:'4px 0 8px'}},'Staff scan this to log ',el('b',null,def.name.toLowerCase()),' for ',el('b',null,lic.name),' ('+st.name+') without signing in. The code carries the state and license, and the database refuses anything else.'),
+        el('input',{readOnly:true,value:link,onFocus:function(e){e.target.select();}}),
+        el('div',{className:'row',style:{marginTop:8}},
+          el('button',{className:'btn sm',onClick:function(){try{navigator.clipboard.writeText(link);setCopied(true);setTimeout(function(){setCopied(false);},1500);}catch(e){}}},copied?'Copied':'Copy link'),
+          el('button',{className:'btn ghost sm',onClick:function(){printQrSign(qrId,st.name,lic,def.name+' log: scan to record');}},'Print QR sign'))))),
+    el('div',{className:'card'},
+      el('div',{className:'row',style:{justifyContent:'space-between'}},
+        el('div',null,el('span',{className:'k'},st.name+' rules - '+def.ruleCat),el('span',{className:'muted',style:{marginLeft:8}},props.rules.length+' in the rulebook')),
+        props.rules.length>0&&el('button',{className:'btn ghost sm',onClick:function(){setShowRules(!showRules);}},showRules?'Hide':'Show')),
+      !props.rules.length&&el('div',{className:'muted',style:{marginTop:6,fontSize:13}},'No '+def.ruleCat+' rules in the '+st.name+' rulebook yet. Add them under Rulebook with category "'+def.ruleCat+'" and they show here.'),
+      showRules&&props.rules.map(function(r){return el('div',{key:r.id,style:{padding:'8px 0',borderTop:'1px solid #1d1d1d'}},
+        el('div',{style:{fontWeight:700}},r.title),r.citation&&el('div',{className:'muted',style:{fontSize:12}},r.citation),r.body&&el('div',{style:{whiteSpace:'pre-wrap',marginTop:4}},r.body));})),
+    el('div',{className:'row',style:{margin:'4px 0 12px'}},
+      el('input',{style:{maxWidth:300},placeholder:'Search entries...',value:q,onChange:function(e){setQ(e.target.value);}}),
+      el('select',{value:range,onChange:function(e){setRange(e.target.value);}},el('option',{value:'1'},'Last 24 hours'),el('option',{value:'7'},'Last 7 days'),el('option',{value:'30'},'Last 30 days'),el('option',{value:'365'},'Last year'),el('option',{value:'all'},'All time')),
+      el('span',{className:'muted'},rows?list.length+(list.length===1?' entry':' entries'):'Loading...'),
+      fails>0&&el('span',{className:'badge bad'},fails+' fail / flag')),
+    rows&&!list.length&&items&&items.length>0&&el('div',{className:'empty'},'No '+def.name.toLowerCase()+' entries in this period.'),
+    list.length>0&&el('div',{className:'card',style:{overflowX:'auto'}},el('table',null,
+      el('thead',null,el('tr',null,['Date / time',def.checklist?'Inspection':def.itemLabel,'Details','Result','By',''].map(function(h,i){return el('th',{key:i},h);}))),
+      el('tbody',null,list.map(function(r){
+        return el('tr',{key:r.id},
+          el('td',{style:{whiteSpace:'nowrap'}},fmt(r.created_at)),
+          el('td',null,r.item||'-'),
+          el('td',{style:{fontSize:13,maxWidth:420}},entrySummary(def,r)),
+          el('td',null,el(ResultBadge,{r:r.result})),
+          el('td',null,r.performed_by,r.source==='kiosk'&&el('span',{className:'badge off',style:{marginLeft:6}},'QR')),
+          el('td',{style:{textAlign:'right',whiteSpace:'nowrap'}},
+            r.source==='kiosk'&&el('button',{className:'btn ghost sm',onClick:function(){viewSig(r);}},'Signature'),' ',
+            isAdmin&&el('button',{className:'btn danger sm',onClick:function(){del(r);}},'Delete')));
+      })))),
+    modal&&modal.add&&el(Modal,{title:'New '+def.name.toLowerCase()+' entry - '+lic.name,onClose:function(){setModal(null);}},
+      el(LogForm,{def:def,items:active,defaultName:props.profile.name||'',onSubmit:addEntry,onCancel:function(){setModal(null);}})),
+    modal&&modal.lists&&el(ListManager,{def:def,st:st,lic:lic,items:items||[],onChanged:loadItems,onClose:function(){setModal(null);}}),
+    modal&&modal.r&&el(Modal,{title:modal.r.performed_by+' - signature',onClose:function(){setModal(null);}},
+      modal.sig?el('img',{src:modal.sig,style:{width:'100%',background:'#fff',borderRadius:8}}):el('div',{className:'muted'},'No signature stored.'),
+      el('div',{className:'muted',style:{marginTop:8}},fmt(modal.r.created_at))));
+}
+
+function FacilityLogs(props){
+  const st=props.state,lic=props.license;
+  const[tab,setTab]=useState(lsGet('hx_logtab')||LOG_TYPES[0].id);
+  const[rules,setRules]=useState([]);
+  const sid=st?st.id:'';
+  useEffect(function(){
+    if(!sid){setRules([]);return;}
+    db.get('hx_rules','state_id=eq.'+encodeURIComponent(sid)+'&select=*&order=created_at')
+      .then(function(r){setRules((r||[]).filter(function(x){return x.state_id===sid;}));}).catch(function(){setRules([]);});
+  },[sid]);
+  if(!lic||!st)return el('div',null,el('h1',null,'Facility ',el('span',{className:'g'},'Logs')),el('div',{className:'empty'},'Pick a state and a license at the top first. Every log belongs to exactly one license.'));
+  const def=LOG_TYPES.find(function(t){return t.id===tab;})||LOG_TYPES[0];
+  return el('div',null,
+    el('h1',null,'Facility ',el('span',{className:'g'},'Logs')),
+    el('div',{className:'sub'},st.name+'  \u00b7  '+lic.name+(lic.license_number?'  \u00b7  '+lic.license_number:'')),
+    el('div',{className:'tabs'},LOG_TYPES.map(function(t){return el('button',{key:t.id,className:t.id===def.id?'on':'',onClick:function(){setTab(t.id);lsSet('hx_logtab',t.id);}},t.name);})),
+    el(LogPanel,{key:def.id+'|'+lic.id,def:def,state:st,license:lic,profile:props.profile,rules:rules.filter(function(r){return (r.category||'').toLowerCase()===def.ruleCat.toLowerCase();})}));
+}
+
+/* QR kiosk for a log (no login). Needs type + state + license in the link; the database re-checks all three. */
+function KioskLog(){
+  const q=new URLSearchParams(window.location.search);
+  const type=q.get('type')||'',stId=q.get('state')||'',licId=q.get('lic')||'';
+  const def=LOG_TYPES.find(function(t){return t.id===type;});
+  const[setup,setSetup]=useState(null);
+  const[bad,setBad]=useState('');
+  const[done,setDone]=useState('');
+  useEffect(function(){
+    if(!cfg().ok){setBad('This kiosk is not connected to a database.');return;}
+    if(!def){setBad('This QR code is not a valid log code. Please ask a manager for the current code.');return;}
+    if(!stId||!licId){setBad('This QR code is missing its state or license. Please ask a manager for the current code.');return;}
+    rpc('hx_kiosk_log_setup',{p_state:stId,p_lic:licId,p_type:type}).then(function(r){
+      if(r&&r.license&&r.license.id===licId&&r.license.state_id===stId)setSetup(r);
+      else setBad('This QR code is not linked to an active license in this state. Please ask a manager for the current code.');
+    }).catch(function(e){setBad(String(e.message||e));});
+  },[]);
+  if(bad)return el('div',{className:'auth'},el('div',{className:'box'},el(Brand),el('div',{className:'msg err',style:{marginTop:18}},bad)));
+  if(!setup)return el('div',{className:'auth'},el(Brand));
+  const lic=setup.license;
+  const head=el('div',{style:{textAlign:'center',marginBottom:16}},
+    el(Brand),
+    el('div',{className:'k',style:{marginTop:16}},lic.state),
+    el('div',{style:{fontSize:20,fontWeight:700}},lic.name),
+    el('div',{className:'muted'},'License '+(lic.license_number||'-')),
+    el('div',{style:{marginTop:10,fontSize:17,color:'var(--gold-hi)',fontWeight:700}},def.name+' Log'));
+  if(done)return el('div',{className:'auth'},el('div',{className:'box'},head,el('div',{className:'msg ok',style:{fontSize:15}},done),
+    el('button',{className:'btn',style:{width:'100%'},onClick:function(){setDone('');}},'Log another')));
+  return el('div',{className:'auth',style:{alignItems:'flex-start'}},el('div',{className:'box',style:{width:'min(560px,100%)'}},head,
+    el(LogForm,{def:def,items:setup.items||[],kiosk:true,onSubmit:async function(p){
+      await rpc('hx_kiosk_log_add',{p_state:stId,p_lic:licId,p_type:def.id,p:p});
+      setDone('Saved. Thank you, '+p.performed_by+'.'+(FLAG_RES.indexOf(p.result)>=0?' This entry was marked '+p.result+' - please tell your supervisor.':''));
+    }})));
 }
 
 /* ---------- App shell ---------- */
@@ -693,6 +1063,7 @@ function App(){
   let body;
   if(page==='locations')body=el(Locations,{profile:profile,states:states,licenses:licenses,reload:loadData,openRulebook:function(id){pickState(id);setPage('rulebook');}});
   else if(page==='visitors')body=el(VisitorLog,{key:licId,state:st,license:lic});
+  else if(page==='logs')body=el(FacilityLogs,{key:licId,state:st,license:lic,profile:profile});
   else if(page==='rulebook')body=el(Rulebook,{key:stateId,profile:profile,state:st,onCount:setRuleCount});
   else if(page==='team'&&isAdmin)body=el(Team,{profile:profile});
   else body=el(Dashboard,{profile:profile,states:states,licenses:licenses,state:st,license:lic,go:setPage,ruleCount:ruleCount});
@@ -718,13 +1089,14 @@ function App(){
       nav.map(function(n){return el('button',{key:n.id,className:page===n.id?'on':'',onClick:function(){setPage(n.id);}},n.label);}),
       el('div',{className:'grp'},'Modules'),
       el('button',{className:page==='visitors'?'on':'',onClick:function(){setPage('visitors');}},'Visitor Log'),
-      ['Other Facility Logs','Batch Tracker','Testing','SOPs','QMS'].map(function(m){return el('button',{key:m,className:'soon',disabled:true},m,el('span',{className:'tag'},'Soon'));}))),
+      el('button',{className:page==='logs'?'on':'',onClick:function(){setPage('logs');}},'Facility Logs'),
+      ['Batch Tracker','Testing','SOPs','QMS'].map(function(m){return el('button',{key:m,className:'soon',disabled:true},m,el('span',{className:'tag'},'Soon'));}))),
     el('div',{className:'main'},body));
 }
 
 {
   const kq=new URLSearchParams(window.location.search).get('kiosk');
-  ReactDOM.createRoot(document.getElementById('root')).render(el(kq==='visitor'?KioskVisitor:App));
+  ReactDOM.createRoot(document.getElementById('root')).render(el(kq==='visitor'?KioskVisitor:kq==='log'?KioskLog:App));
 }
 })();
 </script>
