@@ -85,6 +85,8 @@ td{padding:9px 10px;border-bottom:1px solid #1d1d1d;vertical-align:middle}
 .secth{margin:18px 0 10px;padding:6px 10px;border-left:3px solid var(--gold);background:#141209;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold-hi);font-weight:700}
 .cklist{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:4px 12px}
 .ck{display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer}
+.li{display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
+.li input{width:auto;min-width:0}
 .ck input{width:18px;height:18px;flex:0 0 auto;accent-color:#d4af37}
 .empty{border:1px dashed var(--gold-lo);border-radius:12px;padding:30px;text-align:center;color:var(--muted)}
 @media(max-width:820px){
@@ -155,7 +157,7 @@ async function sb(path,opt){
   if(!r.ok){
     const m=(j&&(j.message||j.hint||j.details))||txt||('Error '+r.status);
     if(/schema cache|Could not find the table|relation .* does not exist/i.test(m)){
-      const step=/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
+      const step=/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
       throw new Error('Database tables are missing - run '+step+' in the Hendrix Supabase project.');
     }
     if(/row-level security|permission denied/i.test(m))throw new Error('Not allowed - only an approved admin can change this.');
@@ -255,7 +257,7 @@ function LoginScreen(props){
 }
 
 /* ---------- Dashboard ---------- */
-const MODULES_SOON=['Batch Tracker','Testing','Compliance Stickers','SOPs','QMS (Deviations, CAPAs, Audits)','Formulations','Time Clock and Badges','Production Planner'];
+const MODULES_SOON=['Batch Tracker','Testing','Compliance Stickers','SOPs','QMS (Deviations, CAPAs, Audits)','Time Clock and Badges','Production Planner'];
 function Dashboard(props){
   const st=props.state,lic=props.license;
   const isAdmin=props.profile.role==='admin';
@@ -1362,6 +1364,442 @@ function KioskLog(){
     }})));
 }
 
+/* ---------- Products: SKUs, flavors, formulations (one source of truth per state) ----------
+   Product types are the Black Fox / Michigan batch types. A SKU belongs to one state, carries its own
+   production settings (the numbers Black Fox kept as constants in code), has flavors, and cannot be
+   switched on until it has a formulation (enforced by the database). Recipes use the Black Fox
+   Formulation Bank layout: Raw Materials / Hardware & Packaging / Labor, with an ingredient price library. */
+const PRODUCT_TYPES=[
+  {id:'ethanol_extraction',name:'Ethanol Extraction'},{id:'butane_extraction',name:'BHO Extraction'},
+  {id:'pre_rolls',name:'Pre-Rolls'},{id:'cartridges',name:'Cartridges'},{id:'gummies',name:'Gummies'},
+  {id:'infused_flower',name:'Infused Flower'},{id:'moon_rocks',name:'Moon Rocks'},{id:'snow_caps',name:'Snow Caps'}];
+function ptName(id){const t=PRODUCT_TYPES.find(function(x){return x.id===id;});return t?t.name:id;}
+const PRE_ROLL_INGREDIENTS=['THCA','Terpene','Live Resin','HTE','Decarbed Cured Resin','Distillate','Trim','THCA (internal)'];
+const SKU_SPECS={
+  pre_rolls:[{k:'grams_filled',l:'Grams per joint, filled / infused',ph:'e.g. 0.55',num:1},{k:'grams_kiefed',l:'Grams per joint after kief (blank = no kief step)',ph:'e.g. 0.60',num:1},
+    {k:'units_per_package',l:'Joints per package',ph:'e.g. 5',num:1},{k:'ingredients',l:'Infusion ingredients used',t:'multi',o:PRE_ROLL_INGREDIENTS}],
+  cartridges:[{k:'oil_per_unit',l:'Oil per cartridge (g)',ph:'e.g. 1 or 2',num:1}],
+  gummies:[{k:'grams_per_gummy',l:'Grams per gummy',ph:'e.g. 4.6',num:1},{k:'units_per_package',l:'Gummies per package',ph:'e.g. 10',num:1}],
+  infused_flower:[{k:'unit_size',l:'Unit size (g)',ph:'e.g. 3.5',num:1}],
+  moon_rocks:[{k:'unit_size',l:'Unit size (g)',ph:'e.g. 1',num:1}],
+  snow_caps:[{k:'unit_size',l:'Unit size (g)',ph:'e.g. 3.5',num:1}]};
+const COGS_CATS=[
+  {id:'raw_material',key:'raw_materials',label:'Raw Materials',nameLabel:'Material',qtyLabel:'Qty',rateLabel:'Cost / Unit'},
+  {id:'packaging',key:'packaging',label:'Hardware & Packaging',nameLabel:'Item',qtyLabel:'Qty',rateLabel:'Cost / Unit'},
+  {id:'labor',key:'labor',label:'Labor',nameLabel:'Role / Task',qtyLabel:'Hours',rateLabel:'Rate / Hour'}];
+function money(n){return '$'+(Math.round((n||0)*100)/100).toFixed(2);}
+function lineTot(r){return (numOk(r.qty)?num(r.qty):0)*(numOk(r.cost_per_unit)?num(r.cost_per_unit):0);}
+function formTotal(f){return COGS_CATS.reduce(function(s,c){return s+(f[c.key]||[]).reduce(function(a,r){return a+lineTot(r);},0);},0);}
+function niceErr(e){
+  const m=String((e&&e.message)||e);
+  if(/hx_skus_name/.test(m))return 'A SKU with that name already exists for this product type in this state.';
+  if(/hx_flavors_name/.test(m))return 'That flavor is already on this SKU.';
+  if(/hx_formulations_one/.test(m))return 'That SKU / flavor already has a formulation. Edit that one instead.';
+  if(/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)&&/schema cache|does not exist/.test(m))return 'Database tables are missing - run hendrix_step5.sql in the Hendrix Supabase project.';
+  return m;
+}
+function specSummary(t,spec){
+  spec=spec||{};
+  return (SKU_SPECS[t]||[]).filter(function(s){const v=spec[s.k];return v!==undefined&&v!==''&&!(Array.isArray(v)&&!v.length);})
+    .map(function(s){const v=spec[s.k];return s.l.replace(/ \(.*\)$/,'')+': '+(Array.isArray(v)?v.join(', '):v);}).join('  \u00b7  ');
+}
+function Checks(props){
+  const val=props.value||[];
+  return el('div',{className:'cklist'},props.options.map(function(o){
+    return el('label',{key:o.v,className:'ck'},el('input',{type:'checkbox',checked:val.indexOf(o.v)>=0,onChange:function(e){
+      const on=e.target.checked;props.onChange(on?val.concat([o.v]):val.filter(function(x){return x!==o.v;}));}}),el('span',null,o.l));}));
+}
+
+/* Recipe line items (Black Fox CogsLineItemEditor) */
+function LineItems(props){
+  const cat=props.cat,rows=props.rows||[];
+  const lib=(props.library||[]).filter(function(l){return l.category===cat.id&&(!(l.product_types||[]).length||l.product_types.indexOf(props.productType)>=0);});
+  function upd(i,p){props.setRows(rows.map(function(r,x){return x===i?{...r,...p}:r;}));}
+  const tot=rows.reduce(function(a,r){return a+lineTot(r);},0);
+  return el('div',{style:{marginBottom:16}},
+    el('div',{className:'row',style:{justifyContent:'space-between',marginBottom:6}},el('span',{className:'k'},cat.label),el('b',{style:{color:'var(--gold-hi)'}},money(tot))),
+    rows.map(function(r,i){return el('div',{key:i,className:'li'},
+      el('input',{placeholder:cat.nameLabel,value:r.name||'',onChange:function(e){upd(i,{name:e.target.value});},style:{flex:'2 1 160px'}}),
+      el('input',{placeholder:cat.qtyLabel,inputMode:'decimal',value:r.qty==null?'':r.qty,onChange:function(e){upd(i,{qty:e.target.value});},style:{flex:'0 1 80px'}}),
+      el('input',{placeholder:'Unit',value:r.unit||'',onChange:function(e){upd(i,{unit:e.target.value});},style:{flex:'0 1 70px'}}),
+      el('input',{placeholder:cat.rateLabel,inputMode:'decimal',value:r.cost_per_unit==null?'':r.cost_per_unit,onChange:function(e){upd(i,{cost_per_unit:e.target.value});},style:{flex:'0 1 95px'}}),
+      el('span',{style:{width:72,textAlign:'right',fontWeight:700}},money(lineTot(r))),
+      el('button',{type:'button',className:'btn danger sm',onClick:function(){props.setRows(rows.filter(function(_,x){return x!==i;}));}},'\u2715'));}),
+    el('div',{className:'row'},
+      el('button',{type:'button',className:'btn ghost sm',onClick:function(){props.setRows(rows.concat([{name:'',qty:'',unit:'',cost_per_unit:''}]));}},'+ Add '+cat.nameLabel),
+      lib.length>0&&el('select',{value:'',onChange:function(e){const it=lib.find(function(l){return l.id===e.target.value;});
+        if(it)props.setRows(rows.concat([{name:it.name,qty:'',unit:it.unit||'',cost_per_unit:it.cost_per_unit==null?'':String(it.cost_per_unit)}]));}},
+        el('option',{value:''},'+ Add from price library...'),lib.map(function(l){return el('option',{key:l.id,value:l.id},l.name+' ('+money(l.cost_per_unit)+'/'+(l.unit||'unit')+')');}))));
+}
+function blankFormula(){return {name:'',batch_size:'',raw_materials:[],packaging:[],labor:[],notes:''};}
+function FormulaFields(props){
+  const f=props.f,set=function(p){props.setF(function(x){return {...x,...p};});};
+  const tot=formTotal(f);
+  return el('div',null,
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:10}},
+      el(Field,{label:'Standard batch size (units)'},el('input',{inputMode:'decimal',value:f.batch_size,placeholder:'e.g. 1000',onChange:function(e){set({batch_size:e.target.value});}})),
+      el(Field,{label:'Recipe name (optional)'},el('input',{value:f.name,placeholder:props.autoName||'Auto-fills from SKU + flavor',onChange:function(e){set({name:e.target.value});}}))),
+    el('div',{className:'muted',style:{fontSize:12,margin:'0 0 12px'}},'Enter the quantities for this recipe. Cost / unit is a reference; prices come from the price library by name.'),
+    COGS_CATS.map(function(c){return el(LineItems,{key:c.id,cat:c,rows:f[c.key],library:props.library,productType:props.productType,setRows:function(r){set({[c.key]:r});}});}),
+    el(Field,{label:'Notes'},el('textarea',{value:f.notes,style:{minHeight:60},onChange:function(e){set({notes:e.target.value});}})),
+    el('div',{className:'row',style:{justifyContent:'flex-end',gap:16}},
+      el('span',null,'Batch total ',el('b',{style:{color:'var(--gold-hi)'}},money(tot))),
+      numOk(f.batch_size)&&num(f.batch_size)>0&&el('span',null,'Per unit ',el('b',{style:{color:'var(--gold-hi)'}},money(tot/num(f.batch_size))))));
+}
+function formulaProblem(f){
+  const rm=(f.raw_materials||[]).filter(function(r){return String(r.name||'').trim();});
+  if(!rm.length)return 'Add at least one raw material.';
+  for(let c=0;c<COGS_CATS.length;c++){const rows=f[COGS_CATS[c].key]||[];
+    for(let i=0;i<rows.length;i++){const r=rows[i];
+      if(String(r.name||'').trim()&&!numOk(r.qty))return COGS_CATS[c].label+': enter a quantity for "'+r.name+'".';
+      if(String(r.cost_per_unit==null?'':r.cost_per_unit).trim()&&!numOk(r.cost_per_unit))return COGS_CATS[c].label+': cost for "'+r.name+'" must be a number.';}}
+  return '';
+}
+function cleanFormula(f){
+  const o={name:String(f.name||'').trim(),batch_size:String(f.batch_size||'').trim(),notes:String(f.notes||'').trim()};
+  COGS_CATS.forEach(function(c){o[c.key]=(f[c.key]||[]).filter(function(r){return String(r.name||'').trim();}).map(function(r){
+    const x={...r,name:String(r.name).trim(),qty:String(r.qty==null?'':r.qty).trim(),unit:String(r.unit||'').trim(),cost_per_unit:String(r.cost_per_unit==null?'':r.cost_per_unit).trim()};return x;});});
+  return o;
+}
+
+/* New SKU: details + flavors, then the required formulation */
+function SkuWizard(props){
+  const st=props.state;
+  const[step,setStep]=useState(1);
+  const[s,setS]=useState({product_type:props.productType||PRODUCT_TYPES[0].id,name:'',license_ids:[],spec:{},has_flavors:true,flavors:''});
+  const[f,setF]=useState(blankFormula);
+  const[err,setErr]=useState('');
+  const[busy,setBusy]=useState(false);
+  const done=useRef({sku:'',flavors:false,formula:false});
+  const flavorList=function(){const seen={};return s.flavors.split(/\n/).map(function(x){return x.trim();}).filter(function(x){const k=x.toLowerCase();if(!x||seen[k])return false;seen[k]=1;return true;});};
+  function next(){
+    setErr('');
+    if(!s.name.trim()){setErr('Enter the SKU name.');return;}
+    const dup=props.skus.find(function(k){return k.product_type===s.product_type&&k.name.trim().toLowerCase()===s.name.trim().toLowerCase();});
+    if(dup&&dup.id!==done.current.sku){setErr('A SKU with that name already exists for this product type in '+st.name+'.');return;}
+    for(const sp of (SKU_SPECS[s.product_type]||[])){const v=s.spec[sp.k];if(sp.num&&v!==undefined&&String(v).trim()!==''&&!numOk(v)){setErr(sp.l+' must be a number.');return;}}
+    setStep(2);
+  }
+  async function save(){
+    setErr('');
+    const p=formulaProblem(f);if(p){setErr(p);return;}
+    setBusy(true);
+    try{
+      const spec={};(SKU_SPECS[s.product_type]||[]).forEach(function(sp){const v=s.spec[sp.k];if(sp.t==='multi'){if(v&&v.length)spec[sp.k]=v;}else if(v!==undefined&&String(v).trim()!=='')spec[sp.k]=sp.num?num(v):String(v).trim();});
+      if(!s.has_flavors)spec.no_flavor=true;
+      if(!done.current.sku){
+        const id=newId('sku');
+        await db.insert('hx_skus',{id:id,state_id:st.id,product_type:s.product_type,name:s.name.trim(),spec:spec,license_ids:s.license_ids,active:false,sort:props.skus.length});
+        done.current.sku=id;
+      }
+      const skuId=done.current.sku;
+      if(!done.current.flavors){
+        const fl=s.has_flavors?flavorList():[];
+        if(fl.length)await db.insert('hx_flavors',fl.map(function(n,i){return {id:newId('fl'),state_id:st.id,sku_id:skuId,name:n,active:true,sort:i};}));
+        done.current.flavors=true;
+      }
+      if(!done.current.formula){
+        const c=cleanFormula(f);
+        await db.insert('hx_formulations',{id:newId('rcp'),state_id:st.id,sku_id:skuId,flavor_id:null,name:c.name||(s.name.trim()+' \u2014 base recipe'),batch_size:c.batch_size,raw_materials:c.raw_materials,packaging:c.packaging,labor:c.labor,notes:c.notes});
+        done.current.formula=true;
+      }
+      await db.update('hx_skus',skuId,{active:true});
+      props.onDone();
+    }catch(e){setErr(niceErr(e)+(done.current.sku?' (The SKU was saved but is not switched on yet. Fix this and press Save again.)':''));}
+    setBusy(false);
+  }
+  const specs=SKU_SPECS[s.product_type]||[];
+  return el(Modal,{title:'New SKU - '+st.name+' (step '+step+' of 2)',wide:true,onClose:props.onClose},
+    step===1?el('div',null,
+      el('div',{className:'grid',style:{gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:10}},
+        el(Field,{label:'Product type'},el('select',{style:{width:'100%'},value:s.product_type,disabled:!!done.current.sku,onChange:function(e){setS({...s,product_type:e.target.value,spec:{}});}},
+          PRODUCT_TYPES.map(function(t){return el('option',{key:t.id,value:t.id},t.name);}))),
+        el(Field,{label:'SKU name *'},el('input',{value:s.name,disabled:!!done.current.sku,placeholder:'e.g. Muha Meds 2G AIO',onChange:function(e){setS({...s,name:e.target.value});}}))),
+      el(Field,{label:'Made under',plain:true},
+        el('label',{className:'ck'},el('input',{type:'checkbox',checked:!s.license_ids.length,onChange:function(e){setS({...s,license_ids:e.target.checked?[]:props.licenses.map(function(l){return l.id;}).slice(0,1)});}}),el('span',null,'Every license in '+st.name)),
+        s.license_ids.length>0&&el(Checks,{options:props.licenses.map(function(l){return {v:l.id,l:l.name+(l.license_number?' ('+l.license_number+')':'')};}),value:s.license_ids,onChange:function(v){setS({...s,license_ids:v.length?v:props.licenses.map(function(l){return l.id;}).slice(0,1)});}})),
+      specs.length>0&&el('div',{className:'secth'},'Production settings'),
+      specs.length>0&&el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}},specs.map(function(sp){
+        return sp.t==='multi'?el('div',{key:sp.k,style:{gridColumn:'1/-1'}},el(Field,{label:sp.l,plain:true},el(Checks,{options:sp.o.map(function(o){return {v:o,l:o};}),value:s.spec[sp.k]||[],onChange:function(v){setS({...s,spec:{...s.spec,[sp.k]:v}});}})))
+          :el(Field,{key:sp.k,label:sp.l},el('input',{inputMode:'decimal',placeholder:sp.ph,value:s.spec[sp.k]==null?'':s.spec[sp.k],onChange:function(e){setS({...s,spec:{...s.spec,[sp.k]:e.target.value}});}}));})),
+      el('div',{className:'secth'},'Flavors'),
+      el('label',{className:'ck',style:{marginBottom:8}},el('input',{type:'checkbox',checked:s.has_flavors,onChange:function(e){setS({...s,has_flavors:e.target.checked});}}),el('span',null,'This SKU has flavors')),
+      s.has_flavors&&el(Field,{label:'Flavors - one per line (you can add more later)'},el('textarea',{value:s.flavors,style:{minHeight:120},placeholder:'Honey Melon\nBlue Dream\nStrawberry Lava',onChange:function(e){setS({...s,flavors:e.target.value});}})),
+      s.has_flavors&&flavorList().length>0&&el('div',{className:'muted',style:{fontSize:12,marginTop:-6,marginBottom:10}},flavorList().length+' flavor'+(flavorList().length===1?'':'s')),
+      err&&el('div',{className:'msg err'},err),
+      el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',onClick:next},'Next: formulation')))
+    :el('div',null,
+      el('div',{className:'msg ok'},'Every new SKU needs a formulation before it can be used. This base recipe covers all of its flavors; flavor-specific recipes can be added afterwards.'),
+      el('div',{className:'muted',style:{marginBottom:10}},ptName(s.product_type)+'  \u00b7  ',el('b',null,s.name.trim())),
+      el(FormulaFields,{f:f,setF:setF,library:props.library,productType:s.product_type,autoName:s.name.trim()+' \u2014 base recipe'}),
+      err&&el('div',{className:'msg err'},err),
+      el('div',{className:'row',style:{justifyContent:'flex-end'}},
+        el('button',{className:'btn ghost',disabled:busy,onClick:function(){setErr('');setStep(1);}},'Back'),
+        el('button',{className:'btn',disabled:busy,onClick:save},busy?'Saving...':'Save SKU and formulation'))));
+}
+
+function SkuEditor(props){
+  const k=props.sku;
+  const[s,setS]=useState({name:k.name,license_ids:k.license_ids||[],spec:{...(k.spec||{})}});
+  const[err,setErr]=useState('');
+  const specs=SKU_SPECS[k.product_type]||[];
+  async function save(){
+    setErr('');
+    if(!s.name.trim()){setErr('Enter the SKU name.');return;}
+    const spec={};
+    specs.forEach(function(sp){const v=s.spec[sp.k];if(sp.t==='multi'){if(v&&v.length)spec[sp.k]=v;}else if(v!==undefined&&String(v).trim()!==''){if(sp.num&&!numOk(v))throw 0;spec[sp.k]=sp.num?num(v):String(v).trim();}});
+    if(s.spec.no_flavor)spec.no_flavor=true;
+    try{await db.update('hx_skus',k.id,{name:s.name.trim(),license_ids:s.license_ids,spec:spec});props.onDone();}catch(e){setErr(niceErr(e));}
+  }
+  return el(Modal,{title:'Edit SKU',wide:true,onClose:props.onClose},
+    el('div',{className:'muted',style:{marginBottom:10}},ptName(k.product_type)+' (the product type of a SKU cannot change)'),
+    el(Field,{label:'SKU name'},el('input',{value:s.name,onChange:function(e){setS({...s,name:e.target.value});}})),
+    el(Field,{label:'Made under',plain:true},
+      el('label',{className:'ck'},el('input',{type:'checkbox',checked:!s.license_ids.length,onChange:function(e){setS({...s,license_ids:e.target.checked?[]:props.licenses.map(function(l){return l.id;}).slice(0,1)});}}),el('span',null,'Every license in '+props.state.name)),
+      s.license_ids.length>0&&el(Checks,{options:props.licenses.map(function(l){return {v:l.id,l:l.name+(l.license_number?' ('+l.license_number+')':'')};}),value:s.license_ids,onChange:function(v){setS({...s,license_ids:v.length?v:props.licenses.map(function(l){return l.id;}).slice(0,1)});}})),
+    specs.length>0&&el('div',{className:'secth'},'Production settings'),
+    specs.length>0&&el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}},specs.map(function(sp){
+      return sp.t==='multi'?el('div',{key:sp.k,style:{gridColumn:'1/-1'}},el(Field,{label:sp.l,plain:true},el(Checks,{options:sp.o.map(function(o){return {v:o,l:o};}),value:s.spec[sp.k]||[],onChange:function(v){setS({...s,spec:{...s.spec,[sp.k]:v}});}})))
+        :el(Field,{key:sp.k,label:sp.l},el('input',{inputMode:'decimal',placeholder:sp.ph,value:s.spec[sp.k]==null?'':s.spec[sp.k],onChange:function(e){setS({...s,spec:{...s.spec,[sp.k]:e.target.value}});}}));})),
+    el('label',{className:'ck',style:{margin:'10px 0'}},el('input',{type:'checkbox',checked:!s.spec.no_flavor,onChange:function(e){setS({...s,spec:{...s.spec,no_flavor:!e.target.checked}});}}),el('span',null,'This SKU has flavors')),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),
+      el('button',{className:'btn',onClick:function(){save().catch(function(){setErr('Production settings must be numbers.');});}},'Save')));
+}
+
+/* One formulation: pick product type -> SKU -> flavor (or base), then the recipe */
+function FormulationEditor(props){
+  const init=props.initial||{};
+  const[sel,setSel]=useState({sku_id:init.sku_id||props.skuId||'',flavor_id:init.flavor_id||props.flavorId||''});
+  const sku0=props.skus.find(function(k){return k.id===sel.sku_id;});
+  const[pt,setPt]=useState(sku0?sku0.product_type:(props.productType||PRODUCT_TYPES[0].id));
+  const[f,setF]=useState(function(){const b=blankFormula();COGS_CATS.forEach(function(c){b[c.key]=(init[c.key]||[]).map(function(r){return {...r};});});
+    return {...b,name:init.name||'',batch_size:init.batch_size||'',notes:init.notes||''};});
+  const[err,setErr]=useState('');
+  const[busy,setBusy]=useState(false);
+  const locked=!!props.lockSku;
+  const sku=props.skus.find(function(k){return k.id===sel.sku_id;});
+  const skuOpts=props.skus.filter(function(k){return k.product_type===pt;});
+  const flavOpts=props.flavors.filter(function(x){return x.sku_id===sel.sku_id;});
+  const flav=flavOpts.find(function(x){return x.id===sel.flavor_id;});
+  const autoName=sku?(sku.name+' \u2014 '+(flav?flav.name:'base recipe')):'';
+  const taken=props.formulations.find(function(x){return x.id!==init.id&&x.sku_id===sel.sku_id&&(x.flavor_id||'')===(sel.flavor_id||'');});
+  async function save(){
+    setErr('');
+    if(!sku){setErr('Choose the SKU.');return;}
+    if(taken){setErr('That '+(flav?'flavor':'SKU')+' already has a formulation ("'+taken.name+'"). Edit that one instead.');return;}
+    const p=formulaProblem(f);if(p){setErr(p);return;}
+    const c=cleanFormula(f);
+    const rec={sku_id:sku.id,flavor_id:sel.flavor_id||null,name:c.name||autoName,batch_size:c.batch_size,raw_materials:c.raw_materials,packaging:c.packaging,labor:c.labor,notes:c.notes};
+    setBusy(true);
+    try{
+      if(init.id)await db.update('hx_formulations',init.id,rec);
+      else await db.insert('hx_formulations',{...rec,id:newId('rcp'),state_id:props.state.id});
+      props.onDone();
+    }catch(e){setErr(niceErr(e));}
+    setBusy(false);
+  }
+  return el(Modal,{title:(init.id?'Edit':'New')+' formulation - '+props.state.name,wide:true,onClose:props.onClose},
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:10}},
+      el(Field,{label:'Product type'},el('select',{style:{width:'100%'},value:pt,disabled:locked||!!init.id,onChange:function(e){setPt(e.target.value);setSel({sku_id:'',flavor_id:''});}},
+        PRODUCT_TYPES.map(function(t){return el('option',{key:t.id,value:t.id},t.name);}))),
+      el(Field,{label:'SKU'},el('select',{style:{width:'100%'},value:sel.sku_id,disabled:locked||!!init.id,onChange:function(e){setSel({sku_id:e.target.value,flavor_id:''});}},
+        el('option',{value:''},skuOpts.length?'Select...':'No SKUs of this type yet'),skuOpts.map(function(k){return el('option',{key:k.id,value:k.id},k.name);}))),
+      el(Field,{label:'Flavor'},el('select',{style:{width:'100%'},value:sel.flavor_id,disabled:!!init.id||!!props.lockFlavor,onChange:function(e){setSel({...sel,flavor_id:e.target.value});}},
+        el('option',{value:''},'All flavors (base recipe)'),flavOpts.map(function(x){return el('option',{key:x.id,value:x.id},x.name);})))),
+    taken&&el('div',{className:'msg err'},'That '+(flav?'flavor':'SKU')+' already has a formulation: "'+taken.name+'".'),
+    el(FormulaFields,{f:f,setF:setF,library:props.library,productType:pt,autoName:autoName}),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),
+      el('button',{className:'btn',disabled:busy,onClick:save},busy?'Saving...':'Save formulation')));
+}
+
+/* Flavors of one SKU, with each flavor's recipe status */
+function FlavorManager(props){
+  const k=props.sku,st=props.state;
+  const fl=props.flavors.filter(function(x){return x.sku_id===k.id;}).sort(function(a,b){return (a.sort-b.sort)||a.name.localeCompare(b.name);});
+  const forms=props.formulations.filter(function(x){return x.sku_id===k.id;});
+  const base=forms.find(function(x){return !x.flavor_id;});
+  const[add,setAdd]=useState('');
+  const[edit,setEdit]=useState(null);
+  const[err,setErr]=useState('');
+  async function run(fn){setErr('');try{await fn();await props.reload();}catch(e){setErr(niceErr(e));}}
+  function addAll(){
+    const have={};fl.forEach(function(x){have[x.name.trim().toLowerCase()]=1;});
+    const names=[];add.split(/\n/).forEach(function(x){x=x.trim();const kk=x.toLowerCase();if(x&&!have[kk]){have[kk]=1;names.push(x);}});
+    if(!names.length){setErr('Nothing new to add.');return;}
+    run(async function(){await db.insert('hx_flavors',names.map(function(n,i){return {id:newId('fl'),state_id:st.id,sku_id:k.id,name:n,active:true,sort:fl.length+i};}));setAdd('');});
+  }
+  return el(Modal,{title:'Flavors - '+k.name,wide:true,onClose:props.onClose},
+    k.spec&&k.spec.no_flavor&&el('div',{className:'msg err'},'This SKU is set to "no flavors". Edit the SKU to change that.'),
+    err&&el('div',{className:'msg err'},err),
+    !fl.length?el('div',{className:'empty',style:{marginBottom:12}},'No flavors yet.'):
+    el('table',{style:{marginBottom:12}},el('thead',null,el('tr',null,el('th',null,'Flavor'),props.isAdmin&&el('th',null,'Formulation'),el('th',null,''))),
+      el('tbody',null,fl.map(function(x){
+        const own=forms.find(function(r){return r.flavor_id===x.id;});
+        return el('tr',{key:x.id},
+          el('td',null,edit&&edit.id===x.id?el('input',{value:edit.name,autoFocus:true,onChange:function(e){setEdit({...edit,name:e.target.value});},onKeyDown:function(e){if(e.key==='Enter'&&edit.name.trim())run(async function(){await db.update('hx_flavors',x.id,{name:edit.name.trim()});setEdit(null);});}})
+            :el('span',{style:{opacity:x.active?1:.45,fontWeight:600}},x.name+(x.active?'':' (hidden)'))),
+          props.isAdmin&&el('td',{style:{fontSize:13}},own?el('span',{className:'badge ok'},'Own recipe'):base?el('span',{className:'muted'},'Uses base recipe'):el('span',{className:'badge bad'},'No recipe')),
+          el('td',{style:{textAlign:'right',whiteSpace:'nowrap'}},
+            props.isAdmin&&(edit&&edit.id===x.id?
+              el('button',{className:'btn sm',disabled:!edit.name.trim(),onClick:function(){run(async function(){await db.update('hx_flavors',x.id,{name:edit.name.trim()});setEdit(null);});}},'Save')
+              :el('button',{className:'btn ghost sm',onClick:function(){setEdit({id:x.id,name:x.name});}},'Rename')),' ',
+            props.isAdmin&&el('button',{className:'btn ghost sm',onClick:function(){props.openFormula(own||null,k.id,x.id);}},own?'Edit recipe':'Own recipe'),' ',
+            props.isAdmin&&el('button',{className:'btn ghost sm',onClick:function(){run(function(){return db.update('hx_flavors',x.id,{active:!x.active});});}},x.active?'Hide':'Show'),' ',
+            props.isAdmin&&el('button',{className:'btn danger sm',onClick:function(){if(window.confirm('Delete flavor "'+x.name+'"'+(own?' and its own recipe':'')+'?'))run(function(){return db.remove('hx_flavors',x.id);});}},'Delete')));
+      }))),
+    props.isAdmin&&el(Field,{label:'Add flavors - one per line'},el('textarea',{value:add,style:{minHeight:90},onChange:function(e){setAdd(e.target.value);}})),
+    props.isAdmin&&el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn',disabled:!add.trim(),onClick:addAll},'+ Add flavors')));
+}
+
+function FormulaCard(props){
+  const f=props.f;
+  const n=COGS_CATS.reduce(function(a,c){return a+(f[c.key]||[]).length;},0);
+  return el('div',{className:'card',style:{marginBottom:0}},
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start',flexWrap:'nowrap'}},
+      el('div',null,el('div',{style:{fontWeight:700}},f.name),el('div',{className:'muted',style:{fontSize:12}},(props.skuName||'?')+'  \u00b7  '+(props.flavorName||'All flavors (base)'))),
+      el('div',{className:'row',style:{flexWrap:'nowrap'}},
+        el('button',{className:'btn ghost sm',onClick:props.onEdit},'Edit'),
+        props.onDup&&el('button',{className:'btn ghost sm',onClick:props.onDup},'Duplicate'),
+        el('button',{className:'btn danger sm',onClick:props.onDelete},'\u2715'))),
+    el('div',{className:'row',style:{margin:'8px 0 6px'}},el('span',{className:'badge'},n+' lines'),f.batch_size&&el('span',{className:'badge off'},'Batch: '+f.batch_size),el('span',{className:'badge off'},money(formTotal(f)))),
+    (f.raw_materials||[]).slice(0,4).map(function(r,i){return el('div',{key:i,className:'row',style:{justifyContent:'space-between',fontSize:12}},el('span',null,r.name),el('span',{className:'muted'},(r.qty||'')+(r.unit?' '+r.unit:'')));}),
+    (f.raw_materials||[]).length>4&&el('div',{className:'muted',style:{fontSize:12}},'+'+(f.raw_materials.length-4)+' more'),
+    f.notes&&el('div',{className:'muted',style:{fontSize:12,marginTop:6,borderTop:'1px solid #1d1d1d',paddingTop:6}},f.notes));
+}
+
+function PriceLibrary(props){
+  const st=props.state;
+  const blank={category:'raw_material',name:'',unit:'',cost_per_unit:'',product_types:[]};
+  const[f,setF]=useState(blank);
+  const[editId,setEditId]=useState('');
+  const[err,setErr]=useState('');
+  async function run(fn){setErr('');try{await fn();await props.reload();}catch(e){setErr(niceErr(e));}}
+  function save(){
+    if(!f.name.trim()){setErr('Enter a name.');return;}
+    if(String(f.cost_per_unit).trim()&&!numOk(f.cost_per_unit)){setErr('Cost must be a number.');return;}
+    const rec={category:f.category,name:f.name.trim(),unit:f.unit.trim(),cost_per_unit:numOk(f.cost_per_unit)?num(f.cost_per_unit):null,product_types:f.product_types};
+    run(async function(){if(editId)await db.update('hx_cost_library',editId,rec);else await db.insert('hx_cost_library',{...rec,id:newId('cost'),state_id:st.id});setF(blank);setEditId('');});
+  }
+  return el('div',null,
+    el('div',{className:'muted',style:{marginBottom:12}},'Prices for '+st.name+'. Recipes pick from this list, and the Planner and COGS will use it.'),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'card gold'},
+      el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(170px,1fr))',gap:10}},
+        el(Field,{label:'Category'},el('select',{style:{width:'100%'},value:f.category,onChange:function(e){setF({...f,category:e.target.value});}},COGS_CATS.map(function(c){return el('option',{key:c.id,value:c.id},c.label);}))),
+        el(Field,{label:'Name'},el('input',{value:f.name,placeholder:'e.g. Distillate',onChange:function(e){setF({...f,name:e.target.value});}})),
+        el(Field,{label:'Unit'},el('input',{value:f.unit,placeholder:'e.g. g',onChange:function(e){setF({...f,unit:e.target.value});}})),
+        el(Field,{label:f.category==='labor'?'Rate / hour ($)':'Cost / unit ($)'},el('input',{inputMode:'decimal',value:f.cost_per_unit,onChange:function(e){setF({...f,cost_per_unit:e.target.value});}}))),
+      el(Field,{label:'Used for (none ticked = every product type)',plain:true},el(Checks,{options:PRODUCT_TYPES.map(function(t){return {v:t.id,l:t.name};}),value:f.product_types,onChange:function(v){setF({...f,product_types:v});}})),
+      el('div',{className:'row',style:{justifyContent:'flex-end'}},editId&&el('button',{className:'btn ghost sm',onClick:function(){setF(blank);setEditId('');}},'Cancel'),el('button',{className:'btn sm',onClick:save},editId?'Save changes':'+ Add price'))),
+    !props.library.length?el('div',{className:'empty'},'No prices yet.'):
+    COGS_CATS.map(function(c){const rows=props.library.filter(function(l){return l.category===c.id;});if(!rows.length)return null;
+      return el('div',{key:c.id,className:'card'},el('div',{className:'k',style:{marginBottom:6}},c.label),el('table',null,el('tbody',null,rows.map(function(l){
+        return el('tr',{key:l.id},el('td',{style:{fontWeight:600}},l.name),el('td',null,money(l.cost_per_unit)+' / '+(l.unit||'unit')),
+          el('td',{className:'muted',style:{fontSize:12}},(l.product_types||[]).length?l.product_types.map(ptName).join(', '):'All product types'),
+          el('td',{style:{textAlign:'right',whiteSpace:'nowrap'}},el('button',{className:'btn ghost sm',onClick:function(){setEditId(l.id);setF({category:l.category,name:l.name,unit:l.unit||'',cost_per_unit:l.cost_per_unit==null?'':String(l.cost_per_unit),product_types:l.product_types||[]});}},'Edit'),' ',
+            el('button',{className:'btn danger sm',onClick:function(){if(window.confirm('Delete "'+l.name+'"?'))run(function(){return db.remove('hx_cost_library',l.id);});}},'Delete')));}))));}));
+}
+
+function Products(props){
+  const st=props.state,isAdmin=props.profile.role==='admin';
+  const sid=st?st.id:'';
+  const[tab,setTab]=useState('skus');
+  const[pt,setPt]=useState(lsGet('hx_ptype')||PRODUCT_TYPES[0].id);
+  const[data,setData]=useState(null);
+  const[err,setErr]=useState('');
+  const[q,setQ]=useState('');
+  const[modal,setModal]=useState(null);
+  const load=useCallback(async function(){
+    if(!sid){setData({skus:[],flavors:[],forms:[],lib:[]});return;}
+    try{
+      const f='state_id=eq.'+encodeURIComponent(sid);
+      const r=await Promise.all([db.get('hx_skus',f+'&select=*&order=sort,name'),db.get('hx_flavors',f+'&select=*&order=sort,name'),
+        isAdmin?db.get('hx_formulations',f+'&select=*&order=name'):Promise.resolve([]),isAdmin?db.get('hx_cost_library',f+'&select=*&order=category,name'):Promise.resolve([])]);
+      const only=function(a){return (a||[]).filter(function(x){return x.state_id===sid;});};
+      setData({skus:only(r[0]),flavors:only(r[1]),forms:only(r[2]),lib:only(r[3])});
+    }catch(e){setErr(niceErr(e));setData({skus:[],flavors:[],forms:[],lib:[]});}
+  },[sid,isAdmin]);
+  useEffect(function(){setData(null);setErr('');load();},[load]);
+  if(!st)return el('div',null,el('h1',null,'Products'),el('div',{className:'empty'},'Create a state first. Every SKU belongs to one state.'));
+  if(!data)return el('div',{className:'muted'},'Loading...');
+  const lics=props.licenses.filter(function(l){return l.state_id===st.id;});
+  const licName=function(id){const l=lics.find(function(x){return x.id===id;});return l?l.name:'?';};
+  const skuName=function(id){const k=data.skus.find(function(x){return x.id===id;});return k?k.name:'?';};
+  const flavName=function(id){const x=data.flavors.find(function(y){return y.id===id;});return x?x.name:'';};
+  function closeReload(){setModal(null);load();}
+  async function del(fn,msg){if(!window.confirm(msg))return;setErr('');try{await fn();await load();}catch(e){setErr(niceErr(e));}}
+  async function toggle(k){setErr('');try{await db.update('hx_skus',k.id,{active:!k.active});await load();}catch(e){setErr(niceErr(e));}}
+  function openFormula(f,skuId,flavorId){setModal({formula:f||null,skuId:skuId,flavorId:flavorId});}
+  const typeSkus=data.skus.filter(function(k){return k.product_type===pt;}).filter(function(k){
+    if(!q)return true;const t=(k.name+' '+data.flavors.filter(function(x){return x.sku_id===k.id;}).map(function(x){return x.name;}).join(' ')).toLowerCase();return t.indexOf(q.toLowerCase())>=0;});
+  const needs=data.skus.filter(function(k){return !k.active&&!data.forms.some(function(f){return f.sku_id===k.id;});}).length;
+  const tabs=[['skus','SKUs and Flavors']].concat(isAdmin?[['formulas','Formulation Bank ('+data.forms.length+')'],['prices','Ingredient Prices ('+data.lib.length+')']]:[]);
+  let body;
+  if(tab==='prices'&&isAdmin)body=el(PriceLibrary,{state:st,library:data.lib,reload:load});
+  else if(tab==='formulas'&&isAdmin){
+    const fl=data.forms.filter(function(f){const t=(f.name+' '+skuName(f.sku_id)+' '+flavName(f.flavor_id)).toLowerCase();return !q||t.indexOf(q.toLowerCase())>=0;});
+    body=el('div',null,
+      el('div',{className:'row',style:{marginBottom:14}},el('input',{style:{maxWidth:300},placeholder:'Search formulations...',value:q,onChange:function(e){setQ(e.target.value);}}),
+        el('span',{className:'muted'},fl.length+' formulation'+(fl.length===1?'':'s')),el('span',{style:{flex:1}}),
+        el('button',{className:'btn',disabled:!data.skus.length,onClick:function(){openFormula(null,'','');}},'+ New formulation')),
+      !fl.length?el('div',{className:'empty'},data.skus.length?'No formulations match.':'Create a SKU first; its formulation is entered as part of creating it.'):
+      PRODUCT_TYPES.map(function(t){
+        const items=fl.filter(function(f){const k=data.skus.find(function(x){return x.id===f.sku_id;});return k&&k.product_type===t.id;});
+        if(!items.length)return null;
+        return el('div',{key:t.id,style:{marginBottom:18}},el('div',{className:'secth'},t.name+'  \u00b7  '+items.length),
+          el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))'}},items.map(function(f){
+            return el(FormulaCard,{key:f.id,f:f,skuName:skuName(f.sku_id),flavorName:flavName(f.flavor_id),onEdit:function(){openFormula(f,f.sku_id,f.flavor_id||'');},
+              onDup:function(){setModal({formula:{...f,id:undefined,name:'',flavor_id:''},skuId:f.sku_id,flavorId:'',dup:true});},
+              onDelete:function(){del(function(){return db.remove('hx_formulations',f.id);},'Delete "'+f.name+'"?'+(data.forms.filter(function(x){return x.sku_id===f.sku_id;}).length===1?' It is this SKU\'s only formulation, so the SKU will be switched off.':''));}});})));
+      }));
+  }else{
+    body=el('div',null,
+      el('div',{className:'tabs'},PRODUCT_TYPES.map(function(t){const n=data.skus.filter(function(k){return k.product_type===t.id;}).length;
+        return el('button',{key:t.id,className:t.id===pt?'on':'',onClick:function(){setPt(t.id);lsSet('hx_ptype',t.id);setErr('');}},t.name+(n?' ('+n+')':''));})),
+      el('div',{className:'row',style:{marginBottom:14}},el('input',{style:{maxWidth:300},placeholder:'Search SKUs and flavors...',value:q,onChange:function(e){setQ(e.target.value);}}),
+        el('span',{style:{flex:1}}),isAdmin&&el('button',{className:'btn',onClick:function(){setModal({wizard:true});}},'+ New SKU')),
+      !typeSkus.length?el('div',{className:'empty'},'No '+ptName(pt)+' SKUs in '+st.name+' yet.'+(isAdmin?' Click "+ New SKU". It starts blank, and the formulation is entered as part of creating it.':'')):
+      el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(330px,1fr))'}},typeSkus.map(function(k){
+        const fl=data.flavors.filter(function(x){return x.sku_id===k.id&&x.active;});
+        const forms=data.forms.filter(function(f){return f.sku_id===k.id;});
+        const hasBase=forms.some(function(f){return !f.flavor_id;});
+        const status=k.active?['Active','ok']:(isAdmin&&!forms.length)?['Needs formulation','bad']:['Off','off'];
+        return el('div',{key:k.id,className:'card gold',style:{marginBottom:0,opacity:k.active?1:.8}},
+          el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start',flexWrap:'nowrap'}},
+            el('div',{style:{fontWeight:700,fontSize:15}},k.name),el('span',{className:'badge '+status[1]},status[0])),
+          el('div',{className:'muted',style:{fontSize:12,margin:'2px 0 8px'}},(k.license_ids||[]).length?'Licenses: '+k.license_ids.map(licName).join(', '):'Every license in '+st.name),
+          specSummary(k.product_type,k.spec)&&el('div',{style:{fontSize:12,marginBottom:8}},specSummary(k.product_type,k.spec)),
+          k.spec&&k.spec.no_flavor?el('div',{className:'muted',style:{fontSize:12}},'No flavors (plain SKU)'):
+          el('div',null,el('div',{className:'k'},fl.length+' flavor'+(fl.length===1?'':'s')),
+            el('div',{className:'row',style:{gap:4,marginTop:4}},fl.slice(0,12).map(function(x){return el('span',{key:x.id,className:'badge off',style:{textTransform:'none',letterSpacing:0}},x.name);}),fl.length>12&&el('span',{className:'muted',style:{fontSize:12}},'+'+(fl.length-12)+' more'))),
+          isAdmin&&el('div',{className:'muted',style:{fontSize:12,marginTop:8}},forms.length?((hasBase?'Base recipe':'No base recipe')+(forms.filter(function(f){return f.flavor_id;}).length?'  \u00b7  '+forms.filter(function(f){return f.flavor_id;}).length+' flavor recipe(s)':'')):'No formulation yet'),
+          el('div',{className:'row',style:{marginTop:12,gap:6}},
+            el('button',{className:'btn ghost sm',onClick:function(){setModal({flavors:k});}},'Flavors'),
+            isAdmin&&el('button',{className:'btn ghost sm',onClick:function(){openFormula(forms.find(function(f){return !f.flavor_id;})||null,k.id,'');}},hasBase?'Base recipe':'Add recipe'),
+            isAdmin&&el('button',{className:'btn ghost sm',onClick:function(){setModal({edit:k});}},'Edit'),
+            isAdmin&&el('button',{className:'btn ghost sm',onClick:function(){toggle(k);}},k.active?'Switch off':'Switch on'),
+            isAdmin&&el('button',{className:'btn danger sm',onClick:function(){del(function(){return db.remove('hx_skus',k.id);},'Delete SKU "'+k.name+'" with its flavors and formulations?');}},'Delete')));
+      })));
+  }
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,el('span',{className:'g'},st.name),' Products'),
+        el('div',{className:'sub'},'SKUs, flavors and formulations for '+st.name+'. Created once here, used by every module. Other states keep their own.'))),
+    err&&el('div',{className:'msg err'},err),
+    needs>0&&isAdmin&&el('div',{className:'msg err'},needs+' SKU'+(needs===1?' needs':'s need')+' a formulation before '+(needs===1?'it':'they')+' can be used.'),
+    tabs.length>1&&el('div',{className:'tabs'},tabs.map(function(t){return el('button',{key:t[0],className:tab===t[0]?'on':'',onClick:function(){setTab(t[0]);setQ('');setErr('');}},t[1]);})),
+    body,
+    modal&&modal.wizard&&el(SkuWizard,{state:st,licenses:lics,skus:data.skus,library:data.lib,productType:pt,onClose:function(){setModal(null);load();},onDone:closeReload}),
+    modal&&modal.edit&&el(SkuEditor,{sku:modal.edit,state:st,licenses:lics,onClose:function(){setModal(null);},onDone:closeReload}),
+    modal&&modal.flavors&&el(FlavorManager,{sku:modal.flavors,state:st,flavors:data.flavors,formulations:data.forms,isAdmin:isAdmin,reload:load,onClose:function(){setModal(null);},
+      openFormula:function(f,skuId,flavorId){setModal({formula:f,skuId:skuId,flavorId:flavorId,back:modal.flavors});}}),
+    modal&&modal.hasOwnProperty('formula')&&el(FormulationEditor,{state:st,skus:data.skus,flavors:data.flavors,formulations:data.forms,library:data.lib,productType:pt,
+      initial:modal.formula,skuId:modal.skuId,flavorId:modal.flavorId,lockSku:!!modal.skuId&&!modal.dup,lockFlavor:!!modal.back,
+      onClose:function(){setModal(modal.back?{flavors:modal.back}:null);},onDone:function(){const b=modal.back;load();setModal(b?{flavors:b}:null);}}));
+}
+
 /* ---------- App shell ---------- */
 function App(){
   const[,force]=useState(0);
@@ -1440,6 +1878,7 @@ function App(){
   let body;
   if(page==='locations')body=el(Locations,{profile:profile,states:states,licenses:licenses,reload:loadData,openRulebook:function(id){pickState(id);setPage('rulebook');}});
   else if(page==='visitors')body=el(VisitorLog,{key:licId,state:st,license:lic});
+  else if(page==='products')body=el(Products,{key:stateId,state:st,licenses:licenses,profile:profile});
   else if(page==='logs')body=el(FacilityLogs,{key:licId,state:st,license:lic,profile:profile});
   else if(page==='rulebook')body=el(Rulebook,{key:stateId,profile:profile,state:st,onCount:setRuleCount});
   else if(page==='team'&&isAdmin)body=el(Team,{profile:profile});
@@ -1467,6 +1906,7 @@ function App(){
       el('div',{className:'grp'},'Modules'),
       el('button',{className:page==='visitors'?'on':'',onClick:function(){setPage('visitors');}},'Visitor Log'),
       el('button',{className:page==='logs'?'on':'',onClick:function(){setPage('logs');}},'Facility Logs'),
+      el('button',{className:page==='products'?'on':'',onClick:function(){setPage('products');}},'Products'),
       ['Batch Tracker','Testing','SOPs','QMS'].map(function(m){return el('button',{key:m,className:'soon',disabled:true},m,el('span',{className:'tag'},'Soon'));}))),
     el('div',{className:'main'},body));
 }
