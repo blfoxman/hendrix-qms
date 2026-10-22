@@ -82,6 +82,10 @@ td{padding:9px 10px;border-bottom:1px solid #1d1d1d;vertical-align:middle}
 .tabs button.on{background:#17140a;border-color:var(--gold);color:var(--gold-hi)}
 .chk{display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid #1d1d1d}
 .btn.selbad{background:#5a2a26;color:#fff}
+.secth{margin:18px 0 10px;padding:6px 10px;border-left:3px solid var(--gold);background:#141209;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold-hi);font-weight:700}
+.cklist{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:4px 12px}
+.ck{display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer}
+.ck input{width:18px;height:18px;flex:0 0 auto;accent-color:#d4af37}
 .empty{border:1px dashed var(--gold-lo);border-radius:12px;padding:30px;text-align:center;color:var(--muted)}
 @media(max-width:820px){
   .shell{grid-template-columns:1fr}
@@ -196,7 +200,7 @@ function Field(props){
 }
 function Modal(props){
   return el('div',{className:'mo',onClick:function(e){if(e.target===e.currentTarget&&props.onClose)props.onClose();}},
-    el('div',{className:'md'},el('h2',null,props.title),props.children));
+    el('div',{className:'md',style:props.wide?{width:'min(860px,100%)'}:null},el('h2',null,props.title),props.children));
 }
 
 /* ---------- connect / login ---------- */
@@ -626,81 +630,479 @@ function ManualVisitor(props){
     el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:!f.visitor_name.trim(),onClick:save},'Save')));
 }
 
-/* ---------- Facility Logs ----------
-   Eight logs, one table. Every list (areas, equipment, rooms, scales...) and every entry belongs to one license
-   inside one state; the database refuses anything else. Pass/fail limits are set per item by the admin. */
-function numOk(v){return v!==''&&v!=null&&!isNaN(parseFloat(v))&&isFinite(v);}
-function num(v){return parseFloat(v);}
-const FLAG_RES=['Fail','Flag'];
+/* ---------- Facility Logs: field-for-field with Black Fox ----------
+   Nine logs, one table (hx_facility_log, every form field in data). Facility-specific lists
+   (areas, cameras, doors, alarms, scales, rooms, waste methods...) are created per license by the admin
+   and start EMPTY; a list with no items becomes a type-in box, same as Black Fox.
+   Generic process choices (shift, pest type, maintenance type...) start with the Black Fox defaults
+   and can be replaced per license. No regulator names are hard-coded: the state's rules come from its Rulebook. */
+function pad2(n){return String(n).padStart(2,'0');}
+function todayStr(){const d=new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());}
+function nowTime(){const d=new Date();return pad2(d.getHours())+':'+pad2(d.getMinutes());}
+function numOk(v){if(v===''||v==null)return false;const n=parseFloat(String(v).replace(/,/g,''));return !isNaN(n)&&isFinite(n);}
+function num(v){return parseFloat(String(v).replace(/,/g,''));}
+function esc3(x){return String(x==null?'':x).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+const FLAG_RES=['Fail','Flag','Open'];
+const OK_RES=['Pass','OK','Resolved'];
+const SHIFTS={key:'common.shifts',title:'Shifts',ph:'e.g. Day',def:['Day','Evening','Night']};
+const SCALE_POINTS=['Front Left','Front Right','Back Left','Back Right','Middle'];
+const SCALE_DEFAULT_TOL=0.1;
+const TEMP_IN='Yes \u2014 within range',TEMP_OUT='No \u2014 out of range (action taken)';
+const SEC_STATUS=['OK','FAIL','N/A'];
+const SEC_PARTS=[
+  {id:'cameras',list:'security_inspection.cameras',title:'Cameras',name:'Camera name',col:'Camera view',opts:['Clear','Partial','Obstructed','Offline']},
+  {id:'doors',list:'security_inspection.doors',title:'Door Locks',name:'Door name',col:'Battery level',opts:['Good (100-60%)','Low (59-20%)','Critical (<20%)','N/A - Wired']},
+  {id:'alarms',list:'security_inspection.alarms',title:'Alarm System',name:'Component name',col:'Battery level',opts:['Good (100-60%)','Low (59-20%)','Critical (<20%)','N/A - Wired','N/A']}];
+
+function scaleCheck(d){
+  d=d||{};
+  const tol=numOk(d.scale_tolerance)?num(d.scale_tolerance):SCALE_DEFAULT_TOL;
+  const pts=[1,2,3,4,5].map(function(i){
+    const nom=numOk(d['tw'+i+'_nominal'])?num(d['tw'+i+'_nominal']):null,rd=numOk(d['tw'+i+'_reading'])?num(d['tw'+i+'_reading']):null;
+    if(nom===null||rd===null)return {i:i,name:SCALE_POINTS[i-1],nom:nom,rd:rd,diff:null,ok:null};
+    const diff=Math.round((rd-nom)*10000)/10000;
+    return {i:i,name:SCALE_POINTS[i-1],nom:nom,rd:rd,diff:diff,ok:Math.abs(diff)<=tol+1e-9};
+  });
+  let cert={status:'unknown',days:null,due:''};
+  if(d.last_cert_date){
+    const c=new Date(d.last_cert_date+'T00:00:00');
+    if(!isNaN(c.getTime())){
+      const due=new Date(c.getTime());due.setFullYear(due.getFullYear()+1);
+      const t=new Date();t.setHours(0,0,0,0);
+      const days=Math.round((due.getTime()-t.getTime())/86400000);
+      cert={status:days<0?'overdue':days<=30?'due-soon':'current',days:days,due:due.getFullYear()+'-'+pad2(due.getMonth()+1)+'-'+pad2(due.getDate())};
+    }
+  }
+  const evald=pts.filter(function(p){return p.ok!==null;});
+  const anyFail=evald.some(function(p){return !p.ok;});
+  let result='';
+  if(cert.status==='overdue'||anyFail)result='Fail';
+  else if(evald.length===5)result='Pass';
+  let nextDue='';
+  if(d.date){const n=new Date(d.date+'T00:00:00');if(!isNaN(n.getTime())){n.setDate(n.getDate()+7);nextDue=n.getFullYear()+'-'+pad2(n.getMonth()+1)+'-'+pad2(n.getDate());}}
+  return {pts:pts,cert:cert,result:result,nextDue:nextDue,tol:tol};
+}
+function inspCount(insp,lists){
+  let total=0,done=0,fails=0;
+  SEC_PARTS.forEach(function(p){(lists[p.list]||[]).forEach(function(it){total++;const s=((insp||{})[p.id]||{})[it.name]||{};if(s.s)done++;if(s.s==='FAIL')fails++;});});
+  return {total:total,done:done,fails:fails};
+}
+
 const LOG_TYPES=[
-  {id:'sanitation',name:'Sanitation',list:'area',listName:'Areas',itemLabel:'Area',ruleCat:'Facility',
-    fields:[{k:'task',l:'Task',t:'select',o:['Daily cleaning','Deep cleaning','Pre-operation','Post-operation','Spill clean-up','Other'],req:1},
-      {k:'chemical',l:'Chemical / sanitizer',t:'text'},{k:'concentration',l:'Concentration (ppm or %)',t:'text'},
-      {k:'check',l:'Visual inspection',t:'select',o:['Pass','Fail'],req:1},{k:'notes',l:'Notes / corrective action',t:'area'}],
-    result:function(d){return d.check?(d.check==='Fail'?'Fail':'Pass'):'';}},
-  {id:'waste',name:'Waste',list:'waste_type',listName:'Waste types',itemLabel:'Waste type',ruleCat:'Facility',
-    fields:[{k:'package_id',l:'Package / batch / tag ID',t:'text'},{k:'weight',l:'Weight (g)',t:'num',req:1},
-      {k:'method',l:'Rendered unusable by',t:'select',o:['Ground and mixed with non-cannabis material','Compost','Incineration','Licensed waste hauler','Other'],req:1},
-      {k:'reason',l:'Reason for disposal',t:'text'},{k:'witness',l:'Witness',t:'text'},{k:'notes',l:'Notes',t:'area'}],
-    result:function(){return 'Logged';}},
-  {id:'pest',name:'Pest Control',list:'pest_station',listName:'Stations / traps',itemLabel:'Station',ruleCat:'Facility',notesKey:'action',
-    fields:[{k:'activity',l:'Activity',t:'select',o:['No activity','Activity found'],req:1},{k:'pest',l:'Pest type',t:'text'},{k:'action',l:'Action taken',t:'area'}],
-    result:function(d){return d.activity?(d.activity==='Activity found'?'Flag':'OK'):'';}},
-  {id:'equipment',name:'Equipment',list:'equipment',listName:'Equipment',itemLabel:'Equipment',ruleCat:'Facility',notesKey:'description',
-    fields:[{k:'activity',l:'Activity',t:'select',o:['Cleaning','Preventive maintenance','Repair','Inspection','Other'],req:1},
-      {k:'condition',l:'Condition after',t:'select',o:['Good','Needs attention','Out of service'],req:1},{k:'description',l:'Work done / notes',t:'area'}],
-    result:function(d){return d.condition?(d.condition==='Good'?'OK':'Flag'):'';}},
-  {id:'temperature',name:'Temperature',list:'temp_unit',listName:'Rooms / units',itemLabel:'Room / unit',ruleCat:'Facility',
-    spec:[{k:'min',l:'Min \u00b0F'},{k:'max',l:'Max \u00b0F'},{k:'hmin',l:'Min RH %'},{k:'hmax',l:'Max RH %'}],
-    fields:[{k:'temp',l:'Temperature (\u00b0F)',t:'num',req:1},{k:'humidity',l:'Relative humidity (%)',t:'num'},{k:'notes',l:'Corrective action / notes',t:'area'}],
-    result:function(d,it){
-      if(!numOk(d.temp))return '';
-      const s=(it&&it.spec)||{};let bad=false;
-      if(numOk(s.min)&&num(d.temp)<num(s.min))bad=true;
-      if(numOk(s.max)&&num(d.temp)>num(s.max))bad=true;
-      if(numOk(d.humidity)){if(numOk(s.hmin)&&num(d.humidity)<num(s.hmin))bad=true;if(numOk(s.hmax)&&num(d.humidity)>num(s.hmax))bad=true;}
-      return bad?'Fail':'Pass';}},
-  {id:'security',name:'Security',list:'security_point',listName:'Cameras, doors and alarms',itemLabel:'Camera / door / alarm',ruleCat:'Security',notesKey:'description',
-    fields:[{k:'status',l:'Status',t:'select',o:['Working','Issue found'],req:1},{k:'description',l:'Issue / action taken',t:'area'}],
-    result:function(d){return d.status?(d.status==='Working'?'OK':'Flag'):'';}},
-  {id:'security_inspection',name:'Security Inspection',list:'inspection_item',listName:'Checklist items',checklist:true,ruleCat:'Security',
-    fields:[{k:'notes',l:'Notes / corrective action',t:'area'}],
-    result:function(d,it,c){const v=Object.keys(c||{}).map(function(k){return c[k];});if(!v.length)return '';return v.indexOf('Fail')>=0?'Fail':'Pass';}},
-  {id:'scale',name:'Scale Calibration',list:'scale',listName:'Scales',itemLabel:'Scale',ruleCat:'Facility',
-    spec:[{k:'std',l:'Test weight (g)'},{k:'tol',l:'Tolerance \u00b1 (g)'}],
-    fields:[{k:'std',l:'Test weight used (g)',t:'num',req:1},{k:'reading',l:'Scale reading (g)',t:'num',req:1},{k:'notes',l:'Notes / corrective action',t:'area'}],
-    result:function(d,it){
-      if(!numOk(d.std)||!numOk(d.reading))return '';
-      const s=(it&&it.spec)||{};if(!numOk(s.tol))return 'Logged';
-      return Math.abs(num(d.reading)-num(d.std))<=num(s.tol)+1e-9?'Pass':'Fail';}}
+  {id:'sanitation',name:'Sanitation Log',freq:'Daily / Weekly / Monthly',ruleCat:'Facility',person:'cleaned_by',itemKey:'shift',itemLabel:'Shift',
+    lists:[SHIFTS,
+      {key:'sanitation.areas',title:'Daily: Areas Cleaned',ph:'e.g. Production Floor'},
+      {key:'sanitation.equip_san',title:'Daily: Facility Equipment Sanitized',ph:'e.g. Mop Sink'},
+      {key:'sanitation.equip_clean',title:'Daily: Equipment Cleaned',ph:'e.g. Towels'},
+      {key:'sanitation.weekly',title:'Weekly: Areas Cleaned',ph:'e.g. Warehouse'},
+      {key:'sanitation.monthly',title:'Monthly: Areas Cleaned',ph:'e.g. Extraction Room'}],
+    fields:[
+      {k:'date',l:'Date',t:'date',req:1},{k:'time',l:'Time Completed',t:'time'},
+      {k:'shift',l:'Shift',t:'select',list:'common.shifts'},
+      {k:'cleaned_by',l:'Cleaned By',t:'text',req:1,ph:'Employee name'},
+      {k:'sanitizer_used',l:'Sanitizer / Chemical Used',t:'text',ph:'e.g. 70% IPA'},
+      {k:'concentration',l:'Concentration / Dilution',t:'text',ph:'e.g. 1:64 dilution'},
+      {t:'section',l:'Daily: Areas Cleaned'},{k:'areas',t:'checklist',list:'sanitation.areas'},
+      {t:'section',l:'Daily: Facility Equipment Sanitized'},{k:'equip_san',t:'checklist',list:'sanitation.equip_san'},
+      {t:'section',l:'Daily: Equipment Cleaned'},{k:'equip_clean',t:'checklist',list:'sanitation.equip_clean'},
+      {t:'section',l:'Weekly: Areas Cleaned'},{k:'weekly',t:'checklist',list:'sanitation.weekly'},
+      {t:'section',l:'Monthly: Areas Cleaned'},{k:'monthly',t:'checklist',list:'sanitation.monthly'},
+      {t:'section',l:'Notes'},{k:'notes',l:'Additional Notes',t:'textarea',ph:'Any observations, issues found, or comments'}],
+    res:function(){return 'Logged';}},
+  {id:'waste',name:'Waste Destruction Log',freq:'Every destruction event',ruleCat:'Facility',person:'personnel_involved',itemKey:'category',itemLabel:'Category',
+    lists:[
+      {key:'waste.categories',title:'Categories',ph:'e.g. Concentrate',hint:'The Category dropdown'},
+      {key:'waste.cameras',title:'Camera names (Angle 1 and 2 of destruction)',ph:'e.g. Waste 1'},
+      {key:'waste.render_locations',title:'Locations of Rendering',ph:'e.g. Waste Area'},
+      {key:'waste.methods',title:'Methods Used',ph:'Write each full method as your state requires it',hint:'Write each full destruction method; they become the dropdown'}],
+    fields:[
+      {k:'date',l:'Date of Waste Generation',t:'date',req:1},{k:'time',l:'Time of Waste Generation',t:'time'},
+      {k:'personnel_involved',l:'Personnel Involved',t:'text',req:1,ph:'Names of all staff involved'},
+      {k:'agent_ids',l:'Agent / Badge ID(s)',t:'text',req:1,ph:'State agent ID numbers'},
+      {k:'category',l:'Category',t:'select',list:'waste.categories',req:1},
+      {k:'strain',l:'Strain / Flavor',t:'text',ph:'Strain or flavor name'},
+      {k:'waste_tags',l:'Track-and-Trace Tag(s)',t:'text',req:1,ph:'e.g. METRC package tags, comma separated'},
+      {k:'qty_unit',l:'Unit of Measure',t:'select',o:['Grams','EA (Each)'],req:1},
+      {k:'qty_expired',l:'Quantity of Waste / Expired Product',t:'text',req:1,ph:'e.g. 14.2 or 50'},
+      {k:'camera_1',l:'Camera #1 Name (Angle 1 of Destruction)',t:'select',list:'waste.cameras'},
+      {k:'camera_2',l:'Camera #2 Name (Angle 2 of Destruction)',t:'select',list:'waste.cameras'},
+      {k:'rendering_location',l:'Location of Rendering',t:'select',list:'waste.render_locations'},
+      {k:'method_used',l:'Method Used',t:'select',list:'waste.methods',req:1},
+      {k:'qty_rendered',l:'Quantity of Rendered Waste',t:'text',ph:'Total weight/quantity after rendering'},
+      {k:'disposal_date',l:'Date of Disposal',t:'date',blank:1},{k:'disposal_time',l:'Time of Disposal',t:'time',blank:1},
+      {k:'waste_company',l:'Waste Management Company / Facility Used',t:'text',ph:'Licensed waste disposal company name'},
+      {k:'manifest_number',l:'Waste Manifest Number',t:'text',ph:'Manifest #'},
+      {k:'receipt_number',l:'Disposal Receipt Number',t:'text',ph:'Receipt #'},
+      {k:'disposal_location',l:'Location of Disposal',t:'text',ph:'Address or facility name'},
+      {t:'section',l:'Notes & Compliance'},
+      {k:'notes',l:'Additional Notes / Comments',t:'textarea',ph:'Any additional information'},
+      {k:'tracking_recorded',l:'Recorded in Track-and-Trace?',t:'select',o:['Yes - recorded before destruction','Yes - recorded after destruction','Pending']},
+      {k:'compliance_verification',l:'Compliance Verification',t:'checkbox'},
+      {k:'supervisor_name',l:'Supervisor Name',t:'text',req:1,ph:'Verifying supervisor full name'}],
+    res:function(d){return d.tracking_recorded==='Pending'?'Open':'Logged';}},
+  {id:'scale_calibration',name:'Scale Calibration Log',freq:'Weekly, and each time the scale is moved',ruleCat:'Facility',person:'performed_by',itemKey:'scale_id',itemLabel:'Scale',
+    lists:[
+      {key:'scale_calibration.scales',title:'Scales',ph:'Scale ID / asset tag, e.g. SCALE-03',hint:'Each physical scale. Picking it on the form fills in its details.',
+        spec:[{k:'location',l:'Location / Room'},{k:'make',l:'Make / Model'},{k:'model',l:'Model Number'},{k:'serial',l:'Serial Number'},
+          {k:'capacity',l:'Capacity / Readability'},{k:'ntep',l:'NTEP Certificate #'},{k:'cert_date',l:'Last Annual Certification',t:'date'},
+          {k:'cert_company',l:'Certified By'},{k:'tol',l:'Tolerance \u00b1 g (blank = 0.1)',num:1}]},
+      {key:'scale_calibration.locations',title:'Locations / Rooms',ph:'e.g. Production Floor'}],
+    fields:[
+      {k:'date',l:'Date',t:'date',req:1},{k:'time',l:'Time',t:'time',req:1},
+      {k:'scale_id',l:'Scale ID / Asset Tag',t:'pick',list:'scale_calibration.scales',req:1,
+        fill:{scale_location:'location',scale_make_model:'make',scale_model_number:'model',scale_serial:'serial',scale_capacity:'capacity',ntep_cc:'ntep',last_cert_date:'cert_date',cert_company:'cert_company',scale_tolerance:'tol'}},
+      {k:'scale_location',l:'Location / Room',t:'select',list:'scale_calibration.locations',req:1},
+      {k:'scale_make_model',l:'Scale Make / Model',t:'text',req:1},
+      {k:'scale_model_number',l:'Model Number',t:'text'},{k:'scale_serial',l:'Serial Number',t:'text'},
+      {k:'scale_capacity',l:'Capacity / Readability',t:'text'},{k:'ntep_cc',l:'NTEP Certificate of Conformance #',t:'text'},
+      {t:'section',l:'Annual Certification'},
+      {k:'last_cert_date',l:'Last Annual Certification Date',t:'date',req:1,blank:1},
+      {k:'cert_company',l:'Certified By (Service Company / Registered Serviceperson)',t:'text',ph:'Company or technician name'},
+      {k:'cert_seal_present',l:'Certification seal / sticker is present and current',t:'checkbox'},
+      {t:'section',l:'Pre-Checks'},
+      {k:'check_clean',l:'Scale and weighing pan are clean',t:'checkbox'},
+      {k:'check_level',l:'Scale is level and on a stable surface',t:'checkbox'},
+      {k:'check_shield',l:'No draft, vibration or debris affecting the reading',t:'checkbox'},
+      {k:'check_zero',l:'Display reads zero with an empty pan',t:'checkbox'},
+      {k:'check_moved',l:'Scale moved since the last check?',t:'select',o:['No','Yes \u2014 full verification performed'],req:1},
+      {t:'section',l:'Test Weights (grams)'},
+      {k:'test_weight_cal_due',l:'Test Weight Calibration Due Date',t:'date',blank:1}]
+      .concat([1,2,3,4,5].reduce(function(a,i){return a.concat([
+        {k:'tw'+i+'_nominal',l:'Point '+i+' \u2014 '+SCALE_POINTS[i-1]+' \u2014 Test Weight',t:'text',num:1,req:1,ph:'e.g. 500',half:1},
+        {k:'tw'+i+'_reading',l:'Point '+i+' \u2014 '+SCALE_POINTS[i-1]+' \u2014 Scale Reading',t:'text',num:1,req:1,ph:'e.g. 500.0',half:1}]);},[]))
+      .concat([
+      {k:'scale_check',l:'Calibration Check Result',t:'scalecheck'},
+      {t:'section',l:'Action & Sign-off'},
+      {k:'out_of_service',l:'Scale status after check',t:'select',o:['In service \u2014 passed','Tagged out of service','Adjusted / repaired and re-verified']},
+      {k:'corrective_action',l:'Corrective Action (required if any point fails)',t:'textarea',ph:'What was done: re-level, clean, re-zero, service call, removed from service...'},
+      {k:'performed_by',l:'Performed By',t:'text',req:1,ph:'Facility agent name'},
+      {k:'verified_by',l:'Reviewed / Verified By',t:'text',ph:'Supervisor or QA'},
+      {k:'notes',l:'Notes',t:'textarea'}]),
+    res:function(d){return scaleCheck(d).result;},
+    needs:function(d,r){return r==='Fail'?'corrective_action':'';}},
+  {id:'security',name:'Security Malfunction Log',freq:'Every malfunction event',ruleCat:'Security',person:'reported_by',itemKey:'system_type',itemLabel:'System',
+    lists:[{key:'security.system_types',title:'System Types',ph:'e.g. CCTV Camera',def:['CCTV Camera','DVR/NVR Recorder','Motion Sensor','Door Access Control','Alarm System','Perimeter Fence/Gate','Safe/Vault','Other']}],
+    fields:[
+      {k:'date',l:'Date',t:'date',req:1},{k:'time',l:'Time Discovered',t:'time'},
+      {k:'reported_by',l:'Reported By',t:'text',req:1,ph:'Your name'},
+      {k:'system_type',l:'System Type',t:'select',list:'security.system_types',req:1},
+      {k:'location',l:'Location',t:'text',req:1,ph:'e.g. Front entrance camera'},
+      {k:'description',l:'Description of Malfunction',t:'textarea',req:1,ph:'What malfunctioned and how discovered'},
+      {k:'regulator_notified',l:'Regulator Notified?',t:'select',o:['Yes \u2014 within 24 hours','Yes \u2014 within 48 hours','Not required \u2014 minor','Pending']},
+      {k:'temp_measure',l:'Temporary Security Measure',t:'textarea',ph:'Interim measures while system is down'},
+      {k:'repair_date',l:'Repair Completed Date',t:'date',blank:1},
+      {k:'resolution',l:'Resolution / Repair',t:'textarea',ph:'How was it resolved?'},
+      {k:'verified_by',l:'Verified Operational By',t:'text',ph:'Name of verifying person'},
+      {k:'notes',l:'Notes',t:'textarea'}],
+    res:function(d){return (d.repair_date||String(d.resolution||'').trim())?'Resolved':'Open';}},
+  {id:'security_inspection',name:'Security Equipment Inspection',freq:'Weekly',ruleCat:'Security',person:'inspected_by',itemText:'Weekly inspection',itemLabel:'Inspection',sigReq:1,
+    lists:SEC_PARTS.map(function(p){return {key:p.list,title:p.title,ph:p.id==='cameras'?'e.g. VAULT 1':p.id==='doors'?'e.g. MAIN ENTRANCE':'e.g. MAIN ENTRANCE CONTACT SENSOR'};}),
+    fields:[
+      {k:'date',l:'Date',t:'date',req:1},{k:'time',l:'Time',t:'time'},
+      {k:'inspected_by',l:'Inspected By',t:'text',req:1,ph:'Inspector full name'},
+      {k:'_insp',t:'inspection'},
+      {k:'notes',l:'Notes / Issues Found',t:'textarea',ph:'Describe any failures, offline cameras, low batteries, or issues found during inspection...'}],
+    res:function(d,ctx){const c=inspCount(ctx.insp,ctx.lists);if(!c.done)return '';return c.fails?'Fail':c.done===c.total?'Pass':'Incomplete';},
+    needs:function(d,r){return r==='Fail'?'notes':'';}},
+  {id:'pest',name:'Pest Control Log',freq:'Each inspection / treatment',ruleCat:'Facility',person:'performed_by',itemKey:'type',itemLabel:'Type',
+    lists:[
+      {key:'pest.types',title:'Type',ph:'e.g. Routine inspection',def:['Routine inspection','Pest sighting report','Treatment / Extermination','Follow-up inspection','Bait station check','Glue trap check']},
+      {key:'pest.found',title:'Pests Found',ph:'e.g. Rodent evidence',hint:'Keep a "None..." choice: anything else marks the entry Flag',def:['None observed','Rodent evidence','Insects','Birds','Other']}],
+    fields:[
+      {k:'date',l:'Date',t:'date',req:1},
+      {k:'type',l:'Type',t:'select',list:'pest.types',req:1},
+      {k:'performed_by',l:'Performed By',t:'text',req:1,ph:'Name or licensed vendor'},
+      {k:'vendor_license',l:'Vendor License #',t:'text',ph:'PCO license number'},
+      {k:'areas_inspected',l:'Areas Inspected',t:'textarea',req:1,ph:'List all areas inspected'},
+      {k:'pests_found',l:'Pests Found',t:'select',list:'pest.found'},
+      {k:'pest_detail',l:'Pest Detail (if found)',t:'textarea',ph:'Type, quantity, location'},
+      {k:'treatment_applied',l:'Treatment / Chemical Applied',t:'text',ph:'Product name and EPA reg #'},
+      {k:'corrective_action',l:'Corrective Action',t:'textarea',ph:'Gaps sealed, entry points addressed'},
+      {k:'next_scheduled',l:'Next Scheduled Inspection',t:'date',blank:1},
+      {k:'notes',l:'Notes',t:'textarea'}],
+    res:function(d){if(!d.pests_found)return '';return /^none/i.test(d.pests_found)?'OK':'Flag';}},
+  {id:'equipment',name:'Equipment Maintenance Log',freq:'Each maintenance event',ruleCat:'Facility',person:'performed_by',itemKey:'equipment_name',itemLabel:'Equipment',
+    lists:[
+      {key:'equipment.equipment',title:'Equipment',ph:'e.g. Filling Machine #2',hint:'Picking it on the form fills in its ID / serial',spec:[{k:'serial',l:'Equipment ID / Serial #'}]},
+      {key:'equipment.maint_types',title:'Maintenance Types',ph:'e.g. Routine/Preventive',def:['Routine/Preventive','Corrective/Repair','Calibration','Deep clean','Inspection','Part replacement']}],
+    fields:[
+      {k:'date',l:'Date',t:'date',req:1},
+      {k:'equipment_name',l:'Equipment Name',t:'pick',list:'equipment.equipment',req:1,ph:'e.g. Filling Machine #2',fill:{equipment_id:'serial'}},
+      {k:'equipment_id',l:'Equipment ID / Serial #',t:'text',ph:'Asset tag or serial number'},
+      {k:'maintenance_type',l:'Maintenance Type',t:'select',list:'equipment.maint_types',req:1},
+      {k:'performed_by',l:'Performed By',t:'text',req:1,ph:'Technician name'},
+      {k:'description',l:'Work Performed',t:'textarea',req:1,ph:'Describe maintenance performed'},
+      {k:'parts_replaced',l:'Parts Replaced',t:'text',ph:'Part names and numbers'},
+      {k:'downtime_hours',l:'Downtime (hours)',t:'text',ph:'e.g. 2.5'},
+      {k:'pass_fail',l:'Equipment Status After',t:'select',o:['Pass \u2014 returned to service','Conditional \u2014 monitor closely','Fail \u2014 out of service','Pending parts / repair']},
+      {k:'next_maintenance',l:'Next Scheduled Maintenance',t:'date',blank:1},
+      {k:'notes',l:'Notes',t:'textarea'}],
+    res:function(d){if(!d.pass_fail)return '';return /^pass/i.test(d.pass_fail)?'OK':/^fail/i.test(d.pass_fail)?'Fail':'Flag';}},
+  {id:'temperature',name:'Temp / Humidity Log',freq:'Every shift',ruleCat:'Facility',person:'recorded_by',itemKey:'location',itemLabel:'Location',
+    lists:[SHIFTS,
+      {key:'temperature.rooms',title:'Locations / Rooms',ph:'e.g. Storage Vault',hint:'Optional ranges set "Within Acceptable Range?" automatically',
+        spec:[{k:'min',l:'Min \u00b0F',num:1},{k:'max',l:'Max \u00b0F',num:1},{k:'hmin',l:'Min RH %',num:1},{k:'hmax',l:'Max RH %',num:1}]}],
+    fields:[
+      {k:'date',l:'Date',t:'date',req:1},{k:'time',l:'Time',t:'time',req:1},
+      {k:'shift',l:'Shift',t:'select',list:'common.shifts'},
+      {k:'recorded_by',l:'Recorded By',t:'text',req:1,ph:'Employee name'},
+      {k:'location',l:'Location / Room',t:'pick',list:'temperature.rooms',req:1,ph:'e.g. Pre-Roll Room, Storage Vault'},
+      {k:'temperature_f',l:'Temperature (\u00b0F)',t:'text',num:1,req:1,ph:'e.g. 68.5',half:1},
+      {k:'humidity_pct',l:'Relative Humidity (%)',t:'text',num:1,req:1,ph:'e.g. 55',half:1},
+      {k:'in_range',l:'Within Acceptable Range?',t:'select',o:[TEMP_IN,TEMP_OUT,'No \u2014 equipment malfunction']},
+      {k:'corrective_action',l:'Corrective Action (if out of range)',t:'textarea',ph:'Action taken to correct'},
+      {k:'notes',l:'Notes',t:'textarea'}],
+    recalc:function(d,k,lists){
+      if(['temperature_f','humidity_pct','location'].indexOf(k)<0||!numOk(d.temperature_f))return d;
+      const room=(lists['temperature.rooms']||[]).find(function(i){return i.name===d.location;});const s=(room&&room.spec)||{};
+      if(!(numOk(s.min)||numOk(s.max)||numOk(s.hmin)||numOk(s.hmax)))return d;
+      let bad=false;const t=num(d.temperature_f);
+      if(numOk(s.min)&&t<num(s.min))bad=true;if(numOk(s.max)&&t>num(s.max))bad=true;
+      if(numOk(d.humidity_pct)){const h=num(d.humidity_pct);if(numOk(s.hmin)&&h<num(s.hmin))bad=true;if(numOk(s.hmax)&&h>num(s.hmax))bad=true;}
+      return {...d,in_range:bad?TEMP_OUT:TEMP_IN};
+    },
+    res:function(d){if(!d.in_range)return '';return /^yes/i.test(d.in_range)?'Pass':'Fail';},
+    needs:function(d,r){return r==='Fail'?'corrective_action':'';}},
+  {id:'environmental',name:'Environmental Monitoring Log',freq:'Monthly minimum',ruleCat:'Facility',person:'performed_by',itemKey:'location',itemLabel:'Location',
+    lists:[
+      {key:'environmental.locations',title:'Sampling Locations',ph:'e.g. Pre-Roll Room - floor drain'},
+      {key:'environmental.sample_types',title:'Sample Types',ph:'e.g. ATP swab (surface)',def:['ATP swab (surface)','Air sample','Water sample','Drain swab','Equipment surface swab','Hand swab']}],
+    fields:[
+      {k:'date',l:'Date',t:'date',req:1},
+      {k:'performed_by',l:'Performed By',t:'text',req:1,ph:'QC technician name'},
+      {k:'location',l:'Sampling Location',t:'select',list:'environmental.locations',req:1,ph:'e.g. Pre-Roll Room - floor drain'},
+      {k:'sample_type',l:'Sample Type',t:'select',list:'environmental.sample_types',req:1},
+      {k:'test_method',l:'Test Method / Equipment',t:'text',ph:'e.g. ATP luminometer'},
+      {k:'result_value',l:'Result Value',t:'text',ph:'e.g. 245 RLU'},
+      {k:'pass_fail',l:'Pass / Fail',t:'select',o:['Pass \u2014 within limit','Fail \u2014 exceeds limit','Inconclusive \u2014 retest required'],req:1},
+      {k:'corrective_action',l:'Corrective Action (if fail)',t:'textarea',ph:'Immediate corrective action taken'},
+      {k:'retest_date',l:'Retest Date (if required)',t:'date',blank:1},
+      {k:'notes',l:'Notes',t:'textarea'}],
+    res:function(d){if(!d.pass_fail)return '';return /^pass/i.test(d.pass_fail)?'Pass':/^fail/i.test(d.pass_fail)?'Fail':'Flag';},
+    needs:function(d,r){return r==='Fail'?'corrective_action':'';}}
 ];
-function specText(def,spec){
-  spec=spec||{};
-  if(def.id==='temperature'){
-    const t=[];
-    if(numOk(spec.min)||numOk(spec.max))t.push((numOk(spec.min)?spec.min:'-')+' to '+(numOk(spec.max)?spec.max:'-')+' \u00b0F');
-    if(numOk(spec.hmin)||numOk(spec.hmax))t.push((numOk(spec.hmin)?spec.hmin:'-')+' to '+(numOk(spec.hmax)?spec.hmax:'-')+' % RH');
-    return t.length?'Allowed: '+t.join(', '):'No range set (admin can add one)';
+function listDef(key){
+  for(let i=0;i<LOG_TYPES.length;i++){const l=LOG_TYPES[i].lists.find(function(x){return x.key===key;});if(l)return l;}
+  return null;
+}
+// choices for a select: the license's own list, else the built-in defaults, else the field's fixed options; null = type-in
+function fieldOptions(f,lists){
+  if(f.list){
+    const own=(lists[f.list]||[]).map(function(i){return i.name;});
+    if(own.length)return own;
+    const L=listDef(f.list);if(L&&L.def)return L.def;
+    return null;
   }
-  if(def.id==='scale'){
-    return (numOk(spec.std)?'Test weight '+spec.std+' g':'No test weight set')+(numOk(spec.tol)?', tolerance \u00b1'+spec.tol+' g':', no tolerance set (admin can add one)');
-  }
-  return '';
+  return f.o||null;
+}
+function groupLists(rows,activeOnly){
+  const g={};(rows||[]).forEach(function(r){if(activeOnly&&!r.active)return;(g[r.list_key]=g[r.list_key]||[]).push(r);});
+  Object.keys(g).forEach(function(k){g[k].sort(function(a,b){return (a.sort||0)-(b.sort||0)||String(a.name).localeCompare(String(b.name));});});
+  return g;
 }
 function ResultBadge(props){
   const r=props.r||'';if(!r)return null;
-  const cls=(r==='Pass'||r==='OK')?' ok':FLAG_RES.indexOf(r)>=0?' bad':'';
-  return el('span',{className:'badge'+cls},r);
+  return el('span',{className:'badge'+(OK_RES.indexOf(r)>=0?' ok':FLAG_RES.indexOf(r)>=0?' bad':'')},r);
 }
-function entrySummary(def,r){
-  const d=r.data||{};
-  if(def.checklist){
-    const c=d.checks||[];const f=c.filter(function(x){return x.res==='Fail';});
-    return c.length+' items: '+c.filter(function(x){return x.res==='Pass';}).length+' pass, '+f.length+' fail'+(f.length?' ('+f.map(function(x){return x.name;}).join(', ')+')':'')+(d.notes?'  \u00b7  '+d.notes:'');
+
+/* Calibration check box (live on the form, same rules as Black Fox) */
+function ScaleCheckBox(props){
+  const c=scaleCheck(props.d);
+  const certTxt=c.cert.status==='unknown'?'Enter the last annual certification date':c.cert.status==='overdue'?'Annual certification OVERDUE (was due '+c.cert.due+')':'Annual certification due '+c.cert.due+' ('+c.cert.days+' days)'+(c.cert.status==='due-soon'?' - due soon':'');
+  return el('div',{className:'card',style:{padding:12,background:'#0f0f0f'}},
+    el('div',{className:'row',style:{justifyContent:'space-between'}},el('span',{className:'k'},'Calibration check  \u00b7  tolerance \u00b1'+c.tol+' g'),el(ResultBadge,{r:c.result||'Incomplete'})),
+    el('table',{style:{marginTop:6}},el('tbody',null,c.pts.map(function(p){
+      return el('tr',{key:p.i},el('td',null,p.i+'. '+p.name),el('td',null,p.nom===null?'-':p.nom+' g'),el('td',null,p.rd===null?'-':p.rd+' g'),
+        el('td',null,p.diff===null?'':(p.diff>0?'+':'')+p.diff+' g'),el('td',null,p.ok===null?'':el('span',{className:'badge '+(p.ok?'ok':'bad')},p.ok?'OK':'FAIL')));}))),
+    el('div',{className:c.cert.status==='overdue'?'msg err':'muted',style:{marginTop:8,fontSize:13}},certTxt),
+    c.nextDue&&el('div',{className:'muted',style:{fontSize:13}},'Next weekly check due '+c.nextDue));
+}
+
+/* Weekly security inspection grid: Cameras / Door Locks / Alarm System */
+function InspectionGrid(props){
+  const insp=props.insp,lists=props.lists;
+  const[tab,setTab]=useState('cameras');
+  const c=inspCount(insp,lists);
+  const part=SEC_PARTS.find(function(p){return p.id===tab;});
+  const items=lists[part.list]||[];
+  function set(pid,name,field,v){props.setInsp(function(p){const P={...(p[pid]||{})};P[name]={...(P[name]||{}),[field]:v};return {...p,[pid]:P};});}
+  return el('div',{style:{marginBottom:14}},
+    el('div',{className:'row',style:{marginBottom:8}},
+      el('span',{className:'k'},'Progress'),el('span',null,c.done+' / '+c.total+' checked'),
+      c.fails>0&&el('span',{className:'badge bad'},c.fails+' FAIL'+(c.fails===1?'':'S')+' found'),
+      !c.fails&&c.done>0&&el('span',{className:'badge ok'},c.done===c.total?'All clear':'In progress')),
+    el('div',{className:'tabs',style:{marginBottom:8}},SEC_PARTS.map(function(p){return el('button',{key:p.id,type:'button',className:tab===p.id?'on':'',onClick:function(){setTab(p.id);}},p.title+' ('+(lists[p.list]||[]).length+')');})),
+    !items.length?el('div',{className:'empty',style:{padding:16}},'No '+part.title.toLowerCase()+' set up for this license yet.'):
+    el('div',{style:{overflowX:'auto'}},el('table',null,
+      el('thead',null,el('tr',null,el('th',null,part.name),el('th',null,part.col),el('th',null,'Functionality'))),
+      el('tbody',null,items.map(function(it){
+        const s=((insp[part.id]||{})[it.name])||{};
+        return el('tr',{key:it.id},el('td',{style:{fontWeight:600}},it.name),
+          el('td',null,el('select',{value:s.a||'',style:{minWidth:120},onChange:function(e){set(part.id,it.name,'a',e.target.value);}},el('option',{value:''},'--'),part.opts.map(function(o){return el('option',{key:o,value:o},o);}))),
+          el('td',{style:{whiteSpace:'nowrap'}},SEC_STATUS.map(function(o){const on=s.s===o;
+            return el('button',{key:o,type:'button',className:'btn sm'+(on?(o==='FAIL'?' selbad':''):' ghost'),style:{marginRight:4},onClick:function(){set(part.id,it.name,'s',o);}},o);})));
+      })))));
+}
+
+/* The entry form: used by staff inside the app (new + admin edit) and by the QR kiosk */
+function LogForm(props){
+  const def=props.def,lists=props.lists||{};
+  function initD(){
+    const d={};
+    def.fields.forEach(function(f){
+      if(!f.k||f.t==='section'||f.t==='scalecheck'||f.t==='inspection'||f.t==='checklist')return;
+      if(f.t==='date')d[f.k]=f.blank?'':todayStr();
+      else if(f.t==='time')d[f.k]=f.blank?'':nowTime();
+      else if(f.t==='checkbox')d[f.k]=false;
+      else if(f.t==='select'){const o=fieldOptions(f,lists);d[f.k]=o&&o.length?o[0]:'';} // first choice, as Black Fox
+      else d[f.k]='';
+    });
+    if(def.person&&props.defaultName)d[def.person]=props.defaultName;
+    if(props.initial){const x=props.initial.data||{};Object.keys(x).forEach(function(k){if(['cameras','doors','alarms','item_spec'].indexOf(k)<0)d[k]=x[k];});d._item_id=props.initial.item_id||'';}
+    return d;
   }
-  return def.fields.filter(function(f){return d[f.k]!==undefined&&d[f.k]!=='';}).map(function(f){return f.l.replace(/ \(.*\)$/,'')+': '+d[f.k];}).join('  \u00b7  ');
+  function initInsp(){
+    const o={};const x=(props.initial&&props.initial.data)||{};
+    SEC_PARTS.forEach(function(p){o[p.id]={};(x[p.id]||[]).forEach(function(r){o[p.id][r.name]={a:r.detail||'',s:r.status||''};});});
+    return o;
+  }
+  const[d,setD]=useState(initD);
+  const[insp,setInsp]=useState(initInsp);
+  const[sig,setSig]=useState('');
+  const[sigKey,setSigKey]=useState(0);
+  const[err,setErr]=useState('');
+  const[busy,setBusy]=useState(false);
+  const ctx={lists:lists,insp:insp};
+  const res=def.res(d,ctx)||'';
+  const need=def.needs?def.needs(d,res):'';
+  const needField=need?def.fields.find(function(f){return f.k===need;}):null;
+  const editing=!!props.initial;
+  function setF(k,v){setD(function(p){let n={...p,[k]:v};if(def.recalc)n=def.recalc(n,k,lists);return n;});}
+  function pick(f,v){
+    const it=(lists[f.list]||[]).find(function(i){return i.id===v;});
+    setD(function(p){
+      let n={...p,[f.k]:it?it.name:'',_item_id:it?it.id:''};
+      if(it&&f.fill)Object.keys(f.fill).forEach(function(dst){const sv=(it.spec||{})[f.fill[dst]];if(sv!==undefined&&sv!==null&&sv!=='')n[dst]=String(sv);});
+      if(def.recalc)n=def.recalc(n,f.k,lists);
+      return n;
+    });
+  }
+  function checkAll(f,on){const o={};(lists[f.list]||[]).forEach(function(i){o[i.name]=on;});setF(f.k,o);}
+  async function submit(){
+    setErr('');
+    for(let i=0;i<def.fields.length;i++){
+      const f=def.fields[i];if(!f.k||f.t==='checkbox'||f.t==='section'||f.t==='checklist'||f.t==='scalecheck'||f.t==='inspection')continue;
+      const v=String(d[f.k]==null?'':d[f.k]).trim();
+      if(f.req&&!v){setErr((f.l||f.k)+' is required.');return;}
+      if(f.num&&v&&!numOk(v)){setErr(f.l+' must be a number.');return;}
+    }
+    if(need&&!String(d[need]||'').trim()){setErr('Result is '+res+'. Fill in "'+(needField?needField.l:need)+'" before saving.');return;}
+    if((props.kiosk||(def.sigReq&&!editing))&&!sig){setErr('Please sign in the box.');return;}
+    const data={};
+    def.fields.forEach(function(f){
+      if(!f.k||f.t==='section'||f.t==='scalecheck'||f.t==='inspection')return;
+      if(f.t==='checklist'){const cur=d[f.k]||{},o={};(lists[f.list]||[]).forEach(function(i){o[i.name]=!!cur[i.name];});Object.keys(cur).forEach(function(n){if(!(n in o))o[n]=!!cur[n];});data[f.k]=o;return;}
+      if(f.t==='checkbox'){data[f.k]=!!d[f.k];return;}
+      const v=String(d[f.k]==null?'':d[f.k]).trim();if(v)data[f.k]=v;
+    });
+    if(def.id==='scale_calibration'){data.scale_tolerance=String(scaleCheck(d).tol);data.scale_next_due=scaleCheck(d).nextDue;}
+    if(def.fields.some(function(f){return f.t==='inspection';}))SEC_PARTS.forEach(function(p){
+      data[p.id]=(lists[p.list]||[]).map(function(it){const s=(insp[p.id]||{})[it.name]||{};return {name:it.name,detail:s.a||'',status:s.s||''};});});
+    let itemId=d._item_id||'';
+    const pf=def.fields.find(function(f){return f.t==='pick'&&f.k===def.itemKey;});
+    if(pf&&itemId){const it=(lists[pf.list]||[]).find(function(i){return i.id===itemId;});if(!it||it.name!==d[pf.k])itemId='';else if(it.spec&&Object.keys(it.spec).length)data.item_spec=it.spec;}
+    setBusy(true);
+    try{
+      await props.onSubmit({item_id:itemId,item:def.itemKey?String(d[def.itemKey]||''):def.itemText,data:data,result:res||'Logged',performed_by:String(d[def.person]||'').trim(),signature:sig});
+      if(props.kiosk){setD(initD());setInsp(initInsp());setSig('');setSigKey(function(k){return k+1;});}
+    }catch(e){setErr(String(e.message||e));}
+    setBusy(false);
+  }
+  function input(f){
+    const v=d[f.k]==null?'':d[f.k];
+    const set=function(e){setF(f.k,e.target.value);};
+    if(f.t==='date')return el('input',{type:'date',value:v,onChange:set});
+    if(f.t==='time')return el('input',{type:'time',value:v,onChange:set});
+    if(f.t==='textarea')return el('textarea',{value:v,placeholder:f.ph||'',style:{minHeight:70},onChange:set});
+    if(f.t==='pick'){
+      const items=lists[f.list]||[];
+      if(!items.length)return el('input',{value:v,placeholder:f.ph||'Type it in (no list set up yet)',onChange:set});
+      const cur=d._item_id&&items.some(function(i){return i.id===d._item_id;})?d._item_id:'';
+      return el('select',{style:{width:'100%'},value:cur,onChange:function(e){pick(f,e.target.value);}},
+        el('option',{value:''},v&&!cur?v+' (not in list)':'Select...'),items.map(function(i){return el('option',{key:i.id,value:i.id},i.name);}));
+    }
+    if(f.t==='select'){
+      const opts=fieldOptions(f,lists);
+      if(!opts)return el('input',{value:v,placeholder:f.ph||'Type it in (no list set up yet)',onChange:set});
+      return el('select',{style:{width:'100%'},value:v,onChange:set},
+        f.list&&el('option',{value:''},'Select...'),v&&opts.indexOf(v)<0&&el('option',{value:v},v),
+        opts.map(function(o){return el('option',{key:o,value:o},o);}));
+    }
+    return el('input',{value:v,placeholder:f.ph||'',inputMode:f.num?'decimal':undefined,onChange:set});
+  }
+  const out=[];let halves=[];
+  function flush(){if(halves.length){out.push(el('div',{key:'h'+out.length,className:'grid',style:{gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:10}},halves));halves=[];}}
+  def.fields.forEach(function(f,idx){
+    const key=f.k||('s'+idx);
+    let node;
+    if(f.t==='section')node=el('div',{key:key,className:'secth'},f.l);
+    else if(f.t==='scalecheck')node=el(ScaleCheckBox,{key:key,d:d});
+    else if(f.t==='inspection')node=el(InspectionGrid,{key:key,insp:insp,setInsp:setInsp,lists:lists});
+    else if(f.t==='checklist'){
+      const items=lists[f.list]||[];const cur=d[f.k]||{};
+      node=items.length?el('div',{key:key,style:{marginBottom:12}},
+        el('div',{className:'row',style:{marginBottom:6}},el('button',{type:'button',className:'btn ghost sm',onClick:function(){checkAll(f,true);}},'Check all'),el('button',{type:'button',className:'btn ghost sm',onClick:function(){checkAll(f,false);}},'Clear'),
+          el('span',{className:'muted',style:{fontSize:12}},items.filter(function(i){return cur[i.name];}).length+' of '+items.length)),
+        el('div',{className:'cklist'},items.map(function(i){return el('label',{key:i.id,className:'ck'},el('input',{type:'checkbox',checked:!!cur[i.name],onChange:function(e){const on=e.target.checked;setD(function(p){return {...p,[f.k]:{...(p[f.k]||{}),[i.name]:on}};});}}),el('span',null,i.name));})))
+        :el('div',{key:key,className:'muted',style:{fontSize:13,marginBottom:12}},'No items set up for this license yet.');
+    }
+    else if(f.t==='checkbox')node=el('label',{key:key,className:'ck',style:{marginBottom:10}},el('input',{type:'checkbox',checked:!!d[f.k],onChange:function(e){setF(f.k,e.target.checked);}}),el('span',null,f.l));
+    else node=el(Field,{key:key,label:f.l+(f.req||(f.k===need)?' *':'')},input(f));
+    if(f.half){halves.push(node);return;}
+    flush();out.push(node);
+  });
+  flush();
+  return el('div',null,
+    el('div',{className:'muted',style:{fontSize:12,marginBottom:10}},'Fields marked * are required.'),
+    out,
+    res&&el('div',{className:'row',style:{margin:'4px 0 12px'}},el('span',{className:'k'},'Result'),el(ResultBadge,{r:res})),
+    (props.kiosk||!editing)&&el(Field,{label:'Signature'+((props.kiosk||def.sigReq)?' *':' (optional)'),plain:true},el(SignaturePad,{key:sigKey,onChange:function(v){setSig(v);}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},
+      props.onCancel&&el('button',{className:'btn ghost',onClick:props.onCancel},'Cancel'),
+      el('button',{className:'btn',style:props.kiosk?{width:'100%',padding:13}:null,disabled:busy,onClick:submit},busy?'Saving...':editing?'Save changes':'Submit entry')));
 }
-function esc3(x){return String(x==null?'':x).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+/* Full record as HTML: used for View, Print and PDF (browser print) */
+const REC_CSS='<style>.hxrec{font-family:Arial,sans-serif;color:#111;background:#fff;padding:18px;border-radius:8px;font-size:13px}.hxrec h2{margin:0 0 2px;font-size:18px}.hxrec .m{color:#555;font-size:12px}.hxrec table{width:100%;border-collapse:collapse;margin:8px 0}.hxrec td,.hxrec th{border:1px solid #ccc;padding:5px 7px;text-align:left;vertical-align:top;font-size:12px;color:#111}.hxrec th{background:#f2f2f2;width:38%;text-transform:none;letter-spacing:0;font-weight:700}.hxrec .sec td{background:#222;color:#fff;font-weight:700;letter-spacing:.06em}.hxrec .bad{color:#b00020;font-weight:700}.hxrec .ok{color:#0a7a3a;font-weight:700}.hxrec img{max-width:320px;border:1px solid #ccc}.pb{page-break-after:always}</style>';
+function entryHtml(def,st,lic,r,sig){
+  const d=r.data||{};const e=esc3;
+  const rows=[];
+  def.fields.forEach(function(f){
+    if(f.t==='section'){rows.push('<tr class="sec"><td colspan="2">'+e(f.l.toUpperCase())+'</td></tr>');return;}
+    if(f.t==='checklist'){const o=d[f.k]||{};const ks=Object.keys(o);
+      rows.push('<tr><th>Completed</th><td>'+(ks.length?ks.map(function(n){return (o[n]?'<span class="ok">[x]</span> ':'[ ] ')+e(n);}).join('<br>'):'-')+'</td></tr>');return;}
+    if(f.t==='scalecheck'){const c=scaleCheck(d);
+      rows.push('<tr><th>Calibration check (tolerance &plusmn;'+c.tol+' g)</th><td>'+c.pts.map(function(p){return e(p.i+'. '+p.name)+': '+(p.nom===null?'-':p.nom)+' / '+(p.rd===null?'-':p.rd)+(p.ok===null?'':' <span class="'+(p.ok?'ok':'bad')+'">'+(p.ok?'OK':'FAIL')+' ('+(p.diff>0?'+':'')+p.diff+')</span>');}).join('<br>')+
+        '<br>Certification: '+e(c.cert.status==='unknown'?'not entered':c.cert.status+' (due '+c.cert.due+')')+(d.scale_next_due?'<br>Next check due: '+e(d.scale_next_due):'')+'</td></tr>');return;}
+    if(f.t==='inspection'){SEC_PARTS.forEach(function(p){const a=d[p.id]||[];
+      rows.push('<tr class="sec"><td colspan="2">'+e(p.title.toUpperCase())+'</td></tr>');
+      rows.push('<tr><td colspan="2">'+(a.length?'<table><tr><th>'+e(p.name)+'</th><th>'+e(p.col)+'</th><th>Functionality</th></tr>'+a.map(function(x){return '<tr><td>'+e(x.name)+'</td><td>'+e(x.detail||'')+'</td><td class="'+(x.status==='FAIL'?'bad':x.status==='OK'?'ok':'')+'">'+e(x.status||'-')+'</td></tr>';}).join('')+'</table>':'None')+'</td></tr>');});return;}
+    if(!f.k)return;
+    const v=d[f.k];
+    rows.push('<tr><th>'+e(f.l)+'</th><td>'+(f.t==='checkbox'?(v?'Yes':'No'):e(v==null||v===''?'-':v))+'</td></tr>');
+  });
+  const resCls=OK_RES.indexOf(r.result)>=0?'ok':FLAG_RES.indexOf(r.result)>=0?'bad':'';
+  return '<div class="hxrec"><div class="m">'+e((st.name||'').toUpperCase())+' &middot; '+e(lic.name)+' &middot; License '+e(lic.license_number||'-')+'</div>'+
+    '<h2>'+e(def.name)+'</h2><div class="m">Entry '+e(r.id)+' &middot; saved '+e(new Date(r.created_at).toLocaleString())+' &middot; '+(r.source==='kiosk'?'QR kiosk':'App')+'</div>'+
+    '<table>'+rows.join('')+'<tr class="sec"><td colspan="2">SIGN-OFF</td></tr><tr><th>Result</th><td class="'+resCls+'">'+e(r.result||'-')+'</td></tr><tr><th>Submitted by</th><td>'+e(r.performed_by||'-')+'</td></tr>'+
+    '<tr><th>Signature</th><td>'+(sig?'<img src="'+e(sig)+'">':'Not signed')+'</td></tr></table></div>';
+}
+function printRecords(title,htmls){
+  const w=window.open('','_blank');if(!w)return;
+  w.document.write('<html><head><title>'+esc3(title)+'</title>'+REC_CSS+'</head><body style="margin:0">'+htmls.map(function(h,i){return '<div'+(i<htmls.length-1?' class="pb"':'')+'>'+h+'</div>';}).join('')+'</body></html>');
+  w.document.close();setTimeout(function(){w.print();},500);
+}
 function printQrSign(boxId,stName,lic,caption){
   const c=document.querySelector('#'+boxId+' canvas'),img=document.querySelector('#'+boxId+' img');
   const src=c?c.toDataURL('image/png'):(img?img.src:'');
@@ -709,82 +1111,9 @@ function printQrSign(boxId,stName,lic,caption){
   w.document.close();setTimeout(function(){w.print();},400);
 }
 
-/* The entry form: used by staff inside the app and by the QR kiosk */
-function LogForm(props){
-  const def=props.def,items=props.items||[];
-  const[itemId,setItemId]=useState('');
-  const[d,setD]=useState({});
-  const[checks,setChecks]=useState({});
-  const[name,setName]=useState(props.defaultName||'');
-  const[sig,setSig]=useState('');
-  const[sigKey,setSigKey]=useState(0);
-  const[err,setErr]=useState('');
-  const[busy,setBusy]=useState(false);
-  const item=items.find(function(i){return i.id===itemId;})||null;
-  const res=def.result(d,item||{spec:{}},checks);
-  const nk=def.notesKey||'notes';
-  const nkField=def.fields.find(function(f){return f.k===nk;});
-  const needNotes=FLAG_RES.indexOf(res)>=0;
-  if(!items.length)return el('div',{className:'empty'},'No '+def.listName.toLowerCase()+' are set up for this license yet. '+(props.kiosk?'Please ask a manager.':'An admin adds them with "Manage '+def.listName.toLowerCase()+'".'));
-  function pickItem(id){
-    setItemId(id);
-    const it=items.find(function(i){return i.id===id;});
-    if(def.id==='scale'&&it&&it.spec&&numOk(it.spec.std))setD(function(p){return {...p,std:String(it.spec.std)};});
-  }
-  async function submit(){
-    setErr('');
-    if(def.checklist){
-      const miss=items.filter(function(i){return !checks[i.id];});
-      if(miss.length){setErr('Answer every checklist item ('+miss.length+' left).');return;}
-    }else if(!item){setErr('Choose the '+def.itemLabel.toLowerCase()+'.');return;}
-    for(let i=0;i<def.fields.length;i++){
-      const f=def.fields[i],v=String(d[f.k]==null?'':d[f.k]).trim();
-      if(f.req&&!v){setErr(f.l+' is required.');return;}
-      if(f.t==='num'&&v&&!numOk(v)){setErr(f.l+' must be a number.');return;}
-    }
-    if(needNotes&&!String(d[nk]||'').trim()){setErr('Result is '+res+'. Fill in "'+(nkField?nkField.l:'Notes')+'" before saving.');return;}
-    if(!name.trim()){setErr('Enter your name.');return;}
-    if(props.kiosk&&!sig){setErr('Please sign in the box.');return;}
-    const data={};
-    def.fields.forEach(function(f){const v=String(d[f.k]==null?'':d[f.k]).trim();if(v)data[f.k]=f.t==='num'?num(v):v;});
-    if(def.checklist)data.checks=items.map(function(i){return {name:i.name,res:checks[i.id]};});
-    if(item&&item.spec&&Object.keys(item.spec).length)data.limits=item.spec; // snapshot of the limits in force at the time
-    setBusy(true);
-    try{
-      await props.onSubmit({item_id:item?item.id:'',item:item?item.name:'Full inspection',data:data,result:res||'Logged',performed_by:name.trim(),signature:sig});
-      setItemId('');setD({});setChecks({});setSig('');setSigKey(function(k){return k+1;});
-      if(props.kiosk)setName('');
-    }catch(e){setErr(String(e.message||e));}
-    setBusy(false);
-  }
-  function input(f){
-    const v=d[f.k]==null?'':d[f.k];
-    const set=function(e){const x=e.target.value;setD(function(p){return {...p,[f.k]:x};});};
-    if(f.t==='select')return el('select',{style:{width:'100%'},value:v,onChange:set},el('option',{value:''},'Select...'),f.o.map(function(o){return el('option',{key:o,value:o},o);}));
-    if(f.t==='area')return el('textarea',{value:v,style:{minHeight:70},onChange:set});
-    return el('input',{value:v,inputMode:f.t==='num'?'decimal':undefined,onChange:set});
-  }
-  return el('div',null,
-    err&&el('div',{className:'msg err'},err),
-    def.checklist?el('div',{style:{marginBottom:14}},el('div',{className:'k',style:{marginBottom:4}},'Checklist'),
-      items.map(function(i){return el('div',{key:i.id,className:'chk'},el('div',{style:{flex:1}},i.name),
-        ['Pass','Fail','N/A'].map(function(o){const on=checks[i.id]===o;
-          return el('button',{key:o,type:'button',className:'btn sm'+(on?(o==='Fail'?' selbad':''):' ghost'),onClick:function(){setChecks(function(p){return {...p,[i.id]:o};});}},o);}));}))
-    :el(Field,{label:def.itemLabel},
-      el('select',{style:{width:'100%'},value:itemId,onChange:function(e){pickItem(e.target.value);}},el('option',{value:''},'Select...'),items.map(function(i){return el('option',{key:i.id,value:i.id},i.name);})),
-      item&&specText(def,item.spec)&&el('div',{className:'muted',style:{fontSize:12,marginTop:4}},specText(def,item.spec))),
-    def.fields.map(function(f){return el(Field,{key:f.k,label:f.l+(f.k===nk&&needNotes?' (required)':'')},input(f));}),
-    res&&el('div',{className:'row',style:{margin:'0 0 12px'}},el('span',{className:'k'},'Result'),el(ResultBadge,{r:res})),
-    el(Field,{label:'Your name'},el('input',{value:name,onChange:function(e){setName(e.target.value);}})),
-    props.kiosk&&el(Field,{label:'Signature',plain:true},el(SignaturePad,{key:sigKey,onChange:function(v){setSig(v);}})),
-    el('div',{className:'row',style:{justifyContent:'flex-end'}},
-      props.onCancel&&el('button',{className:'btn ghost',onClick:props.onCancel},'Cancel'),
-      el('button',{className:'btn',style:props.kiosk?{width:'100%',padding:13}:null,disabled:busy,onClick:submit},busy?'Saving...':'Save entry')));
-}
-
-/* Admin: the areas / equipment / rooms / scales / checklist for one log, for one license */
-function ListManager(props){
-  const def=props.def,items=props.items;
+/* Admin: one editable list */
+function ListSection(props){
+  const L=props.L,items=props.items;
   const blank={name:'',spec:{}};
   const[f,setF]=useState(blank);
   const[editId,setEditId]=useState('');
@@ -792,38 +1121,52 @@ function ListManager(props){
   async function run(fn){setErr('');try{await fn();await props.onChanged();}catch(e){setErr(String(e.message||e));}}
   function save(){
     const nm=f.name.trim();if(!nm)return;
-    const spec={};(def.spec||[]).forEach(function(s){const v=String(f.spec[s.k]==null?'':f.spec[s.k]).trim();if(v!=='')spec[s.k]=numOk(v)?num(v):v;});
+    const spec={};(L.spec||[]).forEach(function(s){const v=String(f.spec[s.k]==null?'':f.spec[s.k]).trim();if(v!=='')spec[s.k]=s.num&&numOk(v)?num(v):v;});
     run(async function(){
       if(editId)await db.update('hx_log_lists',editId,{name:nm,spec:spec});
-      else await db.insert('hx_log_lists',{id:newId('li'),state_id:props.st.id,license_id:props.lic.id,list_key:def.list,name:nm,spec:spec,sort:items.length,active:true});
+      else await db.insert('hx_log_lists',{id:newId('li'),state_id:props.st.id,license_id:props.lic.id,list_key:L.key,name:nm,spec:spec,sort:items.length,active:true});
       setF(blank);setEditId('');
     });
   }
-  return el(Modal,{title:def.listName+' - '+props.lic.name,onClose:props.onClose},
-    el('div',{className:'muted',style:{marginBottom:12}},'Used by the '+def.name+' log for this license only. Other licenses keep their own lists.'),
+  function copyDefaults(){run(async function(){for(let i=0;i<L.def.length;i++)await db.insert('hx_log_lists',{id:newId('li'),state_id:props.st.id,license_id:props.lic.id,list_key:L.key,name:L.def[i],spec:{},sort:i,active:true});});}
+  function specTxt(s){return (L.spec||[]).filter(function(x){return s&&s[x.k]!==undefined&&s[x.k]!=='';}).map(function(x){return x.l+': '+s[x.k];}).join('  \u00b7  ');}
+  return el('div',{className:'card',style:{padding:14}},
+    el('div',{className:'row',style:{justifyContent:'space-between'}},el('h3',{style:{margin:0}},L.title),el('span',{className:'muted',style:{fontSize:12}},items.filter(function(i){return i.active;}).length+' active')),
+    L.key.indexOf('common.')===0&&el('div',{className:'muted',style:{fontSize:12}},'Shared by every log of this license.'),
+    L.hint&&el('div',{className:'muted',style:{fontSize:12}},L.hint),
     err&&el('div',{className:'msg err'},err),
-    el('div',{className:'card',style:{padding:12}},
-      el(Field,{label:editId?'Edit name':'Add '+(def.checklist?'checklist item':def.itemLabel.toLowerCase())},el('input',{value:f.name,onChange:function(e){setF({...f,name:e.target.value});},onKeyDown:function(e){if(e.key==='Enter')save();}})),
-      def.spec&&el('div',{className:'grid',style:{gridTemplateColumns:'repeat(2,1fr)',gap:8}},def.spec.map(function(s){
-        return el(Field,{key:s.k,label:s.l},el('input',{inputMode:'decimal',value:f.spec[s.k]==null?'':f.spec[s.k],onChange:function(e){const x=e.target.value;setF(function(p){return {...p,spec:{...p.spec,[s.k]:x}};});}}));})),
-      el('div',{className:'row',style:{justifyContent:'flex-end'}},
-        editId&&el('button',{className:'btn ghost sm',onClick:function(){setF(blank);setEditId('');}},'Cancel edit'),
-        el('button',{className:'btn sm',disabled:!f.name.trim(),onClick:save},editId?'Save changes':'+ Add'))),
-    !items.length?el('div',{className:'empty'},'Nothing added yet.'):
-    el('table',null,el('tbody',null,items.map(function(i){
+    !items.length&&(L.def?el('div',{className:'muted',style:{fontSize:13,margin:'8px 0'}},'Using the built-in choices: '+L.def.join(', ')+'. ',el('a',{href:'#',style:{color:'var(--gold-hi)'},onClick:function(e){e.preventDefault();copyDefaults();}},'Copy them here to edit')):
+      el('div',{className:'muted',style:{fontSize:13,margin:'8px 0'}},'Empty. The form shows a type-in box until you add items.')),
+    items.length>0&&el('table',{style:{margin:'8px 0'}},el('tbody',null,items.map(function(i){
       return el('tr',{key:i.id},
-        el('td',null,el('div',{style:{fontWeight:600,opacity:i.active?1:.5}},i.name),specText(def,i.spec)&&el('div',{className:'muted',style:{fontSize:12}},specText(def,i.spec))),
+        el('td',null,el('div',{style:{fontWeight:600,opacity:i.active?1:.45}},i.name+(i.active?'':' (hidden)')),specTxt(i.spec)&&el('div',{className:'muted',style:{fontSize:12}},specTxt(i.spec))),
         el('td',{style:{textAlign:'right',whiteSpace:'nowrap'}},
           el('button',{className:'btn ghost sm',onClick:function(){setEditId(i.id);setF({name:i.name,spec:{...(i.spec||{})}});}},'Edit'),' ',
           el('button',{className:'btn ghost sm',onClick:function(){run(function(){return db.update('hx_log_lists',i.id,{active:!i.active});});}},i.active?'Hide':'Show'),' ',
-          el('button',{className:'btn danger sm',onClick:function(){if(window.confirm('Delete "'+i.name+'"? Past log entries keep its name.'))run(function(){return db.remove('hx_log_lists',i.id);});}},'Delete')));
-    }))));
+          el('button',{className:'btn danger sm',onClick:function(){if(window.confirm('Delete "'+i.name+'"? Past entries keep its name.'))run(function(){return db.remove('hx_log_lists',i.id);});}},'Delete')));
+    }))),
+    el('div',{className:'row',style:{alignItems:'flex-end',marginTop:6}},
+      el('div',{style:{flex:'1 1 220px'}},el('input',{value:f.name,placeholder:editId?'Name':(L.ph||'Add an item'),onChange:function(e){setF({...f,name:e.target.value});},onKeyDown:function(e){if(e.key==='Enter'&&!L.spec)save();}})),
+      !L.spec&&el('button',{className:'btn sm',disabled:!f.name.trim(),onClick:save},editId?'Save':'+ Add'),
+      !L.spec&&editId&&el('button',{className:'btn ghost sm',onClick:function(){setF(blank);setEditId('');}},'Cancel')),
+    L.spec&&el('div',null,
+      el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(170px,1fr))',gap:8,marginTop:8}},L.spec.map(function(s){
+        return el(Field,{key:s.k,label:s.l},el('input',{type:s.t==='date'?'date':'text',inputMode:s.num?'decimal':undefined,value:f.spec[s.k]==null?'':f.spec[s.k],onChange:function(e){const x=e.target.value;setF(function(p){return {...p,spec:{...p.spec,[s.k]:x}};});}}));})),
+      el('div',{className:'row',style:{justifyContent:'flex-end'}},
+        editId&&el('button',{className:'btn ghost sm',onClick:function(){setF(blank);setEditId('');}},'Cancel'),
+        el('button',{className:'btn sm',disabled:!f.name.trim(),onClick:save},editId?'Save changes':'+ Add'))));
+}
+function ListManager(props){
+  const def=props.def,byKey=groupLists(props.rows,false);
+  return el(Modal,{title:def.name+' lists - '+props.lic.name,wide:true,onClose:props.onClose},
+    el('div',{className:'muted',style:{marginBottom:12}},'These lists belong to '+props.lic.name+' ('+props.st.name+') only. Other licenses keep their own.'),
+    def.lists.map(function(L){return el(ListSection,{key:L.key,L:L,items:byKey[L.key]||[],st:props.st,lic:props.lic,onChanged:props.onChanged});}));
 }
 
 function LogPanel(props){
   const def=props.def,st=props.state,lic=props.license;
   const isAdmin=props.profile.role==='admin';
-  const[items,setItems]=useState(null);
+  const lists=groupLists(props.listRows,true);
   const[rows,setRows]=useState(null);
   const[range,setRange]=useState('30');
   const[q,setQ]=useState('');
@@ -833,38 +1176,53 @@ function LogPanel(props){
   const[showRules,setShowRules]=useState(false);
   const qrId='hxqr-'+def.id;
   const link=window.location.origin+window.location.pathname+'?kiosk=log&type='+def.id+'&state='+encodeURIComponent(st.id)+'&lic='+encodeURIComponent(lic.id);
-  const loadItems=useCallback(function(){
-    return db.get('hx_log_lists','license_id=eq.'+encodeURIComponent(lic.id)+'&list_key=eq.'+def.list+'&select=*&order=sort,name')
-      .then(function(r){setItems((r||[]).filter(function(x){return x.license_id===lic.id&&x.state_id===st.id;}));})
-      .catch(function(e){setErr(String(e.message||e));setItems([]);});
-  },[lic.id,def.id]);
   const loadRows=useCallback(function(){
     let qs='license_id=eq.'+encodeURIComponent(lic.id)+'&state_id=eq.'+encodeURIComponent(st.id)+'&log_type=eq.'+def.id+'&select=id,state_id,license_id,item,item_id,data,result,performed_by,source,created_at&order=created_at.desc&limit=1000';
     if(range!=='all')qs+='&created_at=gte.'+encodeURIComponent(new Date(Date.now()-parseInt(range,10)*86400000).toISOString());
-    return db.get('hx_facility_log',qs).then(function(r){setRows((r||[]).filter(function(x){return x.license_id===lic.id;}));})
+    return db.get('hx_facility_log',qs).then(function(r){setRows((r||[]).filter(function(x){return x.license_id===lic.id&&x.state_id===st.id;}));})
       .catch(function(e){setErr(String(e.message||e));setRows([]);});
   },[lic.id,def.id,range]);
-  useEffect(function(){loadItems();},[loadItems]);
   useEffect(function(){setRows(null);loadRows();},[loadRows]);
-  const active=(items||[]).filter(function(i){return i.active;});
   const list=(rows||[]).filter(function(r){const t=(r.item+' '+r.performed_by+' '+r.result+' '+JSON.stringify(r.data||{})).toLowerCase();return !q||t.indexOf(q.toLowerCase())>=0;});
-  function fmt(t){return t?new Date(t).toLocaleString([],{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}):'';}
+  function when(r){const d=r.data||{};return d.date?(d.date+(d.time?' '+d.time:'')):new Date(r.created_at).toLocaleString();}
+  function details(r){
+    const d=r.data||{};
+    if(def.id==='sanitation'){let a=0,b=0;['areas','equip_san','equip_clean','weekly','monthly'].forEach(function(k){const o=d[k]||{};Object.keys(o).forEach(function(n){b++;if(o[n])a++;});});return a+' of '+b+' items done'+(d.sanitizer_used?'  \u00b7  '+d.sanitizer_used:'');}
+    if(def.id==='security_inspection'){let t=0,f=[];SEC_PARTS.forEach(function(p){(d[p.id]||[]).forEach(function(x){if(x.status)t++;if(x.status==='FAIL')f.push(x.name);});});return t+' checked'+(f.length?'  \u00b7  FAIL: '+f.join(', '):'');}
+    if(def.id==='scale_calibration'){const c=scaleCheck(d);return c.pts.filter(function(p){return p.ok!==null;}).length+'/5 points  \u00b7  cert '+(c.cert.status==='unknown'?'-':c.cert.status);}
+    const skip=['date','time',def.person,def.itemKey];
+    return def.fields.filter(function(f){return f.k&&skip.indexOf(f.k)<0&&['text','select','textarea','pick'].indexOf(f.t)>=0&&d[f.k];}).slice(0,4)
+      .map(function(f){const v=String(d[f.k]);return f.l.replace(/ \(.*\)$/,'')+': '+(v.length>60?v.slice(0,60)+'...':v);}).join('  \u00b7  ');
+  }
   function csv(){
     const e=function(v){return '"'+String(v==null?'':v).replace(/"/g,'""')+'"';};
-    const head=['State','License','License #','Log','Date / time',def.checklist?'Inspection':def.itemLabel].concat(def.fields.map(function(f){return f.l;}));
-    if(def.checklist)head.push('Checklist');
-    head.push('Result','Performed by','Source');
+    const cols=def.fields.filter(function(f){return f.k&&f.t!=='section'&&f.t!=='scalecheck';});
+    const head=['State','License','License #','Log','Entry ID','Saved at'];
+    cols.forEach(function(f){if(f.t==='inspection')SEC_PARTS.forEach(function(p){head.push(p.title);});else head.push(f.l||f.k);});
+    head.push('Result','Submitted by','Source');
     const lines=[head.map(e).join(',')];
-    list.forEach(function(r){const d=r.data||{};
-      const row=[st.name,lic.name,lic.license_number,def.name,r.created_at,r.item].concat(def.fields.map(function(f){return d[f.k];}));
-      if(def.checklist)row.push((d.checks||[]).map(function(c){return c.name+': '+c.res;}).join('; '));
+    list.forEach(function(r){const d=r.data||{};const row=[st.name,lic.name,lic.license_number,def.name,r.id,r.created_at];
+      cols.forEach(function(f){
+        if(f.t==='inspection'){SEC_PARTS.forEach(function(p){row.push((d[p.id]||[]).map(function(x){return x.name+': '+(x.status||'-')+(x.detail?' ('+x.detail+')':'');}).join('; '));});return;}
+        if(f.t==='checklist'){const o=d[f.k]||{};row.push(Object.keys(o).filter(function(n){return o[n];}).join('; '));return;}
+        row.push(f.t==='checkbox'?(d[f.k]?'Yes':'No'):d[f.k]);});
       row.push(r.result,r.performed_by,r.source);lines.push(row.map(e).join(','));});
     const b=new Blob([lines.join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);
     a.download=def.id+'_log_'+(lic.license_number||lic.id)+'.csv';document.body.appendChild(a);a.click();a.remove();
   }
-  async function viewSig(r){
+  async function sigsFor(ids){
+    const m={};if(!ids.length)return m;
+    for(let i=0;i<ids.length;i+=40){
+      const part=ids.slice(i,i+40);
+      const x=await db.get('hx_facility_log','id=in.('+part.map(function(id){return encodeURIComponent(id);}).join(',')+')&select=id,signature');
+      (x||[]).forEach(function(r){m[r.id]=r.signature;});
+    }
+    return m;
+  }
+  async function view(r){setErr('');try{const s=await sigsFor([r.id]);setModal({view:r,sig:s[r.id]||''});}catch(e){setErr(String(e.message||e));}}
+  async function printAll(){
     setErr('');
-    try{const x=await db.get('hx_facility_log','id=eq.'+encodeURIComponent(r.id)+'&select=signature');setModal({sig:(x&&x[0]&&x[0].signature)||'',r:r});}
+    try{const sl=list.slice(0,300);const s=await sigsFor(sl.map(function(r){return r.id;}));printRecords(def.name+' - '+lic.name,sl.map(function(r){return entryHtml(def,st,lic,r,s[r.id]);}));}
     catch(e){setErr(String(e.message||e));}
   }
   async function del(r){
@@ -875,28 +1233,29 @@ function LogPanel(props){
     await db.insert('hx_facility_log',{id:newId('fl'),state_id:st.id,license_id:lic.id,log_type:def.id,item_id:p.item_id||null,item:p.item,data:p.data,result:p.result,performed_by:p.performed_by,signature:p.signature||null,source:'app'});
     setModal(null);loadRows();
   }
+  async function saveEdit(r,p){
+    await db.update('hx_facility_log',r.id,{item_id:p.item_id||null,item:p.item,data:p.data,result:p.result,performed_by:p.performed_by});
+    setModal(null);loadRows();
+  }
   const fails=(rows||[]).filter(function(r){return FLAG_RES.indexOf(r.result)>=0;}).length;
   return el('div',null,
     el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start',marginBottom:10}},
-      el('div',null,el('h2',{style:{margin:0,fontSize:20}},def.name+' Log'),
-        el('div',{className:'muted'},items?(active.length+' '+def.listName.toLowerCase()+' set up'):'Loading...')),
+      el('div',null,el('h2',{style:{margin:0,fontSize:20}},def.name),el('div',{className:'muted'},'Frequency: '+def.freq)),
       el('div',{className:'row'},
-        isAdmin&&el('button',{className:'btn ghost',onClick:function(){setModal({lists:true});}},'Manage '+def.listName.toLowerCase()),
-        el('button',{className:'btn ghost',disabled:!list.length,onClick:csv},'Export CSV'),
-        el('button',{className:'btn',disabled:!active.length,onClick:function(){setModal({add:true});}},'+ New entry'))),
+        isAdmin&&el('button',{className:'btn ghost',onClick:function(){setModal({lists:true});}},'Manage lists'),
+        el('button',{className:'btn ghost',disabled:!list.length,onClick:csv},'CSV'),
+        el('button',{className:'btn ghost',disabled:!list.length,onClick:printAll},'Print / PDF'),
+        el('button',{className:'btn',onClick:function(){setModal({add:true});}},'+ New entry'))),
     err&&el('div',{className:'msg err'},err),
-    items&&!items.length&&el('div',{className:'empty',style:{marginBottom:14}},
-      'This log is blank for '+lic.name+'. '+(isAdmin?'Start by adding the '+def.listName.toLowerCase()+' it covers.':'Ask an admin to add the '+def.listName.toLowerCase()+' it covers.'),
-      isAdmin&&el('div',{style:{marginTop:12}},el('button',{className:'btn',onClick:function(){setModal({lists:true});}},'Add '+def.listName.toLowerCase()))),
     el('div',{className:'card gold'},el('div',{className:'row',style:{alignItems:'flex-start',gap:20}},
-      el('div',{id:qrId},el(QrBox,{text:link,size:130})),
+      el('div',{id:qrId},el(QrBox,{text:link,size:120})),
       el('div',{style:{flex:1,minWidth:220}},
         el('div',{className:'k'},'Kiosk QR - '+def.name+' - this license only'),
-        el('div',{style:{margin:'4px 0 8px'}},'Staff scan this to log ',el('b',null,def.name.toLowerCase()),' for ',el('b',null,lic.name),' ('+st.name+') without signing in. The code carries the state and license, and the database refuses anything else.'),
+        el('div',{style:{margin:'4px 0 8px'}},'Staff scan this to fill the ',el('b',null,def.name),' for ',el('b',null,lic.name),' ('+st.name+') without signing in. The code carries the state and license; the database refuses anything else.'),
         el('input',{readOnly:true,value:link,onFocus:function(e){e.target.select();}}),
         el('div',{className:'row',style:{marginTop:8}},
           el('button',{className:'btn sm',onClick:function(){try{navigator.clipboard.writeText(link);setCopied(true);setTimeout(function(){setCopied(false);},1500);}catch(e){}}},copied?'Copied':'Copy link'),
-          el('button',{className:'btn ghost sm',onClick:function(){printQrSign(qrId,st.name,lic,def.name+' log: scan to record');}},'Print QR sign'))))),
+          el('button',{className:'btn ghost sm',onClick:function(){printQrSign(qrId,st.name,lic,def.name+': scan to record');}},'Print QR sign'))))),
     el('div',{className:'card'},
       el('div',{className:'row',style:{justifyContent:'space-between'}},
         el('div',null,el('span',{className:'k'},st.name+' rules - '+def.ruleCat),el('span',{className:'muted',style:{marginLeft:8}},props.rules.length+' in the rulebook')),
@@ -908,46 +1267,64 @@ function LogPanel(props){
       el('input',{style:{maxWidth:300},placeholder:'Search entries...',value:q,onChange:function(e){setQ(e.target.value);}}),
       el('select',{value:range,onChange:function(e){setRange(e.target.value);}},el('option',{value:'1'},'Last 24 hours'),el('option',{value:'7'},'Last 7 days'),el('option',{value:'30'},'Last 30 days'),el('option',{value:'365'},'Last year'),el('option',{value:'all'},'All time')),
       el('span',{className:'muted'},rows?list.length+(list.length===1?' entry':' entries'):'Loading...'),
-      fails>0&&el('span',{className:'badge bad'},fails+' fail / flag')),
-    rows&&!list.length&&items&&items.length>0&&el('div',{className:'empty'},'No '+def.name.toLowerCase()+' entries in this period.'),
+      fails>0&&el('span',{className:'badge bad'},fails+' fail / open')),
+    rows&&!list.length&&el('div',{className:'empty'},'No '+def.name+' entries in this period for '+lic.name+'.'),
     list.length>0&&el('div',{className:'card',style:{overflowX:'auto'}},el('table',null,
-      el('thead',null,el('tr',null,['Date / time',def.checklist?'Inspection':def.itemLabel,'Details','Result','By',''].map(function(h,i){return el('th',{key:i},h);}))),
-      el('tbody',null,list.map(function(r){
+      el('thead',null,el('tr',null,['#','Date / time',def.itemLabel,'Details','Result','By',''].map(function(h,i){return el('th',{key:i},h);}))),
+      el('tbody',null,list.map(function(r,i){
         return el('tr',{key:r.id},
-          el('td',{style:{whiteSpace:'nowrap'}},fmt(r.created_at)),
+          el('td',{className:'muted'},list.length-i),
+          el('td',{style:{whiteSpace:'nowrap'}},when(r)),
           el('td',null,r.item||'-'),
-          el('td',{style:{fontSize:13,maxWidth:420}},entrySummary(def,r)),
+          el('td',{style:{fontSize:13,maxWidth:420}},details(r)),
           el('td',null,el(ResultBadge,{r:r.result})),
           el('td',null,r.performed_by,r.source==='kiosk'&&el('span',{className:'badge off',style:{marginLeft:6}},'QR')),
           el('td',{style:{textAlign:'right',whiteSpace:'nowrap'}},
-            r.source==='kiosk'&&el('button',{className:'btn ghost sm',onClick:function(){viewSig(r);}},'Signature'),' ',
+            el('button',{className:'btn ghost sm',onClick:function(){view(r);}},'View'),' ',
+            isAdmin&&el('button',{className:'btn ghost sm',onClick:function(){setModal({edit:r});}},'Edit'),' ',
             isAdmin&&el('button',{className:'btn danger sm',onClick:function(){del(r);}},'Delete')));
       })))),
-    modal&&modal.add&&el(Modal,{title:'New '+def.name.toLowerCase()+' entry - '+lic.name,onClose:function(){setModal(null);}},
-      el(LogForm,{def:def,items:active,defaultName:props.profile.name||'',onSubmit:addEntry,onCancel:function(){setModal(null);}})),
-    modal&&modal.lists&&el(ListManager,{def:def,st:st,lic:lic,items:items||[],onChanged:loadItems,onClose:function(){setModal(null);}}),
-    modal&&modal.r&&el(Modal,{title:modal.r.performed_by+' - signature',onClose:function(){setModal(null);}},
-      modal.sig?el('img',{src:modal.sig,style:{width:'100%',background:'#fff',borderRadius:8}}):el('div',{className:'muted'},'No signature stored.'),
-      el('div',{className:'muted',style:{marginTop:8}},fmt(modal.r.created_at))));
+    modal&&modal.add&&el(Modal,{title:'New '+def.name+' entry - '+lic.name,wide:true,onClose:function(){setModal(null);}},
+      el(LogForm,{def:def,lists:lists,defaultName:props.profile.name||'',onSubmit:addEntry,onCancel:function(){setModal(null);}})),
+    modal&&modal.edit&&el(Modal,{title:'Edit '+def.name+' entry',wide:true,onClose:function(){setModal(null);}},
+      el(LogForm,{def:def,lists:lists,initial:modal.edit,onSubmit:function(p){return saveEdit(modal.edit,p);},onCancel:function(){setModal(null);}})),
+    modal&&modal.lists&&el(ListManager,{def:def,st:st,lic:lic,rows:props.listRows,onChanged:props.reloadLists,onClose:function(){setModal(null);}}),
+    modal&&modal.view&&el(Modal,{title:def.name,wide:true,onClose:function(){setModal(null);}},
+      el('div',{dangerouslySetInnerHTML:{__html:REC_CSS+entryHtml(def,st,lic,modal.view,modal.sig)}}),
+      el('div',{className:'row',style:{justifyContent:'flex-end',marginTop:12}},
+        el('button',{className:'btn ghost',onClick:function(){setModal(null);}},'Close'),
+        el('button',{className:'btn',onClick:function(){printRecords(def.name,[entryHtml(def,st,lic,modal.view,modal.sig)]);}},'Print / PDF'))));
 }
 
 function FacilityLogs(props){
   const st=props.state,lic=props.license;
   const[tab,setTab]=useState(lsGet('hx_logtab')||LOG_TYPES[0].id);
   const[rules,setRules]=useState([]);
-  const sid=st?st.id:'';
+  const[listRows,setListRows]=useState(null);
+  const[err,setErr]=useState('');
+  const sid=st?st.id:'',lid=lic?lic.id:'';
   useEffect(function(){
     if(!sid){setRules([]);return;}
     db.get('hx_rules','state_id=eq.'+encodeURIComponent(sid)+'&select=*&order=created_at')
       .then(function(r){setRules((r||[]).filter(function(x){return x.state_id===sid;}));}).catch(function(){setRules([]);});
   },[sid]);
+  const loadLists=useCallback(function(){
+    if(!lid){setListRows([]);return Promise.resolve();}
+    return db.get('hx_log_lists','license_id=eq.'+encodeURIComponent(lid)+'&select=*&order=sort,name')
+      .then(function(r){setListRows((r||[]).filter(function(x){return x.license_id===lid&&x.state_id===sid;}));})
+      .catch(function(e){setErr(String(e.message||e));setListRows([]);});
+  },[lid,sid]);
+  useEffect(function(){loadLists();},[loadLists]);
   if(!lic||!st)return el('div',null,el('h1',null,'Facility ',el('span',{className:'g'},'Logs')),el('div',{className:'empty'},'Pick a state and a license at the top first. Every log belongs to exactly one license.'));
   const def=LOG_TYPES.find(function(t){return t.id===tab;})||LOG_TYPES[0];
   return el('div',null,
     el('h1',null,'Facility ',el('span',{className:'g'},'Logs')),
     el('div',{className:'sub'},st.name+'  \u00b7  '+lic.name+(lic.license_number?'  \u00b7  '+lic.license_number:'')),
-    el('div',{className:'tabs'},LOG_TYPES.map(function(t){return el('button',{key:t.id,className:t.id===def.id?'on':'',onClick:function(){setTab(t.id);lsSet('hx_logtab',t.id);}},t.name);})),
-    el(LogPanel,{key:def.id+'|'+lic.id,def:def,state:st,license:lic,profile:props.profile,rules:rules.filter(function(r){return (r.category||'').toLowerCase()===def.ruleCat.toLowerCase();})}));
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'tabs'},LOG_TYPES.map(function(t){return el('button',{key:t.id,className:t.id===def.id?'on':'',onClick:function(){setTab(t.id);lsSet('hx_logtab',t.id);}},t.name.replace(/ Log$/,''));})),
+    listRows===null?el('div',{className:'muted'},'Loading...'):
+    el(LogPanel,{key:def.id+'|'+lic.id,def:def,state:st,license:lic,profile:props.profile,listRows:listRows,reloadLists:loadLists,
+      rules:rules.filter(function(r){return (r.category||'').toLowerCase()===def.ruleCat.toLowerCase();})}));
 }
 
 /* QR kiosk for a log (no login). Needs type + state + license in the link; the database re-checks all three. */
@@ -975,13 +1352,13 @@ function KioskLog(){
     el('div',{className:'k',style:{marginTop:16}},lic.state),
     el('div',{style:{fontSize:20,fontWeight:700}},lic.name),
     el('div',{className:'muted'},'License '+(lic.license_number||'-')),
-    el('div',{style:{marginTop:10,fontSize:17,color:'var(--gold-hi)',fontWeight:700}},def.name+' Log'));
+    el('div',{style:{marginTop:10,fontSize:17,color:'var(--gold-hi)',fontWeight:700}},def.name));
   if(done)return el('div',{className:'auth'},el('div',{className:'box'},head,el('div',{className:'msg ok',style:{fontSize:15}},done),
-    el('button',{className:'btn',style:{width:'100%'},onClick:function(){setDone('');}},'Log another')));
-  return el('div',{className:'auth',style:{alignItems:'flex-start'}},el('div',{className:'box',style:{width:'min(560px,100%)'}},head,
-    el(LogForm,{def:def,items:setup.items||[],kiosk:true,onSubmit:async function(p){
+    el('button',{className:'btn',style:{width:'100%'},onClick:function(){setDone('');}},'Fill another')));
+  return el('div',{className:'auth',style:{alignItems:'flex-start'}},el('div',{className:'box',style:{width:'min(640px,100%)'}},head,
+    el(LogForm,{def:def,lists:groupLists(setup.items,false),kiosk:true,onSubmit:async function(p){
       await rpc('hx_kiosk_log_add',{p_state:stId,p_lic:licId,p_type:def.id,p:p});
-      setDone('Saved. Thank you, '+p.performed_by+'.'+(FLAG_RES.indexOf(p.result)>=0?' This entry was marked '+p.result+' - please tell your supervisor.':''));
+      setDone('Saved. Thank you, '+p.performed_by+'.'+(FLAG_RES.indexOf(p.result)>=0?' This entry is marked '+p.result+' - please tell your supervisor.':''));
     }})));
 }
 
