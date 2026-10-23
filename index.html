@@ -165,10 +165,10 @@ async function sb(path,opt){
   if(!r.ok){
     const m=(j&&(j.message||j.hint||j.details))||txt||('Error '+r.status);
     if(/schema cache|Could not find the table|relation .* does not exist/i.test(m)){
-      const step=/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
+      const step=/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
       throw new Error('Database tables are missing - run '+step+' in the Hendrix Supabase project.');
     }
-    if(/row-level security|permission denied/i.test(m))throw new Error('Not allowed - only an approved admin can change this.');
+    if(/row-level security|permission denied/i.test(m))throw new Error('Not allowed - your access level does not allow this here. Ask a system admin.');
     throw new Error(m);
   }
   return j;
@@ -380,7 +380,7 @@ function RuleForm(props){
 }
 function Rulebook(props){
   const st=props.state;
-  const isAdmin=props.profile.role==='admin';
+  const isAdmin=can('rulebook',2),canDel=can('rulebook',3);
   const[rules,setRules]=useState(null);
   const[q,setQ]=useState('');
   const[modal,setModal]=useState(null);
@@ -417,7 +417,7 @@ function Rulebook(props){
               el('div',null,el('div',{style:{fontWeight:700}},r.title),r.citation&&el('div',{className:'muted',style:{fontSize:12}},r.citation)),
               isAdmin&&el('div',{className:'row',style:{flexWrap:'nowrap'}},
                 el('button',{className:'btn ghost sm',onClick:function(){setModal({r:r});}},'Edit'),
-                el('button',{className:'btn danger sm',onClick:function(){if(window.confirm('Delete this rule?'))run(function(){return db.remove('hx_rules',r.id);});}},'Delete'))),
+                canDel&&el('button',{className:'btn danger sm',onClick:function(){if(window.confirm('Delete this rule?'))run(function(){return db.remove('hx_rules',r.id);});}},'Delete'))),
             r.body&&el('div',{style:{marginTop:6,whiteSpace:'pre-wrap',color:'var(--text)'}},r.body));
         }));
     }),
@@ -426,31 +426,6 @@ function Rulebook(props){
 }
 
 /* ---------- Team (admin) ---------- */
-function Team(props){
-  const[rows,setRows]=useState(null);
-  const[err,setErr]=useState('');
-  const load=useCallback(function(){
-    db.get('hx_profiles','select=*&order=created_at').then(setRows).catch(function(e){setErr(String(e.message||e));});
-  },[]);
-  useEffect(load,[load]);
-  async function patch(u,p){
-    setErr('');
-    try{await db.update('hx_profiles',u.id,p);load();}catch(e){setErr(String(e.message||e));}
-  }
-  return el('div',null,
-    el('h1',null,'Team and ',el('span',{className:'g'},'Access')),
-    el('div',{className:'sub'},'Approve people who sign up and choose who is an admin. Finer access templates come in a later step.'),
-    err&&el('div',{className:'msg err'},err),
-    !rows?el('div',{className:'muted'},'Loading...'):
-    el('div',{className:'card'},el('table',null,el('thead',null,el('tr',null,['Name','Email','Role','Status',''].map(function(h,i){return el('th',{key:i},h);}))),
-      el('tbody',null,rows.map(function(u){
-        const me=u.id===props.profile.id;
-        return el('tr',{key:u.id},el('td',null,u.name||'-',me&&el('span',{className:'badge',style:{marginLeft:8}},'You')),el('td',null,u.email),
-          el('td',null,el('select',{value:u.role,disabled:me,onChange:function(e){patch(u,{role:e.target.value});}},el('option',{value:'member'},'Member'),el('option',{value:'admin'},'Admin'))),
-          el('td',null,el('span',{className:'badge'+(u.approved?'':' off')},u.approved?'Approved':'Waiting')),
-          el('td',{style:{textAlign:'right'}},!me&&el('button',{className:'btn sm'+(u.approved?' ghost':''),onClick:function(){patch(u,{approved:!u.approved});}},u.approved?'Revoke':'Approve')));
-      })))));
-}
 
 /* ---------- QR + signature helpers ---------- */
 function QrBox(props){
@@ -592,9 +567,9 @@ function VisitorLog(props){
   return el('div',null,
     el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
       el('div',null,el('h1',null,'Visitor ',el('span',{className:'g'},'Log')),el('div',{className:'sub'},st.name+'  \u00b7  '+lic.name+(lic.license_number?'  \u00b7  '+lic.license_number:''))),
-      el('div',{className:'row'},el('button',{className:'btn ghost',onClick:csv},'Export CSV'),el('button',{className:'btn',onClick:function(){setModal(true);}},'+ Manual entry'))),
+      el('div',{className:'row'},el('button',{className:'btn ghost',onClick:csv},'Export CSV'),can('logs_visitor',2)&&el('button',{className:'btn',onClick:function(){setModal(true);}},'+ Manual entry'))),
     err&&el('div',{className:'msg err'},err),
-    el('div',{className:'card gold'},el('div',{className:'row',style:{alignItems:'flex-start',gap:20}},
+    can('logs_visitor',2)&&el('div',{className:'card gold'},el('div',{className:'row',style:{alignItems:'flex-start',gap:20}},
       el('div',{id:'hxqr'},el(QrBox,{text:link,size:150})),
       el('div',{style:{flex:1,minWidth:220}},
         el('div',{className:'k'},'Kiosk QR for this license only'),
@@ -615,7 +590,7 @@ function VisitorLog(props){
           el('td',null,r.time_out?fmt(r.time_out):el('span',{className:'badge'},'On site')),
           el('td',{style:{textAlign:'right',whiteSpace:'nowrap'}},
             r.signature&&el('button',{className:'btn ghost sm',style:{marginRight:6},onClick:function(){setView(r);}},'Signature'),
-            !r.time_out&&el('button',{className:'btn sm',onClick:function(){outNow(r);}},'Sign out')));
+            !r.time_out&&can('logs_visitor',2)&&el('button',{className:'btn sm',onClick:function(){outNow(r);}},'Sign out')));
       })))),
     modal&&el(ManualVisitor,{st:st,lic:lic,onClose:function(){setModal(false);},onSaved:function(){setModal(false);load();}}),
     view&&el(Modal,{title:view.visitor_name+' - signature',onClose:function(){setView(null);}},el('img',{src:view.signature,style:{width:'100%',background:'#fff',borderRadius:8}}),el('div',{className:'muted',style:{marginTop:8}},fmt(view.time_in))));
@@ -1245,7 +1220,7 @@ function ListManager(props){
 
 function LogPanel(props){
   const def=props.def,st=props.state,lic=props.license;
-  const isAdmin=props.profile.role==='admin';
+  const isAdmin=can(LOG_MOD[def.id],3),canAdd=can(LOG_MOD[def.id],2),canAudit=can('audit',1);
   const lists=groupLists(props.listRows,true);
   const[rows,setRows]=useState(null);
   const[range,setRange]=useState('30');
@@ -1304,7 +1279,7 @@ function LogPanel(props){
     try{
       const s=await sigsFor([r.id]);
       let h=null;
-      if(isAdmin){try{h=await db.get('hx_audit_log','table_name=eq.hx_facility_log&row_id=eq.'+encodeURIComponent(r.id)+'&select=*&order=at.asc');}catch(x){h=null;}}
+      if(canAudit){try{h=await db.get('hx_audit_log','table_name=eq.hx_facility_log&row_id=eq.'+encodeURIComponent(r.id)+'&select=*&order=at.asc');}catch(x){h=null;}}
       setModal({view:r,sig:s[r.id]||'',hist:h});
     }catch(e){setErr(String(e.message||e));}
   }
@@ -1333,9 +1308,9 @@ function LogPanel(props){
         isAdmin&&el('button',{className:'btn ghost',onClick:function(){setModal({lists:true});}},'Manage lists'),
         el('button',{className:'btn ghost',disabled:!list.length,onClick:csv},'CSV'),
         el('button',{className:'btn ghost',disabled:!list.length,onClick:printAll},'Print / PDF'),
-        el('button',{className:'btn',onClick:function(){setModal({add:true});}},'+ New entry'))),
+        canAdd&&el('button',{className:'btn',onClick:function(){setModal({add:true});}},'+ New entry'))),
     err&&el('div',{className:'msg err'},err),
-    el('div',{className:'card gold'},el('div',{className:'row',style:{alignItems:'flex-start',gap:20}},
+    canAdd&&el('div',{className:'card gold'},el('div',{className:'row',style:{alignItems:'flex-start',gap:20}},
       el('div',{id:qrId},el(QrBox,{text:link,size:120})),
       el('div',{style:{flex:1,minWidth:220}},
         el('div',{className:'k'},'Kiosk QR - '+def.name+' - this license only'),
@@ -1405,12 +1380,14 @@ function FacilityLogs(props){
   },[lid,sid]);
   useEffect(function(){loadLists();},[loadLists]);
   if(!lic||!st)return el('div',null,el('h1',null,'Facility ',el('span',{className:'g'},'Logs')),el('div',{className:'empty'},'Pick a state and a license at the top first. Every log belongs to exactly one license.'));
-  const def=LOG_TYPES.find(function(t){return t.id===tab;})||LOG_TYPES[0];
+  const vis=LOG_TYPES.filter(function(t){return can(LOG_MOD[t.id],1);});
+  if(!vis.length)return el('div',null,el('h1',null,'Facility ',el('span',{className:'g'},'Logs')),el('div',{className:'empty'},'You do not have access to any facility log. Ask a system admin.'));
+  const def=vis.find(function(t){return t.id===tab;})||vis[0];
   return el('div',null,
     el('h1',null,'Facility ',el('span',{className:'g'},'Logs')),
     el('div',{className:'sub'},st.name+'  \u00b7  '+lic.name+(lic.license_number?'  \u00b7  '+lic.license_number:'')),
     err&&el('div',{className:'msg err'},err),
-    el('div',{className:'tabs'},LOG_TYPES.map(function(t){return el('button',{key:t.id,className:t.id===def.id?'on':'',onClick:function(){setTab(t.id);lsSet('hx_logtab',t.id);}},t.name.replace(/ Log$/,''));})),
+    el('div',{className:'tabs'},vis.map(function(t){return el('button',{key:t.id,className:t.id===def.id?'on':'',onClick:function(){setTab(t.id);lsSet('hx_logtab',t.id);}},t.name.replace(/ Log$/,''));})),
     listRows===null?el('div',{className:'muted'},'Loading...'):
     el(LogPanel,{key:def.id+'|'+lic.id,def:def,state:st,license:lic,profile:props.profile,listRows:listRows,reloadLists:loadLists,
       rules:rules.filter(function(r){return (r.category||'').toLowerCase()===def.ruleCat.toLowerCase();})}));
@@ -1729,23 +1706,23 @@ function FlavorManager(props){
     k.spec&&k.spec.no_flavor&&el('div',{className:'msg err'},'This SKU is set to "no flavors". Edit the SKU to change that.'),
     err&&el('div',{className:'msg err'},err),
     !fl.length?el('div',{className:'empty',style:{marginBottom:12}},'No flavors yet.'):
-    el('table',{style:{marginBottom:12}},el('thead',null,el('tr',null,el('th',null,'Flavor'),props.isAdmin&&el('th',null,'Formulation'),el('th',null,''))),
+    el('table',{style:{marginBottom:12}},el('thead',null,el('tr',null,el('th',null,'Flavor'),props.canF1&&el('th',null,'Formulation'),el('th',null,''))),
       el('tbody',null,fl.map(function(x){
         const own=forms.find(function(r){return r.flavor_id===x.id;});
         return el('tr',{key:x.id},
           el('td',null,edit&&edit.id===x.id?el('input',{value:edit.name,autoFocus:true,onChange:function(e){setEdit({...edit,name:e.target.value});},onKeyDown:function(e){if(e.key==='Enter'&&edit.name.trim())run(async function(){await db.update('hx_flavors',x.id,{name:edit.name.trim()});setEdit(null);});}})
             :el('span',{style:{opacity:x.active?1:.45,fontWeight:600}},x.name+(x.active?'':' (hidden)'))),
-          props.isAdmin&&el('td',{style:{fontSize:13}},own?el('span',{className:'badge ok'},'Own recipe'):base?el('span',{className:'muted'},'Uses base recipe'):el('span',{className:'badge bad'},'No recipe')),
+          props.canF1&&el('td',{style:{fontSize:13}},own?el('span',{className:'badge ok'},'Own recipe'):base?el('span',{className:'muted'},'Uses base recipe'):el('span',{className:'badge bad'},'No recipe')),
           el('td',{style:{textAlign:'right',whiteSpace:'nowrap'}},
-            props.isAdmin&&(edit&&edit.id===x.id?
+            props.canEdit&&(edit&&edit.id===x.id?
               el('button',{className:'btn sm',disabled:!edit.name.trim(),onClick:function(){run(async function(){await db.update('hx_flavors',x.id,{name:edit.name.trim()});setEdit(null);});}},'Save')
               :el('button',{className:'btn ghost sm',onClick:function(){setEdit({id:x.id,name:x.name});}},'Rename')),' ',
-            props.isAdmin&&el('button',{className:'btn ghost sm',onClick:function(){props.openFormula(own||null,k.id,x.id);}},own?'Edit recipe':'Own recipe'),' ',
-            props.isAdmin&&el('button',{className:'btn ghost sm',onClick:function(){run(function(){return db.update('hx_flavors',x.id,{active:!x.active});});}},x.active?'Hide':'Show'),' ',
-            props.isAdmin&&el('button',{className:'btn danger sm',onClick:function(){if(window.confirm('Delete flavor "'+x.name+'"'+(own?' and its own recipe':'')+'?'))run(function(){return db.remove('hx_flavors',x.id);});}},'Delete')));
+            props.canF2&&el('button',{className:'btn ghost sm',onClick:function(){props.openFormula(own||null,k.id,x.id);}},own?'Edit recipe':'Own recipe'),' ',
+            props.canEdit&&el('button',{className:'btn ghost sm',onClick:function(){run(function(){return db.update('hx_flavors',x.id,{active:!x.active});});}},x.active?'Hide':'Show'),' ',
+            props.canDel&&el('button',{className:'btn danger sm',onClick:function(){if(window.confirm('Delete flavor "'+x.name+'"'+(own?' and its own recipe':'')+'?'))run(function(){return db.remove('hx_flavors',x.id);});}},'Delete')));
       }))),
-    props.isAdmin&&el(Field,{label:'Add flavors - one per line'},el('textarea',{value:add,style:{minHeight:90},onChange:function(e){setAdd(e.target.value);}})),
-    props.isAdmin&&el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn',disabled:!add.trim(),onClick:addAll},'+ Add flavors')));
+    props.canEdit&&el(Field,{label:'Add flavors - one per line'},el('textarea',{value:add,style:{minHeight:90},onChange:function(e){setAdd(e.target.value);}})),
+    props.canEdit&&el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn',disabled:!add.trim(),onClick:addAll},'+ Add flavors')));
 }
 
 function FormulaCard(props){
@@ -1755,9 +1732,9 @@ function FormulaCard(props){
     el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start',flexWrap:'nowrap'}},
       el('div',null,el('div',{style:{fontWeight:700}},f.name),el('div',{className:'muted',style:{fontSize:12}},(props.skuName||'?')+'  \u00b7  '+(props.flavorName||'All flavors (base)'))),
       el('div',{className:'row',style:{flexWrap:'nowrap'}},
-        el('button',{className:'btn ghost sm',onClick:props.onEdit},'Edit'),
+        props.onEdit&&el('button',{className:'btn ghost sm',onClick:props.onEdit},'Edit'),
         props.onDup&&el('button',{className:'btn ghost sm',onClick:props.onDup},'Duplicate'),
-        el('button',{className:'btn danger sm',onClick:props.onDelete},'\u2715'))),
+        props.onDelete&&el('button',{className:'btn danger sm',onClick:props.onDelete},'\u2715'))),
     el('div',{className:'row',style:{margin:'8px 0 6px'}},el('span',{className:'badge'},n+' lines'),f.batch_size&&el('span',{className:'badge off'},'Batch: '+f.batch_size),el('span',{className:'badge off'},money(formTotal(f)))),
     (f.raw_materials||[]).slice(0,4).map(function(r,i){return el('div',{key:i,className:'row',style:{justifyContent:'space-between',fontSize:12}},el('span',null,r.name),el('span',{className:'muted'},(r.qty||'')+(r.unit?' '+r.unit:'')));}),
     (f.raw_materials||[]).length>4&&el('div',{className:'muted',style:{fontSize:12}},'+'+(f.raw_materials.length-4)+' more'),
@@ -1780,7 +1757,7 @@ function PriceLibrary(props){
   return el('div',null,
     el('div',{className:'muted',style:{marginBottom:12}},'Prices for '+st.name+'. Recipes pick from this list, and the Planner and COGS will use it.'),
     err&&el('div',{className:'msg err'},err),
-    el('div',{className:'card gold'},
+    props.canEdit&&el('div',{className:'card gold'},
       el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(170px,1fr))',gap:10}},
         el(Field,{label:'Category'},el('select',{style:{width:'100%'},value:f.category,onChange:function(e){setF({...f,category:e.target.value});}},COGS_CATS.map(function(c){return el('option',{key:c.id,value:c.id},c.label);}))),
         el(Field,{label:'Name'},el('input',{value:f.name,placeholder:'e.g. Distillate',onChange:function(e){setF({...f,name:e.target.value});}})),
@@ -1793,12 +1770,12 @@ function PriceLibrary(props){
       return el('div',{key:c.id,className:'card'},el('div',{className:'k',style:{marginBottom:6}},c.label),el('table',null,el('tbody',null,rows.map(function(l){
         return el('tr',{key:l.id},el('td',{style:{fontWeight:600}},l.name),el('td',null,money(l.cost_per_unit)+' / '+(l.unit||'unit')),
           el('td',{className:'muted',style:{fontSize:12}},(l.product_types||[]).length?l.product_types.map(ptName).join(', '):'All product types'),
-          el('td',{style:{textAlign:'right',whiteSpace:'nowrap'}},el('button',{className:'btn ghost sm',onClick:function(){setEditId(l.id);setF({category:l.category,name:l.name,unit:l.unit||'',cost_per_unit:l.cost_per_unit==null?'':String(l.cost_per_unit),product_types:l.product_types||[]});}},'Edit'),' ',
-            el('button',{className:'btn danger sm',onClick:function(){if(window.confirm('Delete "'+l.name+'"?'))run(function(){return db.remove('hx_cost_library',l.id);});}},'Delete')));}))));}));
+          el('td',{style:{textAlign:'right',whiteSpace:'nowrap'}},props.canEdit&&el('button',{className:'btn ghost sm',onClick:function(){setEditId(l.id);setF({category:l.category,name:l.name,unit:l.unit||'',cost_per_unit:l.cost_per_unit==null?'':String(l.cost_per_unit),product_types:l.product_types||[]});}},'Edit'),' ',
+            props.canDel&&el('button',{className:'btn danger sm',onClick:function(){if(window.confirm('Delete "'+l.name+'"?'))run(function(){return db.remove('hx_cost_library',l.id);});}},'Delete')));}))));}));
 }
 
 function Products(props){
-  const st=props.state,isAdmin=props.profile.role==='admin';
+  const st=props.state,P2=can('products',2),P3=can('products',3),F1=can('formbank',1),F2=can('formbank',2),F3=can('formbank',3),C1=can('cogs',1),C2=can('cogs',2),C3=can('cogs',3);
   const sid=st?st.id:'';
   const[tab,setTab]=useState('skus');
   const[pt,setPt]=useState(lsGet('hx_ptype')||PRODUCT_TYPES[0].id);
@@ -1811,11 +1788,11 @@ function Products(props){
     try{
       const f='state_id=eq.'+encodeURIComponent(sid);
       const r=await Promise.all([db.get('hx_skus',f+'&select=*&order=sort,name'),db.get('hx_flavors',f+'&select=*&order=sort,name'),
-        isAdmin?db.get('hx_formulations',f+'&select=*&order=name'):Promise.resolve([]),isAdmin?db.get('hx_cost_library',f+'&select=*&order=category,name'):Promise.resolve([])]);
+        F1?db.get('hx_formulations',f+'&select=*&order=name'):Promise.resolve([]),C1?db.get('hx_cost_library',f+'&select=*&order=category,name'):Promise.resolve([])]);
       const only=function(a){return (a||[]).filter(function(x){return x.state_id===sid;});};
       setData({skus:only(r[0]),flavors:only(r[1]),forms:only(r[2]),lib:only(r[3])});
     }catch(e){setErr(niceErr(e));setData({skus:[],flavors:[],forms:[],lib:[]});}
-  },[sid,isAdmin]);
+  },[sid,F1,C1]);
   useEffect(function(){setData(null);setErr('');load();},[load]);
   if(!st)return el('div',null,el('h1',null,'Products'),el('div',{className:'empty'},'Create a state first. Every SKU belongs to one state.'));
   if(!data)return el('div',{className:'muted'},'Loading...');
@@ -1830,37 +1807,37 @@ function Products(props){
   const typeSkus=data.skus.filter(function(k){return k.product_type===pt;}).filter(function(k){
     if(!q)return true;const t=(k.name+' '+data.flavors.filter(function(x){return x.sku_id===k.id;}).map(function(x){return x.name;}).join(' ')).toLowerCase();return t.indexOf(q.toLowerCase())>=0;});
   const needs=data.skus.filter(function(k){return !k.active&&!data.forms.some(function(f){return f.sku_id===k.id;});}).length;
-  const tabs=[['skus','SKUs and Flavors']].concat(isAdmin?[['formulas','Formulation Bank ('+data.forms.length+')'],['prices','Ingredient Prices ('+data.lib.length+')']]:[]);
+  const tabs=[['skus','SKUs and Flavors']].concat(F1?[['formulas','Formulation Bank ('+data.forms.length+')']]:[]).concat(C1?[['prices','Ingredient Prices ('+data.lib.length+')']]:[]);
   let body;
-  if(tab==='prices'&&isAdmin)body=el(PriceLibrary,{state:st,library:data.lib,reload:load});
-  else if(tab==='formulas'&&isAdmin){
+  if(tab==='prices'&&C1)body=el(PriceLibrary,{state:st,library:data.lib,reload:load,canEdit:C2,canDel:C3});
+  else if(tab==='formulas'&&F1){
     const fl=data.forms.filter(function(f){const t=(f.name+' '+skuName(f.sku_id)+' '+flavName(f.flavor_id)).toLowerCase();return !q||t.indexOf(q.toLowerCase())>=0;});
     body=el('div',null,
       el('div',{className:'row',style:{marginBottom:14}},el('input',{style:{maxWidth:300},placeholder:'Search formulations...',value:q,onChange:function(e){setQ(e.target.value);}}),
         el('span',{className:'muted'},fl.length+' formulation'+(fl.length===1?'':'s')),el('span',{style:{flex:1}}),
-        el('button',{className:'btn',disabled:!data.skus.length,onClick:function(){openFormula(null,'','');}},'+ New formulation')),
+        F2&&el('button',{className:'btn',disabled:!data.skus.length,onClick:function(){openFormula(null,'','');}},'+ New formulation')),
       !fl.length?el('div',{className:'empty'},data.skus.length?'No formulations match.':'Create a SKU first; its formulation is entered as part of creating it.'):
       PRODUCT_TYPES.map(function(t){
         const items=fl.filter(function(f){const k=data.skus.find(function(x){return x.id===f.sku_id;});return k&&k.product_type===t.id;});
         if(!items.length)return null;
         return el('div',{key:t.id,style:{marginBottom:18}},el('div',{className:'secth'},t.name+'  \u00b7  '+items.length),
           el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))'}},items.map(function(f){
-            return el(FormulaCard,{key:f.id,f:f,skuName:skuName(f.sku_id),flavorName:flavName(f.flavor_id),onEdit:function(){openFormula(f,f.sku_id,f.flavor_id||'');},
-              onDup:function(){setModal({formula:{...f,id:undefined,name:'',flavor_id:''},skuId:f.sku_id,flavorId:'',dup:true});},
-              onDelete:function(){del(function(){return db.remove('hx_formulations',f.id);},'Delete "'+f.name+'"?'+(data.forms.filter(function(x){return x.sku_id===f.sku_id;}).length===1?' It is this SKU\'s only formulation, so the SKU will be switched off.':''));}});})));
+            return el(FormulaCard,{key:f.id,f:f,skuName:skuName(f.sku_id),flavorName:flavName(f.flavor_id),onEdit:F2?function(){openFormula(f,f.sku_id,f.flavor_id||'');}:null,
+              onDup:F2?function(){setModal({formula:{...f,id:undefined,name:'',flavor_id:''},skuId:f.sku_id,flavorId:'',dup:true});}:null,
+              onDelete:F3&&function(){del(function(){return db.remove('hx_formulations',f.id);},'Delete "'+f.name+'"?'+(data.forms.filter(function(x){return x.sku_id===f.sku_id;}).length===1?' It is this SKU\'s only formulation, so the SKU will be switched off.':''));}});})));
       }));
   }else{
     body=el('div',null,
       el('div',{className:'tabs'},PRODUCT_TYPES.map(function(t){const n=data.skus.filter(function(k){return k.product_type===t.id;}).length;
         return el('button',{key:t.id,className:t.id===pt?'on':'',onClick:function(){setPt(t.id);lsSet('hx_ptype',t.id);setErr('');}},t.name+(n?' ('+n+')':''));})),
       el('div',{className:'row',style:{marginBottom:14}},el('input',{style:{maxWidth:300},placeholder:'Search SKUs and flavors...',value:q,onChange:function(e){setQ(e.target.value);}}),
-        el('span',{style:{flex:1}}),isAdmin&&el('button',{className:'btn',onClick:function(){setModal({wizard:true});}},'+ New SKU')),
-      !typeSkus.length?el('div',{className:'empty'},'No '+ptName(pt)+' SKUs in '+st.name+' yet.'+(isAdmin?' Click "+ New SKU". It starts blank, and the formulation is entered as part of creating it.':'')):
+        el('span',{style:{flex:1}}),P2&&F2&&el('button',{className:'btn',onClick:function(){setModal({wizard:true});}},'+ New SKU')),
+      !typeSkus.length?el('div',{className:'empty'},'No '+ptName(pt)+' SKUs in '+st.name+' yet.'+(P2&&F2?' Click "+ New SKU". It starts blank, and the formulation is entered as part of creating it.':'')):
       el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(330px,1fr))'}},typeSkus.map(function(k){
         const fl=data.flavors.filter(function(x){return x.sku_id===k.id&&x.active;});
         const forms=data.forms.filter(function(f){return f.sku_id===k.id;});
         const hasBase=forms.some(function(f){return !f.flavor_id;});
-        const status=k.active?['Active','ok']:(isAdmin&&!forms.length)?['Needs formulation','bad']:['Off','off'];
+        const status=k.active?['Active','ok']:(F1&&!forms.length)?['Needs formulation','bad']:['Off','off'];
         return el('div',{key:k.id,className:'card gold',style:{marginBottom:0,opacity:k.active?1:.8}},
           el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start',flexWrap:'nowrap'}},
             el('div',{style:{fontWeight:700,fontSize:15}},k.name),el('span',{className:'badge '+status[1]},status[0])),
@@ -1869,13 +1846,13 @@ function Products(props){
           k.spec&&k.spec.no_flavor?el('div',{className:'muted',style:{fontSize:12}},'No flavors (plain SKU)'):
           el('div',null,el('div',{className:'k'},fl.length+' flavor'+(fl.length===1?'':'s')),
             el('div',{className:'row',style:{gap:4,marginTop:4}},fl.slice(0,12).map(function(x){return el('span',{key:x.id,className:'badge off',style:{textTransform:'none',letterSpacing:0}},x.name);}),fl.length>12&&el('span',{className:'muted',style:{fontSize:12}},'+'+(fl.length-12)+' more'))),
-          isAdmin&&el('div',{className:'muted',style:{fontSize:12,marginTop:8}},forms.length?((hasBase?'Base recipe':'No base recipe')+(forms.filter(function(f){return f.flavor_id;}).length?'  \u00b7  '+forms.filter(function(f){return f.flavor_id;}).length+' flavor recipe(s)':'')):'No formulation yet'),
+          F1&&el('div',{className:'muted',style:{fontSize:12,marginTop:8}},forms.length?((hasBase?'Base recipe':'No base recipe')+(forms.filter(function(f){return f.flavor_id;}).length?'  \u00b7  '+forms.filter(function(f){return f.flavor_id;}).length+' flavor recipe(s)':'')):'No formulation yet'),
           el('div',{className:'row',style:{marginTop:12,gap:6}},
             el('button',{className:'btn ghost sm',onClick:function(){setModal({flavors:k});}},'Flavors'),
-            isAdmin&&el('button',{className:'btn ghost sm',onClick:function(){openFormula(forms.find(function(f){return !f.flavor_id;})||null,k.id,'');}},hasBase?'Base recipe':'Add recipe'),
-            isAdmin&&el('button',{className:'btn ghost sm',onClick:function(){setModal({edit:k});}},'Edit'),
-            isAdmin&&el('button',{className:'btn ghost sm',onClick:function(){toggle(k);}},k.active?'Switch off':'Switch on'),
-            isAdmin&&el('button',{className:'btn danger sm',onClick:function(){del(function(){return db.remove('hx_skus',k.id);},'Delete SKU "'+k.name+'" with its flavors and formulations?');}},'Delete')));
+            F2&&el('button',{className:'btn ghost sm',onClick:function(){openFormula(forms.find(function(f){return !f.flavor_id;})||null,k.id,'');}},hasBase?'Base recipe':'Add recipe'),
+            P2&&el('button',{className:'btn ghost sm',onClick:function(){setModal({edit:k});}},'Edit'),
+            P2&&el('button',{className:'btn ghost sm',onClick:function(){toggle(k);}},k.active?'Switch off':'Switch on'),
+            P3&&el('button',{className:'btn danger sm',onClick:function(){del(function(){return db.remove('hx_skus',k.id);},'Delete SKU "'+k.name+'" with its flavors and formulations?');}},'Delete')));
       })));
   }
   return el('div',null,
@@ -1883,12 +1860,12 @@ function Products(props){
       el('div',null,el('h1',null,el('span',{className:'g'},st.name),' Products'),
         el('div',{className:'sub'},'SKUs, flavors and formulations for '+st.name+'. Created once here, used by every module. Other states keep their own.'))),
     err&&el('div',{className:'msg err'},err),
-    needs>0&&isAdmin&&el('div',{className:'msg err'},needs+' SKU'+(needs===1?' needs':'s need')+' a formulation before '+(needs===1?'it':'they')+' can be used.'),
+    needs>0&&F1&&el('div',{className:'msg err'},needs+' SKU'+(needs===1?' needs':'s need')+' a formulation before '+(needs===1?'it':'they')+' can be used.'),
     tabs.length>1&&el('div',{className:'tabs'},tabs.map(function(t){return el('button',{key:t[0],className:tab===t[0]?'on':'',onClick:function(){setTab(t[0]);setQ('');setErr('');}},t[1]);})),
     body,
     modal&&modal.wizard&&el(SkuWizard,{state:st,licenses:lics,skus:data.skus,library:data.lib,productType:pt,onClose:function(){setModal(null);load();},onDone:closeReload}),
     modal&&modal.edit&&el(SkuEditor,{sku:modal.edit,state:st,licenses:lics,onClose:function(){setModal(null);},onDone:closeReload}),
-    modal&&modal.flavors&&el(FlavorManager,{sku:modal.flavors,state:st,flavors:data.flavors,formulations:data.forms,isAdmin:isAdmin,reload:load,onClose:function(){setModal(null);},
+    modal&&modal.flavors&&el(FlavorManager,{sku:modal.flavors,state:st,flavors:data.flavors,formulations:data.forms,canEdit:P2,canDel:P3,canF1:F1,canF2:F2,reload:load,onClose:function(){setModal(null);},
       openFormula:function(f,skuId,flavorId){setModal({formula:f,skuId:skuId,flavorId:flavorId,back:modal.flavors});}}),
     modal&&modal.hasOwnProperty('formula')&&el(FormulationEditor,{state:st,skus:data.skus,flavors:data.flavors,formulations:data.forms,library:data.lib,productType:pt,
       initial:modal.formula,skuId:modal.skuId,flavorId:modal.flavorId,lockSku:!!modal.skuId&&!modal.dup,lockFlavor:!!modal.back,
@@ -1898,7 +1875,7 @@ function Products(props){
 /* ---------- Audit trail: history, void, admin page ----------
    The database writes every change to hx_audit_log (append-only). Records are never deleted:
    they are voided with a reason. Every change to a record needs a reason for change. */
-const AUDIT_AREAS={hx_batches:'Batch record',hx_facility_log:'Facility log entry',hx_visitor_log:'Visitor log',hx_log_lists:'Facility log lists',hx_rules:'Rulebook',
+const AUDIT_AREAS={hx_roles:'Roles',hx_batches:'Batch record',hx_facility_log:'Facility log entry',hx_visitor_log:'Visitor log',hx_log_lists:'Facility log lists',hx_rules:'Rulebook',
   hx_states:'States',hx_licenses:'Licenses',hx_profiles:'Team and access',hx_skus:'SKUs',hx_flavors:'Flavors',hx_formulations:'Formulations',hx_cost_library:'Ingredient prices'};
 const AUDIT_SKIP=['voided_by','voided_at','updated_at','edit_reason'];
 function auditVal(v){
@@ -2407,7 +2384,7 @@ function batchHtml(def,st,lic,b,sig,hist,sku){
 }
 
 function BatchTracker(props){
-  const st=props.state,lic=props.license,isAdmin=props.profile.role==='admin';
+  const st=props.state,lic=props.license,isAdmin=can('batch',3),canAdd=can('batch',2),canF=can('formbank',1),canAudit=can('audit',1);
   const ts=(st&&st.tracking_system)||'METRC';
   const sid=st?st.id:'',lid=lic?lic.id:'';
   const[type,setType]=useState(lsGet('hx_btype')||BATCH_TYPES[0].id);
@@ -2423,10 +2400,10 @@ function BatchTracker(props){
     if(!sid){setCat({skus:[],flavors:[],forms:[]});return;}
     try{
       const f='state_id=eq.'+encodeURIComponent(sid);
-      const r=await Promise.all([db.get('hx_skus',f+'&select=*&order=sort,name'),db.get('hx_flavors',f+'&select=*&order=sort,name'),isAdmin?db.get('hx_formulations',f+'&select=*').catch(function(){return [];}):Promise.resolve([])]);
+      const r=await Promise.all([db.get('hx_skus',f+'&select=*&order=sort,name'),db.get('hx_flavors',f+'&select=*&order=sort,name'),canF?db.get('hx_formulations',f+'&select=*').catch(function(){return [];}):Promise.resolve([])]);
       setCat({skus:(r[0]||[]).filter(function(x){return x.state_id===sid;}),flavors:(r[1]||[]).filter(function(x){return x.state_id===sid;}),forms:r[2]||[]});
     }catch(e){setErr(niceErr(e));setCat({skus:[],flavors:[],forms:[]});}
-  },[sid,isAdmin]);
+  },[sid,canF]);
   const loadRows=useCallback(function(){
     if(!lid||!sid){setRows([]);return Promise.resolve();}
     let qs='license_id=eq.'+encodeURIComponent(lid)+'&state_id=eq.'+encodeURIComponent(sid)+'&batch_type=eq.'+type+'&select=id,state_id,license_id,batch_type,batch_number,sku_id,sku,flavor_id,flavor,status,data,attachments,performed_by,created_at,updated_at,voided,void_reason,voided_at&order=created_at.desc&limit=1000';
@@ -2444,7 +2421,7 @@ function BatchTracker(props){
   const list=(rows||[]).filter(function(b){return !q||(b.batch_number+' '+b.sku+' '+b.flavor+' '+b.status+' '+b.performed_by+' '+JSON.stringify(b.data||{})).toLowerCase().indexOf(q.toLowerCase())>=0;});
   async function getFull(b){
     const x=await db.get('hx_batches','id=eq.'+encodeURIComponent(b.id)+'&select=signature');
-    let h=null;if(isAdmin){try{h=await db.get('hx_audit_log','table_name=eq.hx_batches&row_id=eq.'+encodeURIComponent(b.id)+'&select=*&order=at.asc');}catch(e){h=null;}}
+    let h=null;if(canAudit){try{h=await db.get('hx_audit_log','table_name=eq.hx_batches&row_id=eq.'+encodeURIComponent(b.id)+'&select=*&order=at.asc');}catch(e){h=null;}}
     return {sig:(x&&x[0]&&x[0].signature)||'',hist:h};
   }
   async function view(b){setErr('');try{const r=await getFull(b);setModal({view:b,sig:r.sig,hist:r.hist});}catch(e){setErr(String(e.message||e));}}
@@ -2490,8 +2467,8 @@ function BatchTracker(props){
       el('span',{style:{flex:1}}),
       el('button',{className:'btn ghost',disabled:!list.length,onClick:csv},'CSV'),
       el('button',{className:'btn ghost',disabled:!list.length,onClick:printAll},'Print / PDF'),
-      el('button',{className:'btn',disabled:!cat,onClick:function(){setModal({form:'new'});}},'+ New Batch')),
-    cat&&def.id!=='ethanol_extraction'&&!usable.length&&el('div',{className:'msg err'},'No '+def.name+' SKUs are switched on for '+lic.name+'. '+(isAdmin?'Add them under Products (each needs a formulation).':'Ask an admin to add them under Products.')),
+      canAdd&&el('button',{className:'btn',disabled:!cat,onClick:function(){setModal({form:'new'});}},'+ New Batch')),
+    cat&&def.id!=='ethanol_extraction'&&!usable.length&&el('div',{className:'msg err'},'No '+def.name+' SKUs are switched on for '+lic.name+'. '+(can('products',2)?'Add them under Products (each needs a formulation).':'Ask an admin to add them under Products.')),
     el('div',{className:'card',style:{padding:'10px 16px'}},el('span',null,el('b',{style:{color:'var(--gold-hi)'}},list.length),' batches'),
       el('span',{className:'muted',style:{marginLeft:18}},'Last: '+(rows&&rows[0]?new Date(rows[0].created_at).toLocaleDateString():'None'))),
     rows===null?el('div',{className:'muted'},'Loading...'):
@@ -2511,12 +2488,12 @@ function BatchTracker(props){
               return c&&c[0]!=='none'&&c[0]!=='info'?el('span',{key:f.k,className:'badge '+(tone[c[0]]||''),style:{marginRight:6,marginTop:6}},btLabel(def.id,{l:BT_SHORT[f.k]||f.l},ts,sk)+': '+c[1]):null;})),
           el('div',{className:'row',style:{gap:6}},
             el('button',{className:'btn ghost sm',onClick:function(){view(b);}},'View'),
-            !b.voided&&!isAdmin&&el('button',{className:'btn ghost sm',onClick:function(){openFull(b,'fill');}},'Continue'),
+            !b.voided&&canAdd&&!isAdmin&&el('button',{className:'btn ghost sm',onClick:function(){openFull(b,'fill');}},'Continue'),
             !b.voided&&isAdmin&&el('button',{className:'btn ghost sm',onClick:function(){openFull(b,'edit');}},'Edit'),
             !b.voided&&isAdmin&&el('button',{className:'btn danger sm',onClick:function(){setModal({voidb:b});}},'Void'))));
     }),
     modal&&modal.form&&el(Modal,{title:(modal.form==='new'?'New ':modal.form==='fill'?'Continue ':'Edit ')+def.name+' batch'+(modal.b?' \u00b7 '+modal.b.batch_number:''),wide:true,onClose:function(){setModal(null);}},
-      el(BatchForm,{def:def,ts:ts,mode:modal.form,initial:modal.b||null,skus:usable,allSkus:allSkus,flavors:(cat&&cat.flavors)||[],formulas:isAdmin?(cat&&cat.forms):null,defaultName:props.profile.name||'',
+      el(BatchForm,{def:def,ts:ts,mode:modal.form,initial:modal.b||null,skus:usable,allSkus:allSkus,flavors:(cat&&cat.flavors)||[],formulas:canF?(cat&&cat.forms):null,defaultName:props.profile.name||'',
         onCancel:function(){setModal(null);},onSubmit:function(p){return modal.form==='new'?create(p):update(modal.b,p);}})),
     modal&&modal.voidb&&el(VoidModal,{what:'batch '+modal.voidb.batch_number,onClose:function(){setModal(null);},onVoid:function(why){return voidBatch(modal.voidb,why);}}),
     modal&&modal.view&&el(Modal,{title:def.name+' batch '+modal.view.batch_number,wide:true,onClose:function(){setModal(null);}},
@@ -2524,6 +2501,258 @@ function BatchTracker(props){
       (modal.view.attachments||[]).length>0&&el('div',{className:'row',style:{marginTop:10}},(modal.view.attachments||[]).map(function(a){return el('button',{key:a.id,className:'btn ghost sm',onClick:function(){openAttachment(a);}},'Open '+a.name);})),
       el('div',{className:'row',style:{justifyContent:'flex-end',marginTop:12}},el('button',{className:'btn ghost',onClick:function(){setModal(null);}},'Close'),
         el('button',{className:'btn',onClick:function(){printRecords(def.name+' batch '+modal.view.batch_number,[batchHtml(def,st,lic,modal.view,modal.sig,modal.hist,skuOf(modal.view))]);}},'Print / PDF'))));
+}
+
+/* ---------- Roles and access ----------
+   Mirrors the database (hx_perm): system admin = Full everywhere; otherwise the person's custom setting,
+   else the best of their roles. Inside a role or custom setting, a single facility log with no setting of
+   its own follows "Facility Logs (all)". Levels: none / read (View) / editor (Edit) / admin (Full). */
+const ACC={profile:null,roles:[]};
+const ACCESS_MODULES=[
+  {id:'rulebook',label:'Rulebook',grp:'General',help:'View rules / add and edit / delete'},
+  {id:'audit',label:'Audit Trail',grp:'General',max:1,help:'View only'},
+  {id:'batch',label:'Batch Tracker',grp:'Production',help:'View / create and continue (fill blanks) / change filled values with a reason and void'},
+  {id:'products',label:'Products (SKUs and flavors)',grp:'Production',help:'View / add and edit / delete'},
+  {id:'formbank',label:'Formulation Bank (recipes)',grp:'Production',help:'View / add and edit / delete'},
+  {id:'cogs',label:'Ingredient Prices',grp:'Production',help:'View / add and edit / delete'},
+  {id:'logs',label:'Facility Logs (all)',grp:'Facility Logs',help:'Default for every log below that has no setting of its own'},
+  {id:'logs_sanitation',label:'Sanitation Log',grp:'Facility Logs',child:1},
+  {id:'logs_waste',label:'Waste Destruction Log',grp:'Facility Logs',child:1},
+  {id:'logs_scale',label:'Scale Calibration Log',grp:'Facility Logs',child:1},
+  {id:'logs_security',label:'Security Logs (malfunction and inspection)',grp:'Facility Logs',child:1},
+  {id:'logs_pest',label:'Pest Control Log',grp:'Facility Logs',child:1},
+  {id:'logs_equipment',label:'Equipment Maintenance Log',grp:'Facility Logs',child:1},
+  {id:'logs_temp',label:'Temp / Humidity Log',grp:'Facility Logs',child:1},
+  {id:'logs_env',label:'Environmental Monitoring Log',grp:'Facility Logs',child:1},
+  {id:'logs_visitor',label:'Visitor Log',grp:'Facility Logs',child:1}];
+const ACCESS_GROUPS=['General','Production','Facility Logs'];
+const LV_NAME={'':'No access',none:'No access',read:'View',editor:'Edit',admin:'Full'};
+const LV_RANK={admin:3,editor:2,read:1};
+const RANK_LV=['none','read','editor','admin'];
+const LOG_MOD={sanitation:'logs_sanitation',waste:'logs_waste',scale_calibration:'logs_scale',security:'logs_security',security_inspection:'logs_security',
+  pest:'logs_pest',equipment:'logs_equipment',temperature:'logs_temp',environmental:'logs_env',visitor:'logs_visitor'};
+function lvRank(v){return LV_RANK[v]||0;}
+function has(o,k){return !!o&&Object.prototype.hasOwnProperty.call(o,k);}
+function roleLevel(r,mod){const p=(r&&r.perms)||{};if(has(p,mod))return lvRank(p[mod]);if(/^logs_/.test(mod)&&has(p,'logs'))return lvRank(p.logs);return 0;}
+function rolesLevel(ids,roles,mod){let b=0;(ids||[]).forEach(function(id){const r=roles.find(function(x){return x.id===id;});if(r)b=Math.max(b,roleLevel(r,mod));});return b;}
+function permOf(p,roles,mod){
+  if(!p||!p.approved)return 0;
+  if(p.role==='admin')return 3;
+  const ov=p.perms||{};
+  if(has(ov,mod))return lvRank(ov[mod]);
+  if(/^logs_/.test(mod)&&has(ov,'logs'))return lvRank(ov.logs);
+  return rolesLevel(p.role_ids,roles,mod);
+}
+function can(mod,lvl){return permOf(ACC.profile,ACC.roles,mod)>=(lvl||1);}
+function isSysAdmin(){return !!ACC.profile&&ACC.profile.role==='admin';}
+function licOk(id){const p=ACC.profile;return !!p&&(p.role==='admin'||!(p.license_ids||[]).length||(p.license_ids||[]).indexOf(id)>=0);}
+function accessErr(e){
+  const m=String((e&&e.message)||e);
+  if(/role_ids|license_ids|hx_roles|hx_perm/.test(m)&&/schema cache|does not exist|Could not find/.test(m))return 'Roles are not set up yet - run hendrix_step8.sql in the Hendrix Supabase project.';
+  if(/hx_roles_name/.test(m))return 'A role with that name already exists.';
+  return m;
+}
+
+/* One row of the access grid */
+function LevelSelect(props){
+  const m=props.m,opts=[];
+  if(props.inherit)opts.push(['',props.inherit]);
+  if(m.child&&!props.inherit)opts.push(['','Same as Facility Logs (all)']);
+  opts.push(['none','No access'],['read','View']);
+  if(!m.max||m.max>=2)opts.push(['editor','Edit']);
+  if(!m.max||m.max>=3)opts.push(['admin','Full']);
+  return el('select',{value:props.value||'',disabled:props.disabled,onChange:function(e){props.onChange(e.target.value);},style:{minWidth:170}},
+    opts.map(function(o){return el('option',{key:o[0],value:o[0]},o[1]);}));
+}
+function AccessGrid(props){
+  // props.value: {module: level}; props.inheritFor(m) -> label for "inherit" option (custom access) or undefined (role editor)
+  return el('div',null,ACCESS_GROUPS.map(function(g){
+    const ms=ACCESS_MODULES.filter(function(m){return m.grp===g;});
+    return el('div',{key:g,style:{marginBottom:12}},
+      el('div',{className:'secth',style:{display:'flex',justifyContent:'space-between',alignItems:'center'}},el('span',null,g),
+        !props.disabled&&!props.inheritFor&&el('span',{className:'row',style:{gap:4}},['none','read','editor','admin'].map(function(lv){
+          return el('button',{key:lv,type:'button',className:'btn ghost sm',style:{padding:'2px 8px',fontSize:11},onClick:function(){
+            const n={...props.value};ms.forEach(function(m){if(m.child)delete n[m.id];else n[m.id]=(m.max&&lvRank(lv)>m.max)?RANK_LV[m.max]:lv;});props.onChange(n);}},'All '+LV_NAME[lv]);}))),
+      el('table',null,el('tbody',null,ms.map(function(m){
+        const v=has(props.value,m.id)?props.value[m.id]:'';
+        return el('tr',{key:m.id},
+          el('td',{style:{paddingLeft:m.child?26:10}},el('div',{style:{fontWeight:m.child?500:700}},m.label),m.help&&el('div',{className:'muted',style:{fontSize:11}},m.help)),
+          props.extraCol&&el('td',{style:{fontSize:12,whiteSpace:'nowrap'}},props.extraCol(m)),
+          el('td',{style:{textAlign:'right'}},el(LevelSelect,{m:m,value:v,disabled:props.disabled,inherit:props.inheritFor?props.inheritFor(m):undefined,
+            onChange:function(x){const n={...props.value};if(x==='')delete n[m.id];else n[m.id]=x;props.onChange(n);}})));
+      }))));
+  }));
+}
+
+/* System admin: one person's approval, roles, licenses and custom access */
+function AccessEditor(props){
+  const u=props.user,roles=props.roles;
+  const[f,setF]=useState({approved:props.approve?true:!!u.approved,admin:u.role==='admin',role_ids:(u.role_ids||[]).slice(),license_ids:(u.license_ids||[]).slice(),perms:{...(u.perms||{})}});
+  const[err,setErr]=useState('');
+  const[busy,setBusy]=useState(false);
+  const allLic=!f.license_ids.length;
+  const nCustom=Object.keys(f.perms).length;
+  function fromRoles(m){const lv=rolesLevel(f.role_ids,roles,m.id);return lv?LV_NAME[RANK_LV[lv]]:'No access';}
+  async function save(){
+    setErr('');setBusy(true);
+    try{
+      await db.update('hx_profiles',u.id,{approved:f.approved,role:f.admin?'admin':'member',role_ids:f.role_ids,license_ids:f.license_ids,perms:f.perms});
+      props.onDone();
+    }catch(e){setErr(accessErr(e));}
+    setBusy(false);
+  }
+  return el(Modal,{title:(props.approve?'Approve ':'Access for ')+(u.name||u.email),wide:true,onClose:props.onClose},
+    el('div',{className:'muted',style:{marginBottom:10}},u.email),
+    el('div',{className:'card',style:{padding:12}},
+      el('label',{className:'ck'},el('input',{type:'checkbox',checked:f.approved,disabled:props.isSelf,onChange:function(e){setF({...f,approved:e.target.checked});}}),el('span',null,el('b',null,'Approved'),' \u2014 can sign in to Hendrix')),
+      el('label',{className:'ck'},el('input',{type:'checkbox',checked:f.admin,disabled:props.isSelf,onChange:function(e){setF({...f,admin:e.target.checked});}}),el('span',null,el('b',null,'System admin'),' \u2014 Full access to everything, plus States and Licenses, Team and Roles')),
+      props.isSelf&&el('div',{className:'muted',style:{fontSize:12}},'You cannot remove your own approval or admin rights.')),
+    el('div',{className:'secth'},'Roles'),
+    !roles.length?el('div',{className:'muted',style:{marginBottom:12}},'No roles yet. Create them on the Roles page.'):
+    el('div',{className:'cklist',style:{marginBottom:12}},roles.map(function(r){
+      return el('label',{key:r.id,className:'ck',title:r.description||''},el('input',{type:'checkbox',checked:f.role_ids.indexOf(r.id)>=0,onChange:function(e){
+        setF({...f,role_ids:e.target.checked?f.role_ids.concat([r.id]):f.role_ids.filter(function(x){return x!==r.id;})});}}),el('span',null,r.name));})),
+    el('div',{className:'secth'},'Licenses this person can work in'),
+    el('label',{className:'ck'},el('input',{type:'checkbox',checked:allLic,onChange:function(e){setF({...f,license_ids:e.target.checked?[]:props.licenses.slice(0,1).map(function(l){return l.id;})});}}),el('span',null,'All licenses, in every state')),
+    !allLic&&props.states.map(function(s){
+      const ls=props.licenses.filter(function(l){return l.state_id===s.id;});if(!ls.length)return null;
+      return el('div',{key:s.id,style:{margin:'6px 0 6px 26px'}},el('div',{className:'k'},s.name),el('div',{className:'cklist'},ls.map(function(l){
+        return el('label',{key:l.id,className:'ck'},el('input',{type:'checkbox',checked:f.license_ids.indexOf(l.id)>=0,onChange:function(e){
+          const n=e.target.checked?f.license_ids.concat([l.id]):f.license_ids.filter(function(x){return x!==l.id;});setF({...f,license_ids:n.length?n:f.license_ids});}}),
+          el('span',null,l.name+(l.license_number?' ('+l.license_number+')':'')));})));}),
+    el('div',{className:'secth',style:{display:'flex',justifyContent:'space-between',alignItems:'center'}},el('span',null,'Custom access'+(nCustom?' ('+nCustom+' set)':'')),
+      nCustom>0&&!f.admin&&el('button',{type:'button',className:'btn ghost sm',onClick:function(){setF({...f,perms:{}});}},'Clear custom access')),
+    f.admin?el('div',{className:'muted',style:{marginBottom:12}},'System admins have Full access everywhere.'):
+    el('div',null,el('div',{className:'muted',style:{fontSize:12,marginBottom:6}},'Leave a module on "Use role access" to follow this person\u2019s roles. Pick a level to override the roles for this person only.'),
+      el(AccessGrid,{value:f.perms,onChange:function(v){setF({...f,perms:v});},
+        extraCol:function(m){return el('span',{className:'muted'},'Roles: '+fromRoles(m));},
+        inheritFor:function(m){return 'Use role access ('+fromRoles(m)+')';}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),
+      el('button',{className:'btn',disabled:busy,onClick:save},busy?'Saving...':props.approve?'Approve':'Save')));
+}
+
+function Team(props){
+  const[rows,setRows]=useState(null);
+  const[roles,setRoles]=useState([]);
+  const[err,setErr]=useState('');
+  const[edit,setEdit]=useState(null);
+  const load=useCallback(function(){
+    Promise.all([db.get('hx_profiles','select=*&order=created_at'),db.get('hx_roles','select=*&order=sort,name').catch(function(e){setErr(accessErr(e));return [];})])
+      .then(function(r){setRows(r[0]||[]);setRoles(r[1]||[]);}).catch(function(e){setErr(String(e.message||e));});
+  },[]);
+  useEffect(load,[load]);
+  const licName=function(id){const l=props.licenses.find(function(x){return x.id===id;});return l?l.name:'?';};
+  const waiting=(rows||[]).filter(function(u){return !u.approved;});
+  function line(u){
+    const me=u.id===props.profile.id,rs=(u.role_ids||[]).map(function(id){const r=roles.find(function(x){return x.id===id;});return r?r.name:null;}).filter(Boolean);
+    const nC=Object.keys(u.perms||{}).length;
+    return el('tr',{key:u.id},
+      el('td',null,el('div',{style:{fontWeight:700}},u.name||'-',me&&el('span',{className:'badge',style:{marginLeft:8}},'You')),el('div',{className:'muted',style:{fontSize:12}},u.email)),
+      el('td',null,u.role==='admin'?el('span',{className:'badge'},'System admin'):rs.length?rs.map(function(n){return el('span',{key:n,className:'badge off',style:{marginRight:4,textTransform:'none',letterSpacing:0}},n);}):el('span',{className:'muted'},'No role')),
+      el('td',{style:{fontSize:13}},u.role==='admin'||!(u.license_ids||[]).length?'All licenses':(u.license_ids||[]).map(licName).join(', ')),
+      el('td',null,nC&&u.role!=='admin'?el('span',{className:'badge'},'Custom ('+nC+')'):el('span',{className:'muted',style:{fontSize:12}},u.role==='admin'?'Full':'From roles')),
+      el('td',null,el('span',{className:'badge'+(u.approved?' ok':' off')},u.approved?'Approved':'Waiting')),
+      el('td',{style:{textAlign:'right'}},el('button',{className:'btn sm'+(u.approved?' ghost':''),onClick:function(){setEdit({u:u,approve:!u.approved});}},u.approved?'Manage':'Approve')));
+  }
+  const head=el('thead',null,el('tr',null,['Person','Roles','Licenses','Access','Status',''].map(function(h,i){return el('th',{key:i},h);})));
+  return el('div',null,
+    el('h1',null,'Team and ',el('span',{className:'g'},'Access')),
+    el('div',{className:'sub'},'Approve people, give them roles, choose their licenses and set custom access. The database enforces every setting.'),
+    err&&el('div',{className:'msg err'},err),
+    !rows?el('div',{className:'muted'},'Loading...'):el('div',null,
+      waiting.length>0&&el('div',{className:'card gold'},el('h3',null,waiting.length+' waiting for approval'),el('table',null,head,el('tbody',null,waiting.map(line)))),
+      el('div',{className:'card',style:{overflowX:'auto'}},el('table',null,head,el('tbody',null,rows.filter(function(u){return u.approved;}).map(line))))),
+    edit&&el(AccessEditor,{user:edit.u,approve:edit.approve,isSelf:edit.u.id===props.profile.id,roles:roles,states:props.states,licenses:props.licenses,
+      onClose:function(){setEdit(null);},onDone:function(){setEdit(null);load();if(edit.u.id===props.profile.id&&props.onSelfChange)props.onSelfChange();}}));
+}
+
+const LOGS_PROD=['logs_sanitation','logs_waste','logs_scale','logs_equipment','logs_temp','logs_env'];
+function pm(o,list,lv){const x={...o};(list||[]).forEach(function(k){x[k]=lv;});return x;}
+const STARTER_ROLES=[
+  ['General Manager','Leadership. Edit everywhere; Full on batches and every log; sees recipes, prices and the audit trail.',{rulebook:'editor',audit:'read',batch:'admin',products:'editor',formbank:'read',cogs:'read',logs:'admin'}],
+  ['Assistant of General Manager','Leadership support. Edit on batches, products and every log; sees recipes and the audit trail.',{rulebook:'editor',audit:'read',batch:'editor',products:'editor',formbank:'read',logs:'editor'}],
+  ['Compliance Officer','Full on every log and the rulebook; sees batches, products and the audit trail.',{rulebook:'admin',audit:'read',logs:'admin',batch:'read',products:'read'}],
+  ['Security Manager','Full on the security and visitor logs.',{rulebook:'read',logs_security:'admin',logs_visitor:'admin'}],
+  ['Security Officer','Fills the security and visitor logs.',{rulebook:'read',logs_security:'editor',logs_visitor:'editor'}],
+  ['Sanitation','Fills the sanitation, waste and pest control logs.',{logs_sanitation:'editor',logs_waste:'editor',logs_pest:'editor'}],
+  ['Team Member','Continues batches; fills the sanitation and temp / humidity logs.',{batch:'editor',products:'read',logs_temp:'editor',logs_sanitation:'editor'}],
+  ['Inventory Manager','Sees products and batches; fills the waste log.',{products:'read',batch:'read',logs_waste:'editor'}],
+  ['Extraction Manager','Full on batches; fills the scale, equipment and temp / humidity logs.',{batch:'admin',products:'read',formbank:'read',logs_scale:'editor',logs_equipment:'editor',logs_temp:'editor'}],
+  ['Production Manager','Full on batches; edits products; fills the production logs.',pm({batch:'admin',products:'editor',formbank:'read',rulebook:'read'},LOGS_PROD,'editor')],
+  ['Sales Manager','Sees products.',{products:'read'}],
+  ['Production Lead','Creates and continues batches; fills the production logs.',pm({batch:'editor',products:'read'},['logs_sanitation','logs_scale','logs_equipment','logs_temp'],'editor')]];
+function accessSummary(perms){
+  const p=perms||{},out=[];
+  ACCESS_MODULES.forEach(function(m){if(has(p,m.id)&&lvRank(p[m.id]))out.push(m.label.replace(/ \(.*\)$/,'')+': '+LV_NAME[p[m.id]]);});
+  return out;
+}
+function RoleEditor(props){
+  const r=props.role||{};
+  const[f,setF]=useState({name:r.name||'',description:r.description||'',perms:{...(r.perms||{})}});
+  const[err,setErr]=useState('');
+  const[busy,setBusy]=useState(false);
+  async function save(){
+    setErr('');if(!f.name.trim()){setErr('Enter the role name.');return;}
+    setBusy(true);
+    try{
+      const rec={name:f.name.trim(),description:f.description.trim(),perms:f.perms};
+      if(r.id)await db.update('hx_roles',r.id,rec);else await db.insert('hx_roles',{...rec,id:newId('role'),sort:props.count||0});
+      props.onDone();
+    }catch(e){setErr(accessErr(e));}
+    setBusy(false);
+  }
+  return el(Modal,{title:r.id?'Edit role':'New role',wide:true,onClose:props.onClose},
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:10}},
+      el(Field,{label:'Role name *'},el('input',{value:f.name,placeholder:'e.g. Production Lead',onChange:function(e){setF({...f,name:e.target.value});}})),
+      el(Field,{label:'Description'},el('input',{value:f.description,placeholder:'What this role does',onChange:function(e){setF({...f,description:e.target.value});}}))),
+    el('div',{className:'muted',style:{fontSize:12,marginBottom:8}},'View = see records. Edit = create records, continue batches, add and edit. Full = change filled-in records with a reason, void, manage lists, delete.'),
+    el(AccessGrid,{value:f.perms,onChange:function(v){setF({...f,perms:v});}}),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:save},busy?'Saving...':'Save role')));
+}
+function Roles(){
+  const[roles,setRoles]=useState(null);
+  const[people,setPeople]=useState([]);
+  const[err,setErr]=useState('');
+  const[edit,setEdit]=useState(null);
+  const[busy,setBusy]=useState(false);
+  const load=useCallback(function(){
+    Promise.all([db.get('hx_roles','select=*&order=sort,name'),db.get('hx_profiles','select=id,role_ids,approved')])
+      .then(function(r){setRoles(r[0]||[]);setPeople(r[1]||[]);}).catch(function(e){setErr(accessErr(e));setRoles([]);});
+  },[]);
+  useEffect(load,[load]);
+  async function starter(){
+    setErr('');setBusy(true);
+    try{
+      const have={};(roles||[]).forEach(function(r){have[r.name.trim().toLowerCase()]=1;});
+      const add=STARTER_ROLES.filter(function(s){return !have[s[0].toLowerCase()];}).map(function(s,i){return {id:newId('role'),name:s[0],description:s[1],perms:s[2],sort:(roles||[]).length+i};});
+      if(add.length)await db.insert('hx_roles',add);
+      load();
+    }catch(e){setErr(accessErr(e));}
+    setBusy(false);
+  }
+  async function del(r,n){
+    if(!window.confirm('Delete role "'+r.name+'"?'+(n?' '+n+' '+(n===1?'person loses':'people lose')+' the access it gives.':'')))return;
+    setErr('');try{await db.remove('hx_roles',r.id);load();}catch(e){setErr(accessErr(e));}
+  }
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,'Roles and ',el('span',{className:'g'},'Access')),el('div',{className:'sub'},'Create as many roles as you need. Each role carries its own access. People can hold several roles; the highest access wins. Custom access per person is set on Team and Access.')),
+      el('div',{className:'row'},el('button',{className:'btn ghost',disabled:busy||!roles,onClick:starter},'Add Black Fox roles'),el('button',{className:'btn',disabled:!roles,onClick:function(){setEdit({});}},'+ New role'))),
+    err&&el('div',{className:'msg err'},err),
+    !roles?el('div',{className:'muted'},'Loading...'):!roles.length?el('div',{className:'empty'},'No roles yet. Click "+ New role", or "Add Black Fox roles" to start from the 12 Black Fox job titles with suggested access you can change.'):
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(320px,1fr))'}},roles.map(function(r){
+      const n=people.filter(function(p){return (p.role_ids||[]).indexOf(r.id)>=0;}).length,sum=accessSummary(r.perms);
+      return el('div',{key:r.id,className:'card gold',style:{marginBottom:0}},
+        el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start',flexWrap:'nowrap'}},el('div',{style:{fontWeight:700,fontSize:15}},r.name),el('span',{className:'badge off'},n+' '+(n===1?'person':'people'))),
+        r.description&&el('div',{className:'muted',style:{fontSize:12,margin:'4px 0 8px'}},r.description),
+        sum.length?el('div',{style:{fontSize:12,lineHeight:1.6}},sum.map(function(x){return el('div',{key:x},x);})):el('div',{className:'muted',style:{fontSize:12}},'No access yet'),
+        el('div',{className:'row',style:{marginTop:12}},el('button',{className:'btn ghost sm',onClick:function(){setEdit(r);}},'Edit'),
+          el('button',{className:'btn ghost sm',onClick:function(){setEdit({name:r.name+' (copy)',description:r.description,perms:{...(r.perms||{})}});}},'Duplicate'),
+          el('button',{className:'btn danger sm',onClick:function(){del(r,n);}},'Delete')));
+    })),
+    edit&&el(RoleEditor,{role:edit,count:(roles||[]).length,onClose:function(){setEdit(null);},onDone:function(){setEdit(null);load();}}));
 }
 
 /* ---------- App shell ---------- */
@@ -2559,8 +2788,9 @@ function App(){
     try{
       const p=await db.get('hx_profiles','id=eq.'+SESSION.user.id+'&select=*');
       if(!p||!p[0]){setLoadErr('Your profile was not found. Make sure hendrix_setup.sql was run in this Supabase project.');setPhase('login');saveSession(null);return;}
-      setProfile(p[0]);
+      setProfile(p[0]);ACC.profile=p[0];
       if(!p[0].approved){setPhase('pending');return;}
+      try{ACC.roles=(await db.get('hx_roles','select=*&order=sort,name'))||[];}catch(x){ACC.roles=[];}
       await loadData();setPhase('ready');
     }catch(e){setLoadErr(String(e.message||e));setPhase('login');}
   },[loadData]);
@@ -2571,7 +2801,7 @@ function App(){
     if(phase!=='ready')return;
     let sid=stateId;
     if(!states.some(function(s){return s.id===sid;}))sid=states[0]?states[0].id:'';
-    const ls=licenses.filter(function(l){return l.state_id===sid&&l.active;});
+    const ls=licenses.filter(function(l){return l.state_id===sid&&l.active&&licOk(l.id);});
     let lid=licId;
     if(!ls.some(function(l){return l.id===lid;}))lid=ls[0]?ls[0].id:'';
     if(sid!==stateId){setStateId(sid);lsSet('hx_state',sid);}
@@ -2586,30 +2816,35 @@ function App(){
     el('h2',{style:{marginTop:18}},'Waiting for approval'),
     el('p',{className:'muted'},'Your account was created. An admin needs to approve it before you can enter.'),
     el('div',{className:'row'},el('button',{className:'btn',onClick:boot},'Check again'),
-      el('button',{className:'btn ghost',onClick:function(){saveSession(null);setProfile(null);setPhase('login');}},'Sign out'))));
+      el('button',{className:'btn ghost',onClick:function(){saveSession(null);setProfile(null);ACC.profile=null;ACC.roles=[];setPhase('login');}},'Sign out'))));
 
   const st=states.find(function(s){return s.id===stateId;})||null;
-  const stLics=licenses.filter(function(l){return st&&l.state_id===st.id&&l.active;});
+  const stLics=licenses.filter(function(l){return st&&l.state_id===st.id&&l.active&&licOk(l.id);});
   const lic=stLics.find(function(l){return l.id===licId;})||null;
   const isAdmin=profile.role==='admin';
   function pickState(id){
     setStateId(id);lsSet('hx_state',id);
-    const first=licenses.filter(function(l){return l.state_id===id&&l.active;})[0];
+    const first=licenses.filter(function(l){return l.state_id===id&&l.active&&licOk(l.id);})[0];
     const lid=first?first.id:'';setLicId(lid);lsSet('hx_lic',lid);
   }
   function pickLic(id){setLicId(id);lsSet('hx_lic',id);}
 
-  const nav=[{id:'home',label:'Dashboard'},{id:'locations',label:'States and Licenses'},{id:'rulebook',label:(st?st.name+' ':'')+'Rulebook'}];
-  if(isAdmin)nav.push({id:'team',label:'Team and Access'},{id:'audit',label:'Audit Trail'});
+  const nav=[{id:'home',label:'Dashboard'},{id:'locations',label:'States and Licenses'}];
+  if(can('rulebook',1))nav.push({id:'rulebook',label:(st?st.name+' ':'')+'Rulebook'});
+  if(isAdmin)nav.push({id:'team',label:'Team and Access'},{id:'roles',label:'Roles'});
+  if(can('audit',1))nav.push({id:'audit',label:'Audit Trail'});
+  const anyLog=LOG_TYPES.some(function(t){return can(LOG_MOD[t.id],1);});
+  const mods=[can('logs_visitor',1)&&['visitors','Visitor Log'],anyLog&&['logs','Facility Logs'],(can('products',1)||can('formbank',1)||can('cogs',1))&&['products','Products'],can('batch',1)&&['batches','Batch Tracker']].filter(Boolean);
   let body;
   if(page==='locations')body=el(Locations,{profile:profile,states:states,licenses:licenses,reload:loadData,openRulebook:function(id){pickState(id);setPage('rulebook');}});
-  else if(page==='visitors')body=el(VisitorLog,{key:licId,state:st,license:lic});
-  else if(page==='batches')body=el(BatchTracker,{key:licId,state:st,license:lic,profile:profile});
+  else if(page==='visitors'&&can('logs_visitor',1))body=el(VisitorLog,{key:licId,state:st,license:lic});
+  else if(page==='batches'&&can('batch',1))body=el(BatchTracker,{key:licId,state:st,license:lic,profile:profile});
   else if(page==='products')body=el(Products,{key:stateId,state:st,licenses:licenses,profile:profile});
   else if(page==='logs')body=el(FacilityLogs,{key:licId,state:st,license:lic,profile:profile});
-  else if(page==='rulebook')body=el(Rulebook,{key:stateId,profile:profile,state:st,onCount:setRuleCount});
-  else if(page==='team'&&isAdmin)body=el(Team,{profile:profile});
-  else if(page==='audit'&&isAdmin)body=el(AuditTrail,{state:st});
+  else if(page==='rulebook'&&can('rulebook',1))body=el(Rulebook,{key:stateId,profile:profile,state:st,onCount:setRuleCount});
+  else if(page==='team'&&isAdmin)body=el(Team,{profile:profile,states:states,licenses:licenses,onSelfChange:boot});
+  else if(page==='roles'&&isAdmin)body=el(Roles);
+  else if(page==='audit'&&can('audit',1))body=el(AuditTrail,{state:st});
   else body=el(Dashboard,{profile:profile,states:states,licenses:licenses,state:st,license:lic,go:setPage,ruleCount:ruleCount});
 
   return el('div',{className:'shell'},
@@ -2627,15 +2862,12 @@ function App(){
           stLics.map(function(l){return el('option',{key:l.id,value:l.id},l.name+(l.license_number?' ('+l.license_number+')':''));}))),
       el('div',{className:'row'},
         el('span',{className:'muted',style:{fontSize:12}},profile.name||profile.email),
-        el('button',{className:'btn ghost sm',onClick:function(){saveSession(null);setProfile(null);setPhase('login');}},'Sign out'))),
+        el('button',{className:'btn ghost sm',onClick:function(){saveSession(null);setProfile(null);ACC.profile=null;ACC.roles=[];setPhase('login');}},'Sign out'))),
     el('div',{className:'side'},el('div',{className:'nav'},
       el('div',{className:'grp'},'Hendrix'),
       nav.map(function(n){return el('button',{key:n.id,className:page===n.id?'on':'',onClick:function(){setPage(n.id);}},n.label);}),
       el('div',{className:'grp'},'Modules'),
-      el('button',{className:page==='visitors'?'on':'',onClick:function(){setPage('visitors');}},'Visitor Log'),
-      el('button',{className:page==='logs'?'on':'',onClick:function(){setPage('logs');}},'Facility Logs'),
-      el('button',{className:page==='products'?'on':'',onClick:function(){setPage('products');}},'Products'),
-      el('button',{className:page==='batches'?'on':'',onClick:function(){setPage('batches');}},'Batch Tracker'),
+      mods.map(function(m){return el('button',{key:m[0],className:page===m[0]?'on':'',onClick:function(){setPage(m[0]);}},m[1]);}),
       ['Testing','SOPs','QMS'].map(function(m){return el('button',{key:m,className:'soon',disabled:true},m,el('span',{className:'tag'},'Soon'));}))),
     el('div',{className:'main'},body));
 }
