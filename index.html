@@ -584,12 +584,10 @@ function VisitorLog(props){
     const b=new Blob([lines.join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='visitor_log_'+(lic.license_number||lic.id)+'.csv';document.body.appendChild(a);a.click();a.remove();
   }
   function printSign(){
-    const host=document.querySelector('#hxqr canvas'),img=document.querySelector('#hxqr img');
-    const src=host?host.toDataURL('image/png'):(img?img.src:'');
-    const w=window.open('','_blank');if(!w)return;
-    w.document.write('<html><head><title>Visitor sign-in</title></head><body style="font-family:Arial,sans-serif;text-align:center;padding:40px"><div style="font-size:18px;letter-spacing:3px;color:#555">'+esc2(st.name).toUpperCase()+'</div><div style="font-size:34px;font-weight:700;margin:6px 0">'+esc2(lic.name)+'</div><div style="font-size:20px;margin-bottom:24px">License '+esc2(lic.license_number||'')+'</div><img src="'+src+'" style="width:340px;height:340px"/><div style="font-size:26px;margin-top:20px;font-weight:700">Visitors: scan to sign in and out</div></body></html>');
-    w.document.close();setTimeout(function(){w.print();},400);
+    printSignSheet({link:link,lic:lic,stName:st.name,eyebrow:st.name+'  \u00b7  Visitor Sign-In',title:'Welcome, Visitors',cta:'Scan to sign in',ctaSub:'Every visitor must sign in on arrival and sign out when leaving.',
+      steps:[['Scan','Point your phone camera at the code'],['Sign in','Enter your details and sign'],['Sign out','Scan again when you leave']]});
   }
+
   function esc2(x){return String(x==null?'':x).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
   return el('div',null,
     el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
@@ -1130,12 +1128,67 @@ function printRecords(title,htmls){
   w.document.write('<html><head><title>'+esc3(title)+'</title>'+REC_CSS+'</head><body style="margin:0">'+htmls.map(function(h,i){return '<div'+(i<htmls.length-1?' class="pb"':'')+'>'+h+'</div>';}).join('')+'</body></html>');
   w.document.close();setTimeout(function(){w.print();},500);
 }
-function printQrSign(boxId,stName,lic,caption){
-  const c=document.querySelector('#'+boxId+' canvas'),img=document.querySelector('#'+boxId+' img');
-  const src=c?c.toDataURL('image/png'):(img?img.src:'');
-  const w=window.open('','_blank');if(!w)return;
-  w.document.write('<html><head><title>'+esc3(caption)+'</title></head><body style="font-family:Arial,sans-serif;text-align:center;padding:40px"><div style="font-size:18px;letter-spacing:3px;color:#555">'+esc3(stName).toUpperCase()+'</div><div style="font-size:34px;font-weight:700;margin:6px 0">'+esc3(lic.name)+'</div><div style="font-size:20px;margin-bottom:24px">License '+esc3(lic.license_number||'')+'</div><img src="'+src+'" style="width:340px;height:340px"/><div style="font-size:26px;margin-top:20px;font-weight:700">'+esc3(caption)+'</div></body></html>');
-  w.document.close();setTimeout(function(){w.print();},400);
+
+/* ---------- Printable QR signs (letter size, Black & Gold or Light) ---------- */
+function qrDataUrl(text,size){
+  const d=document.createElement('div');
+  try{new window.QRCode(d,{text:text,width:size,height:size,colorDark:'#0a0a0a',colorLight:'#ffffff',correctLevel:window.QRCode.CorrectLevel.Q});}catch(e){return '';}
+  const c=d.querySelector('canvas');if(c)return c.toDataURL('image/png');
+  const i=d.querySelector('img');return i?i.src:'';
+}
+const SIGN_LOGO='<svg viewBox="0 0 40 40" width="54" height="54"><defs><linearGradient id="sg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6e39a"/><stop offset=".5" stop-color="#d4af37"/><stop offset="1" stop-color="#9c7a17"/></linearGradient></defs>'+
+  '<polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="none" stroke="url(#sg)" stroke-width="2.4"/><path d="M13 12v16M27 12v16M13 20h14" stroke="url(#sg)" stroke-width="3" stroke-linecap="round" fill="none"/></svg>';
+const SIGN_CSS='@page{size:letter;margin:0}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
+  'html,body{margin:0;background:#3a3a3a;font-family:Montserrat,"Helvetica Neue",Arial,sans-serif}'+
+  '.bar{position:sticky;top:0;z-index:5;display:flex;gap:8px;justify-content:center;align-items:center;padding:12px;background:#111;border-bottom:1px solid #333;font-size:13px;color:#ccc}'+
+  '.bar button{font:inherit;font-weight:700;border-radius:8px;padding:8px 16px;cursor:pointer;border:1px solid #a8841c;background:transparent;color:#f1d57a}'+
+  '.bar button.on,.bar .print{background:linear-gradient(135deg,#f1d57a,#d4af37 45%,#a8841c);color:#111;border-color:#d4af37}'+
+  '.sheet{width:8.5in;height:11in;margin:20px auto;position:relative;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.5)}'+
+  '.frame{position:absolute;inset:.35in;border:2px solid #d4af37;padding:.3in .45in;display:flex;flex-direction:column;align-items:center;text-align:center}'+
+  '.frame:before{content:"";position:absolute;inset:6px;border:1px solid rgba(212,175,55,.45);pointer-events:none}'+
+  '.cn{position:absolute;width:26px;height:26px;border-color:#d4af37;border-style:solid}.cn.a{top:-2px;left:-2px;border-width:6px 0 0 6px}.cn.b{top:-2px;right:-2px;border-width:6px 6px 0 0}.cn.c{bottom:-2px;left:-2px;border-width:0 0 6px 6px}.cn.d{bottom:-2px;right:-2px;border-width:0 6px 6px 0}'+
+  '.brand{display:flex;align-items:center;gap:12px;margin-top:.05in}.bn{font-weight:800;letter-spacing:.32em;font-size:20px;text-align:left}.bs{font-size:9px;letter-spacing:.42em;margin-top:2px;text-align:left}'+
+  '.eyebrow{margin-top:.32in;font-size:12px;letter-spacing:.45em;font-weight:700;text-transform:uppercase}'+
+  'h1{font-family:"Cormorant Garamond",Georgia,serif;font-weight:700;font-size:50px;line-height:1.02;margin:.08in 0 0;letter-spacing:.01em}'+
+  '.rule{display:flex;align-items:center;gap:12px;width:60%;margin:.16in 0 .2in}.rule i{flex:1;height:1px;background:linear-gradient(90deg,transparent,#d4af37,transparent)}.rule b{width:9px;height:9px;transform:rotate(45deg);background:#d4af37}'+
+  '.qrbox{position:relative;padding:18px;border-radius:18px;background:#fff;box-shadow:0 0 0 2px #d4af37,0 0 0 9px rgba(212,175,55,.18)}.qrbox img{display:block;width:3.7in;height:3.7in;image-rendering:pixelated}'+
+  '.cta{margin-top:.24in;font-weight:800;font-size:24px;letter-spacing:.24em;text-transform:uppercase}'+
+  '.ctas{font-size:13px;margin-top:4px}'+
+  '.steps{display:flex;gap:.22in;margin-top:.3in;width:100%;justify-content:center}.st{flex:1;max-width:1.95in;padding:12px 10px;border-radius:12px}'+
+  '.st .n{width:30px;height:30px;border-radius:50%;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;background:linear-gradient(135deg,#f1d57a,#d4af37 45%,#a8841c);color:#111}'+
+  '.st .t{font-weight:800;font-size:12px;letter-spacing:.12em;text-transform:uppercase}.st .d{font-size:11px;margin-top:3px;line-height:1.35}'+
+  '.foot{margin-top:auto;width:100%;display:flex;justify-content:space-between;align-items:flex-end;padding-top:.14in;border-top:1px solid rgba(212,175,55,.5);text-align:left;font-size:11px}'+
+  '.foot .ln{font-weight:800;font-size:15px}.foot .r{text-align:right}'+
+  /* Black & Gold */
+  '.dark .sheet{background:radial-gradient(ellipse at 50% 0,#2a220c 0,#0d0d0d 55%,#060606 100%);color:#f2efe6}'+
+  '.dark .bn,.dark h1,.dark .cta{background:linear-gradient(135deg,#f6e39a 0,#d4af37 45%,#b08a1e 100%);-webkit-background-clip:text;background-clip:text;color:transparent}'+
+  '.dark .bs,.dark .ctas,.dark .st .d,.dark .foot{color:#b9b4a5}.dark .eyebrow,.dark .st .t{color:#d4af37}.dark .st{background:rgba(212,175,55,.07);border:1px solid rgba(212,175,55,.3)}.dark .foot .ln{color:#f2efe6}'+
+  /* Light (ink saver) */
+  '.light .sheet{background:#fbf8f0;color:#141414}.light .bn,.light h1,.light .cta{color:#141414}.light .bs,.light .ctas,.light .st .d,.light .foot{color:#5b574d}'+
+  '.light .eyebrow,.light .st .t{color:#9c7a17}.light .st{background:#fff;border:1px solid rgba(156,122,23,.35)}'+
+  '@media print{html,body{background:none}.bar{display:none}.sheet{margin:0;box-shadow:none}}';
+function printSignSheet(o){
+  const e=esc3,qr=qrDataUrl(o.link,640);
+  if(!qr){window.alert('Could not create the QR code.');return;}
+  const steps=(o.steps||[]).map(function(s,i){return '<div class="st"><div class="n">'+(i+1)+'</div><div class="t">'+e(s[0])+'</div><div class="d">'+e(s[1])+'</div></div>';}).join('');
+  const html='<!doctype html><html><head><meta charset="utf-8"><title>'+e(o.title+' - '+o.lic.name)+'</title>'+
+    '<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">'+
+    '<style>'+SIGN_CSS+'</style></head><body class="dark">'+
+    '<div class="bar"><span>Sign style</span><button id="bd" class="on" onclick="document.body.className=\'dark\';this.className=\'on\';document.getElementById(\'bl\').className=\'\'">Black &amp; Gold</button>'+
+    '<button id="bl" onclick="document.body.className=\'light\';this.className=\'on\';document.getElementById(\'bd\').className=\'\'">Light (saves ink)</button>'+
+    '<button class="print" onclick="window.print()">Print</button><span>Letter size &middot; turn on &ldquo;Background graphics&rdquo; if colours are missing</span></div>'+
+    '<div class="sheet"><div class="frame"><span class="cn a"></span><span class="cn b"></span><span class="cn c"></span><span class="cn d"></span>'+
+      '<div class="brand">'+SIGN_LOGO+'<div><div class="bn">HENDRIX</div><div class="bs">QUALITY MANAGEMENT</div></div></div>'+
+      '<div class="eyebrow">'+e(o.eyebrow)+'</div><h1>'+e(o.title)+'</h1>'+
+      '<div class="rule"><i></i><b></b><i></i></div>'+
+      '<div class="qrbox"><img src="'+qr+'" alt="QR code"></div>'+
+      '<div class="cta">'+e(o.cta)+'</div><div class="ctas">'+e(o.ctaSub)+'</div>'+
+      '<div class="steps">'+steps+'</div>'+
+      '<div class="foot"><div><div class="ln">'+e(o.lic.name)+'</div>License '+e(o.lic.license_number||'-')+' &middot; '+e(o.stName)+'</div>'+
+        '<div class="r">This code records for this license only.<br>Questions? Ask a manager on duty.</div></div>'+
+    '</div></div></body></html>';
+  const w=window.open('','_blank');if(!w){window.alert('Allow pop-ups for this site to print the sign.');return;}
+  w.document.open();w.document.write(html);w.document.close();
 }
 
 /* Admin: one editable list */
@@ -1290,7 +1343,7 @@ function LogPanel(props){
         el('input',{readOnly:true,value:link,onFocus:function(e){e.target.select();}}),
         el('div',{className:'row',style:{marginTop:8}},
           el('button',{className:'btn sm',onClick:function(){try{navigator.clipboard.writeText(link);setCopied(true);setTimeout(function(){setCopied(false);},1500);}catch(e){}}},copied?'Copied':'Copy link'),
-          el('button',{className:'btn ghost sm',onClick:function(){printQrSign(qrId,st.name,lic,def.name+': scan to record');}},'Print QR sign'))))),
+          el('button',{className:'btn ghost sm',onClick:function(){printSignSheet({link:link,lic:lic,stName:st.name,eyebrow:st.name+'  \u00b7  Facility Log',title:def.name,cta:'Scan to record',ctaSub:'Use your phone camera. No login needed.',steps:[['Scan','Point your phone camera at the code'],['Fill in','Complete every field on the form'],['Sign & submit','Sign with your finger and submit']]});}},'Print QR sign'))))),
     el('div',{className:'card'},
       el('div',{className:'row',style:{justifyContent:'space-between'}},
         el('div',null,el('span',{className:'k'},st.name+' rules - '+def.ruleCat),el('span',{className:'muted',style:{marginLeft:8}},props.rules.length+' in the rulebook')),
