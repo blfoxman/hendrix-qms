@@ -715,8 +715,13 @@ const LOG_TYPES=[
   {id:'waste',name:'Waste Destruction Log',freq:'Every destruction event',ruleCat:'Facility',person:'personnel_involved',itemKey:'category',itemLabel:'Category',
     lists:[
       {key:'waste.categories',title:'Categories',ph:'e.g. Concentrate',hint:'The Category dropdown'},
-      {key:'waste.cameras',title:'Camera names (Angle 1 and 2 of destruction)',ph:'e.g. Waste 1'},
+      {key:'waste.camera_one',title:'Camera #1 names (Angle 1 of destruction)',ph:'e.g. Waste 1'},
+      {key:'waste.camera_two',title:'Camera #2 names (Angle 2 of destruction)',ph:'e.g. Waste 2'},
+      {key:'waste.camera_three',title:'Camera #3 names (Angle 3 of destruction)',ph:'e.g. Waste 3'},
+      {key:'waste.camera_four',title:'Camera #4 names (Angle 4 of destruction)',ph:'e.g. Waste 4'},
+      {key:'waste.cameras',title:'Old shared camera list (feeds Camera #1 and #2 until they have their own names)',ph:'e.g. Waste 1',hideEmpty:1},
       {key:'waste.render_locations',title:'Locations of Rendering',ph:'e.g. Waste Area'},
+      {key:'waste.disposal_locations',title:'Locations of Disposal',ph:'Address or facility name'},
       {key:'waste.methods',title:'Methods Used',ph:'Write each full method as your state requires it',hint:'Write each full destruction method; they become the dropdown'}],
     fields:[
       {k:'date',l:'Date of Waste Generation',t:'date',req:1},{k:'time',l:'Time of Waste Generation',t:'time'},
@@ -727,8 +732,10 @@ const LOG_TYPES=[
       {k:'waste_tags',l:'Track-and-Trace Tag(s)',t:'text',req:1,ph:'e.g. METRC package tags, comma separated'},
       {k:'qty_unit',l:'Unit of Measure',t:'select',o:['Grams','EA (Each)'],req:1},
       {k:'qty_expired',l:'Quantity of Waste / Expired Product',t:'text',req:1,ph:'e.g. 14.2 or 50'},
-      {k:'camera_1',l:'Camera #1 Name (Angle 1 of Destruction)',t:'select',list:'waste.cameras'},
-      {k:'camera_2',l:'Camera #2 Name (Angle 2 of Destruction)',t:'select',list:'waste.cameras'},
+      {k:'camera_1',l:'Camera #1 Name (Angle 1 of Destruction)',t:'select',list:'waste.camera_one',legacy:'waste.cameras'},
+      {k:'camera_2',l:'Camera #2 Name (Angle 2 of Destruction)',t:'select',list:'waste.camera_two',legacy:'waste.cameras'},
+      {k:'camera_3',l:'Camera #3 Name (Angle 3 of Destruction)',t:'select',list:'waste.camera_three'},
+      {k:'camera_4',l:'Camera #4 Name (Angle 4 of Destruction)',t:'select',list:'waste.camera_four'},
       {k:'rendering_location',l:'Location of Rendering',t:'select',list:'waste.render_locations'},
       {k:'method_used',l:'Method Used',t:'select',list:'waste.methods',req:1},
       {k:'qty_rendered',l:'Quantity of Rendered Waste',t:'text',ph:'Total weight/quantity after rendering'},
@@ -736,7 +743,7 @@ const LOG_TYPES=[
       {k:'waste_company',l:'Waste Management Company / Facility Used',t:'text',ph:'Licensed waste disposal company name'},
       {k:'manifest_number',l:'Waste Manifest Number',t:'text',ph:'Manifest #'},
       {k:'receipt_number',l:'Disposal Receipt Number',t:'text',ph:'Receipt #'},
-      {k:'disposal_location',l:'Location of Disposal',t:'text',ph:'Address or facility name'},
+      {k:'disposal_location',l:'Location of Disposal',t:'select',list:'waste.disposal_locations',ph:'Address or facility name'},
       {t:'section',l:'Notes & Compliance'},
       {k:'notes',l:'Additional Notes / Comments',t:'textarea',ph:'Any additional information'},
       {k:'tracking_recorded',l:'Recorded in Track-and-Trace?',t:'select',o:['Yes - recorded before destruction','Yes - recorded after destruction','Pending']},
@@ -891,7 +898,8 @@ function listDef(key){
 // choices for a select: the license's own list, else the built-in defaults, else the field's fixed options; null = type-in
 function fieldOptions(f,lists){
   if(f.list){
-    const own=(lists[f.list]||[]).map(function(i){return i.name;});
+    let own=(lists[f.list]||[]).map(function(i){return i.name;});
+    if(!own.length&&f.legacy)own=(lists[f.legacy]||[]).map(function(i){return i.name;});
     if(own.length)return own;
     const L=listDef(f.list);if(L&&L.def)return L.def;
     return null;
@@ -1170,7 +1178,7 @@ function ListManager(props){
   const def=props.def,byKey=groupLists(props.rows,false);
   return el(Modal,{title:def.name+' lists - '+props.lic.name,wide:true,onClose:props.onClose},
     el('div',{className:'muted',style:{marginBottom:12}},'These lists belong to '+props.lic.name+' ('+props.st.name+') only. Other licenses keep their own.'),
-    def.lists.map(function(L){return el(ListSection,{key:L.key,L:L,items:byKey[L.key]||[],st:props.st,lic:props.lic,onChanged:props.onChanged});}));
+    def.lists.filter(function(L){return !(L.hideEmpty&&!(byKey[L.key]||[]).length);}).map(function(L){return el(ListSection,{key:L.key,L:L,items:byKey[L.key]||[],st:props.st,lic:props.lic,onChanged:props.onChanged});}));
 }
 
 function LogPanel(props){
