@@ -60,6 +60,2063 @@ input,select,textarea{background:#0f0f0f;color:var(--text);border:1px solid var(
 select{width:auto;min-width:150px}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 2px rgba(212,175,55,.18)}
 textarea{min-height:90px;resize:vertical}
+label.f,div.f{display:block;margin-bottom:12px}
+label.f>span,div.f>span{display:block;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin-bottom:5px}
+.badge{display:inline-block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:2px 8px;border-radius:20px;border:1px solid var(--gold-lo);color:var(--gold-hi)}
+.badge.off{border-color:var(--line);color:var(--faint)}
+.msg{padding:9px 12px;border-radius:8px;margin:10px 0;font-size:13px}
+.msg.err{background:#2a1513;border:1px solid #5a2a26;color:#ffb4ac}
+.msg.ok{background:#112218;border:1px solid #23543a;color:#a6e6c4}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);padding:8px 10px;border-bottom:1px solid var(--line)}
+td{padding:9px 10px;border-bottom:1px solid #1d1d1d;vertical-align:middle}
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:50;display:flex;align-items:center;justify-content:center;padding:14px}
+.md{background:var(--panel);border:1px solid var(--gold-lo);border-radius:14px;width:min(520px,100%);max-height:92vh;overflow:auto;padding:20px}
+.md h2{margin:0 0 14px;font-size:18px}
+.auth{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(ellipse at top,#1a1507 0,#0a0a0a 55%)}
+.auth .box{width:min(400px,100%);background:var(--panel);border:1px solid var(--line);border-top:2px solid var(--gold);border-radius:14px;padding:26px}
+.badge.ok{border-color:#23543a;color:#a6e6c4}
+.badge.bad{border-color:#5a2a26;color:#ffb4ac;background:#2a1513}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 18px}
+.tabs button{background:#111;border:1px solid var(--line);color:var(--muted);border-radius:20px;padding:6px 14px;cursor:pointer;font-size:13px}
+.tabs button.on{background:#17140a;border-color:var(--gold);color:var(--gold-hi)}
+.chk{display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid #1d1d1d}
+.btn.selbad{background:#5a2a26;color:#fff}
+.secth{margin:18px 0 10px;padding:6px 10px;border-left:3px solid var(--gold);background:#141209;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold-hi);font-weight:700}
+.cklist{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:4px 12px}
+.ck{display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer}
+.li{display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
+.li input{width:auto;min-width:0}
+.voidrow td{opacity:.5;text-decoration:line-through}.voidrow td:last-child,.voidrow td:nth-child(5){text-decoration:none}
+.ck input{width:18px;height:18px;flex:0 0 auto;accent-color:#d4af37}
+.empty{border:1px dashed var(--gold-lo);border-radius:12px;padding:30px;text-align:center;color:var(--muted)}
+@media(max-width:820px){
+  .shell{grid-template-columns:1fr}
+  .top{grid-column:1}
+  .side{border-right:0;border-bottom:1px solid var(--line);padding:8px}
+  .nav{flex-direction:row;overflow-x:auto}
+  .nav .grp{display:none}
+  .nav button{white-space:nowrap}
+  .main{padding:16px 16px 50px}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+(function(){
+const {useState,useEffect,useCallback,useRef}=React;
+const el=React.createElement;
+
+/* ---------- Supabase connection (a NEW, separate project) ---------- */
+// Optional: paste the new project's URL and anon key here so every browser is pre-connected.
+const HX_URL='https://bqrncllndvzbhmxanitq.supabase.co';
+const HX_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxcm5jbGxuZHZ6YmhteGFuaXRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1OTI0MTgsImV4cCI6MjEwODE2ODQxOH0.OLIy8RzGxYSGulp7m2IdpD7KA5NiGDuEFYfWYT99_Bc';
+
+function lsGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}
+function lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
+function lsDel(k){try{localStorage.removeItem(k);}catch(e){}}
+function cfg(){
+  const url=(HX_URL||lsGet('hx_url')||'').replace(/\/+$/,'');
+  const key=HX_KEY||lsGet('hx_key')||'';
+  return {url:url,key:key,ok:!!(url&&key)};
+}
+
+/* ---------- session + REST helpers ---------- */
+let SESSION=null;
+try{SESSION=JSON.parse(lsGet('hx_session')||'null');}catch(e){SESSION=null;}
+function saveSession(s){SESSION=s;if(s)lsSet('hx_session',JSON.stringify(s));else lsDel('hx_session');}
+
+async function authCall(path,body){
+  const c=cfg();
+  const r=await fetch(c.url+'/auth/v1/'+path,{method:'POST',headers:{'apikey':c.key,'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const j=await r.json().catch(function(){return {};});
+  if(!r.ok)throw new Error(j.error_description||j.msg||j.message||('Auth error '+r.status));
+  return j;
+}
+function toSession(j){
+  return {access_token:j.access_token,refresh_token:j.refresh_token,expires_at:Math.floor(Date.now()/1000)+(j.expires_in||3600),user:j.user};
+}
+async function freshToken(){
+  if(!SESSION)return null;
+  if(SESSION.expires_at-60>Math.floor(Date.now()/1000))return SESSION.access_token;
+  try{
+    const j=await authCall('token?grant_type=refresh_token',{refresh_token:SESSION.refresh_token});
+    saveSession(toSession(j));
+    return SESSION.access_token;
+  }catch(e){saveSession(null);return null;}
+}
+async function sb(path,opt){
+  opt=opt||{};
+  const c=cfg();
+  const tok=await freshToken();
+  const h={'apikey':c.key,'Authorization':'Bearer '+(tok||c.key),'Content-Type':'application/json'};
+  if(opt.prefer)h['Prefer']=opt.prefer;
+  const r=await fetch(c.url+'/rest/v1/'+path,{method:opt.method||'GET',headers:h,body:opt.body?JSON.stringify(opt.body):undefined});
+  const txt=await r.text();
+  let j=null;try{j=txt?JSON.parse(txt):null;}catch(e){j=null;}
+  if(!r.ok){
+    const m=(j&&(j.message||j.hint||j.details))||txt||('Error '+r.status);
+    if(/schema cache|Could not find the table|relation .* does not exist/i.test(m)){
+      const step=/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
+      throw new Error('Database tables are missing - run '+step+' in the Hendrix Supabase project.');
+    }
+    if(/row-level security|permission denied/i.test(m))throw new Error('Not allowed - only an approved admin can change this.');
+    throw new Error(m);
+  }
+  return j;
+}
+const db={
+  get:function(t,q){return sb(t+(q?'?'+q:''));},
+  insert:function(t,row){return sb(t,{method:'POST',body:row,prefer:'return=representation'});},
+  update:function(t,id,patch){return sb(t+'?id=eq.'+encodeURIComponent(id),{method:'PATCH',body:patch,prefer:'return=representation'});},
+  remove:function(t,id){return sb(t+'?id=eq.'+encodeURIComponent(id),{method:'DELETE'});}
+};
+async function rpc(name,args){
+  const c=cfg();
+  const r=await fetch(c.url+'/rest/v1/rpc/'+name,{method:'POST',headers:{'apikey':c.key,'Authorization':'Bearer '+c.key,'Content-Type':'application/json'},body:JSON.stringify(args||{})});
+  const txt=await r.text();let j=null;try{j=txt?JSON.parse(txt):null;}catch(e){j=null;}
+  if(!r.ok){
+    const m=(j&&(j.message||j.hint))||txt||('Error '+r.status);
+    if(/Could not find the function|does not exist/i.test(m))throw new Error('Kiosk setup is missing - run hendrix_step3.sql and hendrix_step4.sql in the Hendrix Supabase project.');
+    throw new Error(m);
+  }
+  return j;
+}
+function newId(p){return p+'-'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
+
+/* ---------- small UI pieces ---------- */
+function Logo(props){
+  const s=props.size||30;
+  return el('svg',{width:s,height:s,viewBox:'0 0 40 40','aria-hidden':'true'},
+    el('defs',null,el('linearGradient',{id:'hxg',x1:'0',y1:'0',x2:'1',y2:'1'},
+      el('stop',{offset:'0',stopColor:'#f1d57a'}),el('stop',{offset:'.5',stopColor:'#d4af37'}),el('stop',{offset:'1',stopColor:'#a8841c'}))),
+    el('polygon',{points:'20,2 36,11 36,29 20,38 4,29 4,11',fill:'none',stroke:'url(#hxg)',strokeWidth:'2.4'}),
+    el('path',{d:'M13 12v16M27 12v16M13 20h14',stroke:'url(#hxg)',strokeWidth:'3',strokeLinecap:'round',fill:'none'}));
+}
+function Brand(){
+  return el('div',{className:'brand'},el(Logo,{size:32}),el('div',null,el('div',{className:'brand-name'},'HENDRIX'),el('div',{className:'brand-sub'},'QUALITY MANAGEMENT')));
+}
+function Field(props){
+  // plain=true uses a div: a label would turn taps on a canvas into clicks on its first button
+  return el(props.plain?'div':'label',{className:'f'},el('span',null,props.label),props.children);
+}
+function Modal(props){
+  return el('div',{className:'mo',onClick:function(e){if(e.target===e.currentTarget&&props.onClose)props.onClose();}},
+    el('div',{className:'md',style:props.wide?{width:'min(860px,100%)'}:null},el('h2',null,props.title),props.children));
+}
+
+/* ---------- connect / login ---------- */
+function ConnectScreen(props){
+  const[url,setUrl]=useState(lsGet('hx_url')||'');
+  const[key,setKey]=useState(lsGet('hx_key')||'');
+  return el('div',{className:'auth'},el('div',{className:'box'},
+    el(Brand),
+    el('p',{className:'muted',style:{margin:'18px 0'}},'Connect this app to its own new Supabase project (Project Settings > API). This is separate from Black Fox and Michigan.'),
+    el(Field,{label:'Project URL'},el('input',{value:url,placeholder:'https://xxxx.supabase.co',onChange:function(e){setUrl(e.target.value.trim());}})),
+    el(Field,{label:'Anon (public) key'},el('input',{value:key,placeholder:'eyJ...',onChange:function(e){setKey(e.target.value.trim());}})),
+    el('button',{className:'btn',style:{width:'100%'},disabled:!url||!key,onClick:function(){lsSet('hx_url',url);lsSet('hx_key',key);props.onDone();}},'Connect')));
+}
+function LoginScreen(props){
+  const[mode,setMode]=useState('in');
+  const[email,setEmail]=useState('');
+  const[pw,setPw]=useState('');
+  const[name,setName]=useState('');
+  const[busy,setBusy]=useState(false);
+  const[err,setErr]=useState('');
+  const[info,setInfo]=useState('');
+  async function go(){
+    setErr('');setInfo('');setBusy(true);
+    try{
+      if(mode==='in'){
+        const j=await authCall('token?grant_type=password',{email:email.trim(),password:pw});
+        saveSession(toSession(j));props.onAuthed();
+      }else{
+        if(!name.trim())throw new Error('Enter your name.');
+        if(pw.length<8)throw new Error('Password must be at least 8 characters.');
+        const j=await authCall('signup',{email:email.trim(),password:pw,data:{name:name.trim()}});
+        if(j.access_token){saveSession(toSession(j));props.onAuthed();}
+        else{setInfo('Account created. If email confirmation is on, confirm your email, then sign in.');setMode('in');}
+      }
+    }catch(e){setErr(String(e.message||e));}
+    setBusy(false);
+  }
+  return el('div',{className:'auth'},el('div',{className:'box'},
+    el(Brand),
+    el('div',{style:{height:18}}),
+    mode==='up'&&el(Field,{label:'Full name'},el('input',{value:name,onChange:function(e){setName(e.target.value);}})),
+    el(Field,{label:'Email'},el('input',{type:'email',value:email,onChange:function(e){setEmail(e.target.value);},onKeyDown:function(e){if(e.key==='Enter')go();}})),
+    el(Field,{label:'Password'},el('input',{type:'password',value:pw,onChange:function(e){setPw(e.target.value);},onKeyDown:function(e){if(e.key==='Enter')go();}})),
+    err&&el('div',{className:'msg err'},err),
+    info&&el('div',{className:'msg ok'},info),
+    el('button',{className:'btn',style:{width:'100%'},disabled:busy||!email||!pw,onClick:go},busy?'Please wait...':(mode==='in'?'Sign in':'Create account')),
+    el('div',{className:'muted',style:{marginTop:14,textAlign:'center',fontSize:13}},
+      mode==='in'?'New here? ':'Already have an account? ',
+      el('a',{href:'#',style:{color:'var(--gold-hi)'},onClick:function(e){e.preventDefault();setMode(mode==='in'?'up':'in');setErr('');}},mode==='in'?'Create an account':'Sign in')),
+    el('div',{className:'muted',style:{marginTop:14,textAlign:'center',fontSize:11}},
+      el('a',{href:'#',style:{color:'var(--faint)'},onClick:function(e){e.preventDefault();lsDel('hx_url');lsDel('hx_key');props.onReconnect();}},'Change database connection'))));
+}
+
+/* ---------- Dashboard ---------- */
+const MODULES_SOON=['Batch Tracker','Testing','Compliance Stickers','SOPs','QMS (Deviations, CAPAs, Audits)','Time Clock and Badges','Production Planner'];
+function Dashboard(props){
+  const st=props.state,lic=props.license;
+  const isAdmin=props.profile.role==='admin';
+  if(!props.states.length){
+    return el('div',null,el('h1',null,'Welcome to ',el('span',{className:'g'},'Hendrix QMS')),el('div',{className:'sub'},'Nothing is set up yet. Everything starts empty and you create it yourself.'),
+      el('div',{className:'empty'},
+        el('div',{style:{fontSize:16,color:'var(--text)',marginBottom:6}},'Step 1: create your first state'),
+        el('div',{style:{marginBottom:14}},'Then add the licenses that belong to it. Each state keeps its own rules, products, areas and logs.'),
+        isAdmin?el('button',{className:'btn',onClick:function(){props.go('locations');}},'Set up States and Licenses'):el('div',null,'Ask the admin to set up the first state.')));
+  }
+  const licsOfState=props.licenses.filter(function(l){return st&&l.state_id===st.id;});
+  return el('div',null,
+    el('h1',null,el('span',{className:'g'},st?st.name:'Hendrix QMS')),
+    el('div',{className:'sub'},lic?(lic.name+(lic.license_number?'  \u00b7  '+lic.license_number:'')):'No license selected for this state yet'),
+    el('div',{className:'grid'},
+      el('div',{className:'card gold'},el('div',{className:'k'},'Regulatory agency'),el('div',{className:'v'},(st&&st.agency)||'Not set'),
+        el('div',{className:'k',style:{marginTop:12}},'Governing code'),el('div',{className:'v'},(st&&st.code)||'Not set')),
+      el('div',{className:'card gold'},el('div',{className:'k'},'Active license'),el('div',{className:'v'},lic?lic.name:'None'),
+        el('div',{className:'muted',style:{marginTop:4}},lic?[lic.license_type,lic.license_number].filter(Boolean).join('  \u00b7  '):'Add one under Locations.'),
+        el('div',{className:'muted',style:{marginTop:10}},licsOfState.length+' license'+(licsOfState.length===1?'':'s')+' in '+(st?st.name:'this state'))),
+      el('div',{className:'card gold'},el('div',{className:'k'},'State rulebook'),el('div',{className:'v'},(props.ruleCount===null||props.ruleCount===undefined?'...':props.ruleCount)+' rules'),
+        el('div',{className:'muted',style:{marginTop:4}},'Only '+(st?st.name:'this state')+"'s own rules are ever loaded here."),el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go('rulebook');}},'Open rulebook'))),
+    !lic&&isAdmin&&el('div',{className:'empty',style:{marginBottom:14}},'This state has no license yet. ',el('a',{href:'#',style:{color:'var(--gold-hi)'},onClick:function(e){e.preventDefault();props.go('locations');}},'Add one')),
+    el('div',{className:'card'},el('h3',null,'Coming next'),
+      el('div',{className:'muted',style:{marginBottom:10}},'Modules are added one at a time and tested before the next. Each starts blank for every state and license.'),
+      el('div',{className:'row'},MODULES_SOON.map(function(m){return el('span',{key:m,className:'badge off'},m);}))));
+}
+
+/* ---------- States and Licenses (admin) ---------- */
+function StateForm(props){
+  const[f,setF]=useState(props.initial||{name:'',agency:'',code:''});
+  return el(Modal,{title:props.initial?'Edit state':'Add a state',onClose:props.onClose},
+    el(Field,{label:'State name'},el('input',{value:f.name,placeholder:'e.g. Michigan',onChange:function(e){setF({...f,name:e.target.value});}})),
+    el(Field,{label:'Regulatory agency'},el('input',{value:f.agency,placeholder:'e.g. the state cannabis regulator',onChange:function(e){setF({...f,agency:e.target.value});}})),
+    el(Field,{label:'Governing code / act'},el('input',{value:f.code,placeholder:'e.g. the regulation or act reference',onChange:function(e){setF({...f,code:e.target.value});}})),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},
+      el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),
+      el('button',{className:'btn',disabled:!f.name.trim(),onClick:function(){props.onSave({name:f.name.trim(),agency:f.agency.trim(),code:f.code.trim()});}},'Save')));
+}
+function LicenseForm(props){
+  const[f,setF]=useState(props.initial||{name:'',license_number:'',license_type:''});
+  return el(Modal,{title:props.initial?'Edit license':'Add a license to '+props.stateName,onClose:props.onClose},
+    el(Field,{label:'License / facility name'},el('input',{value:f.name,onChange:function(e){setF({...f,name:e.target.value});}})),
+    el(Field,{label:'License number'},el('input',{value:f.license_number,onChange:function(e){setF({...f,license_number:e.target.value});}})),
+    el(Field,{label:'License type'},el('input',{value:f.license_type,placeholder:'e.g. Manufacturer, Processor, Cultivation',onChange:function(e){setF({...f,license_type:e.target.value});}})),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},
+      el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),
+      el('button',{className:'btn',disabled:!f.name.trim(),onClick:function(){props.onSave({name:f.name.trim(),license_number:f.license_number.trim(),license_type:f.license_type.trim()});}},'Save')));
+}
+function Locations(props){
+  const isAdmin=props.profile.role==='admin';
+  const[modal,setModal]=useState(null);
+  const[err,setErr]=useState('');
+  async function run(fn){setErr('');try{await fn();await props.reload();setModal(null);}catch(e){setErr(String(e.message||e));}}
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,'States and ',el('span',{className:'g'},'Licenses')),el('div',{className:'sub'},'Each state carries its own rulebook. Licenses live under a state and never share its rules with another state.')),
+      isAdmin&&el('button',{className:'btn',onClick:function(){setModal({t:'state'});}},'+ Add state')),
+    err&&el('div',{className:'msg err'},err),
+    !isAdmin&&el('div',{className:'msg err'},'View only. Only an admin can add or change states and licenses.'),
+    !props.states.length&&el('div',{className:'empty'},'No states yet.'+(isAdmin?' Click "+ Add state" to create the first one.':'')),
+    props.states.map(function(st){
+      const lics=props.licenses.filter(function(l){return l.state_id===st.id;});
+      return el('div',{key:st.id,className:'card gold'},
+        el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+          el('div',null,el('h3',{style:{fontSize:18,marginBottom:2}},st.name),
+            el('div',{className:'muted'},[st.agency,st.code].filter(Boolean).join('  \u00b7  ')||'No agency or code set')),
+          isAdmin&&el('div',{className:'row'},
+            el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'state',s:st});}},'Edit'),
+            el('button',{className:'btn danger sm',onClick:function(){
+              if(lics.length){setErr('Delete or move this state\'s licenses first.');return;}
+              if(window.confirm('Delete state "'+st.name+'" and its rulebook?'))run(function(){return db.remove('hx_states',st.id);});
+            }},'Delete'))),
+        el('div',{style:{marginTop:16}},
+          el('div',{className:'row',style:{justifyContent:'space-between',marginBottom:6}},
+            el('div',{className:'k'},'Licenses'),
+            isAdmin&&el('button',{className:'btn sm',onClick:function(){setModal({t:'lic',st:st});}},'+ Add license')),
+          lics.length?el('table',null,el('thead',null,el('tr',null,['Name','License #','Type','Status',''].map(function(h,i){return el('th',{key:i},h);}))),
+            el('tbody',null,lics.map(function(l){
+              return el('tr',{key:l.id},el('td',null,l.name),el('td',null,l.license_number||'-'),el('td',null,l.license_type||'-'),
+                el('td',null,el('span',{className:'badge'+(l.active?'':' off')},l.active?'Active':'Inactive')),
+                el('td',{style:{textAlign:'right',whiteSpace:'nowrap'}},isAdmin&&el('span',{className:'row',style:{justifyContent:'flex-end',flexWrap:'nowrap'}},
+                  el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'lic',st:st,l:l});}},'Edit'),
+                  el('button',{className:'btn ghost sm',onClick:function(){run(function(){return db.update('hx_licenses',l.id,{active:!l.active});});}},l.active?'Deactivate':'Activate'),
+                  el('button',{className:'btn danger sm',onClick:function(){if(window.confirm('Delete license "'+l.name+'"?'))run(function(){return db.remove('hx_licenses',l.id);});}},'Delete'))));
+            }))):el('div',{className:'muted'},'No licenses in this state yet.')),
+        el('div',{className:'row',style:{marginTop:16,justifyContent:'space-between'}},
+          el('div',{className:'muted'},'Laws and rules for '+st.name+' live in its own Rulebook.'),
+          el('button',{className:'btn ghost sm',onClick:function(){props.openRulebook(st.id);}},'Open '+st.name+' rulebook')));
+    }),
+    modal&&modal.t==='state'&&el(StateForm,{initial:modal.s,onClose:function(){setModal(null);},onSave:function(v){
+      run(function(){return modal.s?db.update('hx_states',modal.s.id,v):db.insert('hx_states',{id:newId('st'),name:v.name,agency:v.agency,code:v.code,rules:[]});});}}),
+    modal&&modal.t==='lic'&&el(LicenseForm,{stateName:modal.st.name,initial:modal.l,onClose:function(){setModal(null);},onSave:function(v){
+      run(function(){return modal.l?db.update('hx_licenses',modal.l.id,v):db.insert('hx_licenses',{id:newId('lic'),state_id:modal.st.id,name:v.name,license_number:v.license_number,license_type:v.license_type,active:true});});}}));
+}
+
+/* ---------- Rulebook: every rule row carries its state; only the active state's rules are ever loaded ---------- */
+const RULE_CATS=['Licensing','Labeling','Packaging','Testing','Facility','Security','Recordkeeping','Training','Inventory / Tracking','Other'];
+function RuleForm(props){
+  const[f,setF]=useState(props.initial||{category:'Licensing',citation:'',title:'',body:''});
+  return el(Modal,{title:props.initial?'Edit rule':'Add a rule to '+props.stateName,onClose:props.onClose},
+    el(Field,{label:'Category'},el('input',{list:'hxcats',value:f.category,onChange:function(e){setF({...f,category:e.target.value});}}),
+      el('datalist',{id:'hxcats'},RULE_CATS.map(function(c){return el('option',{key:c,value:c});}))),
+    el(Field,{label:'Citation (section / rule number)'},el('input',{value:f.citation,placeholder:'e.g. the rule or statute number',onChange:function(e){setF({...f,citation:e.target.value});}})),
+    el(Field,{label:'Title'},el('input',{value:f.title,onChange:function(e){setF({...f,title:e.target.value});}})),
+    el(Field,{label:'Rule text / what it requires'},el('textarea',{value:f.body,onChange:function(e){setF({...f,body:e.target.value});}})),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},
+      el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),
+      el('button',{className:'btn',disabled:!f.title.trim(),onClick:function(){props.onSave({category:(f.category||'Other').trim()||'Other',citation:f.citation.trim(),title:f.title.trim(),body:f.body.trim()});}},'Save')));
+}
+function Rulebook(props){
+  const st=props.state;
+  const isAdmin=props.profile.role==='admin';
+  const[rules,setRules]=useState(null);
+  const[q,setQ]=useState('');
+  const[modal,setModal]=useState(null);
+  const[err,setErr]=useState('');
+  const sid=st?st.id:'';
+  const load=useCallback(function(){
+    if(!sid){setRules([]);return;}
+    return db.get('hx_rules','state_id=eq.'+encodeURIComponent(sid)+'&select=*&order=category,created_at').then(function(r){
+      // defensive: never show a rule that belongs to another state
+      const only=(r||[]).filter(function(x){return x.state_id===sid;});
+      setRules(only);props.onCount(only.length);
+    }).catch(function(e){setErr(String(e.message||e));setRules([]);});
+  },[sid]);
+  useEffect(function(){setRules(null);setErr('');load();},[load]);
+  async function run(fn){setErr('');try{await fn();await load();setModal(null);}catch(e){setErr(String(e.message||e));}}
+  if(!st)return el('div',null,el('h1',null,'Rulebook'),el('div',{className:'empty'},'Create a state first, then add its rules here.'));
+  const list=(rules||[]).filter(function(r){
+    const t=(r.title+' '+r.citation+' '+r.body+' '+r.category).toLowerCase();return !q||t.indexOf(q.toLowerCase())>=0;});
+  const cats=[];list.forEach(function(r){if(cats.indexOf(r.category)<0)cats.push(r.category);});
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,el('span',{className:'g'},st.name),' Rulebook'),
+        el('div',{className:'sub'},'Only '+st.name+"'s own rules appear here. Switching state loads that state's rules instead, and rules can never be moved between states.")),
+      isAdmin&&el('button',{className:'btn',onClick:function(){setModal({});}},'+ Add rule')),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{marginBottom:14}},el('input',{style:{maxWidth:340},placeholder:'Search '+st.name+' rules...',value:q,onChange:function(e){setQ(e.target.value);}}),
+      el('span',{className:'muted'},rules?(list.length+' of '+rules.length+' rules'):'Loading...')),
+    rules&&!rules.length&&el('div',{className:'empty'},'No rules in the '+st.name+' rulebook yet.'+(isAdmin?' Click "+ Add rule" to start. It begins completely blank.':'')),
+    cats.map(function(c){
+      return el('div',{key:c,className:'card gold'},el('div',{className:'k',style:{marginBottom:8}},c),
+        list.filter(function(r){return r.category===c;}).map(function(r){
+          return el('div',{key:r.id,style:{padding:'10px 0',borderTop:'1px solid #1d1d1d'}},
+            el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start',flexWrap:'nowrap'}},
+              el('div',null,el('div',{style:{fontWeight:700}},r.title),r.citation&&el('div',{className:'muted',style:{fontSize:12}},r.citation)),
+              isAdmin&&el('div',{className:'row',style:{flexWrap:'nowrap'}},
+                el('button',{className:'btn ghost sm',onClick:function(){setModal({r:r});}},'Edit'),
+                el('button',{className:'btn danger sm',onClick:function(){if(window.confirm('Delete this rule?'))run(function(){return db.remove('hx_rules',r.id);});}},'Delete'))),
+            r.body&&el('div',{style:{marginTop:6,whiteSpace:'pre-wrap',color:'var(--text)'}},r.body));
+        }));
+    }),
+    modal&&el(RuleForm,{stateName:st.name,initial:modal.r,onClose:function(){setModal(null);},onSave:function(v){
+      run(function(){return modal.r?db.update('hx_rules',modal.r.id,v):db.insert('hx_rules',{id:newId('rule'),state_id:st.id,category:v.category,citation:v.citation,title:v.title,body:v.body});});}}));
+}
+
+/* ---------- Team (admin) ---------- */
+function Team(props){
+  const[rows,setRows]=useState(null);
+  const[err,setErr]=useState('');
+  const load=useCallback(function(){
+    db.get('hx_profiles','select=*&order=created_at').then(setRows).catch(function(e){setErr(String(e.message||e));});
+  },[]);
+  useEffect(load,[load]);
+  async function patch(u,p){
+    setErr('');
+    try{await db.update('hx_profiles',u.id,p);load();}catch(e){setErr(String(e.message||e));}
+  }
+  return el('div',null,
+    el('h1',null,'Team and ',el('span',{className:'g'},'Access')),
+    el('div',{className:'sub'},'Approve people who sign up and choose who is an admin. Finer access templates come in a later step.'),
+    err&&el('div',{className:'msg err'},err),
+    !rows?el('div',{className:'muted'},'Loading...'):
+    el('div',{className:'card'},el('table',null,el('thead',null,el('tr',null,['Name','Email','Role','Status',''].map(function(h,i){return el('th',{key:i},h);}))),
+      el('tbody',null,rows.map(function(u){
+        const me=u.id===props.profile.id;
+        return el('tr',{key:u.id},el('td',null,u.name||'-',me&&el('span',{className:'badge',style:{marginLeft:8}},'You')),el('td',null,u.email),
+          el('td',null,el('select',{value:u.role,disabled:me,onChange:function(e){patch(u,{role:e.target.value});}},el('option',{value:'member'},'Member'),el('option',{value:'admin'},'Admin'))),
+          el('td',null,el('span',{className:'badge'+(u.approved?'':' off')},u.approved?'Approved':'Waiting')),
+          el('td',{style:{textAlign:'right'}},!me&&el('button',{className:'btn sm'+(u.approved?' ghost':''),onClick:function(){patch(u,{approved:!u.approved});}},u.approved?'Revoke':'Approve')));
+      })))));
+}
+
+/* ---------- QR + signature helpers ---------- */
+function QrBox(props){
+  const ref=useRef(null);
+  useEffect(function(){
+    const host=ref.current;if(!host)return;
+    host.innerHTML='';
+    if(window.QRCode){try{new window.QRCode(host,{text:props.text,width:props.size||180,height:props.size||180,colorDark:'#000000',colorLight:'#ffffff',correctLevel:window.QRCode.CorrectLevel.M});}catch(e){host.textContent=props.text;}}
+    else host.textContent=props.text;
+  },[props.text,props.size]);
+  return el('div',{ref:ref,style:{background:'#fff',padding:10,borderRadius:8,display:'inline-block',lineHeight:0}});
+}
+function SignaturePad(props){
+  const cv=useRef(null);const drawing=useRef(false);
+  useEffect(function(){
+    const c=cv.current;if(!c)return;const ctx=c.getContext('2d');
+    ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.lineWidth=2.4;ctx.lineCap='round';ctx.strokeStyle='#111';
+  },[]);
+  function pos(e){const c=cv.current,r=c.getBoundingClientRect();return {x:(e.clientX-r.left)*c.width/r.width,y:(e.clientY-r.top)*c.height/r.height};}
+  function down(e){drawing.current=true;const ctx=cv.current.getContext('2d'),q=pos(e);ctx.beginPath();ctx.moveTo(q.x,q.y);try{cv.current.setPointerCapture(e.pointerId);}catch(x){}e.preventDefault();}
+  function move(e){if(!drawing.current)return;const ctx=cv.current.getContext('2d'),q=pos(e);ctx.lineTo(q.x,q.y);ctx.stroke();e.preventDefault();}
+  function up(){if(!drawing.current)return;drawing.current=false;props.onChange(cv.current.toDataURL('image/png'));}
+  function clear(){const c=cv.current,ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);props.onChange('');}
+  return el('div',null,
+    el('canvas',{ref:cv,width:600,height:180,style:{width:'100%',height:140,background:'#fff',borderRadius:8,touchAction:'none',display:'block'},onPointerDown:down,onPointerMove:move,onPointerUp:up,onPointerLeave:up}),
+    el('button',{className:'btn ghost sm',style:{marginTop:6},onClick:clear},'Clear signature'));
+}
+const PURPOSES=['Vendor / delivery','Contractor / maintenance','Inspector / regulator','Customer / buyer','Interview','Meeting','Tour','Other'];
+
+/* ---------- Visitor kiosk (no login). The license comes from the QR link; the database re-checks it. ---------- */
+function KioskVisitor(){
+  const q=new URLSearchParams(window.location.search);
+  const licId=q.get('lic')||'';
+  const stId=q.get('state')||'';
+  const[lic,setLic]=useState(null);
+  const[bad,setBad]=useState('');
+  const[tab,setTab]=useState('in');
+  const[f,setF]=useState({visitor_name:'',company:'',purpose:'',host:'',vehicle:'',signature:'',agree:false});
+  const[busy,setBusy]=useState(false);
+  const[err,setErr]=useState('');
+  const[done,setDone]=useState('');
+  const[open,setOpen]=useState([]);
+  useEffect(function(){
+    if(!cfg().ok){setBad('This kiosk is not connected to a database.');return;}
+    if(!licId||!stId){setBad('This QR code is missing its state or license. Please ask a manager for the current code.');return;}
+    rpc('hx_kiosk_check',{p_state:stId,p_lic:licId}).then(function(r){if(r&&r.id)setLic(r);else setBad('This QR code is not linked to an active license in this state. Please ask a manager for the correct code.');}).catch(function(e){setBad(String(e.message||e));});
+  },[licId,stId]);
+  function loadOpen(){rpc('hx_kiosk_open_visitors',{p_lic:licId}).then(function(r){setOpen(r||[]);}).catch(function(e){setErr(String(e.message||e));});}
+  useEffect(function(){if(lic&&tab==='out')loadOpen();},[lic,tab]);
+  async function signIn(){
+    setErr('');
+    if(!f.visitor_name.trim()){setErr('Please enter your name.');return;}
+    if(!f.purpose){setErr('Please choose the purpose of your visit.');return;}
+    if(!f.signature){setErr('Please sign in the box.');return;}
+    if(!f.agree){setErr('Please accept the facility rules.');return;}
+    setBusy(true);
+    try{
+      await rpc('hx_kiosk_visitor_in',{p_lic:licId,p:{visitor_name:f.visitor_name,company:f.company,purpose:f.purpose,host:f.host,vehicle:f.vehicle,signature:f.signature}});
+      setDone('Thank you, '+f.visitor_name.trim()+'. You are signed in. Please remember to sign out when you leave.');
+      setF({visitor_name:'',company:'',purpose:'',host:'',vehicle:'',signature:'',agree:false});
+    }catch(e){setErr(String(e.message||e));}
+    setBusy(false);
+  }
+  async function signOut(v){
+    setErr('');setBusy(true);
+    try{await rpc('hx_kiosk_visitor_out',{p_lic:licId,p_id:v.id});setDone('Goodbye, '+v.visitor_name+'. You are signed out.');loadOpen();}
+    catch(e){setErr(String(e.message||e));}
+    setBusy(false);
+  }
+  if(bad)return el('div',{className:'auth'},el('div',{className:'box'},el(Brand),el('div',{className:'msg err',style:{marginTop:18}},bad)));
+  if(!lic)return el('div',{className:'auth'},el(Brand));
+  const head=el('div',{style:{textAlign:'center',marginBottom:16}},
+    el(Brand),
+    el('div',{className:'k',style:{marginTop:16}},lic.state),
+    el('div',{style:{fontSize:20,fontWeight:700}},lic.name),
+    el('div',{className:'muted'},'License '+(lic.license_number||'-')));
+  if(done)return el('div',{className:'auth'},el('div',{className:'box'},head,el('div',{className:'msg ok',style:{fontSize:15}},done),
+    el('button',{className:'btn',style:{width:'100%'},onClick:function(){setDone('');}},'Done')));
+  return el('div',{className:'auth',style:{alignItems:'flex-start'}},el('div',{className:'box',style:{width:'min(560px,100%)'}},head,
+    el('div',{className:'row',style:{marginBottom:14}},
+      el('button',{className:'btn'+(tab==='in'?'':' ghost'),style:{flex:1},onClick:function(){setTab('in');setErr('');}},'Sign in'),
+      el('button',{className:'btn'+(tab==='out'?'':' ghost'),style:{flex:1},onClick:function(){setTab('out');setErr('');}},'Sign out')),
+    err&&el('div',{className:'msg err'},err),
+    tab==='in'?el('div',null,
+      el(Field,{label:'Full name'},el('input',{value:f.visitor_name,onChange:function(e){setF({...f,visitor_name:e.target.value});}})),
+      el(Field,{label:'Company'},el('input',{value:f.company,onChange:function(e){setF({...f,company:e.target.value});}})),
+      el(Field,{label:'Purpose of visit'},el('select',{style:{width:'100%'},value:f.purpose,onChange:function(e){setF({...f,purpose:e.target.value});}},el('option',{value:''},'Select...'),PURPOSES.map(function(x){return el('option',{key:x,value:x},x);}))),
+      el(Field,{label:'Who are you visiting?'},el('input',{value:f.host,onChange:function(e){setF({...f,host:e.target.value});}})),
+      el(Field,{label:'Vehicle plate (optional)'},el('input',{value:f.vehicle,onChange:function(e){setF({...f,vehicle:e.target.value});}})),
+      el(Field,{label:'Signature',plain:true},el(SignaturePad,{onChange:function(v){setF(function(p){return {...p,signature:v};});}})),
+      el('label',{style:{display:'flex',gap:8,alignItems:'flex-start',margin:'6px 0 14px'}},el('input',{type:'checkbox',style:{width:'auto',marginTop:4},checked:f.agree,onChange:function(e){setF({...f,agree:e.target.checked});}}),
+        el('span',{className:'muted'},'I will follow the facility rules, stay with my escort, and not take photos or touch product.')),
+      el('button',{className:'btn',style:{width:'100%',padding:'13px'},disabled:busy,onClick:signIn},busy?'Saving...':'Sign in'))
+    :el('div',null,
+      !open.length&&el('div',{className:'empty'},'Nobody is currently signed in.'),
+      open.map(function(v){return el('div',{key:v.id,className:'card',style:{padding:'12px 14px'}},el('div',{className:'row',style:{justifyContent:'space-between'}},
+        el('div',null,el('div',{style:{fontWeight:700}},v.visitor_name),el('div',{className:'muted',style:{fontSize:12}},'In at '+new Date(v.time_in).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}))),
+        el('button',{className:'btn sm',disabled:busy,onClick:function(){signOut(v);}},'Sign out')));}))));
+}
+
+/* ---------- Visitor Log (staff) ---------- */
+function VisitorLog(props){
+  const st=props.state,lic=props.license;
+  const[rows,setRows]=useState(null);
+  const[range,setRange]=useState('30');
+  const[q,setQ]=useState('');
+  const[err,setErr]=useState('');
+  const[modal,setModal]=useState(false);
+  const[copied,setCopied]=useState(false);
+  const[view,setView]=useState(null);
+  const licId=lic?lic.id:'';
+  const link=window.location.origin+window.location.pathname+'?kiosk=visitor&state='+encodeURIComponent(st?st.id:'')+'&lic='+encodeURIComponent(licId);
+  const load=useCallback(function(){
+    if(!lic||!st){setRows([]);return;}
+    let qs='license_id=eq.'+encodeURIComponent(lic.id)+'&state_id=eq.'+encodeURIComponent(st.id)+'&select=*&order=time_in.desc&limit=1000';
+    if(range!=='all'){qs+='&time_in=gte.'+encodeURIComponent(new Date(Date.now()-parseInt(range,10)*86400000).toISOString());}
+    return db.get('hx_visitor_log',qs).then(function(r){
+      // defensive: only ever show rows of the active license
+      setRows((r||[]).filter(function(x){return x.license_id===lic.id;}));
+    }).catch(function(e){setErr(String(e.message||e));setRows([]);});
+  },[licId,range]);
+  useEffect(function(){setRows(null);setErr('');load();},[load]);
+  if(!lic||!st)return el('div',null,el('h1',null,'Visitor ',el('span',{className:'g'},'Log')),el('div',{className:'empty'},'Pick a state and a license at the top first. Every visitor log belongs to exactly one license.'));
+  async function outNow(r){setErr('');try{await db.update('hx_visitor_log',r.id,{time_out:new Date().toISOString()});load();}catch(e){setErr(String(e.message||e));}}
+  function fmt(t){return t?new Date(t).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'';}
+  const list=(rows||[]).filter(function(r){const t=(r.visitor_name+' '+r.company+' '+r.purpose+' '+r.host).toLowerCase();return !q||t.indexOf(q.toLowerCase())>=0;});
+  function csv(){
+    const esc=function(v){return '"'+String(v==null?'':v).replace(/"/g,'""')+'"';};
+    const lines=[['State','License','License #','Name','Company','Purpose','Host','Vehicle','Time in','Time out'].map(esc).join(',')];
+    list.forEach(function(r){lines.push([st.name,lic.name,lic.license_number,r.visitor_name,r.company,r.purpose,r.host,r.vehicle,r.time_in,r.time_out||''].map(esc).join(','));});
+    const b=new Blob([lines.join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='visitor_log_'+(lic.license_number||lic.id)+'.csv';document.body.appendChild(a);a.click();a.remove();
+  }
+  function printSign(){
+    const host=document.querySelector('#hxqr canvas'),img=document.querySelector('#hxqr img');
+    const src=host?host.toDataURL('image/png'):(img?img.src:'');
+    const w=window.open('','_blank');if(!w)return;
+    w.document.write('<html><head><title>Visitor sign-in</title></head><body style="font-family:Arial,sans-serif;text-align:center;padding:40px"><div style="font-size:18px;letter-spacing:3px;color:#555">'+esc2(st.name).toUpperCase()+'</div><div style="font-size:34px;font-weight:700;margin:6px 0">'+esc2(lic.name)+'</div><div style="font-size:20px;margin-bottom:24px">License '+esc2(lic.license_number||'')+'</div><img src="'+src+'" style="width:340px;height:340px"/><div style="font-size:26px;margin-top:20px;font-weight:700">Visitors: scan to sign in and out</div></body></html>');
+    w.document.close();setTimeout(function(){w.print();},400);
+  }
+  function esc2(x){return String(x==null?'':x).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,'Visitor ',el('span',{className:'g'},'Log')),el('div',{className:'sub'},st.name+'  \u00b7  '+lic.name+(lic.license_number?'  \u00b7  '+lic.license_number:''))),
+      el('div',{className:'row'},el('button',{className:'btn ghost',onClick:csv},'Export CSV'),el('button',{className:'btn',onClick:function(){setModal(true);}},'+ Manual entry'))),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'card gold'},el('div',{className:'row',style:{alignItems:'flex-start',gap:20}},
+      el('div',{id:'hxqr'},el(QrBox,{text:link,size:150})),
+      el('div',{style:{flex:1,minWidth:220}},
+        el('div',{className:'k'},'Kiosk QR for this license only'),
+        el('div',{style:{margin:'4px 0 8px'}},'Visitors scanning this code sign in to ',el('b',null,lic.name),' ('+st.name+'). It cannot save to any other license.'),
+        el('input',{readOnly:true,value:link,onFocus:function(e){e.target.select();}}),
+        el('div',{className:'row',style:{marginTop:8}},
+          el('button',{className:'btn sm',onClick:function(){try{navigator.clipboard.writeText(link);setCopied(true);setTimeout(function(){setCopied(false);},1500);}catch(e){}}},copied?'Copied':'Copy link'),
+          el('button',{className:'btn ghost sm',onClick:printSign},'Print QR sign'))))),
+    el('div',{className:'row',style:{margin:'4px 0 12px'}},
+      el('input',{style:{maxWidth:300},placeholder:'Search name, company, host...',value:q,onChange:function(e){setQ(e.target.value);}}),
+      el('select',{value:range,onChange:function(e){setRange(e.target.value);}},el('option',{value:'1'},'Last 24 hours'),el('option',{value:'7'},'Last 7 days'),el('option',{value:'30'},'Last 30 days'),el('option',{value:'365'},'Last year'),el('option',{value:'all'},'All time')),
+      el('span',{className:'muted'},rows?list.length+' entries':'Loading...')),
+    rows&&!list.length&&el('div',{className:'empty'},'No visitors in this period for '+lic.name+'.'),
+    list.length>0&&el('div',{className:'card',style:{overflowX:'auto'}},el('table',null,
+      el('thead',null,el('tr',null,['Time in','Name','Company','Purpose','Host','Vehicle','Time out',''].map(function(h,i){return el('th',{key:i},h);}))),
+      el('tbody',null,list.map(function(r){
+        return el('tr',{key:r.id},el('td',null,fmt(r.time_in)),el('td',null,r.visitor_name),el('td',null,r.company||'-'),el('td',null,r.purpose||'-'),el('td',null,r.host||'-'),el('td',null,r.vehicle||'-'),
+          el('td',null,r.time_out?fmt(r.time_out):el('span',{className:'badge'},'On site')),
+          el('td',{style:{textAlign:'right',whiteSpace:'nowrap'}},
+            r.signature&&el('button',{className:'btn ghost sm',style:{marginRight:6},onClick:function(){setView(r);}},'Signature'),
+            !r.time_out&&el('button',{className:'btn sm',onClick:function(){outNow(r);}},'Sign out')));
+      })))),
+    modal&&el(ManualVisitor,{st:st,lic:lic,onClose:function(){setModal(false);},onSaved:function(){setModal(false);load();}}),
+    view&&el(Modal,{title:view.visitor_name+' - signature',onClose:function(){setView(null);}},el('img',{src:view.signature,style:{width:'100%',background:'#fff',borderRadius:8}}),el('div',{className:'muted',style:{marginTop:8}},fmt(view.time_in))));
+}
+function ManualVisitor(props){
+  const[f,setF]=useState({visitor_name:'',company:'',purpose:'',host:'',vehicle:''});
+  const[err,setErr]=useState('');
+  async function save(){
+    setErr('');
+    try{
+      await db.insert('hx_visitor_log',{id:newId('vis'),state_id:props.st.id,license_id:props.lic.id,visitor_name:f.visitor_name.trim(),company:f.company.trim(),purpose:f.purpose,host:f.host.trim(),vehicle:f.vehicle.trim(),source:'manual'});
+      props.onSaved();
+    }catch(e){setErr(String(e.message||e));}
+  }
+  return el(Modal,{title:'Manual visitor entry - '+props.lic.name,onClose:props.onClose},
+    err&&el('div',{className:'msg err'},err),
+    el(Field,{label:'Full name'},el('input',{value:f.visitor_name,onChange:function(e){setF({...f,visitor_name:e.target.value});}})),
+    el(Field,{label:'Company'},el('input',{value:f.company,onChange:function(e){setF({...f,company:e.target.value});}})),
+    el(Field,{label:'Purpose'},el('select',{style:{width:'100%'},value:f.purpose,onChange:function(e){setF({...f,purpose:e.target.value});}},el('option',{value:''},'Select...'),PURPOSES.map(function(x){return el('option',{key:x,value:x},x);}))),
+    el(Field,{label:'Visiting'},el('input',{value:f.host,onChange:function(e){setF({...f,host:e.target.value});}})),
+    el(Field,{label:'Vehicle plate'},el('input',{value:f.vehicle,onChange:function(e){setF({...f,vehicle:e.target.value});}})),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:!f.visitor_name.trim(),onClick:save},'Save')));
+}
+
+/* ---------- Facility Logs: field-for-field with Black Fox ----------
+   Nine logs, one table (hx_facility_log, every form field in data). Facility-specific lists
+   (areas, cameras, doors, alarms, scales, rooms, waste methods...) are created per license by the admin
+   and start EMPTY; a list with no items becomes a type-in box, same as Black Fox.
+   Generic process choices (shift, pest type, maintenance type...) start with the Black Fox defaults
+   and can be replaced per license. No regulator names are hard-coded: the state's rules come from its Rulebook. */
+function pad2(n){return String(n).padStart(2,'0');}
+function todayStr(){const d=new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());}
+function nowTime(){const d=new Date();return pad2(d.getHours())+':'+pad2(d.getMinutes());}
+function numOk(v){if(v===''||v==null)return false;const n=parseFloat(String(v).replace(/,/g,''));return !isNaN(n)&&isFinite(n);}
+function num(v){return parseFloat(String(v).replace(/,/g,''));}
+function esc3(x){return String(x==null?'':x).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+const FLAG_RES=['Fail','Flag','Open'];
+const OK_RES=['Pass','OK','Resolved'];
+const SHIFTS={key:'common.shifts',title:'Shifts',ph:'e.g. Day',def:['Day','Evening','Night']};
+const SCALE_POINTS=['Front Left','Front Right','Back Left','Back Right','Middle'];
+const SCALE_DEFAULT_TOL=0.1;
+const TEMP_IN='Yes \u2014 within range',TEMP_OUT='No \u2014 out of range (action taken)';
+const SEC_STATUS=['OK','FAIL','N/A'];
+const SEC_PARTS=[
+  {id:'cameras',list:'security_inspection.cameras',title:'Cameras',name:'Camera name',col:'Camera view',opts:['Clear','Partial','Obstructed','Offline']},
+  {id:'doors',list:'security_inspection.doors',title:'Door Locks',name:'Door name',col:'Battery level',opts:['Good (100-60%)','Low (59-20%)','Critical (<20%)','N/A - Wired']},
+  {id:'alarms',list:'security_inspection.alarms',title:'Alarm System',name:'Component name',col:'Battery level',opts:['Good (100-60%)','Low (59-20%)','Critical (<20%)','N/A - Wired','N/A']}];
+
+function scaleCheck(d){
+  d=d||{};
+  const tol=numOk(d.scale_tolerance)?num(d.scale_tolerance):SCALE_DEFAULT_TOL;
+  const pts=[1,2,3,4,5].map(function(i){
+    const nom=numOk(d['tw'+i+'_nominal'])?num(d['tw'+i+'_nominal']):null,rd=numOk(d['tw'+i+'_reading'])?num(d['tw'+i+'_reading']):null;
+    if(nom===null||rd===null)return {i:i,name:SCALE_POINTS[i-1],nom:nom,rd:rd,diff:null,ok:null};
+    const diff=Math.round((rd-nom)*10000)/10000;
+    return {i:i,name:SCALE_POINTS[i-1],nom:nom,rd:rd,diff:diff,ok:Math.abs(diff)<=tol+1e-9};
+  });
+  let cert={status:'unknown',days:null,due:''};
+  if(d.last_cert_date){
+    const c=new Date(d.last_cert_date+'T00:00:00');
+    if(!isNaN(c.getTime())){
+      const due=new Date(c.getTime());due.setFullYear(due.getFullYear()+1);
+      const t=new Date();t.setHours(0,0,0,0);
+      const days=Math.round((due.getTime()-t.getTime())/86400000);
+      cert={status:days<0?'overdue':days<=30?'due-soon':'current',days:days,due:due.getFullYear()+'-'+pad2(due.getMonth()+1)+'-'+pad2(due.getDate())};
+    }
+  }
+  const evald=pts.filter(function(p){return p.ok!==null;});
+  const anyFail=evald.some(function(p){return !p.ok;});
+  let result='';
+  if(cert.status==='overdue'||anyFail)result='Fail';
+  else if(evald.length===5)result='Pass';
+  let nextDue='';
+  if(d.date){const n=new Date(d.date+'T00:00:00');if(!isNaN(n.getTime())){n.setDate(n.getDate()+7);nextDue=n.getFullYear()+'-'+pad2(n.getMonth()+1)+'-'+pad2(n.getDate());}}
+  return {pts:pts,cert:cert,result:result,nextDue:nextDue,tol:tol};
+}
+function inspCount(insp,lists){
+  let total=0,done=0,fails=0;
+  SEC_PARTS.forEach(function(p){(lists[p.list]||[]).forEach(function(it){total++;const s=((insp||{})[p.id]||{})[it.name]||{};if(s.s)done++;if(s.s==='FAIL')fails++;});});
+  return {total:total,done:done,fails:fails};
+}
+
+const LOG_TYPES=[
+  {id:'sanitation',name:'Sanitation Log',freq:'Daily / Weekly / Monthly',ruleCat:'Facility',person:'cleaned_by',itemKey:'shift',itemLabel:'Shift',
+    lists:[SHIFTS,
+      {key:'sanitation.areas',title:'Daily: Areas Cleaned',ph:'e.g. Production Floor'},
+      {key:'sanitation.equip_san',title:'Daily: Facility Equipment Sanitized',ph:'e.g. Mop Sink'},
+      {key:'sanitation.equip_clean',title:'Daily: Equipment Cleaned',ph:'e.g. Towels'},
+      {key:'sanitation.weekly',title:'Weekly: Areas Cleaned',ph:'e.g. Warehouse'},
+      {key:'sanitation.monthly',title:'Monthly: Areas Cleaned',ph:'e.g. Extraction Room'}],
+    fields:[
+      {k:'date',l:'Date',t:'date',req:1},{k:'time',l:'Time Completed',t:'time'},
+      {k:'shift',l:'Shift',t:'select',list:'common.shifts'},
+      {k:'cleaned_by',l:'Cleaned By',t:'text',req:1,ph:'Employee name'},
+      {k:'sanitizer_used',l:'Sanitizer / Chemical Used',t:'text',ph:'e.g. 70% IPA'},
+      {k:'concentration',l:'Concentration / Dilution',t:'text',ph:'e.g. 1:64 dilution'},
+      {t:'section',l:'Daily: Areas Cleaned'},{k:'areas',t:'checklist',list:'sanitation.areas'},
+      {t:'section',l:'Daily: Facility Equipment Sanitized'},{k:'equip_san',t:'checklist',list:'sanitation.equip_san'},
+      {t:'section',l:'Daily: Equipment Cleaned'},{k:'equip_clean',t:'checklist',list:'sanitation.equip_clean'},
+      {t:'section',l:'Weekly: Areas Cleaned'},{k:'weekly',t:'checklist',list:'sanitation.weekly'},
+      {t:'section',l:'Monthly: Areas Cleaned'},{k:'monthly',t:'checklist',list:'sanitation.monthly'},
+      {t:'section',l:'Notes'},{k:'notes',l:'Additional Notes',t:'textarea',ph:'Any observations, issues found, or comments'}],
+    res:function(){return 'Logged';}},
+  {id:'waste',name:'Waste Destruction Log',freq:'Every destruction event',ruleCat:'Facility',person:'personnel_involved',itemKey:'category',itemLabel:'Category',
+    lists:[
+      {key:'waste.categories',title:'Categories',ph:'e.g. Concentrate',hint:'The Category dropdown'},
+      {key:'waste.cameras',title:'Camera names (Angle 1 and 2 of destruction)',ph:'e.g. Waste 1'},
+      {key:'waste.render_locations',title:'Locations of Rendering',ph:'e.g. Waste Area'},
+      {key:'waste.methods',title:'Methods Used',ph:'Write each full method as your state requires it',hint:'Write each full destruction method; they become the dropdown'}],
+    fields:[
+      {k:'date',l:'Date of Waste Generation',t:'date',req:1},{k:'time',l:'Time of Waste Generation',t:'time'},
+      {k:'personnel_involved',l:'Personnel Involved',t:'text',req:1,ph:'Names of all staff involved'},
+      {k:'agent_ids',l:'Agent / Badge ID(s)',t:'text',req:1,ph:'State agent ID numbers'},
+      {k:'category',l:'Category',t:'select',list:'waste.categories',req:1},
+      {k:'strain',l:'Strain / Flavor',t:'text',ph:'Strain or flavor name'},
+      {k:'waste_tags',l:'Track-and-Trace Tag(s)',t:'text',req:1,ph:'e.g. METRC package tags, comma separated'},
+      {k:'qty_unit',l:'Unit of Measure',t:'select',o:['Grams','EA (Each)'],req:1},
+      {k:'qty_expired',l:'Quantity of Waste / Expired Product',t:'text',req:1,ph:'e.g. 14.2 or 50'},
+      {k:'camera_1',l:'Camera #1 Name (Angle 1 of Destruction)',t:'select',list:'waste.cameras'},
+      {k:'camera_2',l:'Camera #2 Name (Angle 2 of Destruction)',t:'select',list:'waste.cameras'},
+      {k:'rendering_location',l:'Location of Rendering',t:'select',list:'waste.render_locations'},
+      {k:'method_used',l:'Method Used',t:'select',list:'waste.methods',req:1},
+      {k:'qty_rendered',l:'Quantity of Rendered Waste',t:'text',ph:'Total weight/quantity after rendering'},
+      {k:'disposal_date',l:'Date of Disposal',t:'date',blank:1},{k:'disposal_time',l:'Time of Disposal',t:'time',blank:1},
+      {k:'waste_company',l:'Waste Management Company / Facility Used',t:'text',ph:'Licensed waste disposal company name'},
+      {k:'manifest_number',l:'Waste Manifest Number',t:'text',ph:'Manifest #'},
+      {k:'receipt_number',l:'Disposal Receipt Number',t:'text',ph:'Receipt #'},
+      {k:'disposal_location',l:'Location of Disposal',t:'text',ph:'Address or facility name'},
+      {t:'section',l:'Notes & Compliance'},
+      {k:'notes',l:'Additional Notes / Comments',t:'textarea',ph:'Any additional information'},
+      {k:'tracking_recorded',l:'Recorded in Track-and-Trace?',t:'select',o:['Yes - recorded before destruction','Yes - recorded after destruction','Pending']},
+      {k:'compliance_verification',l:'Compliance Verification',t:'checkbox'},
+      {k:'supervisor_name',l:'Supervisor Name',t:'text',req:1,ph:'Verifying supervisor full name'}],
+    res:function(d){return d.tracking_recorded==='Pending'?'Open':'Logged';}},
+  {id:'scale_calibration',name:'Scale Calibration Log',freq:'Weekly, and each time the scale is moved',ruleCat:'Facility',person:'performed_by',itemKey:'scale_id',itemLabel:'Scale',
+    lists:[
+      {key:'scale_calibration.scales',title:'Scales',ph:'Scale ID / asset tag, e.g. SCALE-03',hint:'Each physical scale. Picking it on the form fills in its details.',
+        spec:[{k:'location',l:'Location / Room'},{k:'make',l:'Make / Model'},{k:'model',l:'Model Number'},{k:'serial',l:'Serial Number'},
+          {k:'capacity',l:'Capacity / Readability'},{k:'ntep',l:'NTEP Certificate #'},{k:'cert_date',l:'Last Annual Certification',t:'date'},
+          {k:'cert_company',l:'Certified By'},{k:'tol',l:'Tolerance \u00b1 g (blank = 0.1)',num:1}]},
+      {key:'scale_calibration.locations',title:'Locations / Rooms',ph:'e.g. Production Floor'}],
+    fields:[
+      {k:'date',l:'Date',t:'date',req:1},{k:'time',l:'Time',t:'time',req:1},
+      {k:'scale_id',l:'Scale ID / Asset Tag',t:'pick',list:'scale_calibration.scales',req:1,
+        fill:{scale_location:'location',scale_make_model:'make',scale_model_number:'model',scale_serial:'serial',scale_capacity:'capacity',ntep_cc:'ntep',last_cert_date:'cert_date',cert_company:'cert_company',scale_tolerance:'tol'}},
+      {k:'scale_location',l:'Location / Room',t:'select',list:'scale_calibration.locations',req:1},
+      {k:'scale_make_model',l:'Scale Make / Model',t:'text',req:1},
+      {k:'scale_model_number',l:'Model Number',t:'text'},{k:'scale_serial',l:'Serial Number',t:'text'},
+      {k:'scale_capacity',l:'Capacity / Readability',t:'text'},{k:'ntep_cc',l:'NTEP Certificate of Conformance #',t:'text'},
+      {t:'section',l:'Annual Certification'},
+      {k:'last_cert_date',l:'Last Annual Certification Date',t:'date',req:1,blank:1},
+      {k:'cert_company',l:'Certified By (Service Company / Registered Serviceperson)',t:'text',ph:'Company or technician name'},
+      {k:'cert_seal_present',l:'Certification seal / sticker is present and current',t:'checkbox'},
+      {t:'section',l:'Pre-Checks'},
+      {k:'check_clean',l:'Scale and weighing pan are clean',t:'checkbox'},
+      {k:'check_level',l:'Scale is level and on a stable surface',t:'checkbox'},
+      {k:'check_shield',l:'No draft, vibration or debris affecting the reading',t:'checkbox'},
+      {k:'check_zero',l:'Display reads zero with an empty pan',t:'checkbox'},
+      {k:'check_moved',l:'Scale moved since the last check?',t:'select',o:['No','Yes \u2014 full verification performed'],req:1},
+      {t:'section',l:'Test Weights (grams)'},
+      {k:'test_weight_cal_due',l:'Test Weight Calibration Due Date',t:'date',blank:1}]
+      .concat([1,2,3,4,5].reduce(function(a,i){return a.concat([
+        {k:'tw'+i+'_nominal',l:'Point '+i+' \u2014 '+SCALE_POINTS[i-1]+' \u2014 Test Weight',t:'text',num:1,req:1,ph:'e.g. 500',half:1},
+        {k:'tw'+i+'_reading',l:'Point '+i+' \u2014 '+SCALE_POINTS[i-1]+' \u2014 Scale Reading',t:'text',num:1,req:1,ph:'e.g. 500.0',half:1}]);},[]))
+      .concat([
+      {k:'scale_check',l:'Calibration Check Result',t:'scalecheck'},
+      {t:'section',l:'Action & Sign-off'},
+      {k:'out_of_service',l:'Scale status after check',t:'select',o:['In service \u2014 passed','Tagged out of service','Adjusted / repaired and re-verified']},
+      {k:'corrective_action',l:'Corrective Action (required if any point fails)',t:'textarea',ph:'What was done: re-level, clean, re-zero, service call, removed from service...'},
+      {k:'performed_by',l:'Performed By',t:'text',req:1,ph:'Facility agent name'},
+      {k:'verified_by',l:'Reviewed / Verified By',t:'text',ph:'Supervisor or QA'},
+      {k:'notes',l:'Notes',t:'textarea'}]),
+    res:function(d){return scaleCheck(d).result;},
+    needs:function(d,r){return r==='Fail'?'corrective_action':'';}},
+  {id:'security',name:'Security Malfunction Log',freq:'Every malfunction event',ruleCat:'Security',person:'reported_by',itemKey:'system_type',itemLabel:'System',
+    lists:[{key:'security.system_types',title:'System Types',ph:'e.g. CCTV Camera',def:['CCTV Camera','DVR/NVR Recorder','Motion Sensor','Door Access Control','Alarm System','Perimeter Fence/Gate','Safe/Vault','Other']}],
+    fields:[
+      {k:'date',l:'Date',t:'date',req:1},{k:'time',l:'Time Discovered',t:'time'},
+      {k:'reported_by',l:'Reported By',t:'text',req:1,ph:'Your name'},
+      {k:'system_type',l:'System Type',t:'select',list:'security.system_types',req:1},
+      {k:'location',l:'Location',t:'text',req:1,ph:'e.g. Front entrance camera'},
+      {k:'description',l:'Description of Malfunction',t:'textarea',req:1,ph:'What malfunctioned and how discovered'},
+      {k:'regulator_notified',l:'Regulator Notified?',t:'select',o:['Yes \u2014 within 24 hours','Yes \u2014 within 48 hours','Not required \u2014 minor','Pending']},
+      {k:'temp_measure',l:'Temporary Security Measure',t:'textarea',ph:'Interim measures while system is down'},
+      {k:'repair_date',l:'Repair Completed Date',t:'date',blank:1},
+      {k:'resolution',l:'Resolution / Repair',t:'textarea',ph:'How was it resolved?'},
+      {k:'verified_by',l:'Verified Operational By',t:'text',ph:'Name of verifying person'},
+      {k:'notes',l:'Notes',t:'textarea'}],
+    res:function(d){return (d.repair_date||String(d.resolution||'').trim())?'Resolved':'Open';}},
+  {id:'security_inspection',name:'Security Equipment Inspection',freq:'Weekly',ruleCat:'Security',person:'inspected_by',itemText:'Weekly inspection',itemLabel:'Inspection',sigReq:1,
+    lists:SEC_PARTS.map(function(p){return {key:p.list,title:p.title,ph:p.id==='cameras'?'e.g. VAULT 1':p.id==='doors'?'e.g. MAIN ENTRANCE':'e.g. MAIN ENTRANCE CONTACT SENSOR'};}),
+    fields:[
+      {k:'date',l:'Date',t:'date',req:1},{k:'time',l:'Time',t:'time'},
+      {k:'inspected_by',l:'Inspected By',t:'text',req:1,ph:'Inspector full name'},
+      {k:'_insp',t:'inspection'},
+      {k:'notes',l:'Notes / Issues Found',t:'textarea',ph:'Describe any failures, offline cameras, low batteries, or issues found during inspection...'}],
+    res:function(d,ctx){const c=inspCount(ctx.insp,ctx.lists);if(!c.done)return '';return c.fails?'Fail':c.done===c.total?'Pass':'Incomplete';},
+    needs:function(d,r){return r==='Fail'?'notes':'';}},
+  {id:'pest',name:'Pest Control Log',freq:'Each inspection / treatment',ruleCat:'Facility',person:'performed_by',itemKey:'type',itemLabel:'Type',
+    lists:[
+      {key:'pest.types',title:'Type',ph:'e.g. Routine inspection',def:['Routine inspection','Pest sighting report','Treatment / Extermination','Follow-up inspection','Bait station check','Glue trap check']},
+      {key:'pest.found',title:'Pests Found',ph:'e.g. Rodent evidence',hint:'Keep a "None..." choice: anything else marks the entry Flag',def:['None observed','Rodent evidence','Insects','Birds','Other']}],
+    fields:[
+      {k:'date',l:'Date',t:'date',req:1},
+      {k:'type',l:'Type',t:'select',list:'pest.types',req:1},
+      {k:'performed_by',l:'Performed By',t:'text',req:1,ph:'Name or licensed vendor'},
+      {k:'vendor_license',l:'Vendor License #',t:'text',ph:'PCO license number'},
+      {k:'areas_inspected',l:'Areas Inspected',t:'textarea',req:1,ph:'List all areas inspected'},
+      {k:'pests_found',l:'Pests Found',t:'select',list:'pest.found'},
+      {k:'pest_detail',l:'Pest Detail (if found)',t:'textarea',ph:'Type, quantity, location'},
+      {k:'treatment_applied',l:'Treatment / Chemical Applied',t:'text',ph:'Product name and EPA reg #'},
+      {k:'corrective_action',l:'Corrective Action',t:'textarea',ph:'Gaps sealed, entry points addressed'},
+      {k:'next_scheduled',l:'Next Scheduled Inspection',t:'date',blank:1},
+      {k:'notes',l:'Notes',t:'textarea'}],
+    res:function(d){if(!d.pests_found)return '';return /^none/i.test(d.pests_found)?'OK':'Flag';}},
+  {id:'equipment',name:'Equipment Maintenance Log',freq:'Each maintenance event',ruleCat:'Facility',person:'performed_by',itemKey:'equipment_name',itemLabel:'Equipment',
+    lists:[
+      {key:'equipment.equipment',title:'Equipment',ph:'e.g. Filling Machine #2',hint:'Picking it on the form fills in its ID / serial',spec:[{k:'serial',l:'Equipment ID / Serial #'}]},
+      {key:'equipment.maint_types',title:'Maintenance Types',ph:'e.g. Routine/Preventive',def:['Routine/Preventive','Corrective/Repair','Calibration','Deep clean','Inspection','Part replacement']}],
+    fields:[
+      {k:'date',l:'Date',t:'date',req:1},
+      {k:'equipment_name',l:'Equipment Name',t:'pick',list:'equipment.equipment',req:1,ph:'e.g. Filling Machine #2',fill:{equipment_id:'serial'}},
+      {k:'equipment_id',l:'Equipment ID / Serial #',t:'text',ph:'Asset tag or serial number'},
+      {k:'maintenance_type',l:'Maintenance Type',t:'select',list:'equipment.maint_types',req:1},
+      {k:'performed_by',l:'Performed By',t:'text',req:1,ph:'Technician name'},
+      {k:'description',l:'Work Performed',t:'textarea',req:1,ph:'Describe maintenance performed'},
+      {k:'parts_replaced',l:'Parts Replaced',t:'text',ph:'Part names and numbers'},
+      {k:'downtime_hours',l:'Downtime (hours)',t:'text',ph:'e.g. 2.5'},
+      {k:'pass_fail',l:'Equipment Status After',t:'select',o:['Pass \u2014 returned to service','Conditional \u2014 monitor closely','Fail \u2014 out of service','Pending parts / repair']},
+      {k:'next_maintenance',l:'Next Scheduled Maintenance',t:'date',blank:1},
+      {k:'notes',l:'Notes',t:'textarea'}],
+    res:function(d){if(!d.pass_fail)return '';return /^pass/i.test(d.pass_fail)?'OK':/^fail/i.test(d.pass_fail)?'Fail':'Flag';}},
+  {id:'temperature',name:'Temp / Humidity Log',freq:'Every shift',ruleCat:'Facility',person:'recorded_by',itemKey:'location',itemLabel:'Location',
+    lists:[SHIFTS,
+      {key:'temperature.rooms',title:'Locations / Rooms',ph:'e.g. Storage Vault',hint:'Optional ranges set "Within Acceptable Range?" automatically',
+        spec:[{k:'min',l:'Min \u00b0F',num:1},{k:'max',l:'Max \u00b0F',num:1},{k:'hmin',l:'Min RH %',num:1},{k:'hmax',l:'Max RH %',num:1}]}],
+    fields:[
+      {k:'date',l:'Date',t:'date',req:1},{k:'time',l:'Time',t:'time',req:1},
+      {k:'shift',l:'Shift',t:'select',list:'common.shifts'},
+      {k:'recorded_by',l:'Recorded By',t:'text',req:1,ph:'Employee name'},
+      {k:'location',l:'Location / Room',t:'pick',list:'temperature.rooms',req:1,ph:'e.g. Pre-Roll Room, Storage Vault'},
+      {k:'temperature_f',l:'Temperature (\u00b0F)',t:'text',num:1,req:1,ph:'e.g. 68.5',half:1},
+      {k:'humidity_pct',l:'Relative Humidity (%)',t:'text',num:1,req:1,ph:'e.g. 55',half:1},
+      {k:'in_range',l:'Within Acceptable Range?',t:'select',o:[TEMP_IN,TEMP_OUT,'No \u2014 equipment malfunction']},
+      {k:'corrective_action',l:'Corrective Action (if out of range)',t:'textarea',ph:'Action taken to correct'},
+      {k:'notes',l:'Notes',t:'textarea'}],
+    recalc:function(d,k,lists){
+      if(['temperature_f','humidity_pct','location'].indexOf(k)<0||!numOk(d.temperature_f))return d;
+      const room=(lists['temperature.rooms']||[]).find(function(i){return i.name===d.location;});const s=(room&&room.spec)||{};
+      if(!(numOk(s.min)||numOk(s.max)||numOk(s.hmin)||numOk(s.hmax)))return d;
+      let bad=false;const t=num(d.temperature_f);
+      if(numOk(s.min)&&t<num(s.min))bad=true;if(numOk(s.max)&&t>num(s.max))bad=true;
+      if(numOk(d.humidity_pct)){const h=num(d.humidity_pct);if(numOk(s.hmin)&&h<num(s.hmin))bad=true;if(numOk(s.hmax)&&h>num(s.hmax))bad=true;}
+      return {...d,in_range:bad?TEMP_OUT:TEMP_IN};
+    },
+    res:function(d){if(!d.in_range)return '';return /^yes/i.test(d.in_range)?'Pass':'Fail';},
+    needs:function(d,r){return r==='Fail'?'corrective_action':'';}},
+  {id:'environmental',name:'Environmental Monitoring Log',freq:'Monthly minimum',ruleCat:'Facility',person:'performed_by',itemKey:'location',itemLabel:'Location',
+    lists:[
+      {key:'environmental.locations',title:'Sampling Locations',ph:'e.g. Pre-Roll Room - floor drain'},
+      {key:'environmental.sample_types',title:'Sample Types',ph:'e.g. ATP swab (surface)',def:['ATP swab (surface)','Air sample','Water sample','Drain swab','Equipment surface swab','Hand swab']}],
+    fields:[
+      {k:'date',l:'Date',t:'date',req:1},
+      {k:'performed_by',l:'Performed By',t:'text',req:1,ph:'QC technician name'},
+      {k:'location',l:'Sampling Location',t:'select',list:'environmental.locations',req:1,ph:'e.g. Pre-Roll Room - floor drain'},
+      {k:'sample_type',l:'Sample Type',t:'select',list:'environmental.sample_types',req:1},
+      {k:'test_method',l:'Test Method / Equipment',t:'text',ph:'e.g. ATP luminometer'},
+      {k:'result_value',l:'Result Value',t:'text',ph:'e.g. 245 RLU'},
+      {k:'pass_fail',l:'Pass / Fail',t:'select',o:['Pass \u2014 within limit','Fail \u2014 exceeds limit','Inconclusive \u2014 retest required'],req:1},
+      {k:'corrective_action',l:'Corrective Action (if fail)',t:'textarea',ph:'Immediate corrective action taken'},
+      {k:'retest_date',l:'Retest Date (if required)',t:'date',blank:1},
+      {k:'notes',l:'Notes',t:'textarea'}],
+    res:function(d){if(!d.pass_fail)return '';return /^pass/i.test(d.pass_fail)?'Pass':/^fail/i.test(d.pass_fail)?'Fail':'Flag';},
+    needs:function(d,r){return r==='Fail'?'corrective_action':'';}}
+];
+function listDef(key){
+  for(let i=0;i<LOG_TYPES.length;i++){const l=LOG_TYPES[i].lists.find(function(x){return x.key===key;});if(l)return l;}
+  return null;
+}
+// choices for a select: the license's own list, else the built-in defaults, else the field's fixed options; null = type-in
+function fieldOptions(f,lists){
+  if(f.list){
+    const own=(lists[f.list]||[]).map(function(i){return i.name;});
+    if(own.length)return own;
+    const L=listDef(f.list);if(L&&L.def)return L.def;
+    return null;
+  }
+  return f.o||null;
+}
+function groupLists(rows,activeOnly){
+  const g={};(rows||[]).forEach(function(r){if(activeOnly&&!r.active)return;(g[r.list_key]=g[r.list_key]||[]).push(r);});
+  Object.keys(g).forEach(function(k){g[k].sort(function(a,b){return (a.sort||0)-(b.sort||0)||String(a.name).localeCompare(String(b.name));});});
+  return g;
+}
+function ResultBadge(props){
+  const r=props.r||'';if(!r)return null;
+  return el('span',{className:'badge'+(OK_RES.indexOf(r)>=0?' ok':FLAG_RES.indexOf(r)>=0?' bad':'')},r);
+}
+
+/* Calibration check box (live on the form, same rules as Black Fox) */
+function ScaleCheckBox(props){
+  const c=scaleCheck(props.d);
+  const certTxt=c.cert.status==='unknown'?'Enter the last annual certification date':c.cert.status==='overdue'?'Annual certification OVERDUE (was due '+c.cert.due+')':'Annual certification due '+c.cert.due+' ('+c.cert.days+' days)'+(c.cert.status==='due-soon'?' - due soon':'');
+  return el('div',{className:'card',style:{padding:12,background:'#0f0f0f'}},
+    el('div',{className:'row',style:{justifyContent:'space-between'}},el('span',{className:'k'},'Calibration check  \u00b7  tolerance \u00b1'+c.tol+' g'),el(ResultBadge,{r:c.result||'Incomplete'})),
+    el('table',{style:{marginTop:6}},el('tbody',null,c.pts.map(function(p){
+      return el('tr',{key:p.i},el('td',null,p.i+'. '+p.name),el('td',null,p.nom===null?'-':p.nom+' g'),el('td',null,p.rd===null?'-':p.rd+' g'),
+        el('td',null,p.diff===null?'':(p.diff>0?'+':'')+p.diff+' g'),el('td',null,p.ok===null?'':el('span',{className:'badge '+(p.ok?'ok':'bad')},p.ok?'OK':'FAIL')));}))),
+    el('div',{className:c.cert.status==='overdue'?'msg err':'muted',style:{marginTop:8,fontSize:13}},certTxt),
+    c.nextDue&&el('div',{className:'muted',style:{fontSize:13}},'Next weekly check due '+c.nextDue));
+}
+
+/* Weekly security inspection grid: Cameras / Door Locks / Alarm System */
+function InspectionGrid(props){
+  const insp=props.insp,lists=props.lists;
+  const[tab,setTab]=useState('cameras');
+  const c=inspCount(insp,lists);
+  const part=SEC_PARTS.find(function(p){return p.id===tab;});
+  const items=lists[part.list]||[];
+  function set(pid,name,field,v){props.setInsp(function(p){const P={...(p[pid]||{})};P[name]={...(P[name]||{}),[field]:v};return {...p,[pid]:P};});}
+  return el('div',{style:{marginBottom:14}},
+    el('div',{className:'row',style:{marginBottom:8}},
+      el('span',{className:'k'},'Progress'),el('span',null,c.done+' / '+c.total+' checked'),
+      c.fails>0&&el('span',{className:'badge bad'},c.fails+' FAIL'+(c.fails===1?'':'S')+' found'),
+      !c.fails&&c.done>0&&el('span',{className:'badge ok'},c.done===c.total?'All clear':'In progress')),
+    el('div',{className:'tabs',style:{marginBottom:8}},SEC_PARTS.map(function(p){return el('button',{key:p.id,type:'button',className:tab===p.id?'on':'',onClick:function(){setTab(p.id);}},p.title+' ('+(lists[p.list]||[]).length+')');})),
+    !items.length?el('div',{className:'empty',style:{padding:16}},'No '+part.title.toLowerCase()+' set up for this license yet.'):
+    el('div',{style:{overflowX:'auto'}},el('table',null,
+      el('thead',null,el('tr',null,el('th',null,part.name),el('th',null,part.col),el('th',null,'Functionality'))),
+      el('tbody',null,items.map(function(it){
+        const s=((insp[part.id]||{})[it.name])||{};
+        return el('tr',{key:it.id},el('td',{style:{fontWeight:600}},it.name),
+          el('td',null,el('select',{value:s.a||'',style:{minWidth:120},onChange:function(e){set(part.id,it.name,'a',e.target.value);}},el('option',{value:''},'--'),part.opts.map(function(o){return el('option',{key:o,value:o},o);}))),
+          el('td',{style:{whiteSpace:'nowrap'}},SEC_STATUS.map(function(o){const on=s.s===o;
+            return el('button',{key:o,type:'button',className:'btn sm'+(on?(o==='FAIL'?' selbad':''):' ghost'),style:{marginRight:4},onClick:function(){set(part.id,it.name,'s',o);}},o);})));
+      })))));
+}
+
+/* The entry form: used by staff inside the app (new + admin edit) and by the QR kiosk */
+function LogForm(props){
+  const def=props.def,lists=props.lists||{};
+  function initD(){
+    const d={};
+    def.fields.forEach(function(f){
+      if(!f.k||f.t==='section'||f.t==='scalecheck'||f.t==='inspection'||f.t==='checklist')return;
+      if(f.t==='date')d[f.k]=f.blank?'':todayStr();
+      else if(f.t==='time')d[f.k]=f.blank?'':nowTime();
+      else if(f.t==='checkbox')d[f.k]=false;
+      else if(f.t==='select'){const o=fieldOptions(f,lists);d[f.k]=o&&o.length?o[0]:'';} // first choice, as Black Fox
+      else d[f.k]='';
+    });
+    if(def.person&&props.defaultName)d[def.person]=props.defaultName;
+    if(props.initial){const x=props.initial.data||{};Object.keys(x).forEach(function(k){if(['cameras','doors','alarms','item_spec'].indexOf(k)<0)d[k]=x[k];});d._item_id=props.initial.item_id||'';}
+    return d;
+  }
+  function initInsp(){
+    const o={};const x=(props.initial&&props.initial.data)||{};
+    SEC_PARTS.forEach(function(p){o[p.id]={};(x[p.id]||[]).forEach(function(r){o[p.id][r.name]={a:r.detail||'',s:r.status||''};});});
+    return o;
+  }
+  const[d,setD]=useState(initD);
+  const[insp,setInsp]=useState(initInsp);
+  const[sig,setSig]=useState('');
+  const[reason,setReason]=useState('');
+  const[sigKey,setSigKey]=useState(0);
+  const[err,setErr]=useState('');
+  const[busy,setBusy]=useState(false);
+  const ctx={lists:lists,insp:insp};
+  const res=def.res(d,ctx)||'';
+  const need=def.needs?def.needs(d,res):'';
+  const needField=need?def.fields.find(function(f){return f.k===need;}):null;
+  const editing=!!props.initial;
+  function setF(k,v){setD(function(p){let n={...p,[k]:v};if(def.recalc)n=def.recalc(n,k,lists);return n;});}
+  function pick(f,v){
+    const it=(lists[f.list]||[]).find(function(i){return i.id===v;});
+    setD(function(p){
+      let n={...p,[f.k]:it?it.name:'',_item_id:it?it.id:''};
+      if(it&&f.fill)Object.keys(f.fill).forEach(function(dst){const sv=(it.spec||{})[f.fill[dst]];if(sv!==undefined&&sv!==null&&sv!=='')n[dst]=String(sv);});
+      if(def.recalc)n=def.recalc(n,f.k,lists);
+      return n;
+    });
+  }
+  function checkAll(f,on){const o={};(lists[f.list]||[]).forEach(function(i){o[i.name]=on;});setF(f.k,o);}
+  async function submit(){
+    setErr('');
+    for(let i=0;i<def.fields.length;i++){
+      const f=def.fields[i];if(!f.k||f.t==='checkbox'||f.t==='section'||f.t==='checklist'||f.t==='scalecheck'||f.t==='inspection')continue;
+      const v=String(d[f.k]==null?'':d[f.k]).trim();
+      if(f.req&&!v){setErr((f.l||f.k)+' is required.');return;}
+      if(f.num&&v&&!numOk(v)){setErr(f.l+' must be a number.');return;}
+    }
+    if(need&&!String(d[need]||'').trim()){setErr('Result is '+res+'. Fill in "'+(needField?needField.l:need)+'" before saving.');return;}
+    if((props.kiosk||(def.sigReq&&!editing))&&!sig){setErr('Please sign in the box.');return;}
+    if(editing&&!reason.trim()){setErr('Enter the reason for change. It is saved permanently in the audit trail.');return;}
+    const data={};
+    def.fields.forEach(function(f){
+      if(!f.k||f.t==='section'||f.t==='scalecheck'||f.t==='inspection')return;
+      if(f.t==='checklist'){const cur=d[f.k]||{},o={};(lists[f.list]||[]).forEach(function(i){o[i.name]=!!cur[i.name];});Object.keys(cur).forEach(function(n){if(!(n in o))o[n]=!!cur[n];});data[f.k]=o;return;}
+      if(f.t==='checkbox'){data[f.k]=!!d[f.k];return;}
+      const v=String(d[f.k]==null?'':d[f.k]).trim();if(v)data[f.k]=v;
+    });
+    if(def.id==='scale_calibration'){data.scale_tolerance=String(scaleCheck(d).tol);data.scale_next_due=scaleCheck(d).nextDue;}
+    if(def.fields.some(function(f){return f.t==='inspection';}))SEC_PARTS.forEach(function(p){
+      data[p.id]=(lists[p.list]||[]).map(function(it){const s=(insp[p.id]||{})[it.name]||{};return {name:it.name,detail:s.a||'',status:s.s||''};});});
+    let itemId=d._item_id||'';
+    const pf=def.fields.find(function(f){return f.t==='pick'&&f.k===def.itemKey;});
+    if(pf&&itemId){const it=(lists[pf.list]||[]).find(function(i){return i.id===itemId;});if(!it||it.name!==d[pf.k])itemId='';else if(it.spec&&Object.keys(it.spec).length)data.item_spec=it.spec;}
+    setBusy(true);
+    try{
+      await props.onSubmit({item_id:itemId,item:def.itemKey?String(d[def.itemKey]||''):def.itemText,data:data,result:res||'Logged',performed_by:String(d[def.person]||'').trim(),signature:sig,edit_reason:reason.trim()});
+      if(props.kiosk){setD(initD());setInsp(initInsp());setSig('');setSigKey(function(k){return k+1;});}
+    }catch(e){setErr(String(e.message||e));}
+    setBusy(false);
+  }
+  function input(f){
+    const v=d[f.k]==null?'':d[f.k];
+    const set=function(e){setF(f.k,e.target.value);};
+    if(f.t==='date')return el('input',{type:'date',value:v,onChange:set});
+    if(f.t==='time')return el('input',{type:'time',value:v,onChange:set});
+    if(f.t==='textarea')return el('textarea',{value:v,placeholder:f.ph||'',style:{minHeight:70},onChange:set});
+    if(f.t==='pick'){
+      const items=lists[f.list]||[];
+      if(!items.length)return el('input',{value:v,placeholder:f.ph||'Type it in (no list set up yet)',onChange:set});
+      const cur=d._item_id&&items.some(function(i){return i.id===d._item_id;})?d._item_id:'';
+      return el('select',{style:{width:'100%'},value:cur,onChange:function(e){pick(f,e.target.value);}},
+        el('option',{value:''},v&&!cur?v+' (not in list)':'Select...'),items.map(function(i){return el('option',{key:i.id,value:i.id},i.name);}));
+    }
+    if(f.t==='select'){
+      const opts=fieldOptions(f,lists);
+      if(!opts)return el('input',{value:v,placeholder:f.ph||'Type it in (no list set up yet)',onChange:set});
+      return el('select',{style:{width:'100%'},value:v,onChange:set},
+        f.list&&el('option',{value:''},'Select...'),v&&opts.indexOf(v)<0&&el('option',{value:v},v),
+        opts.map(function(o){return el('option',{key:o,value:o},o);}));
+    }
+    return el('input',{value:v,placeholder:f.ph||'',inputMode:f.num?'decimal':undefined,onChange:set});
+  }
+  const out=[];let halves=[];
+  function flush(){if(halves.length){out.push(el('div',{key:'h'+out.length,className:'grid',style:{gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:10}},halves));halves=[];}}
+  def.fields.forEach(function(f,idx){
+    const key=f.k||('s'+idx);
+    let node;
+    if(f.t==='section')node=el('div',{key:key,className:'secth'},f.l);
+    else if(f.t==='scalecheck')node=el(ScaleCheckBox,{key:key,d:d});
+    else if(f.t==='inspection')node=el(InspectionGrid,{key:key,insp:insp,setInsp:setInsp,lists:lists});
+    else if(f.t==='checklist'){
+      const items=lists[f.list]||[];const cur=d[f.k]||{};
+      node=items.length?el('div',{key:key,style:{marginBottom:12}},
+        el('div',{className:'row',style:{marginBottom:6}},el('button',{type:'button',className:'btn ghost sm',onClick:function(){checkAll(f,true);}},'Check all'),el('button',{type:'button',className:'btn ghost sm',onClick:function(){checkAll(f,false);}},'Clear'),
+          el('span',{className:'muted',style:{fontSize:12}},items.filter(function(i){return cur[i.name];}).length+' of '+items.length)),
+        el('div',{className:'cklist'},items.map(function(i){return el('label',{key:i.id,className:'ck'},el('input',{type:'checkbox',checked:!!cur[i.name],onChange:function(e){const on=e.target.checked;setD(function(p){return {...p,[f.k]:{...(p[f.k]||{}),[i.name]:on}};});}}),el('span',null,i.name));})))
+        :el('div',{key:key,className:'muted',style:{fontSize:13,marginBottom:12}},'No items set up for this license yet.');
+    }
+    else if(f.t==='checkbox')node=el('label',{key:key,className:'ck',style:{marginBottom:10}},el('input',{type:'checkbox',checked:!!d[f.k],onChange:function(e){setF(f.k,e.target.checked);}}),el('span',null,f.l));
+    else node=el(Field,{key:key,label:f.l+(f.req||(f.k===need)?' *':'')},input(f));
+    if(f.half){halves.push(node);return;}
+    flush();out.push(node);
+  });
+  flush();
+  return el('div',null,
+    el('div',{className:'muted',style:{fontSize:12,marginBottom:10}},'Fields marked * are required.'),
+    out,
+    res&&el('div',{className:'row',style:{margin:'4px 0 12px'}},el('span',{className:'k'},'Result'),el(ResultBadge,{r:res})),
+    (props.kiosk||!editing)&&el(Field,{label:'Signature'+((props.kiosk||def.sigReq)?' *':' (optional)'),plain:true},el(SignaturePad,{key:sigKey,onChange:function(v){setSig(v);}})),
+    editing&&el('div',{className:'card',style:{borderColor:'var(--gold-lo)',padding:12}},
+      el(Field,{label:'Reason for change *'},el('textarea',{value:reason,style:{minHeight:60},placeholder:'Why is this record being changed? Saved permanently in the audit trail.',onChange:function(e){setReason(e.target.value);}})),
+      el('div',{className:'muted',style:{fontSize:12}},'The original values, who changed them and when are kept in the audit trail.')),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},
+      props.onCancel&&el('button',{className:'btn ghost',onClick:props.onCancel},'Cancel'),
+      el('button',{className:'btn',style:props.kiosk?{width:'100%',padding:13}:null,disabled:busy,onClick:submit},busy?'Saving...':editing?'Save changes':'Submit entry')));
+}
+
+/* Full record as HTML: used for View, Print and PDF (browser print) */
+const REC_CSS='<style>.hxrec{font-family:Arial,sans-serif;color:#111;background:#fff;padding:18px;border-radius:8px;font-size:13px}.hxrec h2{margin:0 0 2px;font-size:18px}.hxrec .m{color:#555;font-size:12px}.hxrec table{width:100%;border-collapse:collapse;margin:8px 0}.hxrec td,.hxrec th{border:1px solid #ccc;padding:5px 7px;text-align:left;vertical-align:top;font-size:12px;color:#111}.hxrec th{background:#f2f2f2;width:38%;text-transform:none;letter-spacing:0;font-weight:700}.hxrec .sec td{background:#222;color:#fff;font-weight:700;letter-spacing:.06em}.hxrec .bad{color:#b00020;font-weight:700}.hxrec .void{border:2px solid #b00020;color:#b00020;font-weight:700;padding:8px 10px;margin:8px 0;border-radius:6px}.hxrec .hist td{font-size:11px}.hxrec .ok{color:#0a7a3a;font-weight:700}.hxrec img{max-width:320px;border:1px solid #ccc}.pb{page-break-after:always}</style>';
+function entryHtml(def,st,lic,r,sig,hist){
+  const d=r.data||{};const e=esc3;
+  const rows=[];
+  def.fields.forEach(function(f){
+    if(f.t==='section'){rows.push('<tr class="sec"><td colspan="2">'+e(f.l.toUpperCase())+'</td></tr>');return;}
+    if(f.t==='checklist'){const o=d[f.k]||{};const ks=Object.keys(o);
+      rows.push('<tr><th>Completed</th><td>'+(ks.length?ks.map(function(n){return (o[n]?'<span class="ok">[x]</span> ':'[ ] ')+e(n);}).join('<br>'):'-')+'</td></tr>');return;}
+    if(f.t==='scalecheck'){const c=scaleCheck(d);
+      rows.push('<tr><th>Calibration check (tolerance &plusmn;'+c.tol+' g)</th><td>'+c.pts.map(function(p){return e(p.i+'. '+p.name)+': '+(p.nom===null?'-':p.nom)+' / '+(p.rd===null?'-':p.rd)+(p.ok===null?'':' <span class="'+(p.ok?'ok':'bad')+'">'+(p.ok?'OK':'FAIL')+' ('+(p.diff>0?'+':'')+p.diff+')</span>');}).join('<br>')+
+        '<br>Certification: '+e(c.cert.status==='unknown'?'not entered':c.cert.status+' (due '+c.cert.due+')')+(d.scale_next_due?'<br>Next check due: '+e(d.scale_next_due):'')+'</td></tr>');return;}
+    if(f.t==='inspection'){SEC_PARTS.forEach(function(p){const a=d[p.id]||[];
+      rows.push('<tr class="sec"><td colspan="2">'+e(p.title.toUpperCase())+'</td></tr>');
+      rows.push('<tr><td colspan="2">'+(a.length?'<table><tr><th>'+e(p.name)+'</th><th>'+e(p.col)+'</th><th>Functionality</th></tr>'+a.map(function(x){return '<tr><td>'+e(x.name)+'</td><td>'+e(x.detail||'')+'</td><td class="'+(x.status==='FAIL'?'bad':x.status==='OK'?'ok':'')+'">'+e(x.status||'-')+'</td></tr>';}).join('')+'</table>':'None')+'</td></tr>');});return;}
+    if(!f.k)return;
+    const v=d[f.k];
+    rows.push('<tr><th>'+e(f.l)+'</th><td>'+(f.t==='checkbox'?(v?'Yes':'No'):e(v==null||v===''?'-':v))+'</td></tr>');
+  });
+  const resCls=OK_RES.indexOf(r.result)>=0?'ok':FLAG_RES.indexOf(r.result)>=0?'bad':'';
+  return '<div class="hxrec"><div class="m">'+e((st.name||'').toUpperCase())+' &middot; '+e(lic.name)+' &middot; License '+e(lic.license_number||'-')+'</div>'+
+    '<h2>'+e(def.name)+'</h2><div class="m">Entry '+e(r.id)+' &middot; saved '+e(new Date(r.created_at).toLocaleString())+' &middot; '+(r.source==='kiosk'?'QR kiosk':'App')+'</div>'+
+    '<table>'+rows.join('')+'<tr class="sec"><td colspan="2">SIGN-OFF</td></tr><tr><th>Result</th><td class="'+resCls+'">'+e(r.result||'-')+'</td></tr><tr><th>Submitted by</th><td>'+e(r.performed_by||'-')+'</td></tr>'+
+    '<tr><th>Signature</th><td>'+(sig?'<img src="'+e(sig)+'">':'Not signed')+'</td></tr></table>'+
+    (r.voided?'<div class="void">VOID'+(r.voided_at?' &middot; '+e(new Date(r.voided_at).toLocaleString()):'')+'<br>Reason: '+e(r.void_reason||'-')+'</div>':'')+
+    (hist?historyHtml(hist,def):'')+'</div>';
+}
+function printRecords(title,htmls){
+  const w=window.open('','_blank');if(!w)return;
+  w.document.write('<html><head><title>'+esc3(title)+'</title>'+REC_CSS+'</head><body style="margin:0">'+htmls.map(function(h,i){return '<div'+(i<htmls.length-1?' class="pb"':'')+'>'+h+'</div>';}).join('')+'</body></html>');
+  w.document.close();setTimeout(function(){w.print();},500);
+}
+function printQrSign(boxId,stName,lic,caption){
+  const c=document.querySelector('#'+boxId+' canvas'),img=document.querySelector('#'+boxId+' img');
+  const src=c?c.toDataURL('image/png'):(img?img.src:'');
+  const w=window.open('','_blank');if(!w)return;
+  w.document.write('<html><head><title>'+esc3(caption)+'</title></head><body style="font-family:Arial,sans-serif;text-align:center;padding:40px"><div style="font-size:18px;letter-spacing:3px;color:#555">'+esc3(stName).toUpperCase()+'</div><div style="font-size:34px;font-weight:700;margin:6px 0">'+esc3(lic.name)+'</div><div style="font-size:20px;margin-bottom:24px">License '+esc3(lic.license_number||'')+'</div><img src="'+src+'" style="width:340px;height:340px"/><div style="font-size:26px;margin-top:20px;font-weight:700">'+esc3(caption)+'</div></body></html>');
+  w.document.close();setTimeout(function(){w.print();},400);
+}
+
+/* Admin: one editable list */
+function ListSection(props){
+  const L=props.L,items=props.items;
+  const blank={name:'',spec:{}};
+  const[f,setF]=useState(blank);
+  const[editId,setEditId]=useState('');
+  const[err,setErr]=useState('');
+  async function run(fn){setErr('');try{await fn();await props.onChanged();}catch(e){setErr(String(e.message||e));}}
+  function save(){
+    const nm=f.name.trim();if(!nm)return;
+    const spec={};(L.spec||[]).forEach(function(s){const v=String(f.spec[s.k]==null?'':f.spec[s.k]).trim();if(v!=='')spec[s.k]=s.num&&numOk(v)?num(v):v;});
+    run(async function(){
+      if(editId)await db.update('hx_log_lists',editId,{name:nm,spec:spec});
+      else await db.insert('hx_log_lists',{id:newId('li'),state_id:props.st.id,license_id:props.lic.id,list_key:L.key,name:nm,spec:spec,sort:items.length,active:true});
+      setF(blank);setEditId('');
+    });
+  }
+  function copyDefaults(){run(async function(){for(let i=0;i<L.def.length;i++)await db.insert('hx_log_lists',{id:newId('li'),state_id:props.st.id,license_id:props.lic.id,list_key:L.key,name:L.def[i],spec:{},sort:i,active:true});});}
+  function specTxt(s){return (L.spec||[]).filter(function(x){return s&&s[x.k]!==undefined&&s[x.k]!=='';}).map(function(x){return x.l+': '+s[x.k];}).join('  \u00b7  ');}
+  return el('div',{className:'card',style:{padding:14}},
+    el('div',{className:'row',style:{justifyContent:'space-between'}},el('h3',{style:{margin:0}},L.title),el('span',{className:'muted',style:{fontSize:12}},items.filter(function(i){return i.active;}).length+' active')),
+    L.key.indexOf('common.')===0&&el('div',{className:'muted',style:{fontSize:12}},'Shared by every log of this license.'),
+    L.hint&&el('div',{className:'muted',style:{fontSize:12}},L.hint),
+    err&&el('div',{className:'msg err'},err),
+    !items.length&&(L.def?el('div',{className:'muted',style:{fontSize:13,margin:'8px 0'}},'Using the built-in choices: '+L.def.join(', ')+'. ',el('a',{href:'#',style:{color:'var(--gold-hi)'},onClick:function(e){e.preventDefault();copyDefaults();}},'Copy them here to edit')):
+      el('div',{className:'muted',style:{fontSize:13,margin:'8px 0'}},'Empty. The form shows a type-in box until you add items.')),
+    items.length>0&&el('table',{style:{margin:'8px 0'}},el('tbody',null,items.map(function(i){
+      return el('tr',{key:i.id},
+        el('td',null,el('div',{style:{fontWeight:600,opacity:i.active?1:.45}},i.name+(i.active?'':' (hidden)')),specTxt(i.spec)&&el('div',{className:'muted',style:{fontSize:12}},specTxt(i.spec))),
+        el('td',{style:{textAlign:'right',whiteSpace:'nowrap'}},
+          el('button',{className:'btn ghost sm',onClick:function(){setEditId(i.id);setF({name:i.name,spec:{...(i.spec||{})}});}},'Edit'),' ',
+          el('button',{className:'btn ghost sm',onClick:function(){run(function(){return db.update('hx_log_lists',i.id,{active:!i.active});});}},i.active?'Hide':'Show'),' ',
+          el('button',{className:'btn danger sm',onClick:function(){if(window.confirm('Delete "'+i.name+'"? Past entries keep its name.'))run(function(){return db.remove('hx_log_lists',i.id);});}},'Delete')));
+    }))),
+    el('div',{className:'row',style:{alignItems:'flex-end',marginTop:6}},
+      el('div',{style:{flex:'1 1 220px'}},el('input',{value:f.name,placeholder:editId?'Name':(L.ph||'Add an item'),onChange:function(e){setF({...f,name:e.target.value});},onKeyDown:function(e){if(e.key==='Enter'&&!L.spec)save();}})),
+      !L.spec&&el('button',{className:'btn sm',disabled:!f.name.trim(),onClick:save},editId?'Save':'+ Add'),
+      !L.spec&&editId&&el('button',{className:'btn ghost sm',onClick:function(){setF(blank);setEditId('');}},'Cancel')),
+    L.spec&&el('div',null,
+      el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(170px,1fr))',gap:8,marginTop:8}},L.spec.map(function(s){
+        return el(Field,{key:s.k,label:s.l},el('input',{type:s.t==='date'?'date':'text',inputMode:s.num?'decimal':undefined,value:f.spec[s.k]==null?'':f.spec[s.k],onChange:function(e){const x=e.target.value;setF(function(p){return {...p,spec:{...p.spec,[s.k]:x}};});}}));})),
+      el('div',{className:'row',style:{justifyContent:'flex-end'}},
+        editId&&el('button',{className:'btn ghost sm',onClick:function(){setF(blank);setEditId('');}},'Cancel'),
+        el('button',{className:'btn sm',disabled:!f.name.trim(),onClick:save},editId?'Save changes':'+ Add'))));
+}
+function ListManager(props){
+  const def=props.def,byKey=groupLists(props.rows,false);
+  return el(Modal,{title:def.name+' lists - '+props.lic.name,wide:true,onClose:props.onClose},
+    el('div',{className:'muted',style:{marginBottom:12}},'These lists belong to '+props.lic.name+' ('+props.st.name+') only. Other licenses keep their own.'),
+    def.lists.map(function(L){return el(ListSection,{key:L.key,L:L,items:byKey[L.key]||[],st:props.st,lic:props.lic,onChanged:props.onChanged});}));
+}
+
+function LogPanel(props){
+  const def=props.def,st=props.state,lic=props.license;
+  const isAdmin=props.profile.role==='admin';
+  const lists=groupLists(props.listRows,true);
+  const[rows,setRows]=useState(null);
+  const[range,setRange]=useState('30');
+  const[q,setQ]=useState('');
+  const[err,setErr]=useState('');
+  const[modal,setModal]=useState(null);
+  const[copied,setCopied]=useState(false);
+  const[showRules,setShowRules]=useState(false);
+  const qrId='hxqr-'+def.id;
+  const link=window.location.origin+window.location.pathname+'?kiosk=log&type='+def.id+'&state='+encodeURIComponent(st.id)+'&lic='+encodeURIComponent(lic.id);
+  const loadRows=useCallback(function(){
+    let qs='license_id=eq.'+encodeURIComponent(lic.id)+'&state_id=eq.'+encodeURIComponent(st.id)+'&log_type=eq.'+def.id+'&select=id,state_id,license_id,item,item_id,data,result,performed_by,source,created_at,voided,void_reason,voided_at&order=created_at.desc&limit=1000';
+    if(range!=='all')qs+='&created_at=gte.'+encodeURIComponent(new Date(Date.now()-parseInt(range,10)*86400000).toISOString());
+    return db.get('hx_facility_log',qs).then(function(r){setRows((r||[]).filter(function(x){return x.license_id===lic.id&&x.state_id===st.id;}));})
+      .catch(function(e){setErr(String(e.message||e));setRows([]);});
+  },[lic.id,def.id,range]);
+  useEffect(function(){setRows(null);loadRows();},[loadRows]);
+  const list=(rows||[]).filter(function(r){const t=(r.item+' '+r.performed_by+' '+r.result+' '+JSON.stringify(r.data||{})).toLowerCase();return !q||t.indexOf(q.toLowerCase())>=0;});
+  function when(r){const d=r.data||{};return d.date?(d.date+(d.time?' '+d.time:'')):new Date(r.created_at).toLocaleString();}
+  function details(r){
+    const d=r.data||{};
+    if(def.id==='sanitation'){let a=0,b=0;['areas','equip_san','equip_clean','weekly','monthly'].forEach(function(k){const o=d[k]||{};Object.keys(o).forEach(function(n){b++;if(o[n])a++;});});return a+' of '+b+' items done'+(d.sanitizer_used?'  \u00b7  '+d.sanitizer_used:'');}
+    if(def.id==='security_inspection'){let t=0,f=[];SEC_PARTS.forEach(function(p){(d[p.id]||[]).forEach(function(x){if(x.status)t++;if(x.status==='FAIL')f.push(x.name);});});return t+' checked'+(f.length?'  \u00b7  FAIL: '+f.join(', '):'');}
+    if(def.id==='scale_calibration'){const c=scaleCheck(d);return c.pts.filter(function(p){return p.ok!==null;}).length+'/5 points  \u00b7  cert '+(c.cert.status==='unknown'?'-':c.cert.status);}
+    const skip=['date','time',def.person,def.itemKey];
+    return def.fields.filter(function(f){return f.k&&skip.indexOf(f.k)<0&&['text','select','textarea','pick'].indexOf(f.t)>=0&&d[f.k];}).slice(0,4)
+      .map(function(f){const v=String(d[f.k]);return f.l.replace(/ \(.*\)$/,'')+': '+(v.length>60?v.slice(0,60)+'...':v);}).join('  \u00b7  ');
+  }
+  function csv(){
+    const e=function(v){return '"'+String(v==null?'':v).replace(/"/g,'""')+'"';};
+    const cols=def.fields.filter(function(f){return f.k&&f.t!=='section'&&f.t!=='scalecheck';});
+    const head=['State','License','License #','Log','Entry ID','Saved at'];
+    cols.forEach(function(f){if(f.t==='inspection')SEC_PARTS.forEach(function(p){head.push(p.title);});else head.push(f.l||f.k);});
+    head.push('Result','Submitted by','Source');
+    const lines=[head.map(e).join(',')];
+    list.forEach(function(r){const d=r.data||{};const row=[st.name,lic.name,lic.license_number,def.name,r.id,r.created_at];
+      cols.forEach(function(f){
+        if(f.t==='inspection'){SEC_PARTS.forEach(function(p){row.push((d[p.id]||[]).map(function(x){return x.name+': '+(x.status||'-')+(x.detail?' ('+x.detail+')':'');}).join('; '));});return;}
+        if(f.t==='checklist'){const o=d[f.k]||{};row.push(Object.keys(o).filter(function(n){return o[n];}).join('; '));return;}
+        row.push(f.t==='checkbox'?(d[f.k]?'Yes':'No'):d[f.k]);});
+      row.push(r.result,r.performed_by,r.source);lines.push(row.map(e).join(','));});
+    const b=new Blob([lines.join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);
+    a.download=def.id+'_log_'+(lic.license_number||lic.id)+'.csv';document.body.appendChild(a);a.click();a.remove();
+  }
+  async function sigsFor(ids){
+    const m={};if(!ids.length)return m;
+    for(let i=0;i<ids.length;i+=40){
+      const part=ids.slice(i,i+40);
+      const x=await db.get('hx_facility_log','id=in.('+part.map(function(id){return encodeURIComponent(id);}).join(',')+')&select=id,signature');
+      (x||[]).forEach(function(r){m[r.id]=r.signature;});
+    }
+    return m;
+  }
+  async function view(r){
+    setErr('');
+    try{
+      const s=await sigsFor([r.id]);
+      let h=null;
+      if(isAdmin){try{h=await db.get('hx_audit_log','table_name=eq.hx_facility_log&row_id=eq.'+encodeURIComponent(r.id)+'&select=*&order=at.asc');}catch(x){h=null;}}
+      setModal({view:r,sig:s[r.id]||'',hist:h});
+    }catch(e){setErr(String(e.message||e));}
+  }
+  async function printAll(){
+    setErr('');
+    try{const sl=list.slice(0,300);const s=await sigsFor(sl.map(function(r){return r.id;}));printRecords(def.name+' - '+lic.name,sl.map(function(r){return entryHtml(def,st,lic,r,s[r.id]);}));}
+    catch(e){setErr(String(e.message||e));}
+  }
+  async function voidEntry(r,why){
+    await db.update('hx_facility_log',r.id,{voided:true,void_reason:why});
+    setModal(null);loadRows();
+  }
+  async function addEntry(p){
+    await db.insert('hx_facility_log',{id:newId('fl'),state_id:st.id,license_id:lic.id,log_type:def.id,item_id:p.item_id||null,item:p.item,data:p.data,result:p.result,performed_by:p.performed_by,signature:p.signature||null,source:'app'});
+    setModal(null);loadRows();
+  }
+  async function saveEdit(r,p){
+    await db.update('hx_facility_log',r.id,{item_id:p.item_id||null,item:p.item,data:p.data,result:p.result,performed_by:p.performed_by,edit_reason:p.edit_reason});
+    setModal(null);loadRows();
+  }
+  const fails=(rows||[]).filter(function(r){return !r.voided&&FLAG_RES.indexOf(r.result)>=0;}).length;
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start',marginBottom:10}},
+      el('div',null,el('h2',{style:{margin:0,fontSize:20}},def.name),el('div',{className:'muted'},'Frequency: '+def.freq)),
+      el('div',{className:'row'},
+        isAdmin&&el('button',{className:'btn ghost',onClick:function(){setModal({lists:true});}},'Manage lists'),
+        el('button',{className:'btn ghost',disabled:!list.length,onClick:csv},'CSV'),
+        el('button',{className:'btn ghost',disabled:!list.length,onClick:printAll},'Print / PDF'),
+        el('button',{className:'btn',onClick:function(){setModal({add:true});}},'+ New entry'))),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'card gold'},el('div',{className:'row',style:{alignItems:'flex-start',gap:20}},
+      el('div',{id:qrId},el(QrBox,{text:link,size:120})),
+      el('div',{style:{flex:1,minWidth:220}},
+        el('div',{className:'k'},'Kiosk QR - '+def.name+' - this license only'),
+        el('div',{style:{margin:'4px 0 8px'}},'Staff scan this to fill the ',el('b',null,def.name),' for ',el('b',null,lic.name),' ('+st.name+') without signing in. The code carries the state and license; the database refuses anything else.'),
+        el('input',{readOnly:true,value:link,onFocus:function(e){e.target.select();}}),
+        el('div',{className:'row',style:{marginTop:8}},
+          el('button',{className:'btn sm',onClick:function(){try{navigator.clipboard.writeText(link);setCopied(true);setTimeout(function(){setCopied(false);},1500);}catch(e){}}},copied?'Copied':'Copy link'),
+          el('button',{className:'btn ghost sm',onClick:function(){printQrSign(qrId,st.name,lic,def.name+': scan to record');}},'Print QR sign'))))),
+    el('div',{className:'card'},
+      el('div',{className:'row',style:{justifyContent:'space-between'}},
+        el('div',null,el('span',{className:'k'},st.name+' rules - '+def.ruleCat),el('span',{className:'muted',style:{marginLeft:8}},props.rules.length+' in the rulebook')),
+        props.rules.length>0&&el('button',{className:'btn ghost sm',onClick:function(){setShowRules(!showRules);}},showRules?'Hide':'Show')),
+      !props.rules.length&&el('div',{className:'muted',style:{marginTop:6,fontSize:13}},'No '+def.ruleCat+' rules in the '+st.name+' rulebook yet. Add them under Rulebook with category "'+def.ruleCat+'" and they show here.'),
+      showRules&&props.rules.map(function(r){return el('div',{key:r.id,style:{padding:'8px 0',borderTop:'1px solid #1d1d1d'}},
+        el('div',{style:{fontWeight:700}},r.title),r.citation&&el('div',{className:'muted',style:{fontSize:12}},r.citation),r.body&&el('div',{style:{whiteSpace:'pre-wrap',marginTop:4}},r.body));})),
+    el('div',{className:'row',style:{margin:'4px 0 12px'}},
+      el('input',{style:{maxWidth:300},placeholder:'Search entries...',value:q,onChange:function(e){setQ(e.target.value);}}),
+      el('select',{value:range,onChange:function(e){setRange(e.target.value);}},el('option',{value:'1'},'Last 24 hours'),el('option',{value:'7'},'Last 7 days'),el('option',{value:'30'},'Last 30 days'),el('option',{value:'365'},'Last year'),el('option',{value:'all'},'All time')),
+      el('span',{className:'muted'},rows?list.length+(list.length===1?' entry':' entries'):'Loading...'),
+      fails>0&&el('span',{className:'badge bad'},fails+' fail / open')),
+    rows&&!list.length&&el('div',{className:'empty'},'No '+def.name+' entries in this period for '+lic.name+'.'),
+    list.length>0&&el('div',{className:'card',style:{overflowX:'auto'}},el('table',null,
+      el('thead',null,el('tr',null,['#','Date / time',def.itemLabel,'Details','Result','By',''].map(function(h,i){return el('th',{key:i},h);}))),
+      el('tbody',null,list.map(function(r,i){
+        return el('tr',{key:r.id,className:r.voided?'voidrow':''},
+          el('td',{className:'muted'},list.length-i),
+          el('td',{style:{whiteSpace:'nowrap'}},when(r)),
+          el('td',null,r.item||'-'),
+          el('td',{style:{fontSize:13,maxWidth:420}},details(r)),
+          el('td',null,r.voided?el('span',{className:'badge bad',title:r.void_reason||''},'Void'):el(ResultBadge,{r:r.result})),
+          el('td',null,r.performed_by,r.source==='kiosk'&&el('span',{className:'badge off',style:{marginLeft:6}},'QR')),
+          el('td',{style:{textAlign:'right',whiteSpace:'nowrap'}},
+            el('button',{className:'btn ghost sm',onClick:function(){view(r);}},'View'),' ',
+            isAdmin&&!r.voided&&el('button',{className:'btn ghost sm',onClick:function(){setModal({edit:r});}},'Edit'),' ',
+            isAdmin&&!r.voided&&el('button',{className:'btn danger sm',onClick:function(){setModal({voidr:r});}},'Void')));
+      })))),
+    modal&&modal.add&&el(Modal,{title:'New '+def.name+' entry - '+lic.name,wide:true,onClose:function(){setModal(null);}},
+      el(LogForm,{def:def,lists:lists,defaultName:props.profile.name||'',onSubmit:addEntry,onCancel:function(){setModal(null);}})),
+    modal&&modal.edit&&el(Modal,{title:'Edit '+def.name+' entry',wide:true,onClose:function(){setModal(null);}},
+      el(LogForm,{def:def,lists:lists,initial:modal.edit,onSubmit:function(p){return saveEdit(modal.edit,p);},onCancel:function(){setModal(null);}})),
+    modal&&modal.voidr&&el(VoidModal,{what:def.name+' entry #'+(list.length-list.indexOf(modal.voidr)),onClose:function(){setModal(null);},onVoid:function(why){return voidEntry(modal.voidr,why);}}),
+    modal&&modal.lists&&el(ListManager,{def:def,st:st,lic:lic,rows:props.listRows,onChanged:props.reloadLists,onClose:function(){setModal(null);}}),
+    modal&&modal.view&&el(Modal,{title:def.name,wide:true,onClose:function(){setModal(null);}},
+      el('div',{dangerouslySetInnerHTML:{__html:REC_CSS+entryHtml(def,st,lic,modal.view,modal.sig,modal.hist)}}),
+      el('div',{className:'row',style:{justifyContent:'flex-end',marginTop:12}},
+        el('button',{className:'btn ghost',onClick:function(){setModal(null);}},'Close'),
+        el('button',{className:'btn',onClick:function(){printRecords(def.name,[entryHtml(def,st,lic,modal.view,modal.sig,modal.hist)]);}},'Print / PDF'))));
+}
+
+function FacilityLogs(props){
+  const st=props.state,lic=props.license;
+  const[tab,setTab]=useState(lsGet('hx_logtab')||LOG_TYPES[0].id);
+  const[rules,setRules]=useState([]);
+  const[listRows,setListRows]=useState(null);
+  const[err,setErr]=useState('');
+  const sid=st?st.id:'',lid=lic?lic.id:'';
+  useEffect(function(){
+    if(!sid){setRules([]);return;}
+    db.get('hx_rules','state_id=eq.'+encodeURIComponent(sid)+'&select=*&order=created_at')
+      .then(function(r){setRules((r||[]).filter(function(x){return x.state_id===sid;}));}).catch(function(){setRules([]);});
+  },[sid]);
+  const loadLists=useCallback(function(){
+    if(!lid){setListRows([]);return Promise.resolve();}
+    return db.get('hx_log_lists','license_id=eq.'+encodeURIComponent(lid)+'&select=*&order=sort,name')
+      .then(function(r){setListRows((r||[]).filter(function(x){return x.license_id===lid&&x.state_id===sid;}));})
+      .catch(function(e){setErr(String(e.message||e));setListRows([]);});
+  },[lid,sid]);
+  useEffect(function(){loadLists();},[loadLists]);
+  if(!lic||!st)return el('div',null,el('h1',null,'Facility ',el('span',{className:'g'},'Logs')),el('div',{className:'empty'},'Pick a state and a license at the top first. Every log belongs to exactly one license.'));
+  const def=LOG_TYPES.find(function(t){return t.id===tab;})||LOG_TYPES[0];
+  return el('div',null,
+    el('h1',null,'Facility ',el('span',{className:'g'},'Logs')),
+    el('div',{className:'sub'},st.name+'  \u00b7  '+lic.name+(lic.license_number?'  \u00b7  '+lic.license_number:'')),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'tabs'},LOG_TYPES.map(function(t){return el('button',{key:t.id,className:t.id===def.id?'on':'',onClick:function(){setTab(t.id);lsSet('hx_logtab',t.id);}},t.name.replace(/ Log$/,''));})),
+    listRows===null?el('div',{className:'muted'},'Loading...'):
+    el(LogPanel,{key:def.id+'|'+lic.id,def:def,state:st,license:lic,profile:props.profile,listRows:listRows,reloadLists:loadLists,
+      rules:rules.filter(function(r){return (r.category||'').toLowerCase()===def.ruleCat.toLowerCase();})}));
+}
+
+/* QR kiosk for a log (no login). Needs type + state + license in the link; the database re-checks all three. */
+function KioskLog(){
+  const q=new URLSearchParams(window.location.search);
+  const type=q.get('type')||'',stId=q.get('state')||'',licId=q.get('lic')||'';
+  const def=LOG_TYPES.find(function(t){return t.id===type;});
+  const[setup,setSetup]=useState(null);
+  const[bad,setBad]=useState('');
+  const[done,setDone]=useState('');
+  useEffect(function(){
+    if(!cfg().ok){setBad('This kiosk is not connected to a database.');return;}
+    if(!def){setBad('This QR code is not a valid log code. Please ask a manager for the current code.');return;}
+    if(!stId||!licId){setBad('This QR code is missing its state or license. Please ask a manager for the current code.');return;}
+    rpc('hx_kiosk_log_setup',{p_state:stId,p_lic:licId,p_type:type}).then(function(r){
+      if(r&&r.license&&r.license.id===licId&&r.license.state_id===stId)setSetup(r);
+      else setBad('This QR code is not linked to an active license in this state. Please ask a manager for the current code.');
+    }).catch(function(e){setBad(String(e.message||e));});
+  },[]);
+  if(bad)return el('div',{className:'auth'},el('div',{className:'box'},el(Brand),el('div',{className:'msg err',style:{marginTop:18}},bad)));
+  if(!setup)return el('div',{className:'auth'},el(Brand));
+  const lic=setup.license;
+  const head=el('div',{style:{textAlign:'center',marginBottom:16}},
+    el(Brand),
+    el('div',{className:'k',style:{marginTop:16}},lic.state),
+    el('div',{style:{fontSize:20,fontWeight:700}},lic.name),
+    el('div',{className:'muted'},'License '+(lic.license_number||'-')),
+    el('div',{style:{marginTop:10,fontSize:17,color:'var(--gold-hi)',fontWeight:700}},def.name));
+  if(done)return el('div',{className:'auth'},el('div',{className:'box'},head,el('div',{className:'msg ok',style:{fontSize:15}},done),
+    el('button',{className:'btn',style:{width:'100%'},onClick:function(){setDone('');}},'Fill another')));
+  return el('div',{className:'auth',style:{alignItems:'flex-start'}},el('div',{className:'box',style:{width:'min(640px,100%)'}},head,
+    el(LogForm,{def:def,lists:groupLists(setup.items,false),kiosk:true,onSubmit:async function(p){
+      await rpc('hx_kiosk_log_add',{p_state:stId,p_lic:licId,p_type:def.id,p:p});
+      setDone('Saved. Thank you, '+p.performed_by+'.'+(FLAG_RES.indexOf(p.result)>=0?' This entry is marked '+p.result+' - please tell your supervisor.':''));
+    }})));
+}
+
+/* ---------- Products: SKUs, flavors, formulations (one source of truth per state) ----------
+   Product types are the Black Fox / Michigan batch types. A SKU belongs to one state, carries its own
+   production settings (the numbers Black Fox kept as constants in code), has flavors, and cannot be
+   switched on until it has a formulation (enforced by the database). Recipes use the Black Fox
+   Formulation Bank layout: Raw Materials / Hardware & Packaging / Labor, with an ingredient price library. */
+const PRODUCT_TYPES=[
+  {id:'ethanol_extraction',name:'Ethanol Extraction'},{id:'butane_extraction',name:'BHO Extraction'},
+  {id:'pre_rolls',name:'Pre-Rolls'},{id:'cartridges',name:'Cartridges'},{id:'gummies',name:'Gummies'},
+  {id:'infused_flower',name:'Infused Flower'},{id:'moon_rocks',name:'Moon Rocks'},{id:'snow_caps',name:'Snow Caps'}];
+function ptName(id){const t=PRODUCT_TYPES.find(function(x){return x.id===id;});return t?t.name:id;}
+const PRE_ROLL_INGREDIENTS=['THCA','Terpene','Live Resin','HTE','Decarbed Cured Resin','Distillate','Trim','THCA (internal)'];
+const SKU_SPECS={
+  pre_rolls:[{k:'grams_filled',l:'Grams per joint, filled / infused',ph:'e.g. 0.55',num:1},{k:'grams_kiefed',l:'Grams per joint after kief (blank = no kief step)',ph:'e.g. 0.60',num:1},
+    {k:'units_per_package',l:'Joints per package',ph:'e.g. 5',num:1},{k:'ingredients',l:'Infusion ingredients used',t:'multi',o:PRE_ROLL_INGREDIENTS}],
+  cartridges:[{k:'oil_per_unit',l:'Oil per cartridge (g)',ph:'e.g. 1 or 2',num:1}],
+  gummies:[{k:'grams_per_gummy',l:'Grams per gummy',ph:'e.g. 4.6',num:1},{k:'units_per_package',l:'Gummies per package',ph:'e.g. 10',num:1}],
+  infused_flower:[{k:'unit_size',l:'Unit size (g)',ph:'e.g. 3.5',num:1}],
+  moon_rocks:[{k:'unit_size',l:'Unit size (g)',ph:'e.g. 1',num:1}],
+  snow_caps:[{k:'unit_size',l:'Unit size (g)',ph:'e.g. 3.5',num:1}]};
+const COGS_CATS=[
+  {id:'raw_material',key:'raw_materials',label:'Raw Materials',nameLabel:'Material',qtyLabel:'Qty',rateLabel:'Cost / Unit'},
+  {id:'packaging',key:'packaging',label:'Hardware & Packaging',nameLabel:'Item',qtyLabel:'Qty',rateLabel:'Cost / Unit'},
+  {id:'labor',key:'labor',label:'Labor',nameLabel:'Role / Task',qtyLabel:'Hours',rateLabel:'Rate / Hour'}];
+function money(n){return '$'+(Math.round((n||0)*100)/100).toFixed(2);}
+function lineTot(r){return (numOk(r.qty)?num(r.qty):0)*(numOk(r.cost_per_unit)?num(r.cost_per_unit):0);}
+function formTotal(f){return COGS_CATS.reduce(function(s,c){return s+(f[c.key]||[]).reduce(function(a,r){return a+lineTot(r);},0);},0);}
+function niceErr(e){
+  const m=String((e&&e.message)||e);
+  if(/hx_skus_name/.test(m))return 'A SKU with that name already exists for this product type in this state.';
+  if(/hx_flavors_name/.test(m))return 'That flavor is already on this SKU.';
+  if(/hx_formulations_one/.test(m))return 'That SKU / flavor already has a formulation. Edit that one instead.';
+  if(/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)&&/schema cache|does not exist/.test(m))return 'Database tables are missing - run hendrix_step5.sql in the Hendrix Supabase project.';
+  return m;
+}
+function specSummary(t,spec){
+  spec=spec||{};
+  return (SKU_SPECS[t]||[]).filter(function(s){const v=spec[s.k];return v!==undefined&&v!==''&&!(Array.isArray(v)&&!v.length);})
+    .map(function(s){const v=spec[s.k];return s.l.replace(/ \(.*\)$/,'')+': '+(Array.isArray(v)?v.join(', '):v);}).join('  \u00b7  ');
+}
+function Checks(props){
+  const val=props.value||[];
+  return el('div',{className:'cklist'},props.options.map(function(o){
+    return el('label',{key:o.v,className:'ck'},el('input',{type:'checkbox',checked:val.indexOf(o.v)>=0,onChange:function(e){
+      const on=e.target.checked;props.onChange(on?val.concat([o.v]):val.filter(function(x){return x!==o.v;}));}}),el('span',null,o.l));}));
+}
+
+/* Recipe line items (Black Fox CogsLineItemEditor) */
+function LineItems(props){
+  const cat=props.cat,rows=props.rows||[];
+  const lib=(props.library||[]).filter(function(l){return l.category===cat.id&&(!(l.product_types||[]).length||l.product_types.indexOf(props.productType)>=0);});
+  function upd(i,p){props.setRows(rows.map(function(r,x){return x===i?{...r,...p}:r;}));}
+  const tot=rows.reduce(function(a,r){return a+lineTot(r);},0);
+  return el('div',{style:{marginBottom:16}},
+    el('div',{className:'row',style:{justifyContent:'space-between',marginBottom:6}},el('span',{className:'k'},cat.label),el('b',{style:{color:'var(--gold-hi)'}},money(tot))),
+    rows.map(function(r,i){return el('div',{key:i,className:'li'},
+      el('input',{placeholder:cat.nameLabel,value:r.name||'',onChange:function(e){upd(i,{name:e.target.value});},style:{flex:'2 1 160px'}}),
+      el('input',{placeholder:cat.qtyLabel,inputMode:'decimal',value:r.qty==null?'':r.qty,onChange:function(e){upd(i,{qty:e.target.value});},style:{flex:'0 1 80px'}}),
+      el('input',{placeholder:'Unit',value:r.unit||'',onChange:function(e){upd(i,{unit:e.target.value});},style:{flex:'0 1 70px'}}),
+      el('input',{placeholder:cat.rateLabel,inputMode:'decimal',value:r.cost_per_unit==null?'':r.cost_per_unit,onChange:function(e){upd(i,{cost_per_unit:e.target.value});},style:{flex:'0 1 95px'}}),
+      el('span',{style:{width:72,textAlign:'right',fontWeight:700}},money(lineTot(r))),
+      el('button',{type:'button',className:'btn danger sm',onClick:function(){props.setRows(rows.filter(function(_,x){return x!==i;}));}},'\u2715'));}),
+    el('div',{className:'row'},
+      el('button',{type:'button',className:'btn ghost sm',onClick:function(){props.setRows(rows.concat([{name:'',qty:'',unit:'',cost_per_unit:''}]));}},'+ Add '+cat.nameLabel),
+      lib.length>0&&el('select',{value:'',onChange:function(e){const it=lib.find(function(l){return l.id===e.target.value;});
+        if(it)props.setRows(rows.concat([{name:it.name,qty:'',unit:it.unit||'',cost_per_unit:it.cost_per_unit==null?'':String(it.cost_per_unit)}]));}},
+        el('option',{value:''},'+ Add from price library...'),lib.map(function(l){return el('option',{key:l.id,value:l.id},l.name+' ('+money(l.cost_per_unit)+'/'+(l.unit||'unit')+')');}))));
+}
+function blankFormula(){return {name:'',batch_size:'',raw_materials:[],packaging:[],labor:[],notes:''};}
+function FormulaFields(props){
+  const f=props.f,set=function(p){props.setF(function(x){return {...x,...p};});};
+  const tot=formTotal(f);
+  return el('div',null,
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:10}},
+      el(Field,{label:'Standard batch size (units)'},el('input',{inputMode:'decimal',value:f.batch_size,placeholder:'e.g. 1000',onChange:function(e){set({batch_size:e.target.value});}})),
+      el(Field,{label:'Recipe name (optional)'},el('input',{value:f.name,placeholder:props.autoName||'Auto-fills from SKU + flavor',onChange:function(e){set({name:e.target.value});}}))),
+    el('div',{className:'muted',style:{fontSize:12,margin:'0 0 12px'}},'Enter the quantities for this recipe. Cost / unit is a reference; prices come from the price library by name.'),
+    COGS_CATS.map(function(c){return el(LineItems,{key:c.id,cat:c,rows:f[c.key],library:props.library,productType:props.productType,setRows:function(r){set({[c.key]:r});}});}),
+    el(Field,{label:'Notes'},el('textarea',{value:f.notes,style:{minHeight:60},onChange:function(e){set({notes:e.target.value});}})),
+    el('div',{className:'row',style:{justifyContent:'flex-end',gap:16}},
+      el('span',null,'Batch total ',el('b',{style:{color:'var(--gold-hi)'}},money(tot))),
+      numOk(f.batch_size)&&num(f.batch_size)>0&&el('span',null,'Per unit ',el('b',{style:{color:'var(--gold-hi)'}},money(tot/num(f.batch_size))))));
+}
+function formulaProblem(f){
+  const rm=(f.raw_materials||[]).filter(function(r){return String(r.name||'').trim();});
+  if(!rm.length)return 'Add at least one raw material.';
+  for(let c=0;c<COGS_CATS.length;c++){const rows=f[COGS_CATS[c].key]||[];
+    for(let i=0;i<rows.length;i++){const r=rows[i];
+      if(String(r.name||'').trim()&&!numOk(r.qty))return COGS_CATS[c].label+': enter a quantity for "'+r.name+'".';
+      if(String(r.cost_per_unit==null?'':r.cost_per_unit).trim()&&!numOk(r.cost_per_unit))return COGS_CATS[c].label+': cost for "'+r.name+'" must be a number.';}}
+  return '';
+}
+function cleanFormula(f){
+  const o={name:String(f.name||'').trim(),batch_size:String(f.batch_size||'').trim(),notes:String(f.notes||'').trim()};
+  COGS_CATS.forEach(function(c){o[c.key]=(f[c.key]||[]).filter(function(r){return String(r.name||'').trim();}).map(function(r){
+    const x={...r,name:String(r.name).trim(),qty:String(r.qty==null?'':r.qty).trim(),unit:String(r.unit||'').trim(),cost_per_unit:String(r.cost_per_unit==null?'':r.cost_per_unit).trim()};return x;});});
+  return o;
+}
+
+/* New SKU: details + flavors, then the required formulation */
+function SkuWizard(props){
+  const st=props.state;
+  const[step,setStep]=useState(1);
+  const[s,setS]=useState({product_type:props.productType||PRODUCT_TYPES[0].id,name:'',license_ids:[],spec:{},has_flavors:true,flavors:''});
+  const[f,setF]=useState(blankFormula);
+  const[err,setErr]=useState('');
+  const[busy,setBusy]=useState(false);
+  const done=useRef({sku:'',flavors:false,formula:false});
+  const flavorList=function(){const seen={};return s.flavors.split(/\n/).map(function(x){return x.trim();}).filter(function(x){const k=x.toLowerCase();if(!x||seen[k])return false;seen[k]=1;return true;});};
+  function next(){
+    setErr('');
+    if(!s.name.trim()){setErr('Enter the SKU name.');return;}
+    const dup=props.skus.find(function(k){return k.product_type===s.product_type&&k.name.trim().toLowerCase()===s.name.trim().toLowerCase();});
+    if(dup&&dup.id!==done.current.sku){setErr('A SKU with that name already exists for this product type in '+st.name+'.');return;}
+    for(const sp of (SKU_SPECS[s.product_type]||[])){const v=s.spec[sp.k];if(sp.num&&v!==undefined&&String(v).trim()!==''&&!numOk(v)){setErr(sp.l+' must be a number.');return;}}
+    setStep(2);
+  }
+  async function save(){
+    setErr('');
+    const p=formulaProblem(f);if(p){setErr(p);return;}
+    setBusy(true);
+    try{
+      const spec={};(SKU_SPECS[s.product_type]||[]).forEach(function(sp){const v=s.spec[sp.k];if(sp.t==='multi'){if(v&&v.length)spec[sp.k]=v;}else if(v!==undefined&&String(v).trim()!=='')spec[sp.k]=sp.num?num(v):String(v).trim();});
+      if(!s.has_flavors)spec.no_flavor=true;
+      if(!done.current.sku){
+        const id=newId('sku');
+        await db.insert('hx_skus',{id:id,state_id:st.id,product_type:s.product_type,name:s.name.trim(),spec:spec,license_ids:s.license_ids,active:false,sort:props.skus.length});
+        done.current.sku=id;
+      }
+      const skuId=done.current.sku;
+      if(!done.current.flavors){
+        const fl=s.has_flavors?flavorList():[];
+        if(fl.length)await db.insert('hx_flavors',fl.map(function(n,i){return {id:newId('fl'),state_id:st.id,sku_id:skuId,name:n,active:true,sort:i};}));
+        done.current.flavors=true;
+      }
+      if(!done.current.formula){
+        const c=cleanFormula(f);
+        await db.insert('hx_formulations',{id:newId('rcp'),state_id:st.id,sku_id:skuId,flavor_id:null,name:c.name||(s.name.trim()+' \u2014 base recipe'),batch_size:c.batch_size,raw_materials:c.raw_materials,packaging:c.packaging,labor:c.labor,notes:c.notes});
+        done.current.formula=true;
+      }
+      await db.update('hx_skus',skuId,{active:true});
+      props.onDone();
+    }catch(e){setErr(niceErr(e)+(done.current.sku?' (The SKU was saved but is not switched on yet. Fix this and press Save again.)':''));}
+    setBusy(false);
+  }
+  const specs=SKU_SPECS[s.product_type]||[];
+  return el(Modal,{title:'New SKU - '+st.name+' (step '+step+' of 2)',wide:true,onClose:props.onClose},
+    step===1?el('div',null,
+      el('div',{className:'grid',style:{gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:10}},
+        el(Field,{label:'Product type'},el('select',{style:{width:'100%'},value:s.product_type,disabled:!!done.current.sku,onChange:function(e){setS({...s,product_type:e.target.value,spec:{}});}},
+          PRODUCT_TYPES.map(function(t){return el('option',{key:t.id,value:t.id},t.name);}))),
+        el(Field,{label:'SKU name *'},el('input',{value:s.name,disabled:!!done.current.sku,placeholder:'e.g. Muha Meds 2G AIO',onChange:function(e){setS({...s,name:e.target.value});}}))),
+      el(Field,{label:'Made under',plain:true},
+        el('label',{className:'ck'},el('input',{type:'checkbox',checked:!s.license_ids.length,onChange:function(e){setS({...s,license_ids:e.target.checked?[]:props.licenses.map(function(l){return l.id;}).slice(0,1)});}}),el('span',null,'Every license in '+st.name)),
+        s.license_ids.length>0&&el(Checks,{options:props.licenses.map(function(l){return {v:l.id,l:l.name+(l.license_number?' ('+l.license_number+')':'')};}),value:s.license_ids,onChange:function(v){setS({...s,license_ids:v.length?v:props.licenses.map(function(l){return l.id;}).slice(0,1)});}})),
+      specs.length>0&&el('div',{className:'secth'},'Production settings'),
+      specs.length>0&&el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}},specs.map(function(sp){
+        return sp.t==='multi'?el('div',{key:sp.k,style:{gridColumn:'1/-1'}},el(Field,{label:sp.l,plain:true},el(Checks,{options:sp.o.map(function(o){return {v:o,l:o};}),value:s.spec[sp.k]||[],onChange:function(v){setS({...s,spec:{...s.spec,[sp.k]:v}});}})))
+          :el(Field,{key:sp.k,label:sp.l},el('input',{inputMode:'decimal',placeholder:sp.ph,value:s.spec[sp.k]==null?'':s.spec[sp.k],onChange:function(e){setS({...s,spec:{...s.spec,[sp.k]:e.target.value}});}}));})),
+      el('div',{className:'secth'},'Flavors'),
+      el('label',{className:'ck',style:{marginBottom:8}},el('input',{type:'checkbox',checked:s.has_flavors,onChange:function(e){setS({...s,has_flavors:e.target.checked});}}),el('span',null,'This SKU has flavors')),
+      s.has_flavors&&el(Field,{label:'Flavors - one per line (you can add more later)'},el('textarea',{value:s.flavors,style:{minHeight:120},placeholder:'Honey Melon\nBlue Dream\nStrawberry Lava',onChange:function(e){setS({...s,flavors:e.target.value});}})),
+      s.has_flavors&&flavorList().length>0&&el('div',{className:'muted',style:{fontSize:12,marginTop:-6,marginBottom:10}},flavorList().length+' flavor'+(flavorList().length===1?'':'s')),
+      err&&el('div',{className:'msg err'},err),
+      el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',onClick:next},'Next: formulation')))
+    :el('div',null,
+      el('div',{className:'msg ok'},'Every new SKU needs a formulation before it can be used. This base recipe covers all of its flavors; flavor-specific recipes can be added afterwards.'),
+      el('div',{className:'muted',style:{marginBottom:10}},ptName(s.product_type)+'  \u00b7  ',el('b',null,s.name.trim())),
+      el(FormulaFields,{f:f,setF:setF,library:props.library,productType:s.product_type,autoName:s.name.trim()+' \u2014 base recipe'}),
+      err&&el('div',{className:'msg err'},err),
+      el('div',{className:'row',style:{justifyContent:'flex-end'}},
+        el('button',{className:'btn ghost',disabled:busy,onClick:function(){setErr('');setStep(1);}},'Back'),
+        el('button',{className:'btn',disabled:busy,onClick:save},busy?'Saving...':'Save SKU and formulation'))));
+}
+
+function SkuEditor(props){
+  const k=props.sku;
+  const[s,setS]=useState({name:k.name,license_ids:k.license_ids||[],spec:{...(k.spec||{})}});
+  const[err,setErr]=useState('');
+  const specs=SKU_SPECS[k.product_type]||[];
+  async function save(){
+    setErr('');
+    if(!s.name.trim()){setErr('Enter the SKU name.');return;}
+    const spec={};
+    specs.forEach(function(sp){const v=s.spec[sp.k];if(sp.t==='multi'){if(v&&v.length)spec[sp.k]=v;}else if(v!==undefined&&String(v).trim()!==''){if(sp.num&&!numOk(v))throw 0;spec[sp.k]=sp.num?num(v):String(v).trim();}});
+    if(s.spec.no_flavor)spec.no_flavor=true;
+    try{await db.update('hx_skus',k.id,{name:s.name.trim(),license_ids:s.license_ids,spec:spec});props.onDone();}catch(e){setErr(niceErr(e));}
+  }
+  return el(Modal,{title:'Edit SKU',wide:true,onClose:props.onClose},
+    el('div',{className:'muted',style:{marginBottom:10}},ptName(k.product_type)+' (the product type of a SKU cannot change)'),
+    el(Field,{label:'SKU name'},el('input',{value:s.name,onChange:function(e){setS({...s,name:e.target.value});}})),
+    el(Field,{label:'Made under',plain:true},
+      el('label',{className:'ck'},el('input',{type:'checkbox',checked:!s.license_ids.length,onChange:function(e){setS({...s,license_ids:e.target.checked?[]:props.licenses.map(function(l){return l.id;}).slice(0,1)});}}),el('span',null,'Every license in '+props.state.name)),
+      s.license_ids.length>0&&el(Checks,{options:props.licenses.map(function(l){return {v:l.id,l:l.name+(l.license_number?' ('+l.license_number+')':'')};}),value:s.license_ids,onChange:function(v){setS({...s,license_ids:v.length?v:props.licenses.map(function(l){return l.id;}).slice(0,1)});}})),
+    specs.length>0&&el('div',{className:'secth'},'Production settings'),
+    specs.length>0&&el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}},specs.map(function(sp){
+      return sp.t==='multi'?el('div',{key:sp.k,style:{gridColumn:'1/-1'}},el(Field,{label:sp.l,plain:true},el(Checks,{options:sp.o.map(function(o){return {v:o,l:o};}),value:s.spec[sp.k]||[],onChange:function(v){setS({...s,spec:{...s.spec,[sp.k]:v}});}})))
+        :el(Field,{key:sp.k,label:sp.l},el('input',{inputMode:'decimal',placeholder:sp.ph,value:s.spec[sp.k]==null?'':s.spec[sp.k],onChange:function(e){setS({...s,spec:{...s.spec,[sp.k]:e.target.value}});}}));})),
+    el('label',{className:'ck',style:{margin:'10px 0'}},el('input',{type:'checkbox',checked:!s.spec.no_flavor,onChange:function(e){setS({...s,spec:{...s.spec,no_flavor:!e.target.checked}});}}),el('span',null,'This SKU has flavors')),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),
+      el('button',{className:'btn',onClick:function(){save().catch(function(){setErr('Production settings must be numbers.');});}},'Save')));
+}
+
+/* One formulation: pick product type -> SKU -> flavor (or base), then the recipe */
+function FormulationEditor(props){
+  const init=props.initial||{};
+  const[sel,setSel]=useState({sku_id:init.sku_id||props.skuId||'',flavor_id:init.flavor_id||props.flavorId||''});
+  const sku0=props.skus.find(function(k){return k.id===sel.sku_id;});
+  const[pt,setPt]=useState(sku0?sku0.product_type:(props.productType||PRODUCT_TYPES[0].id));
+  const[f,setF]=useState(function(){const b=blankFormula();COGS_CATS.forEach(function(c){b[c.key]=(init[c.key]||[]).map(function(r){return {...r};});});
+    return {...b,name:init.name||'',batch_size:init.batch_size||'',notes:init.notes||''};});
+  const[err,setErr]=useState('');
+  const[busy,setBusy]=useState(false);
+  const locked=!!props.lockSku;
+  const sku=props.skus.find(function(k){return k.id===sel.sku_id;});
+  const skuOpts=props.skus.filter(function(k){return k.product_type===pt;});
+  const flavOpts=props.flavors.filter(function(x){return x.sku_id===sel.sku_id;});
+  const flav=flavOpts.find(function(x){return x.id===sel.flavor_id;});
+  const autoName=sku?(sku.name+' \u2014 '+(flav?flav.name:'base recipe')):'';
+  const taken=props.formulations.find(function(x){return x.id!==init.id&&x.sku_id===sel.sku_id&&(x.flavor_id||'')===(sel.flavor_id||'');});
+  async function save(){
+    setErr('');
+    if(!sku){setErr('Choose the SKU.');return;}
+    if(taken){setErr('That '+(flav?'flavor':'SKU')+' already has a formulation ("'+taken.name+'"). Edit that one instead.');return;}
+    const p=formulaProblem(f);if(p){setErr(p);return;}
+    const c=cleanFormula(f);
+    const rec={sku_id:sku.id,flavor_id:sel.flavor_id||null,name:c.name||autoName,batch_size:c.batch_size,raw_materials:c.raw_materials,packaging:c.packaging,labor:c.labor,notes:c.notes};
+    setBusy(true);
+    try{
+      if(init.id)await db.update('hx_formulations',init.id,rec);
+      else await db.insert('hx_formulations',{...rec,id:newId('rcp'),state_id:props.state.id});
+      props.onDone();
+    }catch(e){setErr(niceErr(e));}
+    setBusy(false);
+  }
+  return el(Modal,{title:(init.id?'Edit':'New')+' formulation - '+props.state.name,wide:true,onClose:props.onClose},
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:10}},
+      el(Field,{label:'Product type'},el('select',{style:{width:'100%'},value:pt,disabled:locked||!!init.id,onChange:function(e){setPt(e.target.value);setSel({sku_id:'',flavor_id:''});}},
+        PRODUCT_TYPES.map(function(t){return el('option',{key:t.id,value:t.id},t.name);}))),
+      el(Field,{label:'SKU'},el('select',{style:{width:'100%'},value:sel.sku_id,disabled:locked||!!init.id,onChange:function(e){setSel({sku_id:e.target.value,flavor_id:''});}},
+        el('option',{value:''},skuOpts.length?'Select...':'No SKUs of this type yet'),skuOpts.map(function(k){return el('option',{key:k.id,value:k.id},k.name);}))),
+      el(Field,{label:'Flavor'},el('select',{style:{width:'100%'},value:sel.flavor_id,disabled:!!init.id||!!props.lockFlavor,onChange:function(e){setSel({...sel,flavor_id:e.target.value});}},
+        el('option',{value:''},'All flavors (base recipe)'),flavOpts.map(function(x){return el('option',{key:x.id,value:x.id},x.name);})))),
+    taken&&el('div',{className:'msg err'},'That '+(flav?'flavor':'SKU')+' already has a formulation: "'+taken.name+'".'),
+    el(FormulaFields,{f:f,setF:setF,library:props.library,productType:pt,autoName:autoName}),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),
+      el('button',{className:'btn',disabled:busy,onClick:save},busy?'Saving...':'Save formulation')));
+}
+
+/* Flavors of one SKU, with each flavor's recipe status */
+function FlavorManager(props){
+  const k=props.sku,st=props.state;
+  const fl=props.flavors.filter(function(x){return x.sku_id===k.id;}).sort(function(a,b){return (a.sort-b.sort)||a.name.localeCompare(b.name);});
+  const forms=props.formulations.filter(function(x){return x.sku_id===k.id;});
+  const base=forms.find(function(x){return !x.flavor_id;});
+  const[add,setAdd]=useState('');
+  const[edit,setEdit]=useState(null);
+  const[err,setErr]=useState('');
+  async function run(fn){setErr('');try{await fn();await props.reload();}catch(e){setErr(niceErr(e));}}
+  function addAll(){
+    const have={};fl.forEach(function(x){have[x.name.trim().toLowerCase()]=1;});
+    const names=[];add.split(/\n/).forEach(function(x){x=x.trim();const kk=x.toLowerCase();if(x&&!have[kk]){have[kk]=1;names.push(x);}});
+    if(!names.length){setErr('Nothing new to add.');return;}
+    run(async function(){await db.insert('hx_flavors',names.map(function(n,i){return {id:newId('fl'),state_id:st.id,sku_id:k.id,name:n,active:true,sort:fl.length+i};}));setAdd('');});
+  }
+  return el(Modal,{title:'Flavors - '+k.name,wide:true,onClose:props.onClose},
+    k.spec&&k.spec.no_flavor&&el('div',{className:'msg err'},'This SKU is set to "no flavors". Edit the SKU to change that.'),
+    err&&el('div',{className:'msg err'},err),
+    !fl.length?el('div',{className:'empty',style:{marginBottom:12}},'No flavors yet.'):
+    el('table',{style:{marginBottom:12}},el('thead',null,el('tr',null,el('th',null,'Flavor'),props.isAdmin&&el('th',null,'Formulation'),el('th',null,''))),
+      el('tbody',null,fl.map(function(x){
+        const own=forms.find(function(r){return r.flavor_id===x.id;});
+        return el('tr',{key:x.id},
+          el('td',null,edit&&edit.id===x.id?el('input',{value:edit.name,autoFocus:true,onChange:function(e){setEdit({...edit,name:e.target.value});},onKeyDown:function(e){if(e.key==='Enter'&&edit.name.trim())run(async function(){await db.update('hx_flavors',x.id,{name:edit.name.trim()});setEdit(null);});}})
+            :el('span',{style:{opacity:x.active?1:.45,fontWeight:600}},x.name+(x.active?'':' (hidden)'))),
+          props.isAdmin&&el('td',{style:{fontSize:13}},own?el('span',{className:'badge ok'},'Own recipe'):base?el('span',{className:'muted'},'Uses base recipe'):el('span',{className:'badge bad'},'No recipe')),
+          el('td',{style:{textAlign:'right',whiteSpace:'nowrap'}},
+            props.isAdmin&&(edit&&edit.id===x.id?
+              el('button',{className:'btn sm',disabled:!edit.name.trim(),onClick:function(){run(async function(){await db.update('hx_flavors',x.id,{name:edit.name.trim()});setEdit(null);});}},'Save')
+              :el('button',{className:'btn ghost sm',onClick:function(){setEdit({id:x.id,name:x.name});}},'Rename')),' ',
+            props.isAdmin&&el('button',{className:'btn ghost sm',onClick:function(){props.openFormula(own||null,k.id,x.id);}},own?'Edit recipe':'Own recipe'),' ',
+            props.isAdmin&&el('button',{className:'btn ghost sm',onClick:function(){run(function(){return db.update('hx_flavors',x.id,{active:!x.active});});}},x.active?'Hide':'Show'),' ',
+            props.isAdmin&&el('button',{className:'btn danger sm',onClick:function(){if(window.confirm('Delete flavor "'+x.name+'"'+(own?' and its own recipe':'')+'?'))run(function(){return db.remove('hx_flavors',x.id);});}},'Delete')));
+      }))),
+    props.isAdmin&&el(Field,{label:'Add flavors - one per line'},el('textarea',{value:add,style:{minHeight:90},onChange:function(e){setAdd(e.target.value);}})),
+    props.isAdmin&&el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn',disabled:!add.trim(),onClick:addAll},'+ Add flavors')));
+}
+
+function FormulaCard(props){
+  const f=props.f;
+  const n=COGS_CATS.reduce(function(a,c){return a+(f[c.key]||[]).length;},0);
+  return el('div',{className:'card',style:{marginBottom:0}},
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start',flexWrap:'nowrap'}},
+      el('div',null,el('div',{style:{fontWeight:700}},f.name),el('div',{className:'muted',style:{fontSize:12}},(props.skuName||'?')+'  \u00b7  '+(props.flavorName||'All flavors (base)'))),
+      el('div',{className:'row',style:{flexWrap:'nowrap'}},
+        el('button',{className:'btn ghost sm',onClick:props.onEdit},'Edit'),
+        props.onDup&&el('button',{className:'btn ghost sm',onClick:props.onDup},'Duplicate'),
+        el('button',{className:'btn danger sm',onClick:props.onDelete},'\u2715'))),
+    el('div',{className:'row',style:{margin:'8px 0 6px'}},el('span',{className:'badge'},n+' lines'),f.batch_size&&el('span',{className:'badge off'},'Batch: '+f.batch_size),el('span',{className:'badge off'},money(formTotal(f)))),
+    (f.raw_materials||[]).slice(0,4).map(function(r,i){return el('div',{key:i,className:'row',style:{justifyContent:'space-between',fontSize:12}},el('span',null,r.name),el('span',{className:'muted'},(r.qty||'')+(r.unit?' '+r.unit:'')));}),
+    (f.raw_materials||[]).length>4&&el('div',{className:'muted',style:{fontSize:12}},'+'+(f.raw_materials.length-4)+' more'),
+    f.notes&&el('div',{className:'muted',style:{fontSize:12,marginTop:6,borderTop:'1px solid #1d1d1d',paddingTop:6}},f.notes));
+}
+
+function PriceLibrary(props){
+  const st=props.state;
+  const blank={category:'raw_material',name:'',unit:'',cost_per_unit:'',product_types:[]};
+  const[f,setF]=useState(blank);
+  const[editId,setEditId]=useState('');
+  const[err,setErr]=useState('');
+  async function run(fn){setErr('');try{await fn();await props.reload();}catch(e){setErr(niceErr(e));}}
+  function save(){
+    if(!f.name.trim()){setErr('Enter a name.');return;}
+    if(String(f.cost_per_unit).trim()&&!numOk(f.cost_per_unit)){setErr('Cost must be a number.');return;}
+    const rec={category:f.category,name:f.name.trim(),unit:f.unit.trim(),cost_per_unit:numOk(f.cost_per_unit)?num(f.cost_per_unit):null,product_types:f.product_types};
+    run(async function(){if(editId)await db.update('hx_cost_library',editId,rec);else await db.insert('hx_cost_library',{...rec,id:newId('cost'),state_id:st.id});setF(blank);setEditId('');});
+  }
+  return el('div',null,
+    el('div',{className:'muted',style:{marginBottom:12}},'Prices for '+st.name+'. Recipes pick from this list, and the Planner and COGS will use it.'),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'card gold'},
+      el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(170px,1fr))',gap:10}},
+        el(Field,{label:'Category'},el('select',{style:{width:'100%'},value:f.category,onChange:function(e){setF({...f,category:e.target.value});}},COGS_CATS.map(function(c){return el('option',{key:c.id,value:c.id},c.label);}))),
+        el(Field,{label:'Name'},el('input',{value:f.name,placeholder:'e.g. Distillate',onChange:function(e){setF({...f,name:e.target.value});}})),
+        el(Field,{label:'Unit'},el('input',{value:f.unit,placeholder:'e.g. g',onChange:function(e){setF({...f,unit:e.target.value});}})),
+        el(Field,{label:f.category==='labor'?'Rate / hour ($)':'Cost / unit ($)'},el('input',{inputMode:'decimal',value:f.cost_per_unit,onChange:function(e){setF({...f,cost_per_unit:e.target.value});}}))),
+      el(Field,{label:'Used for (none ticked = every product type)',plain:true},el(Checks,{options:PRODUCT_TYPES.map(function(t){return {v:t.id,l:t.name};}),value:f.product_types,onChange:function(v){setF({...f,product_types:v});}})),
+      el('div',{className:'row',style:{justifyContent:'flex-end'}},editId&&el('button',{className:'btn ghost sm',onClick:function(){setF(blank);setEditId('');}},'Cancel'),el('button',{className:'btn sm',onClick:save},editId?'Save changes':'+ Add price'))),
+    !props.library.length?el('div',{className:'empty'},'No prices yet.'):
+    COGS_CATS.map(function(c){const rows=props.library.filter(function(l){return l.category===c.id;});if(!rows.length)return null;
+      return el('div',{key:c.id,className:'card'},el('div',{className:'k',style:{marginBottom:6}},c.label),el('table',null,el('tbody',null,rows.map(function(l){
+        return el('tr',{key:l.id},el('td',{style:{fontWeight:600}},l.name),el('td',null,money(l.cost_per_unit)+' / '+(l.unit||'unit')),
+          el('td',{className:'muted',style:{fontSize:12}},(l.product_types||[]).length?l.product_types.map(ptName).join(', '):'All product types'),
+          el('td',{style:{textAlign:'right',whiteSpace:'nowrap'}},el('button',{className:'btn ghost sm',onClick:function(){setEditId(l.id);setF({category:l.category,name:l.name,unit:l.unit||'',cost_per_unit:l.cost_per_unit==null?'':String(l.cost_per_unit),product_types:l.product_types||[]});}},'Edit'),' ',
+            el('button',{className:'btn danger sm',onClick:function(){if(window.confirm('Delete "'+l.name+'"?'))run(function(){return db.remove('hx_cost_library',l.id);});}},'Delete')));}))));}));
+}
+
+function Products(props){
+  const st=props.state,isAdmin=props.profile.role==='admin';
+  const sid=st?st.id:'';
+  const[tab,setTab]=useState('skus');
+  const[pt,setPt]=useState(lsGet('hx_ptype')||PRODUCT_TYPES[0].id);
+  const[data,setData]=useState(null);
+  const[err,setErr]=useState('');
+  const[q,setQ]=useState('');
+  const[modal,setModal]=useState(null);
+  const load=useCallback(async function(){
+    if(!sid){setData({skus:[],flavors:[],forms:[],lib:[]});return;}
+    try{
+      const f='state_id=eq.'+encodeURIComponent(sid);
+      const r=await Promise.all([db.get('hx_skus',f+'&select=*&order=sort,name'),db.get('hx_flavors',f+'&select=*&order=sort,name'),
+        isAdmin?db.get('hx_formulations',f+'&select=*&order=name'):Promise.resolve([]),isAdmin?db.get('hx_cost_library',f+'&select=*&order=category,name'):Promise.resolve([])]);
+      const only=function(a){return (a||[]).filter(function(x){return x.state_id===sid;});};
+      setData({skus:only(r[0]),flavors:only(r[1]),forms:only(r[2]),lib:only(r[3])});
+    }catch(e){setErr(niceErr(e));setData({skus:[],flavors:[],forms:[],lib:[]});}
+  },[sid,isAdmin]);
+  useEffect(function(){setData(null);setErr('');load();},[load]);
+  if(!st)return el('div',null,el('h1',null,'Products'),el('div',{className:'empty'},'Create a state first. Every SKU belongs to one state.'));
+  if(!data)return el('div',{className:'muted'},'Loading...');
+  const lics=props.licenses.filter(function(l){return l.state_id===st.id;});
+  const licName=function(id){const l=lics.find(function(x){return x.id===id;});return l?l.name:'?';};
+  const skuName=function(id){const k=data.skus.find(function(x){return x.id===id;});return k?k.name:'?';};
+  const flavName=function(id){const x=data.flavors.find(function(y){return y.id===id;});return x?x.name:'';};
+  function closeReload(){setModal(null);load();}
+  async function del(fn,msg){if(!window.confirm(msg))return;setErr('');try{await fn();await load();}catch(e){setErr(niceErr(e));}}
+  async function toggle(k){setErr('');try{await db.update('hx_skus',k.id,{active:!k.active});await load();}catch(e){setErr(niceErr(e));}}
+  function openFormula(f,skuId,flavorId){setModal({formula:f||null,skuId:skuId,flavorId:flavorId});}
+  const typeSkus=data.skus.filter(function(k){return k.product_type===pt;}).filter(function(k){
+    if(!q)return true;const t=(k.name+' '+data.flavors.filter(function(x){return x.sku_id===k.id;}).map(function(x){return x.name;}).join(' ')).toLowerCase();return t.indexOf(q.toLowerCase())>=0;});
+  const needs=data.skus.filter(function(k){return !k.active&&!data.forms.some(function(f){return f.sku_id===k.id;});}).length;
+  const tabs=[['skus','SKUs and Flavors']].concat(isAdmin?[['formulas','Formulation Bank ('+data.forms.length+')'],['prices','Ingredient Prices ('+data.lib.length+')']]:[]);
+  let body;
+  if(tab==='prices'&&isAdmin)body=el(PriceLibrary,{state:st,library:data.lib,reload:load});
+  else if(tab==='formulas'&&isAdmin){
+    const fl=data.forms.filter(function(f){const t=(f.name+' '+skuName(f.sku_id)+' '+flavName(f.flavor_id)).toLowerCase();return !q||t.indexOf(q.toLowerCase())>=0;});
+    body=el('div',null,
+      el('div',{className:'row',style:{marginBottom:14}},el('input',{style:{maxWidth:300},placeholder:'Search formulations...',value:q,onChange:function(e){setQ(e.target.value);}}),
+        el('span',{className:'muted'},fl.length+' formulation'+(fl.length===1?'':'s')),el('span',{style:{flex:1}}),
+        el('button',{className:'btn',disabled:!data.skus.length,onClick:function(){openFormula(null,'','');}},'+ New formulation')),
+      !fl.length?el('div',{className:'empty'},data.skus.length?'No formulations match.':'Create a SKU first; its formulation is entered as part of creating it.'):
+      PRODUCT_TYPES.map(function(t){
+        const items=fl.filter(function(f){const k=data.skus.find(function(x){return x.id===f.sku_id;});return k&&k.product_type===t.id;});
+        if(!items.length)return null;
+        return el('div',{key:t.id,style:{marginBottom:18}},el('div',{className:'secth'},t.name+'  \u00b7  '+items.length),
+          el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))'}},items.map(function(f){
+            return el(FormulaCard,{key:f.id,f:f,skuName:skuName(f.sku_id),flavorName:flavName(f.flavor_id),onEdit:function(){openFormula(f,f.sku_id,f.flavor_id||'');},
+              onDup:function(){setModal({formula:{...f,id:undefined,name:'',flavor_id:''},skuId:f.sku_id,flavorId:'',dup:true});},
+              onDelete:function(){del(function(){return db.remove('hx_formulations',f.id);},'Delete "'+f.name+'"?'+(data.forms.filter(function(x){return x.sku_id===f.sku_id;}).length===1?' It is this SKU\'s only formulation, so the SKU will be switched off.':''));}});})));
+      }));
+  }else{
+    body=el('div',null,
+      el('div',{className:'tabs'},PRODUCT_TYPES.map(function(t){const n=data.skus.filter(function(k){return k.product_type===t.id;}).length;
+        return el('button',{key:t.id,className:t.id===pt?'on':'',onClick:function(){setPt(t.id);lsSet('hx_ptype',t.id);setErr('');}},t.name+(n?' ('+n+')':''));})),
+      el('div',{className:'row',style:{marginBottom:14}},el('input',{style:{maxWidth:300},placeholder:'Search SKUs and flavors...',value:q,onChange:function(e){setQ(e.target.value);}}),
+        el('span',{style:{flex:1}}),isAdmin&&el('button',{className:'btn',onClick:function(){setModal({wizard:true});}},'+ New SKU')),
+      !typeSkus.length?el('div',{className:'empty'},'No '+ptName(pt)+' SKUs in '+st.name+' yet.'+(isAdmin?' Click "+ New SKU". It starts blank, and the formulation is entered as part of creating it.':'')):
+      el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(330px,1fr))'}},typeSkus.map(function(k){
+        const fl=data.flavors.filter(function(x){return x.sku_id===k.id&&x.active;});
+        const forms=data.forms.filter(function(f){return f.sku_id===k.id;});
+        const hasBase=forms.some(function(f){return !f.flavor_id;});
+        const status=k.active?['Active','ok']:(isAdmin&&!forms.length)?['Needs formulation','bad']:['Off','off'];
+        return el('div',{key:k.id,className:'card gold',style:{marginBottom:0,opacity:k.active?1:.8}},
+          el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start',flexWrap:'nowrap'}},
+            el('div',{style:{fontWeight:700,fontSize:15}},k.name),el('span',{className:'badge '+status[1]},status[0])),
+          el('div',{className:'muted',style:{fontSize:12,margin:'2px 0 8px'}},(k.license_ids||[]).length?'Licenses: '+k.license_ids.map(licName).join(', '):'Every license in '+st.name),
+          specSummary(k.product_type,k.spec)&&el('div',{style:{fontSize:12,marginBottom:8}},specSummary(k.product_type,k.spec)),
+          k.spec&&k.spec.no_flavor?el('div',{className:'muted',style:{fontSize:12}},'No flavors (plain SKU)'):
+          el('div',null,el('div',{className:'k'},fl.length+' flavor'+(fl.length===1?'':'s')),
+            el('div',{className:'row',style:{gap:4,marginTop:4}},fl.slice(0,12).map(function(x){return el('span',{key:x.id,className:'badge off',style:{textTransform:'none',letterSpacing:0}},x.name);}),fl.length>12&&el('span',{className:'muted',style:{fontSize:12}},'+'+(fl.length-12)+' more'))),
+          isAdmin&&el('div',{className:'muted',style:{fontSize:12,marginTop:8}},forms.length?((hasBase?'Base recipe':'No base recipe')+(forms.filter(function(f){return f.flavor_id;}).length?'  \u00b7  '+forms.filter(function(f){return f.flavor_id;}).length+' flavor recipe(s)':'')):'No formulation yet'),
+          el('div',{className:'row',style:{marginTop:12,gap:6}},
+            el('button',{className:'btn ghost sm',onClick:function(){setModal({flavors:k});}},'Flavors'),
+            isAdmin&&el('button',{className:'btn ghost sm',onClick:function(){openFormula(forms.find(function(f){return !f.flavor_id;})||null,k.id,'');}},hasBase?'Base recipe':'Add recipe'),
+            isAdmin&&el('button',{className:'btn ghost sm',onClick:function(){setModal({edit:k});}},'Edit'),
+            isAdmin&&el('button',{className:'btn ghost sm',onClick:function(){toggle(k);}},k.active?'Switch off':'Switch on'),
+            isAdmin&&el('button',{className:'btn danger sm',onClick:function(){del(function(){return db.remove('hx_skus',k.id);},'Delete SKU "'+k.name+'" with its flavors and formulations?');}},'Delete')));
+      })));
+  }
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,el('span',{className:'g'},st.name),' Products'),
+        el('div',{className:'sub'},'SKUs, flavors and formulations for '+st.name+'. Created once here, used by every module. Other states keep their own.'))),
+    err&&el('div',{className:'msg err'},err),
+    needs>0&&isAdmin&&el('div',{className:'msg err'},needs+' SKU'+(needs===1?' needs':'s need')+' a formulation before '+(needs===1?'it':'they')+' can be used.'),
+    tabs.length>1&&el('div',{className:'tabs'},tabs.map(function(t){return el('button',{key:t[0],className:tab===t[0]?'on':'',onClick:function(){setTab(t[0]);setQ('');setErr('');}},t[1]);})),
+    body,
+    modal&&modal.wizard&&el(SkuWizard,{state:st,licenses:lics,skus:data.skus,library:data.lib,productType:pt,onClose:function(){setModal(null);load();},onDone:closeReload}),
+    modal&&modal.edit&&el(SkuEditor,{sku:modal.edit,state:st,licenses:lics,onClose:function(){setModal(null);},onDone:closeReload}),
+    modal&&modal.flavors&&el(FlavorManager,{sku:modal.flavors,state:st,flavors:data.flavors,formulations:data.forms,isAdmin:isAdmin,reload:load,onClose:function(){setModal(null);},
+      openFormula:function(f,skuId,flavorId){setModal({formula:f,skuId:skuId,flavorId:flavorId,back:modal.flavors});}}),
+    modal&&modal.hasOwnProperty('formula')&&el(FormulationEditor,{state:st,skus:data.skus,flavors:data.flavors,formulations:data.forms,library:data.lib,productType:pt,
+      initial:modal.formula,skuId:modal.skuId,flavorId:modal.flavorId,lockSku:!!modal.skuId&&!modal.dup,lockFlavor:!!modal.back,
+      onClose:function(){setModal(modal.back?{flavors:modal.back}:null);},onDone:function(){const b=modal.back;load();setModal(b?{flavors:b}:null);}}));
+}
+
+/* ---------- Audit trail: history, void, admin page ----------
+   The database writes every change to hx_audit_log (append-only). Records are never deleted:
+   they are voided with a reason. Every change to a record needs a reason for change. */
+const AUDIT_AREAS={hx_facility_log:'Facility log entry',hx_visitor_log:'Visitor log',hx_log_lists:'Facility log lists',hx_rules:'Rulebook',
+  hx_states:'States',hx_licenses:'Licenses',hx_profiles:'Team and access',hx_skus:'SKUs',hx_flavors:'Flavors',hx_formulations:'Formulations',hx_cost_library:'Ingredient prices'};
+const AUDIT_SKIP=['voided_by','voided_at','updated_at','edit_reason'];
+function auditVal(v){
+  if(v===null||v===undefined||v==='')return '(blank)';
+  let t=typeof v==='object'?JSON.stringify(v):String(v);
+  return t.length>90?t.slice(0,90)+'...':t;
+}
+function auditDefOf(a){
+  if(a.table_name!=='hx_facility_log')return null;
+  const r=a.new_data||a.old_data||{};
+  return LOG_TYPES.find(function(t){return t.id===r.log_type;})||null;
+}
+function auditLines(a){
+  if(a.action==='INSERT')return ['Created'];
+  if(a.action==='DELETE')return ['Removed'];
+  if(a.action==='VOID')return ['Voided'];
+  const o=a.old_data||{},n=a.new_data||{},def=auditDefOf(a),out=[];
+  (a.changed||[]).forEach(function(k){
+    if(AUDIT_SKIP.indexOf(k)>=0)return;
+    const ov=o[k],nv=n[k];
+    if(k==='data'&&ov&&nv&&typeof ov==='object'&&typeof nv==='object'){
+      const keys={};Object.keys(ov).concat(Object.keys(nv)).forEach(function(x){keys[x]=1;});
+      Object.keys(keys).forEach(function(x){
+        if(JSON.stringify(ov[x])===JSON.stringify(nv[x]))return;
+        const f=def&&def.fields.find(function(y){return y.k===x;});
+        out.push((f&&f.l?f.l:x.replace(/_/g,' '))+': '+auditVal(ov[x])+' \u2192 '+auditVal(nv[x]));
+      });
+      return;
+    }
+    out.push(k.replace(/_/g,' ')+': '+auditVal(ov)+' \u2192 '+auditVal(nv));
+  });
+  return out.length?out:['Changed'];
+}
+function auditRecord(a){
+  const r=a.new_data||a.old_data||{};
+  if(a.table_name==='hx_facility_log'){const d=auditDefOf(a);return (d?d.name:'Log')+(r.item?': '+r.item:'');}
+  if(a.table_name==='hx_visitor_log')return r.visitor_name||a.row_id;
+  if(a.table_name==='hx_profiles')return r.name||r.email||a.row_id;
+  if(a.table_name==='hx_licenses')return (r.name||'')+(r.license_number?' ('+r.license_number+')':'');
+  return r.name||r.title||a.row_id;
+}
+function historyHtml(hist,def){
+  const e=esc3;
+  return '<table class="hist"><tr class="sec"><td colspan="4">CHANGE HISTORY (AUDIT TRAIL)</td></tr><tr><th style="width:auto">When</th><th style="width:auto">Who</th><th style="width:auto">What</th><th style="width:auto">Reason</th></tr>'+
+    (hist.length?hist.map(function(a){return '<tr><td>'+e(new Date(a.at).toLocaleString())+'</td><td>'+e(a.user_name||'-')+'</td><td>'+(a.action==='UPDATE'?'':'<b>'+({INSERT:'Created',VOID:'Voided',DELETE:'Removed'}[a.action]||e(a.action))+'</b><br>')+auditLines(a).filter(function(x){return a.action==='UPDATE';}).map(e).join('<br>')+'</td><td>'+e(a.reason||'-')+'</td></tr>';}).join('')
+      :'<tr><td colspan="4">No history recorded.</td></tr>')+'</table>';
+}
+function VoidModal(props){
+  const[why,setWhy]=useState('');
+  const[err,setErr]=useState('');
+  const[busy,setBusy]=useState(false);
+  async function go(){
+    setErr('');
+    if(!why.trim()){setErr('Enter the reason. It is saved permanently.');return;}
+    setBusy(true);
+    try{await props.onVoid(why.trim());}catch(e){setErr(String(e.message||e));setBusy(false);}
+  }
+  return el(Modal,{title:'Void '+props.what,onClose:props.onClose},
+    el('div',{className:'muted',style:{marginBottom:12}},'Records are never deleted. A voided entry stays on file, crossed out, with your name, the time and this reason. A void cannot be undone.'),
+    el(Field,{label:'Reason for voiding *'},el('textarea',{value:why,style:{minHeight:70},placeholder:'e.g. Duplicate of entry #12',onChange:function(e){setWhy(e.target.value);}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),
+      el('button',{className:'btn danger',disabled:busy,onClick:go},busy?'Saving...':'Void entry')));
+}
+function AuditTrail(props){
+  const st=props.state,sid=st?st.id:'';
+  const[rows,setRows]=useState(null);
+  const[area,setArea]=useState('');
+  const[range,setRange]=useState('30');
+  const[only,setOnly]=useState(true);
+  const[q,setQ]=useState('');
+  const[err,setErr]=useState('');
+  const load=useCallback(function(){
+    let qs='select=*&order=at.desc&limit=1000';
+    if(area)qs+='&table_name=eq.'+area;
+    if(range!=='all')qs+='&at=gte.'+encodeURIComponent(new Date(Date.now()-parseInt(range,10)*86400000).toISOString());
+    if(only&&sid)qs+='&or=(state_id.eq.'+encodeURIComponent(sid)+',state_id.is.null)';
+    return db.get('hx_audit_log',qs).then(function(r){setRows(r||[]);}).catch(function(e){setErr(String(e.message||e));setRows([]);});
+  },[area,range,only,sid]);
+  useEffect(function(){setRows(null);setErr('');load();},[load]);
+  const list=(rows||[]).filter(function(a){if(!q)return true;return (a.user_name+' '+auditRecord(a)+' '+(a.reason||'')+' '+auditLines(a).join(' ')).toLowerCase().indexOf(q.toLowerCase())>=0;});
+  function csv(){
+    const e=function(v){return '"'+String(v==null?'':v).replace(/"/g,'""')+'"';};
+    const lines=[['When','Who','Area','Record','Record ID','Action','Changes','Reason','State ID','License ID'].map(e).join(',')];
+    list.forEach(function(a){lines.push([a.at,a.user_name,AUDIT_AREAS[a.table_name]||a.table_name,auditRecord(a),a.row_id,a.action,auditLines(a).join(' | '),a.reason,a.state_id,a.license_id].map(e).join(','));});
+    const b=new Blob([lines.join('\n')],{type:'text/csv'});const x=document.createElement('a');x.href=URL.createObjectURL(b);x.download='audit_trail.csv';document.body.appendChild(x);x.click();x.remove();
+  }
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,'Audit ',el('span',{className:'g'},'Trail')),
+        el('div',{className:'sub'},'Every change in Hendrix: who, when, old value, new value and the reason. Written by the database; nobody can edit or delete it.')),
+      el('button',{className:'btn ghost',disabled:!list.length,onClick:csv},'Export CSV')),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{marginBottom:12}},
+      el('input',{style:{maxWidth:260},placeholder:'Search who, record, reason...',value:q,onChange:function(e){setQ(e.target.value);}}),
+      el('select',{value:area,onChange:function(e){setArea(e.target.value);}},el('option',{value:''},'All areas'),Object.keys(AUDIT_AREAS).map(function(k){return el('option',{key:k,value:k},AUDIT_AREAS[k]);})),
+      el('select',{value:range,onChange:function(e){setRange(e.target.value);}},el('option',{value:'1'},'Last 24 hours'),el('option',{value:'7'},'Last 7 days'),el('option',{value:'30'},'Last 30 days'),el('option',{value:'365'},'Last year'),el('option',{value:'all'},'All time')),
+      st&&el('label',{className:'ck'},el('input',{type:'checkbox',checked:only,onChange:function(e){setOnly(e.target.checked);}}),el('span',null,st.name+' only')),
+      el('span',{className:'muted'},rows?list.length+' change'+(list.length===1?'':'s'):'Loading...')),
+    rows&&!list.length&&el('div',{className:'empty'},'No changes in this period.'),
+    list.length>0&&el('div',{className:'card',style:{overflowX:'auto'}},el('table',null,
+      el('thead',null,el('tr',null,['When','Who','Area','Record','Action','Changes','Reason'].map(function(h){return el('th',{key:h},h);}))),
+      el('tbody',null,list.map(function(a){
+        return el('tr',{key:a.id},
+          el('td',{style:{whiteSpace:'nowrap',fontSize:13}},new Date(a.at).toLocaleString([],{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'})),
+          el('td',null,a.user_name||'-'),
+          el('td',{style:{fontSize:13}},AUDIT_AREAS[a.table_name]||a.table_name),
+          el('td',{style:{fontSize:13}},auditRecord(a)),
+          el('td',null,el('span',{className:'badge'+(a.action==='VOID'||a.action==='DELETE'?' bad':a.action==='INSERT'?' ok':'')},a.action==='INSERT'?'Created':a.action==='UPDATE'?'Changed':a.action==='VOID'?'Void':'Removed')),
+          el('td',{style:{fontSize:12,maxWidth:420}},a.action==='UPDATE'?auditLines(a).map(function(x,i){return el('div',{key:i},x);}):null),
+          el('td',{style:{fontSize:13,maxWidth:260}},a.reason||el('span',{className:'muted'},'-')));
+      })))));
+}
+
+/* ---------- App shell ---------- */
+function App(){
+  const[,force]=useState(0);
+  const rerender=function(){force(function(n){return n+1;});};
+  const[phase,setPhase]=useState('boot'); // boot | connect | login | pending | ready
+  const[profile,setProfile]=useState(null);
+  const[states,setStates]=useState([]);
+  const[licenses,setLicenses]=useState([]);
+  const[page,setPage]=useState('home');
+  const[stateId,setStateId]=useState(lsGet('hx_state')||'');
+  const[licId,setLicId]=useState(lsGet('hx_lic')||'');
+  const[loadErr,setLoadErr]=useState('');
+  const[ruleCount,setRuleCount]=useState(null);
+  useEffect(function(){
+    if(phase!=='ready'||!stateId){setRuleCount(null);return;}
+    let dead=false;setRuleCount(null);
+    db.get('hx_rules','state_id=eq.'+encodeURIComponent(stateId)+'&select=id').then(function(r){if(!dead)setRuleCount((r||[]).length);}).catch(function(){if(!dead)setRuleCount(null);});
+    return function(){dead=true;};
+  },[phase,stateId]);
+
+  const loadData=useCallback(async function(){
+    const s=await db.get('hx_states','select=*&order=name');
+    const l=await db.get('hx_licenses','select=*&order=name');
+    setStates(s||[]);setLicenses(l||[]);
+  },[]);
+
+  const boot=useCallback(async function(){
+    setLoadErr('');
+    if(!cfg().ok){setPhase('connect');return;}
+    if(!SESSION||!(await freshToken())){setPhase('login');return;}
+    try{
+      const p=await db.get('hx_profiles','id=eq.'+SESSION.user.id+'&select=*');
+      if(!p||!p[0]){setLoadErr('Your profile was not found. Make sure hendrix_setup.sql was run in this Supabase project.');setPhase('login');saveSession(null);return;}
+      setProfile(p[0]);
+      if(!p[0].approved){setPhase('pending');return;}
+      await loadData();setPhase('ready');
+    }catch(e){setLoadErr(String(e.message||e));setPhase('login');}
+  },[loadData]);
+  useEffect(function(){boot();},[boot]);
+
+  // keep the selected state/license valid; licenses always belong to the selected state
+  useEffect(function(){
+    if(phase!=='ready')return;
+    let sid=stateId;
+    if(!states.some(function(s){return s.id===sid;}))sid=states[0]?states[0].id:'';
+    const ls=licenses.filter(function(l){return l.state_id===sid&&l.active;});
+    let lid=licId;
+    if(!ls.some(function(l){return l.id===lid;}))lid=ls[0]?ls[0].id:'';
+    if(sid!==stateId){setStateId(sid);lsSet('hx_state',sid);}
+    if(lid!==licId){setLicId(lid);lsSet('hx_lic',lid);}
+  },[phase,states,licenses,stateId,licId]);
+
+  if(phase==='boot')return el('div',{className:'auth'},el(Brand));
+  if(phase==='connect')return el(ConnectScreen,{onDone:boot});
+  if(phase==='login')return el('div',null,loadErr&&el('div',{className:'msg err',style:{margin:12}},loadErr),
+    el(LoginScreen,{onAuthed:boot,onReconnect:function(){setPhase('connect');rerender();}}));
+  if(phase==='pending')return el('div',{className:'auth'},el('div',{className:'box'},el(Brand),
+    el('h2',{style:{marginTop:18}},'Waiting for approval'),
+    el('p',{className:'muted'},'Your account was created. An admin needs to approve it before you can enter.'),
+    el('div',{className:'row'},el('button',{className:'btn',onClick:boot},'Check again'),
+      el('button',{className:'btn ghost',onClick:function(){saveSession(null);setProfile(null);setPhase('login');}},'Sign out'))));
+
+  const st=states.find(function(s){return s.id===stateId;})||null;
+  const stLics=licenses.filter(function(l){return st&&l.state_id===st.id&&l.active;});
+  const lic=stLics.find(function(l){return l.id===licId;})||null;
+  const isAdmin=profile.role==='admin';
+  function pickState(id){
+    setStateId(id);lsSet('hx_state',id);
+    const first=licenses.filter(function(l){return l.state_id===id&&l.active;})[0];
+    const lid=first?first.id:'';setLicId(lid);lsSet('hx_lic',lid);
+  }
+  function pickLic(id){setLicId(id);lsSet('hx_lic',id);}
+
+  const nav=[{id:'home',label:'Dashboard'},{id:'locations',label:'States and Licenses'},{id:'rulebook',label:(st?st.name+' ':'')+'Rulebook'}];
+  if(isAdmin)nav.push({id:'team',label:'Team and Access'},{id:'audit',label:'Audit Trail'});
+  let body;
+  if(page==='locations')body=el(Locations,{profile:profile,states:states,licenses:licenses,reload:loadData,openRulebook:function(id){pickState(id);setPage('rulebook');}});
+  else if(page==='visitors')body=el(VisitorLog,{key:licId,state:st,license:lic});
+  else if(page==='products')body=el(Products,{key:stateId,state:st,licenses:licenses,profile:profile});
+  else if(page==='logs')body=el(FacilityLogs,{key:licId,state:st,license:lic,profile:profile});
+  else if(page==='rulebook')body=el(Rulebook,{key:stateId,profile:profile,state:st,onCount:setRuleCount});
+  else if(page==='team'&&isAdmin)body=el(Team,{profile:profile});
+  else if(page==='audit'&&isAdmin)body=el(AuditTrail,{state:st});
+  else body=el(Dashboard,{profile:profile,states:states,licenses:licenses,state:st,license:lic,go:setPage,ruleCount:ruleCount});
+
+  return el('div',{className:'shell'},
+    el('div',{className:'top'},
+      el(Brand),
+      el('div',{className:'sp'}),
+      el('div',{className:'ctx'},
+        el('label',null,'State'),
+        el('select',{value:stateId,onChange:function(e){pickState(e.target.value);},disabled:!states.length},
+          !states.length&&el('option',{value:''},'No states yet'),
+          states.map(function(s){return el('option',{key:s.id,value:s.id},s.name);})),
+        el('label',null,'License'),
+        el('select',{value:licId,onChange:function(e){pickLic(e.target.value);},disabled:!stLics.length},
+          !stLics.length&&el('option',{value:''},'No licenses'),
+          stLics.map(function(l){return el('option',{key:l.id,value:l.id},l.name+(l.license_number?' ('+l.license_number+')':''));}))),
+      el('div',{className:'row'},
+        el('span',{className:'muted',style:{fontSize:12}},profile.name||profile.email),
+        el('button',{className:'btn ghost sm',onClick:function(){saveSession(null);setProfile(null);setPhase('login');}},'Sign out'))),
+    el('div',{className:'side'},el('div',{className:'nav'},
+      el('div',{className:'grp'},'Hendrix'),
+      nav.map(function(n){return el('button',{key:n.id,className:page===n.id?'on':'',onClick:function(){setPage(n.id);}},n.label);}),
+      el('div',{className:'grp'},'Modules'),
+      el('button',{className:page==='visitors'?'on':'',onClick:function(){setPage('visitors');}},'Visitor Log'),
+      el('button',{className:page==='logs'?'on':'',onClick:function(){setPage('logs');}},'Facility Logs'),
+      el('button',{className:page==='products'?'on':'',onClick:function(){setPage('products');}},'Products'),
+      ['Batch Tracker','Testing','SOPs','QMS'].map(function(m){return el('button',{key:m,className:'soon',disabled:true},m,el('span',{className:'tag'},'Soon'));}))),
+    el('div',{className:'main'},body));
+}
+
+{
+  const kq=new URLSearchParams(window.location.search).get('kiosk');
+  ReactDOM.createRoot(document.getElementById('root')).render(el(kq==='visitor'?KioskVisitor:kq==='log'?KioskLog:App));
+}
+})();
+</script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hendrix QMS</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{
+  --bg:#0a0a0a; --panel:#121212; --panel2:#181818; --line:#2a2a2a;
+  --text:#f2efe6; --muted:#9a968a; --faint:#6c685e;
+  --gold:#d4af37; --gold-hi:#f1d57a; --gold-lo:#a8841c;
+  --red:#e5645a; --green:#5fbf8a;
+  --gold-grad:linear-gradient(135deg,#f1d57a 0%,#d4af37 45%,#a8841c 100%);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.5}
+button,input,select,textarea{font-family:inherit;font-size:14px}
+::selection{background:var(--gold);color:#000}
+.brand{display:flex;align-items:center;gap:10px}
+.box .brand{justify-content:center}
+.brand-name{font-weight:800;letter-spacing:.22em;font-size:15px;background:var(--gold-grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.brand-sub{font-size:10px;letter-spacing:.3em;color:var(--muted);margin-top:-2px}
+/* shell */
+.shell{display:grid;grid-template-columns:230px 1fr;grid-template-rows:auto 1fr;min-height:100vh}
+.top{grid-column:1/3;display:flex;align-items:center;gap:14px;padding:10px 18px;border-bottom:1px solid var(--line);background:#0d0d0d;position:sticky;top:0;z-index:20;flex-wrap:wrap}
+.top .sp{flex:1}
+.ctx{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ctx label{font-size:10px;letter-spacing:.18em;color:var(--gold);text-transform:uppercase}
+.side{border-right:1px solid var(--line);padding:16px 10px;background:#0d0d0d}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav .grp{font-size:10px;letter-spacing:.2em;color:var(--faint);text-transform:uppercase;margin:14px 10px 6px}
+.nav button{display:flex;align-items:center;gap:10px;background:none;border:0;color:var(--muted);text-align:left;padding:9px 12px;border-radius:8px;cursor:pointer;border-left:2px solid transparent}
+.nav button:hover{color:var(--text);background:#151515}
+.nav button.on{color:var(--gold-hi);background:#17140a;border-left-color:var(--gold)}
+.nav button.soon{opacity:.45;cursor:default}
+.nav .tag{margin-left:auto;font-size:9px;letter-spacing:.14em;color:var(--faint);text-transform:uppercase}
+.main{padding:24px 28px 60px;min-width:0}
+h1{font-size:24px;margin:0 0 4px;font-weight:700;letter-spacing:.02em}
+h1 .g{background:var(--gold-grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--muted);margin-bottom:20px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:14px;position:relative}
+.card.gold{border-top:2px solid var(--gold)}
+.card h3{margin:0 0 8px;font-size:15px;letter-spacing:.03em}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.k{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold)}
+.v{font-size:16px;margin-top:2px}
+.muted{color:var(--muted)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{border:0;border-radius:8px;padding:9px 16px;font-weight:700;cursor:pointer;background:var(--gold-grad);color:#0a0a0a;letter-spacing:.02em}
+.btn:hover{filter:brightness(1.08)}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.ghost{background:transparent;color:var(--gold-hi);border:1px solid var(--gold-lo)}
+.btn.ghost:hover{background:#17140a}
+.btn.danger{background:transparent;color:var(--red);border:1px solid #5a2a26}
+.btn.sm{padding:5px 11px;font-size:12px}
+input,select,textarea{background:#0f0f0f;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:9px 11px;width:100%}
+select{width:auto;min-width:150px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 2px rgba(212,175,55,.18)}
+textarea{min-height:90px;resize:vertical}
 label.f{display:block;margin-bottom:12px}
 label.f span{display:block;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin-bottom:5px}
 .badge{display:inline-block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:2px 8px;border-radius:20px;border:1px solid var(--gold-lo);color:var(--gold-hi)}
