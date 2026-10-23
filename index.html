@@ -88,6 +88,13 @@ td{padding:9px 10px;border-bottom:1px solid #1d1d1d;vertical-align:middle}
 .li{display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
 .li input{width:auto;min-width:0}
 .voidrow td{opacity:.5;text-decoration:line-through}.voidrow td:last-child,.voidrow td:nth-child(5){text-decoration:none}
+.chkp{border-radius:10px;padding:12px 16px;text-align:center;border:1px solid var(--line)}
+.chkp .h{font-weight:800;font-size:15px;letter-spacing:.04em}.chkp .s{font-size:12px;opacity:.9;margin-top:3px}
+.chkp.ok{background:#112218;border-color:#23543a;color:#a6e6c4}.chkp.bad{background:#2a1513;border-color:#5a2a26;color:#ffb4ac}
+.chkp.warn{background:#2a2108;border-color:#6b5414;color:#f1d57a}.chkp.none,.chkp.info{background:#151515;color:var(--muted)}.chkp.info{color:var(--text)}
+.autov{background:#151515;border:1px dashed var(--line);border-radius:8px;padding:9px 11px;font-weight:700}
+.metrcck{background:#0f1a13;border:1px solid #23543a;border-radius:8px;padding:9px 12px;margin-bottom:12px;color:#a6e6c4;font-weight:700}
+.voidcard{opacity:.55}
 .ck input{width:18px;height:18px;flex:0 0 auto;accent-color:#d4af37}
 .empty{border:1px dashed var(--gold-lo);border-radius:12px;padding:30px;text-align:center;color:var(--muted)}
 @media(max-width:820px){
@@ -105,7 +112,7 @@ td{padding:9px 10px;border-bottom:1px solid #1d1d1d;vertical-align:middle}
 <div id="root"></div>
 <script>
 (function(){
-const {useState,useEffect,useCallback,useRef}=React;
+const {useState,useEffect,useCallback,useRef,useMemo}=React;
 const el=React.createElement;
 
 /* ---------- Supabase connection (a NEW, separate project) ---------- */
@@ -158,7 +165,7 @@ async function sb(path,opt){
   if(!r.ok){
     const m=(j&&(j.message||j.hint||j.details))||txt||('Error '+r.status);
     if(/schema cache|Could not find the table|relation .* does not exist/i.test(m)){
-      const step=/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
+      const step=/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
       throw new Error('Database tables are missing - run '+step+' in the Hendrix Supabase project.');
     }
     if(/row-level security|permission denied/i.test(m))throw new Error('Not allowed - only an approved admin can change this.');
@@ -258,7 +265,7 @@ function LoginScreen(props){
 }
 
 /* ---------- Dashboard ---------- */
-const MODULES_SOON=['Batch Tracker','Testing','Compliance Stickers','SOPs','QMS (Deviations, CAPAs, Audits)','Time Clock and Badges','Production Planner'];
+const MODULES_SOON=['Testing','Compliance Stickers','SOPs','QMS (Deviations, CAPAs, Audits)','Time Clock and Badges','Production Planner'];
 function Dashboard(props){
   const st=props.state,lic=props.license;
   const isAdmin=props.profile.role==='admin';
@@ -289,14 +296,16 @@ function Dashboard(props){
 
 /* ---------- States and Licenses (admin) ---------- */
 function StateForm(props){
-  const[f,setF]=useState(props.initial||{name:'',agency:'',code:''});
+  const[f,setF]=useState(props.initial?{...props.initial,tracking_system:props.initial.tracking_system||'METRC'}:{name:'',agency:'',code:'',tracking_system:'METRC'});
   return el(Modal,{title:props.initial?'Edit state':'Add a state',onClose:props.onClose},
     el(Field,{label:'State name'},el('input',{value:f.name,placeholder:'e.g. Michigan',onChange:function(e){setF({...f,name:e.target.value});}})),
     el(Field,{label:'Regulatory agency'},el('input',{value:f.agency,placeholder:'e.g. the state cannabis regulator',onChange:function(e){setF({...f,agency:e.target.value});}})),
     el(Field,{label:'Governing code / act'},el('input',{value:f.code,placeholder:'e.g. the regulation or act reference',onChange:function(e){setF({...f,code:e.target.value});}})),
+    el(Field,{label:'Track-and-trace system'},el('input',{value:f.tracking_system,placeholder:'e.g. METRC',onChange:function(e){setF({...f,tracking_system:e.target.value});}})),
+    el('div',{className:'muted',style:{fontSize:12,marginTop:-6,marginBottom:12}},'Used in batch record labels, e.g. "Recorded on METRC?".'),
     el('div',{className:'row',style:{justifyContent:'flex-end'}},
       el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),
-      el('button',{className:'btn',disabled:!f.name.trim(),onClick:function(){props.onSave({name:f.name.trim(),agency:f.agency.trim(),code:f.code.trim()});}},'Save')));
+      el('button',{className:'btn',disabled:!f.name.trim(),onClick:function(){props.onSave({name:f.name.trim(),agency:f.agency.trim(),code:f.code.trim(),tracking_system:(f.tracking_system||'').trim()||'METRC'});}},'Save')));
 }
 function LicenseForm(props){
   const[f,setF]=useState(props.initial||{name:'',license_number:'',license_type:''});
@@ -350,7 +359,7 @@ function Locations(props){
           el('button',{className:'btn ghost sm',onClick:function(){props.openRulebook(st.id);}},'Open '+st.name+' rulebook')));
     }),
     modal&&modal.t==='state'&&el(StateForm,{initial:modal.s,onClose:function(){setModal(null);},onSave:function(v){
-      run(function(){return modal.s?db.update('hx_states',modal.s.id,v):db.insert('hx_states',{id:newId('st'),name:v.name,agency:v.agency,code:v.code,rules:[]});});}}),
+      run(function(){return modal.s?db.update('hx_states',modal.s.id,v):db.insert('hx_states',{id:newId('st'),name:v.name,agency:v.agency,code:v.code,tracking_system:v.tracking_system,rules:[]});});}}),
     modal&&modal.t==='lic'&&el(LicenseForm,{stateName:modal.st.name,initial:modal.l,onClose:function(){setModal(null);},onSave:function(v){
       run(function(){return modal.l?db.update('hx_licenses',modal.l.id,v):db.insert('hx_licenses',{id:newId('lic'),state_id:modal.st.id,name:v.name,license_number:v.license_number,license_type:v.license_type,active:true});});}}));
 }
@@ -1401,8 +1410,11 @@ const PRODUCT_TYPES=[
 function ptName(id){const t=PRODUCT_TYPES.find(function(x){return x.id===id;});return t?t.name:id;}
 const PRE_ROLL_INGREDIENTS=['THCA','Terpene','Live Resin','HTE','Decarbed Cured Resin','Distillate','Trim','THCA (internal)'];
 const SKU_SPECS={
-  pre_rolls:[{k:'grams_filled',l:'Grams per joint, filled / infused',ph:'e.g. 0.55',num:1},{k:'grams_kiefed',l:'Grams per joint after kief (blank = no kief step)',ph:'e.g. 0.60',num:1},
-    {k:'units_per_package',l:'Joints per package',ph:'e.g. 5',num:1},{k:'ingredients',l:'Infusion ingredients used',t:'multi',o:PRE_ROLL_INGREDIENTS}],
+  pre_rolls:[{k:'grams_filled',l:'Grams per joint, filled / infused',ph:'e.g. 0.55',num:1},{k:'grams_kiefed',l:'Grams per joint after coating (blank = no coating step)',ph:'e.g. 0.60',num:1},
+    {k:'coating',l:'Coating step',t:'select',o:['Kief','Diamond']},{k:'flower_type',l:'Flower used',t:'select',o:['Infused','Ground']},
+    {k:'package_name',l:'Package name',ph:'e.g. Jar or Mylar'},
+    {k:'units_per_package',l:'Joints per package (blank = no packaging check)',ph:'e.g. 1',num:1},{k:'ingredients',l:'Infusion ingredients used',t:'multi',o:PRE_ROLL_INGREDIENTS}],
+  butane_extraction:[{k:'dual',l:'Makes two products (THCA + HTE)',t:'select',o:['No','Yes']}],
   cartridges:[{k:'oil_per_unit',l:'Oil per cartridge (g)',ph:'e.g. 1 or 2',num:1}],
   gummies:[{k:'grams_per_gummy',l:'Grams per gummy',ph:'e.g. 4.6',num:1},{k:'units_per_package',l:'Gummies per package',ph:'e.g. 10',num:1}],
   infused_flower:[{k:'unit_size',l:'Unit size (g)',ph:'e.g. 3.5',num:1}],
@@ -1419,9 +1431,14 @@ function niceErr(e){
   const m=String((e&&e.message)||e);
   if(/hx_skus_name/.test(m))return 'A SKU with that name already exists for this product type in this state.';
   if(/hx_flavors_name/.test(m))return 'That flavor is already on this SKU.';
+  if(/hx_batches_number/.test(m))return 'That batch / lot number is already used under this license.';
   if(/hx_formulations_one/.test(m))return 'That SKU / flavor already has a formulation. Edit that one instead.';
   if(/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)&&/schema cache|does not exist/.test(m))return 'Database tables are missing - run hendrix_step5.sql in the Hendrix Supabase project.';
   return m;
+}
+function specInput(sp,v,set){
+  if(sp.t==='select')return el('select',{style:{width:'100%'},value:v||sp.o[0],onChange:function(e){set(e.target.value);}},sp.o.map(function(o){return el('option',{key:o,value:o},o);}));
+  return el('input',{inputMode:sp.num?'decimal':undefined,placeholder:sp.ph,value:v==null?'':v,onChange:function(e){set(e.target.value);}});
 }
 function specSummary(t,spec){
   spec=spec||{};
@@ -1546,7 +1563,7 @@ function SkuWizard(props){
       specs.length>0&&el('div',{className:'secth'},'Production settings'),
       specs.length>0&&el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}},specs.map(function(sp){
         return sp.t==='multi'?el('div',{key:sp.k,style:{gridColumn:'1/-1'}},el(Field,{label:sp.l,plain:true},el(Checks,{options:sp.o.map(function(o){return {v:o,l:o};}),value:s.spec[sp.k]||[],onChange:function(v){setS({...s,spec:{...s.spec,[sp.k]:v}});}})))
-          :el(Field,{key:sp.k,label:sp.l},el('input',{inputMode:'decimal',placeholder:sp.ph,value:s.spec[sp.k]==null?'':s.spec[sp.k],onChange:function(e){setS({...s,spec:{...s.spec,[sp.k]:e.target.value}});}}));})),
+          :el(Field,{key:sp.k,label:sp.l},specInput(sp,s.spec[sp.k],function(v){setS({...s,spec:{...s.spec,[sp.k]:v}});}));})),
       el('div',{className:'secth'},'Flavors'),
       el('label',{className:'ck',style:{marginBottom:8}},el('input',{type:'checkbox',checked:s.has_flavors,onChange:function(e){setS({...s,has_flavors:e.target.checked});}}),el('span',null,'This SKU has flavors')),
       s.has_flavors&&el(Field,{label:'Flavors - one per line (you can add more later)'},el('textarea',{value:s.flavors,style:{minHeight:120},placeholder:'Honey Melon\nBlue Dream\nStrawberry Lava',onChange:function(e){setS({...s,flavors:e.target.value});}})),
@@ -1585,7 +1602,7 @@ function SkuEditor(props){
     specs.length>0&&el('div',{className:'secth'},'Production settings'),
     specs.length>0&&el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}},specs.map(function(sp){
       return sp.t==='multi'?el('div',{key:sp.k,style:{gridColumn:'1/-1'}},el(Field,{label:sp.l,plain:true},el(Checks,{options:sp.o.map(function(o){return {v:o,l:o};}),value:s.spec[sp.k]||[],onChange:function(v){setS({...s,spec:{...s.spec,[sp.k]:v}});}})))
-        :el(Field,{key:sp.k,label:sp.l},el('input',{inputMode:'decimal',placeholder:sp.ph,value:s.spec[sp.k]==null?'':s.spec[sp.k],onChange:function(e){setS({...s,spec:{...s.spec,[sp.k]:e.target.value}});}}));})),
+        :el(Field,{key:sp.k,label:sp.l},specInput(sp,s.spec[sp.k],function(v){setS({...s,spec:{...s.spec,[sp.k]:v}});}));})),
     el('label',{className:'ck',style:{margin:'10px 0'}},el('input',{type:'checkbox',checked:!s.spec.no_flavor,onChange:function(e){setS({...s,spec:{...s.spec,no_flavor:!e.target.checked}});}}),el('span',null,'This SKU has flavors')),
     err&&el('div',{className:'msg err'},err),
     el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),
@@ -1828,7 +1845,7 @@ function Products(props){
 /* ---------- Audit trail: history, void, admin page ----------
    The database writes every change to hx_audit_log (append-only). Records are never deleted:
    they are voided with a reason. Every change to a record needs a reason for change. */
-const AUDIT_AREAS={hx_facility_log:'Facility log entry',hx_visitor_log:'Visitor log',hx_log_lists:'Facility log lists',hx_rules:'Rulebook',
+const AUDIT_AREAS={hx_batches:'Batch record',hx_facility_log:'Facility log entry',hx_visitor_log:'Visitor log',hx_log_lists:'Facility log lists',hx_rules:'Rulebook',
   hx_states:'States',hx_licenses:'Licenses',hx_profiles:'Team and access',hx_skus:'SKUs',hx_flavors:'Flavors',hx_formulations:'Formulations',hx_cost_library:'Ingredient prices'};
 const AUDIT_SKIP=['voided_by','voided_at','updated_at','edit_reason'];
 function auditVal(v){
@@ -1837,8 +1854,9 @@ function auditVal(v){
   return t.length>90?t.slice(0,90)+'...':t;
 }
 function auditDefOf(a){
-  if(a.table_name!=='hx_facility_log')return null;
   const r=a.new_data||a.old_data||{};
+  if(a.table_name==='hx_batches')return BATCH_TYPES.find(function(t){return t.id===r.batch_type;})||null;
+  if(a.table_name!=='hx_facility_log')return null;
   return LOG_TYPES.find(function(t){return t.id===r.log_type;})||null;
 }
 function auditLines(a){
@@ -1866,6 +1884,7 @@ function auditRecord(a){
   const r=a.new_data||a.old_data||{};
   if(a.table_name==='hx_facility_log'){const d=auditDefOf(a);return (d?d.name:'Log')+(r.item?': '+r.item:'');}
   if(a.table_name==='hx_visitor_log')return r.visitor_name||a.row_id;
+  if(a.table_name==='hx_batches'){const d=auditDefOf(a);return (d?d.name:'Batch')+' '+(r.batch_number||'');}
   if(a.table_name==='hx_profiles')return r.name||r.email||a.row_id;
   if(a.table_name==='hx_licenses')return (r.name||'')+(r.license_number?' ('+r.license_number+')':'');
   return r.name||r.title||a.row_id;
@@ -1941,6 +1960,517 @@ function AuditTrail(props){
           el('td',{style:{fontSize:12,maxWidth:420}},a.action==='UPDATE'?auditLines(a).map(function(x,i){return el('div',{key:i},x);}):null),
           el('td',{style:{fontSize:13,maxWidth:260}},a.reason||el('span',{className:'muted'},'-')));
       })))));
+}
+
+/* ---------- Batch Tracker: Black Fox batch records, driven by Products ----------
+   Same 8 batch types, fields, sections and system checks as Black Fox. The numbers Black Fox kept
+   in code per SKU (joint weights, oil per cart, grams per gummy, bag size, ingredients, kief or
+   diamond coating, dual THCA/HTE) come from the SKU's production settings in Products.
+   Team members continue a batch by filling blanks; admins change filled values with a reason. */
+const BT_STATUS=['In Progress','QC Hold','Passed','Failed','Completed'];
+const BT_TESTS=['Not Submitted','Submitted','Passed','Failed'];
+const BT_TOL=0.10;
+function bS(l){return {t:'section',l:l};}
+function bT(k,l,ph,x){return Object.assign({k:k,l:l,t:'text',ph:ph||''},x||{});}
+function bC(k,x){return Object.assign({k:k,l:'Recorded on METRC?',t:'checkbox',metrc:1},x||{});}
+function bD(k,l,x){return Object.assign({k:k,l:l,t:'display'},x||{});}
+function bA(k,l,x){return Object.assign({k:k,l:l,t:'auto'},x||{});}
+function bR(k,l,x){return Object.assign({k:k,l:l,t:'rd'},x||{});}
+function bSel(k,l,o,x){return Object.assign({k:k,l:l,t:'select',o:o},x||{});}
+function bHead(ph,sku,flavor){
+  const a=[{k:'batch_number',l:'Batch / Lot Number',t:'batchno',ph:ph},{k:'date',l:'Date',t:'date'},bT('operator','Operator / Personnel','Who ran this batch')];
+  if(sku)a.push({k:'sku',l:'SKU',t:'sku'});
+  if(flavor)a.push({k:'flavor',l:'Flavor',t:'flavor'});
+  return a;
+}
+function bTail(st){return [bSel('status','Status',st||BT_STATUS),{k:'notes',l:'Notes',t:'textarea',ph:'Any observations or issues'}];}
+const PR_ING={'THCA':['thca_metrc','thca_qty'],'Terpene':['terp_qty'],'Live Resin':['live_resin_metrc','live_resin_qty'],'HTE':['hte_metrc','hte_qty'],
+  'Decarbed Cured Resin':['decarbed_resin_metrc','decarbed_resin_qty'],'Distillate':['distillate_metrc','distillate_qty'],'Trim':['trim_metrc','trim_qty'],'THCA (internal)':['thca_internal_metrc','thca_internal_qty']};
+function prIng(k){for(const n in PR_ING){if(PR_ING[n].indexOf(k)>=0)return n;}return '';}
+const BATCH_TYPES=[
+  {id:'ethanol_extraction',name:'Ethanol Extraction',fields:bHead('e.g. ETH-2026-014',false,false).concat([
+    bS('Extraction'),{k:'biomass_tags',l:'Biomass Tags',t:'tags'},bA('total_biomass_used','Total Biomass Used'),
+    bT('ethanol_crude_metrc','Ethanol Crude METRC #','METRC tag for the crude oil'),bT('ethanol_crude_weight','Ethanol Crude Weight','Actual measured weight',{sug:['ethanol_crude_suggested','77%']}),bC('extraction_metrc_confirmed'),
+    bS('Recovery and Decarbing'),bT('decarbed_crude_tag','Decarbed Crude Tag','METRC tag for the decarbed crude'),bT('decarbed_crude_weight','Decarbed Crude Weight Produced','Actual measured weight',{sug:['decarbed_crude_suggested','20%']}),bC('recovery_metrc_confirmed'),
+    bS('Distillation'),bT('total_decarbed_crude_used','Total Decarbed Crude Used'),bT('total_decarbed_crude_waste','Total Decarbed Crude Waste'),bC('decarbed_waste_metrc_confirmed'),
+    bT('total_distillate_produced','Total Distillate Produced','Actual measured weight',{sug:['distillate_suggested','16%']}),bT('distillate_metrc_tag','Distillate METRC Tag','METRC tag for the finished distillate'),bC('distillation_metrc_confirmed'),
+    bS('Batch Yield Quality Check'),bD('yield_quality_result','Yield Quality')]).concat(bTail(['In Progress','Winterization','Filtration','QC Hold','Passed','Failed','Completed']))},
+  {id:'butane_extraction',name:'BHO Extraction',fields:bHead('e.g. BHO-2026-014',true,false).concat([
+    bS('Biomass Used'),{k:'biomass_tags',l:'Biomass Tags',t:'tags'},bA('total_biomass_used','Total Biomass Used'),
+    bS('BHO Crude'),bT('bho_crude_metrc','BHO Crude METRC #','METRC tag for the BHO crude'),bT('bho_crude_produced','BHO Crude Produced','Actual measured weight'),bC('bho_crude_metrc_confirmed'),
+    bS('In Progress'),
+    bT('product_inprogress_metrc','(In Progress) METRC #','',{single:1}),bT('product_inprogress_qty','(In Progress) Qty Produced','',{single:1}),bC('product_inprogress_metrc_confirmed',{single:1}),
+    bT('product_inprogress_waste','(In Progress) Waste','',{single:1}),bC('product_inprogress_waste_metrc_confirmed',{single:1}),
+    bT('hte_inprogress_metrc','HTE (In Progress) METRC #','',{dual:1}),bT('hte_inprogress_qty','HTE (In Progress) Qty Produced','',{dual:1}),bC('hte_inprogress_metrc_confirmed',{dual:1}),
+    bT('hte_inprogress_waste','HTE (In Progress) Waste','',{dual:1}),bC('hte_inprogress_waste_metrc_confirmed',{dual:1}),
+    bT('thca_inprogress_metrc','THCA (In Progress) METRC #','',{dual:1}),bT('thca_inprogress_qty','THCA (In Progress) Qty Produced','',{dual:1}),bC('thca_inprogress_metrc_confirmed',{dual:1}),
+    bT('thca_inprogress_waste','THCA (In Progress) Waste','',{dual:1}),bC('thca_inprogress_waste_metrc_confirmed',{dual:1}),
+    bS('Final'),
+    bT('product_final_metrc','Final Batch METRC #','',{single:1}),bT('product_final_qty','Final Qty','',{single:1}),bC('product_final_metrc_confirmed',{single:1}),
+    bT('product_final_waste','Final Waste','',{single:1}),bC('product_final_waste_metrc_confirmed',{single:1}),
+    bT('hte_final_metrc','HTE Final Batch METRC #','',{dual:1}),bT('hte_final_qty','HTE Final Qty','',{dual:1}),bC('hte_final_metrc_confirmed',{dual:1}),
+    bT('hte_final_waste','HTE Final Waste','',{dual:1}),bC('hte_final_waste_metrc_confirmed',{dual:1}),
+    bT('thca_final_metrc','THCA Final Batch METRC #','',{dual:1}),bT('thca_final_qty','THCA Final Qty','',{dual:1}),bC('thca_final_metrc_confirmed',{dual:1}),
+    bT('thca_final_waste','THCA Final Waste','',{dual:1}),bC('thca_final_waste_metrc_confirmed',{dual:1}),
+    bS('Yield'),bD('bho_yield_display','Yield')]).concat(bTail(['In Progress','Purging','QC Hold','Passed','Failed','Completed']))},
+  {id:'pre_rolls',name:'Pre-Rolls',fields:bHead('e.g. PR-2026-014',true,true).concat([
+    bS('Infused Flower'),bT('flower_metrc','Flower METRC #','METRC tag for the source flower'),bT('flower_qty','Flower Used','e.g. 1,000g'),
+    bT('thca_metrc','THCA #','METRC tag for the THCA used',{ing:1}),bT('thca_qty','THCA Used','e.g. 200g',{ing:1}),bT('terp_qty','Terpene Used','e.g. 40g',{ing:1}),
+    bT('live_resin_metrc','Live Resin METRC #','METRC tag for the live resin used',{ing:1}),bT('live_resin_qty','Live Resin Used','e.g. 150g',{ing:1}),
+    bT('hte_metrc','HTE METRC #','METRC tag for the HTE used',{ing:1}),bT('hte_qty','HTE Used','e.g. 120g',{ing:1}),
+    bT('decarbed_resin_metrc','Decarbed Cured Resin METRC #','METRC tag for the decarbed cured resin',{ing:1}),bT('decarbed_resin_qty','Decarbed Cured Resin Used','e.g. 100g',{ing:1}),
+    bT('distillate_metrc','Distillate METRC #','METRC tag for the distillate used',{ing:1}),bT('distillate_qty','Distillate Used','e.g. 80g',{ing:1}),
+    bT('trim_metrc','Trim METRC #','METRC tag for the trim used',{ing:1}),bT('trim_qty','Trim Used','e.g. 500g',{ing:1}),
+    bT('thca_internal_metrc','THCA METRC #','METRC tag for the THCA used',{ing:1}),bT('thca_internal_qty','THCA Used','e.g. 200g',{ing:1}),
+    bT('infused_flower_number','Infused Flower #','Infused flower batch/lot #'),bT('infused_flower_total_wt','Infused Flower Total WT','e.g. 1,240g'),bC('flower_metrc_confirmed'),
+    bS('System Check'),bD('flower_check_result','System Check'),
+    bS('Infused Joints'),bT('infused_flower_used','Infused Flower Used','Amount used for this run'),bT('infused_flower_waste','Infused Flower Waste','Amount wasted'),bC('infused_flower_waste_metrc_confirmed'),
+    bT('total_joint_filled','Total Joint Filled','e.g. 1,500 joints'),bT('infused_preroll_metrc','Infused Pre Roll METRC Tag','METRC tag for the infused joints'),bC('joints_metrc_confirmed'),
+    bS('System Check'),bD('joints_check_result','System Check'),
+    bS('Infused Kiefed Preroll',{kief:1}),bT('total_infused_preroll_used','Total Infused Pre Roll Used','Joints used for kiefing',{kief:1}),bT('total_infused_preroll_waste','Total Infused Pre Roll Waste','Joints wasted',{kief:1}),bC('preroll_waste_metrc_confirmed',{kief:1}),
+    bT('kief_metrc','Kief METRC #','METRC tag for the kief used',{kief:1}),bT('kief_qty_used','Kief QTY Used','e.g. 60g',{kief:1}),bT('total_kiefed_infused_joints','Total Kiefed Infused Joints','e.g. 1,480 joints',{kief:1}),
+    bT('kiefed_infused_preroll_metrc','Kiefed Infused Preroll METRC #','METRC tag for the kiefed joints',{kief:1}),bC('kiefed_metrc_confirmed',{kief:1}),
+    bS('System Check',{kief:1}),bD('kiefed_check_result','System Check',{kief:1}),
+    bS('Final Packaging'),bT('kiefed_infused_joints_used','Kiefed Infused Joints Used','Joints used for packaging',{kief:1}),bT('kief_infused_joints_waste','Kief Infused Joints Waste','Joints wasted during packaging',{kief:1}),bC('kief_waste_metrc_confirmed',{kief:1}),
+    bT('total_jar_packaged','Total Jar Packaged','Final packaged jar count'),bT('final_packaged_tag','Final Packaged Tag #','METRC tag for packaged units'),bD('packaging_check_result','System Check'),
+    bR('rd1_result','R&D 1'),bR('rd2_result','R&D 2'),bSel('mandatory_testing','Mandatory Testing',BT_TESTS,{afterRd:1}),bC('packaging_metrc_confirmed')]).concat(bTail())},
+  {id:'cartridges',name:'Cartridges',fields:bHead('e.g. CART-2026-014',true,true).concat([
+    bS('Source Oil / Distillate'),bT('oil_source_batch','Oil / Distillate Source Batch #','Which extraction batch this oil came from'),bT('input_weight','Input Oil Weight','e.g. 800g distillate'),
+    bT('terpene_added','Amount Terpene Added','e.g. 40g or 5%'),bC('source_metrc_confirmed'),
+    bS('Primed Oil'),bT('primed_oil_total_weight','Primed Oil Total Weight','e.g. 840g'),bT('primed_oil_metrc','Primed Oil METRC #','METRC tag for the primed oil'),
+    bT('primed_oil_used','Primed Oil Used','How much primed oil was used in this fill run'),bR('primed_rd1','R&D Test'),bR('primed_rd2','R&D Test 2'),bC('primed_metrc_confirmed'),
+    bS('System Check'),bD('primed_check_result','System Check'),
+    bS('Packaged'),bT('cart_packaged','Total Cart Packaged','Final packaged unit count'),bT('cart_packaged_metrc','Total Cart Packaged METRC#','METRC tag for packaged units'),
+    bSel('mandatory_test','Mandatory Test',BT_TESTS),bC('packaged_metrc_confirmed')]).concat(bTail())},
+  {id:'gummies',name:'Gummies',fields:bHead('e.g. GUM-2026-014',true,true).concat([
+    bS('Gummy Mixture Batch'),bT('distillate_metrc','Distillate METRC #','METRC tag for the distillate used'),bT('distillate_qty','Distillate Used','e.g. 500g'),
+    bT('gummy_mixture_batch_weight','Gummy Mixture Batch Weight','e.g. 4,500g'),bT('oil_source_batch','Gummy Mixture METRC #','METRC tag for the gummy mixture'),bC('mixture_metrc_confirmed'),
+    bS('Gummies Production Batch (Eaches)'),bA('gummy_mixture_used','Gummy Mixture Used'),bT('gummy_mixture_waste','Gummy Mixture Waste','Amount wasted'),bC('gummy_mixture_waste_metrc_confirmed'),
+    bT('units_produced','Total Gummies Produced','e.g. 5,000 gummies'),bT('gummies_batch_metrc','Gummies Production Batch METRC#','METRC tag for this production batch'),bC('production_metrc_confirmed'),
+    bS('Sugared Gummies'),bT('total_gummies_used','Total Gummies Used','Gummies used for sugaring'),bT('total_gummies_waste_presugar','Total Gummies Waste (Before Sugaring)','Gummies wasted before sugaring'),bC('gummies_waste_presugar_metrc_confirmed'),
+    bA('total_sugar_coated_gummies','Total Sugar Coated Gummies'),bT('sugar_coated_gummies_metrc','Sugar Coated Gummies METRC#','METRC tag for the sugar coated gummies'),
+    bR('gummy_rd1','R&D Test'),bR('gummy_rd2','R&D Test 2'),bC('sugared_metrc_confirmed'),
+    bS('Final Packaging'),bT('sugar_coated_used','Total Sugar Coated Gummies Used','Amount used for packaging'),bT('sugar_coated_waste','Total Sugar Coated Gummies Waste','Amount wasted during packaging'),bC('sugar_coated_waste_metrc_confirmed'),
+    bA('total_packaged_gummies','Total Packaged Gummies'),bT('final_packaged_gummies_metrc','Final Packaged Gummies METRC#','METRC tag for packaged units'),
+    bSel('gummy_mandatory_test','Mandatory Testing',BT_TESTS),bC('packaging_metrc_confirmed_gummy'),
+    bS('System Check'),bD('system_check_result','System Check')]).concat(bTail())},
+  {id:'infused_flower',name:'Infused Flower',fields:bHead('e.g. IF-2026-014',true,true).concat([
+    bS('Infused Flower'),bT('flower_metrc','Flower METRC #','METRC tag for the source flower'),bT('flower_qty','Flower Used','e.g. 1,000g'),
+    bT('thca_metrc','THCA #','METRC tag for the THCA used'),bT('thca_qty','THCA Used','e.g. 200g'),
+    bT('live_resin_metrc','Live Resin METRC #','METRC tag for the live resin used'),bT('live_resin_qty','Live Resin Used','e.g. 150g'),
+    bT('hte_metrc','HTE METRC #','METRC tag for the HTE used'),bT('hte_qty','HTE Used','e.g. 120g'),
+    bT('decarbed_resin_metrc','Decarbed Cured Resin METRC #','METRC tag for the decarbed cured resin'),bT('decarbed_resin_qty','Decarbed Cured Resin Used','e.g. 100g'),
+    bT('distillate_metrc','Distillate METRC #','METRC tag for the distillate used'),bT('distillate_qty','Distillate Used','e.g. 80g'),bT('terp_qty','Terpene Used','e.g. 40g'),
+    bT('infused_flower_number','Infused Flower METRC Tag','METRC tag for the infused flower produced'),bT('infused_flower_total_wt','Infused Flower Total WT','e.g. 1,240g'),bC('flower_metrc_confirmed'),
+    bS('System Check'),bD('flower_check_result','System Check'),bR('rd1_result','R&D Test'),bR('rd2_result','R&D Test 2'),
+    bS('Filling & Packaging',{ifPkg:1}),bT('infused_flower_used','Infused Flower Used','Amount used for this run',{ifPkg:1}),bT('units_produced','Total Bags Filled','e.g. 300 bags',{ifPkg:1}),
+    bT('cart_waste','Infused Flower Waste','Amount wasted',{ifPkg:1}),bT('metrc_tag','Final Packaging METRC Tag','METRC tag for the packaged product',{ifPkg:1}),
+    bD('packaging_check_result','Validation',{ifPkg:1}),bC('packaging_metrc_confirmed',{ifPkg:1}),bSel('mandatory_testing','Mandatory Testing',BT_TESTS,{afterRd:1})]).concat(bTail())},
+  {id:'moon_rocks',name:'Moon Rocks',fields:bHead('e.g. MR-2026-014',true,true).concat([
+    bT('oil_source_batch','Base Flower METRC#','METRC tag for the base flower'),bT('input_weight','Base Flower Weight','e.g. 500g'),
+    bT('distillate_metrc','Hash Oil METRC#','METRC tag for the hash oil used'),bT('distillate_qty','Hash Oil Used','e.g. 150g'),
+    bT('kief_metrc','Kief METRC#','METRC tag for the kief used'),bT('kief_qty_used','Kief Used','e.g. 100g'),
+    bT('units_produced','Total Moon Rocks Produced','e.g. 750g'),bT('metrc_tag','Final METRC Tag#','METRC tag for the finished product')]).concat(bTail())},
+  {id:'snow_caps',name:'Snow Caps',fields:bHead('e.g. SC-2026-014',true,true).concat([
+    bT('oil_source_batch','Base Flower METRC#','METRC tag for the base flower'),bT('input_weight','Base Flower Weight','e.g. 500g'),
+    bT('kief_metrc','Kief METRC#','METRC tag for the kief used'),bT('kief_qty_used','Kief Used','e.g. 120g'),
+    bT('units_produced','Total Snow Caps Produced','e.g. 620g'),bT('metrc_tag','Final METRC Tag#','METRC tag for the finished product')]).concat(bTail())}
+];
+const BT_FREE=['status','mandatory_testing','mandatory_test','gummy_mandatory_test','rd1_result','rd2_result','primed_rd1','primed_rd2','gummy_rd1','gummy_rd2',
+  'total_biomass_used','yield_quality_pct','yield_quality_band','gummy_mixture_used','total_sugar_coated_gummies','total_packaged_gummies'];
+const BT_SHORT={flower_check_result:'Infused Flower',joints_check_result:'Joints',kiefed_check_result:'Kiefed',packaging_check_result:'Packaging',primed_check_result:'Primed Oil',system_check_result:'Gummy Weight',yield_quality_result:'Yield'};
+function btFree(k){return BT_FREE.indexOf(k)>=0||/(_expected|_status|_suggested)$/.test(k);}
+function n0(v){const n=parseFloat(String(v==null?'':v).replace(/,/g,''));return isNaN(n)?0:n;}
+function r2(n){return String(Math.round(n*100)/100);}
+function btDirect(exp,act){if(!exp&&!act)return 'none';if(act<exp*(1-BT_TOL))return 'under';if(act>exp*(1+BT_TOL))return 'over';return 'pass';}
+function btCount(exp,act){if(!exp&&!act)return 'none';if(act>exp*(1+BT_TOL))return 'under';if(act<exp*(1-BT_TOL))return 'over';return 'pass';}
+function btSpec(sku){return (sku&&sku.spec)||{};}
+function prKief(spec){return numOk(spec.grams_kiefed)?num(spec.grams_kiefed):0;}
+function btRecalc(type,f,sku){
+  const spec=btSpec(sku),name=sku?sku.name:'';
+  if(type==='ethanol_extraction'||type==='butane_extraction'){
+    const tags=Array.isArray(f.biomass_tags)?f.biomass_tags:[];
+    const tb=tags.reduce(function(s,r){return s+n0(r&&r.weight);},0);
+    const o={...f,total_biomass_used:r2(tb)};
+    if(type==='butane_extraction')return o;
+    const dist=n0(f.total_distillate_produced),pct=tb>0?dist/tb*100:0;
+    let band='none';
+    if(tb>0&&dist>0){band=pct>=16&&pct<=19?'very_good':pct>=13&&pct<16?'good':pct>=10&&pct<13?'bad':pct>=7&&pct<10?'very_bad':'out_of_range';}
+    return {...o,ethanol_crude_suggested:r2(tb*0.77),decarbed_crude_suggested:r2(tb*0.20),distillate_suggested:r2(tb*0.16),yield_quality_pct:r2(pct),yield_quality_band:band};
+  }
+  if(type==='cartridges'){
+    const sum=n0(f.input_weight)+n0(f.terpene_added);
+    return {...f,primed_check_expected:r2(sum),primed_check_status:btDirect(sum,n0(f.primed_oil_total_weight))};
+  }
+  if(type==='gummies'){
+    const gpg=numOk(spec.grams_per_gummy)?num(spec.grams_per_gummy):4.6,per=numOk(spec.units_per_package)?num(spec.units_per_package):10;
+    const used=n0(f.gummy_mixture_batch_weight)-n0(f.gummy_mixture_waste);
+    const coated=n0(f.units_produced)-n0(f.total_gummies_waste_presugar);
+    const packaged=(coated-n0(f.sugar_coated_waste))/per;
+    const exp=(used/gpg)/per;
+    return {...f,gummy_mixture_used:r2(used),total_sugar_coated_gummies:r2(coated),total_packaged_gummies:r2(packaged),system_check_expected:r2(exp),system_check_status:btCount(exp,packaged)};
+  }
+  if(type==='infused_flower'){
+    const sum=['flower_qty','thca_qty','live_resin_qty','hte_qty','decarbed_resin_qty','distillate_qty','terp_qty'].reduce(function(s,k){return s+n0(f[k]);},0);
+    const size=numOk(spec.unit_size)?num(spec.unit_size):(String(name).indexOf('7g')>=0?7:3.5);
+    const exp=n0(f.infused_flower_used)/size;
+    return {...f,flower_check_expected:r2(sum),flower_check_status:btDirect(sum,n0(f.infused_flower_total_wt)),packaging_check_expected:r2(exp),packaging_check_status:btCount(exp,n0(f.units_produced))};
+  }
+  if(type==='pre_rolls'){
+    const used=n0(f.infused_flower_used),filled=numOk(spec.grams_filled)?num(spec.grams_filled):0.55,kief=prKief(spec);
+    const e1=filled?used/filled:0;
+    const e2=kief?(spec.coating==='Diamond'?(used+n0(f.kief_qty_used))/kief:used/kief):0;
+    const sum=['flower_qty','thca_qty','terp_qty','live_resin_qty','hte_qty','decarbed_resin_qty','distillate_qty','trim_qty','thca_internal_qty'].reduce(function(s,k){return s+n0(f[k]);},0);
+    const o={...f,joints_check_expected:r2(e1),joints_check_status:btCount(e1,n0(f.total_joint_filled)),kiefed_check_expected:r2(e2),kiefed_check_status:btCount(e2,n0(f.total_kiefed_infused_joints)),
+      flower_check_expected:r2(sum),flower_check_status:btDirect(sum,n0(f.infused_flower_total_wt))};
+    if(numOk(spec.units_per_package)&&num(spec.units_per_package)>0){
+      const src=kief?n0(f.kiefed_infused_joints_used):n0(f.total_joint_filled),ep=src/num(spec.units_per_package);
+      o.packaging_check_expected=r2(ep);o.packaging_check_status=btCount(ep,n0(f.total_jar_packaged));
+    }
+    return o;
+  }
+  return f;
+}
+function bhoYieldOf(f,sku){
+  let bio=n0(f.total_biomass_used);
+  if(!bio&&Array.isArray(f.biomass_tags))bio=f.biomass_tags.reduce(function(s,r){return s+n0(r&&r.weight);},0);
+  const pct=function(q){return bio>0&&q>0?Math.round(q/bio*10000)/100:null;};
+  if(btSpec(sku).dual==='Yes'){const t=n0(f.thca_final_qty),h=n0(f.hte_final_qty);
+    return {bio:bio,rows:[{l:'THCA Final',q:t,p:pct(t)},{l:'HTE Final',q:h,p:pct(h)},{l:'Total Yield (THCA + HTE)',q:t+h,p:pct(t+h),tot:1}]};}
+  const q=n0(f.product_final_qty);return {bio:bio,rows:[{l:((sku&&sku.name)||'Product')+' Final',q:q,p:pct(q),tot:1}]};
+}
+const BT_YIELD={very_good:['ok','VERY GOOD','16-19% distillate-to-biomass yield'],good:['ok','GOOD','13-16% distillate-to-biomass yield'],bad:['warn','BAD','10-13% distillate-to-biomass yield'],
+  very_bad:['bad','VERY BAD','7-10% distillate-to-biomass yield'],out_of_range:['none','OUT OF RANGE','Outside the 7-19% expected range'],none:['none','AWAITING DATA','Enter biomass and distillate weights to see yield quality']};
+// one place that turns a display field into [tone, headline, detail]
+function btCheck(type,key,f,sku){
+  const spec=btSpec(sku);
+  function cnt(status,noun,exp,act){
+    const m={pass:['ok','PASS',(noun.pass)],under:['bad','UNDER WEIGHT',noun.under],over:['warn','OVER WEIGHT',noun.over],none:['none','AWAITING DATA','Enter the numbers to run this check']}[status||'none'];
+    return [m[0],m[1],m[2]+(status&&status!=='none'?' \u2014 Expected \u2248 '+(exp||'0')+' \u00b110%, Actual: '+(act||'0'):'')];
+  }
+  if(key==='yield_quality_result'){const y=BT_YIELD[f.yield_quality_band||'none'];return [y[0],y[1],y[2]+(f.yield_quality_band&&f.yield_quality_band!=='none'?' \u2014 Actual yield: '+(f.yield_quality_pct||'0')+'%':'')];}
+  if(key==='primed_check_result')return cnt(f.primed_check_status,{pass:'Primed oil weight matches ingredients',under:'Primed oil weighs less than the ingredients that went in',over:'Primed oil weighs more than the ingredients that went in'},f.primed_check_expected,f.primed_oil_total_weight);
+  if(key==='flower_check_result'){const w=spec.flower_type==='Ground'?'Ground':'Infused';
+    return cnt(f.flower_check_status,{pass:w+' flower weight matches ingredients',under:w+' flower weighs less than the ingredients that went in',over:w+' flower weighs more than the ingredients that went in'},f.flower_check_expected,f.infused_flower_total_wt);}
+  if(key==='joints_check_result'||key==='kiefed_check_result'){
+    const j=key==='joints_check_result',noun=j?'joint':(spec.coating==='Diamond'?'diamond coated joint':'kiefed joint');
+    return cnt(j?f.joints_check_status:f.kiefed_check_status,{pass:'Weight per '+noun+' is on target',under:'More '+noun+'s than expected \u2014 weight per '+noun+' is under target',over:'Fewer '+noun+'s than expected \u2014 weight per '+noun+' is over target'},
+      j?f.joints_check_expected:f.kiefed_check_expected,j?f.total_joint_filled:f.total_kiefed_infused_joints);}
+  if(key==='packaging_check_result'&&type==='pre_rolls'){
+    if(!(numOk(spec.units_per_package)&&num(spec.units_per_package)>0))return null;
+    const p=(spec.package_name||'package').toLowerCase();
+    return cnt(f.packaging_check_status,{pass:'Joints per '+p+' is on target',under:'More '+p+'s than expected \u2014 fewer joints made it into each '+p,over:'Fewer '+p+'s than expected \u2014 more joints went into each '+p},f.packaging_check_expected,f.total_jar_packaged);}
+  if(key==='packaging_check_result'&&type==='infused_flower')
+    return cnt(f.packaging_check_status,{pass:'Weight per package is on target',under:'More packages than expected \u2014 weight per package is under target',over:'Fewer packages than expected \u2014 weight per package is over target'},f.packaging_check_expected,f.units_produced);
+  if(key==='system_check_result')return cnt(f.system_check_status,{pass:'Weight per gummy is on target',under:'More gummies packaged than expected \u2014 weight per gummy is under target',over:'Fewer gummies packaged than expected \u2014 weight per gummy is over target'},f.system_check_expected,f.total_packaged_gummies);
+  if(key==='bho_yield_display'){const y=bhoYieldOf(f,sku);return ['info','YIELD','Biomass used: '+(y.bio?y.bio+' g':'\u2014')+'  \u00b7  '+y.rows.map(function(r){return r.l+(r.q?' ('+r.q+' g)':'')+': '+(r.p==null?'\u2014':r.p+'%');}).join('  \u00b7  ')];}
+  return null;
+}
+// label wording per state / SKU (tracking system name, kief vs diamond, ground flower, package name, BHO SKU name)
+function btLabel(type,f,ts,sku){
+  const spec=btSpec(sku);let l=f.l;
+  if(type==='pre_rolls'&&spec.coating==='Diamond')l=l.replace(/Kiefed/g,'Diamond Coated').replace(/KIEFED/g,'DIAMOND COATED').replace(/Kief/g,'Diamond Coating').replace(/KIEF/g,'DIAMOND COATING');
+  if(type==='pre_rolls'&&spec.flower_type==='Ground')l=l.replace(/Infused Flower/g,'Ground Flower').replace(/Infused flower/g,'Ground flower');
+  if(type==='pre_rolls'&&spec.package_name)l=l.replace(/Jar/g,spec.package_name);
+  if(type==='butane_extraction'&&f.single&&f.t!=='checkbox')l=(sku&&sku.name&&spec.dual!=='Yes'?sku.name:'Product')+' '+l;
+  return l.replace(/METRC/g,ts||'METRC');
+}
+function btRdPassed(f){return f.rd1_result==='Passed'||f.rd2_result==='Passed';}
+function btVisible(type,fd,f,sku,initial){
+  const spec=btSpec(sku);
+  if(fd.ing&&type==='pre_rolls'&&(spec.ingredients||[]).indexOf(prIng(fd.k))<0)return false;
+  if(fd.kief&&!prKief(spec))return false;
+  if(type==='butane_extraction'&&fd.single&&spec.dual==='Yes')return false;
+  if(type==='butane_extraction'&&fd.dual&&spec.dual!=='Yes')return false;
+  if(fd.t==='rd'&&/rd2|_rd2$/.test(fd.k)){const first=fd.k.replace('rd2','rd1');if(f[first]!=='Failed')return false;}
+  if(fd.afterRd&&!btRdPassed(f))return false;
+  if(fd.ifPkg&&!btRdPassed(f)){const x=(initial&&initial.data)||{};if(!['infused_flower_used','units_produced','cart_waste','metrc_tag'].some(function(k){return String(x[k]||'').trim();}))return false;}
+  if(fd.k==='flavor'&&spec.no_flavor)return false;
+  return true;
+}
+function btMetrc(def,f,sku,ts){
+  const cks=def.fields.filter(function(x){return x.metrc&&btVisible(def.id,x,f,sku,null);});
+  return {done:cks.filter(function(x){return f[x.k];}).length,total:cks.length};
+}
+function CheckPanel(props){
+  const c=props.c;if(!c)return null;
+  return el('div',{className:'chkp '+c[0]},el('div',{className:'h'},c[0]==='ok'?'\u2713 '+c[1]:c[0]==='none'||c[0]==='info'?c[1]:'\u26a0 '+c[1]),el('div',{className:'s'},c[2]));
+}
+function compressFile(file){
+  return new Promise(function(res,rej){
+    if(file.size>5*1024*1024){rej(new Error(file.name+' is over 5 MB.'));return;}
+    if(/^image\//.test(file.type)){
+      const img=new Image(),url=URL.createObjectURL(file);
+      img.onload=function(){const MAX=1200;let w=img.width,h=img.height;if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
+        const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);const data=c.toDataURL('image/jpeg',0.75);URL.revokeObjectURL(url);
+        res({id:newId('att'),name:file.name,type:'image/jpeg',size:Math.round(data.length*0.75),data:data});};
+      img.onerror=function(){rej(new Error('Could not read '+file.name));};img.src=url;
+    }else{const r=new FileReader();r.onload=function(e){res({id:newId('att'),name:file.name,type:file.type||'application/octet-stream',size:file.size,data:e.target.result});};r.onerror=function(){rej(new Error('Could not read '+file.name));};r.readAsDataURL(file);}
+  });
+}
+function openAttachment(a){const x=document.createElement('a');x.href=a.data;x.download=a.name;x.target='_blank';document.body.appendChild(x);x.click();x.remove();}
+
+/* The batch form: new batch, admin edit (reason required), or "continue" (fill blanks only) */
+function BatchForm(props){
+  const def=props.def,init=props.initial,mode=props.mode||'new',ts=props.ts;
+  const[top,setTop]=useState(function(){return init?{batch_number:init.batch_number||'',sku_id:init.sku_id||'',flavor_id:init.flavor_id||'',flavor:init.flavor||''}:{batch_number:'',sku_id:'',flavor_id:'',flavor:''};});
+  const findSku=function(id){return props.allSkus.find(function(k){return k.id===id;})||null;};
+  const[d,setD]=useState(function(){
+    if(init)return {...(init.data||{})};
+    const o={};def.fields.forEach(function(f){
+      if(f.t==='date')o[f.k]=todayStr();else if(f.t==='checkbox')o[f.k]=false;else if(f.t==='tags')o[f.k]=[];
+      else if(f.t==='select')o[f.k]=f.o[0];else if(f.t==='text'||f.t==='textarea')o[f.k]='';});
+    o.operator=props.defaultName||'';return o;});
+  const[att,setAtt]=useState(function(){return init&&Array.isArray(init.attachments)?init.attachments.slice():[];});
+  const[sig,setSig]=useState('');
+  const[reason,setReason]=useState('');
+  const[err,setErr]=useState('');
+  const[busy,setBusy]=useState(false);
+  const orig=useRef(init?{...(init.data||{}),_bn:init.batch_number,_sku:init.sku_id,_fl:init.flavor_id||init.flavor}:null);
+  const sku=findSku(top.sku_id);
+  const spec=btSpec(sku);
+  const fd=useMemo(function(){return btRecalc(def.id,d,sku);},[d,sku,def.id]);
+  const flavors=props.flavors.filter(function(x){return x.sku_id===top.sku_id&&(x.active||x.id===top.flavor_id);});
+  const formula=props.formulas&&sku?(props.formulas.find(function(r){return r.sku_id===sku.id&&r.flavor_id&&r.flavor_id===top.flavor_id;})||props.formulas.find(function(r){return r.sku_id===sku.id&&!r.flavor_id;})):null;
+  function locked(k){
+    if(mode!=='fill'||!orig.current)return false;
+    if(k==='batch_number')return !!String(orig.current._bn||'').trim();
+    if(k==='sku')return !!orig.current._sku;
+    if(k==='flavor')return !!String(orig.current._fl||'').trim();
+    if(btFree(k))return false;
+    const v=orig.current[k];return typeof v==='string'&&!!v.trim();
+  }
+  function setF(k,v){setD(function(p){return {...p,[k]:v};});}
+  async function addFiles(files){
+    setErr('');
+    for(const f of Array.from(files)){try{const a=await compressFile(f);setAtt(function(p){return p.concat([a]);});}catch(e){setErr(String(e.message||e));}}
+  }
+  async function submit(){
+    setErr('');
+    if(!top.batch_number.trim()){setErr('Batch / Lot Number is required.');return;}
+    if(!fd.date){setErr('Date is required.');return;}
+    if(def.id!=='ethanol_extraction'&&!top.sku_id){setErr('Choose the SKU.');return;}
+    if(mode==='edit'&&!reason.trim()){setErr('Enter the reason for change. It is saved permanently in the audit trail.');return;}
+    const data={...fd};
+    setBusy(true);
+    try{
+      await props.onSubmit({batch_number:top.batch_number.trim(),sku_id:top.sku_id||null,flavor_id:top.flavor_id||null,flavor:top.flavor_id?undefined:String(top.flavor||'').trim(),
+        status:String(data.status||''),data:data,attachments:att,performed_by:String(data.operator||'').trim(),signature:sig||null,edit_reason:reason.trim()});
+    }catch(e){setErr(niceErr(e));}
+    setBusy(false);
+  }
+  const lockNote=el('div',{className:'muted',style:{fontSize:11,marginTop:3}},'Already entered \u2014 locked (an admin can change it with a reason)');
+  function field(f,i){
+    if(!btVisible(def.id,f,fd,sku,init))return null;
+    const key=f.k||('s'+i),lab=btLabel(def.id,f,ts,sku),lk=f.k&&locked(f.k);
+    if(f.t==='section')return el('div',{key:key,className:'secth'},lab);
+    if(f.t==='batchno')return el(Field,{key:key,label:lab+' *'},el('input',{value:top.batch_number,placeholder:f.ph,disabled:lk,onChange:function(e){setTop({...top,batch_number:e.target.value});}}),lk&&lockNote);
+    if(f.t==='sku'){
+      const opts=props.skus;
+      return el(Field,{key:key,label:'SKU *'},
+        el('select',{style:{width:'100%'},value:top.sku_id,disabled:lk,onChange:function(e){setTop({...top,sku_id:e.target.value,flavor_id:'',flavor:''});}},
+          el('option',{value:''},opts.length?'Select...':'No SKUs switched on for this license'),
+          top.sku_id&&!opts.some(function(k){return k.id===top.sku_id;})&&sku&&el('option',{value:sku.id},sku.name+' (off)'),
+          opts.map(function(k){return el('option',{key:k.id,value:k.id},k.name);})),lk&&lockNote);
+    }
+    if(f.t==='flavor'){
+      if(!top.sku_id)return el(Field,{key:key,label:'Flavor'},el('input',{disabled:true,placeholder:'Choose the SKU first'}));
+      const node=flavors.length?
+        el('select',{style:{width:'100%'},value:top.flavor_id,disabled:lk,onChange:function(e){setTop({...top,flavor_id:e.target.value,flavor:''});}},el('option',{value:''},'Select...'),flavors.map(function(x){return el('option',{key:x.id,value:x.id},x.name);}))
+        :el('input',{value:top.flavor,disabled:lk,placeholder:'No flavor list yet for this SKU \u2014 type it in',onChange:function(e){setTop({...top,flavor:e.target.value});}});
+      return el(React.Fragment,{key:key},el(Field,{label:lab},node,lk&&lockNote),
+        formula&&el('div',{className:'card',style:{borderColor:'var(--gold-lo)',padding:12}},
+          el('div',{className:'k',style:{marginBottom:6}},'Formulation \u2014 '+(formula.name||'')),
+          (formula.raw_materials||[]).map(function(m,j){return el('div',{key:j,className:'row',style:{justifyContent:'space-between',fontSize:13}},el('span',null,m.name),el('b',null,(m.qty||'')+(m.unit?' '+m.unit:'')));}),
+          formula.batch_size&&el('div',{className:'muted',style:{fontSize:12,marginTop:4}},'Standard batch: '+formula.batch_size+' units'),
+          el('div',{className:'muted',style:{fontSize:11,marginTop:4}},'From the Formulation Bank (admins only).')));
+    }
+    if(f.t==='checkbox')return el('label',{key:key,className:'ck metrcck'},el('input',{type:'checkbox',checked:!!fd[f.k],onChange:function(e){setF(f.k,e.target.checked);}}),el('span',null,lab));
+    if(f.t==='display')return el('div',{key:key,style:{marginBottom:12}},el(CheckPanel,{c:btCheck(def.id,f.k,fd,sku)}));
+    if(f.t==='auto')return el(Field,{key:key,label:lab+' (auto-calculated)'},el('div',{className:'autov'},fd[f.k]||'0'));
+    if(f.t==='rd')return el(Field,{key:key,label:lab,plain:true},el('div',{className:'row'},['Passed','Failed'].map(function(o){const on=fd[f.k]===o;
+      return el('button',{key:o,type:'button',className:'btn sm'+(on?(o==='Failed'?' selbad':''):' ghost'),onClick:function(){setF(f.k,on?'':o);}},(on?'\u2713 ':'')+o);})));
+    if(f.t==='tags'){
+      const tags=Array.isArray(fd[f.k])?fd[f.k]:[],keep=lk||(mode==='fill'&&orig.current?((orig.current[f.k]||[]).length):0);
+      return el(Field,{key:key,label:lab+' \u2014 add as many as you need',plain:true},
+        tags.map(function(r,j){const ro=mode==='fill'&&j<keep;return el('div',{key:j,className:'li'},
+          el('input',{value:(r&&r.tag)||'',disabled:ro,placeholder:'Biomass '+(ts||'METRC')+' Tag #',style:{flex:'2 1 180px'},onChange:function(e){const n=tags.map(function(x,q){return q===j?{...x,tag:e.target.value}:x;});setF(f.k,n);}}),
+          el('input',{value:(r&&r.weight)||'',disabled:ro,inputMode:'decimal',placeholder:'Weight',style:{flex:'1 1 90px'},onChange:function(e){const n=tags.map(function(x,q){return q===j?{...x,weight:e.target.value}:x;});setF(f.k,n);}}),
+          !ro&&el('button',{type:'button',className:'btn danger sm',onClick:function(){setF(f.k,tags.filter(function(_,q){return q!==j;}));}},'\u2715'));}),
+        el('button',{type:'button',className:'btn ghost sm',onClick:function(){setF(f.k,tags.concat([{tag:'',weight:''}]));}},'+ Add Biomass Tag'));
+    }
+    let input;
+    if(f.t==='date')input=el('input',{type:'date',value:fd[f.k]||'',disabled:lk,onChange:function(e){setF(f.k,e.target.value);}});
+    else if(f.t==='select')input=el('select',{style:{width:'100%'},value:fd[f.k]||f.o[0],onChange:function(e){setF(f.k,e.target.value);}},(fd[f.k]&&f.o.indexOf(fd[f.k])<0?[fd[f.k]].concat(f.o):f.o).map(function(o){return el('option',{key:o,value:o},o);}));
+    else if(f.t==='textarea')input=el('textarea',{value:fd[f.k]||'',disabled:lk,placeholder:f.ph,style:{minHeight:60},onChange:function(e){setF(f.k,e.target.value);}});
+    else input=el('input',{value:fd[f.k]||'',disabled:lk,placeholder:(f.ph||'').replace(/METRC/g,ts||'METRC'),onChange:function(e){setF(f.k,e.target.value);}});
+    return el(React.Fragment,{key:key},el(Field,{label:lab},input,lk&&lockNote,
+        f.sug&&el('div',{style:{fontSize:12,color:'var(--gold-hi)',marginTop:4}},'Average weight for a good to very good yield is usually: '+(fd[f.sug[0]]||'0')+' ('+f.sug[1]+' of Total Biomass Used)')),
+      f.k==='rd2_result'&&def.id==='infused_flower'&&!btRdPassed(fd)&&el('div',{className:'msg err',style:{marginTop:-4}},'Filling & Packaging unlocks once the R&D Test is marked Passed.'));
+  }
+  const origAtt=mode==='fill'&&init?(init.attachments||[]).length:0;
+  return el('div',null,
+    mode==='fill'&&el('div',{className:'msg ok'},'Continue this batch: fill in the blank fields. Fields that already have a value are locked.'),
+    el('div',{className:'muted',style:{fontSize:12,marginBottom:10}},'Fields marked * are required. This record is timestamped, signed and kept in the audit trail.'),
+    def.fields.map(field),
+    el('div',{className:'secth'},'Attachments'),
+    att.map(function(a,j){return el('div',{key:a.id||j,className:'li'},
+      /^image\//.test(a.type)&&el('img',{src:a.data,style:{width:40,height:40,objectFit:'cover',borderRadius:4}}),
+      el('a',{href:'#',style:{color:'var(--gold-hi)',flex:1},onClick:function(e){e.preventDefault();openAttachment(a);}},a.name),
+      el('span',{className:'muted',style:{fontSize:12}},a.size>1048576?(a.size/1048576).toFixed(1)+' MB':Math.round(a.size/1024)+' KB'),
+      !(mode==='fill'&&j<origAtt)&&el('button',{type:'button',className:'btn danger sm',onClick:function(){setAtt(att.filter(function(_,q){return q!==j;}));}},'\u2715'));}),
+    el('label',{className:'btn ghost sm',style:{display:'inline-block',margin:'4px 0 12px'}},'+ Upload file / photo',
+      el('input',{type:'file',multiple:true,accept:'.pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xlsx,.csv',style:{display:'none'},onChange:function(e){addFiles(e.target.files);e.target.value='';}})),
+    el('div',{className:'muted',style:{fontSize:11,marginTop:-8,marginBottom:12}},'Max 5 MB per file \u00b7 PDF, PNG, JPG, DOCX, XLSX'),
+    mode==='new'&&el(Field,{label:'Signature',plain:true},el(SignaturePad,{onChange:function(v){setSig(v);}})),
+    mode==='edit'&&el('div',{className:'card',style:{borderColor:'var(--gold-lo)',padding:12}},
+      el(Field,{label:'Reason for change *'},el('textarea',{value:reason,style:{minHeight:60},placeholder:'Explain why this value is being changed. Saved permanently in the audit trail.',onChange:function(e){setReason(e.target.value);}}))),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onCancel},'Cancel'),
+      el('button',{className:'btn',disabled:busy,onClick:submit},busy?'Saving...':mode==='new'?'Submit & Sign':mode==='fill'?'Save':'Save changes')));
+}
+
+function batchHtml(def,st,lic,b,sig,hist,sku){
+  const e=esc3,f=b.data||{},ts=st.tracking_system||'METRC',rows=[];
+  def.fields.forEach(function(fd){
+    if(!btVisible(def.id,fd,f,sku,b))return;
+    const l=btLabel(def.id,fd,ts,sku);
+    if(fd.t==='section'){rows.push('<tr class="sec"><td colspan="2">'+e(l.toUpperCase())+'</td></tr>');return;}
+    let v;
+    if(fd.t==='batchno')v=b.batch_number;else if(fd.t==='sku')v=b.sku;else if(fd.t==='flavor')v=b.flavor;
+    else if(fd.t==='checkbox')v=f[fd.k]?'Yes':'No';
+    else if(fd.t==='display'){const c=btCheck(def.id,fd.k,f,sku);if(!c)return;rows.push('<tr><th>'+e(l)+'</th><td class="'+(c[0]==='ok'?'ok':c[0]==='bad'||c[0]==='warn'?'bad':'')+'">'+e(c[1])+'<br><span style="color:#555">'+e(c[2])+'</span></td></tr>');return;}
+    else if(fd.t==='tags'){const t=f[fd.k]||[];v=t.length?t.map(function(r){return (r.tag||'-')+' ('+(r.weight||'-')+')';}).join('; '):'-';}
+    else v=f[fd.k];
+    rows.push('<tr><th>'+e(l)+'</th><td>'+e(v==null||v===''?'-':v)+'</td></tr>');
+  });
+  const atts=(b.attachments||[]);
+  return '<div class="hxrec"><div class="m">'+e((st.name||'').toUpperCase())+' &middot; '+e(lic.name)+' &middot; License '+e(lic.license_number||'-')+'</div>'+
+    '<h2>'+e(def.name)+' Batch Record &middot; '+e(b.batch_number)+'</h2><div class="m">Record '+e(b.id)+' &middot; created '+e(new Date(b.created_at).toLocaleString())+(b.updated_at&&b.updated_at!==b.created_at?' &middot; last change '+e(new Date(b.updated_at).toLocaleString()):'')+'</div>'+
+    '<table>'+rows.join('')+'<tr class="sec"><td colspan="2">ATTACHMENTS AND SIGN-OFF</td></tr><tr><th>Attachments</th><td>'+(atts.length?atts.map(function(a){return e(a.name);}).join('<br>'):'None')+'</td></tr>'+
+    '<tr><th>Submitted by</th><td>'+e(b.performed_by||'-')+'</td></tr><tr><th>Signature</th><td>'+(sig?'<img src="'+e(sig)+'">':'Not signed')+'</td></tr></table>'+
+    (b.voided?'<div class="void">VOID'+(b.voided_at?' &middot; '+e(new Date(b.voided_at).toLocaleString()):'')+'<br>Reason: '+e(b.void_reason||'-')+'</div>':'')+
+    (hist?historyHtml(hist,def):'')+'</div>';
+}
+
+function BatchTracker(props){
+  const st=props.state,lic=props.license,isAdmin=props.profile.role==='admin';
+  const ts=(st&&st.tracking_system)||'METRC';
+  const sid=st?st.id:'',lid=lic?lic.id:'';
+  const[type,setType]=useState(lsGet('hx_btype')||BATCH_TYPES[0].id);
+  const[cat,setCat]=useState(null);
+  const[rows,setRows]=useState(null);
+  const[q,setQ]=useState('');
+  const[from,setFrom]=useState('');
+  const[to,setTo]=useState('');
+  const[err,setErr]=useState('');
+  const[modal,setModal]=useState(null);
+  const def=BATCH_TYPES.find(function(t){return t.id===type;})||BATCH_TYPES[0];
+  const loadCat=useCallback(async function(){
+    if(!sid){setCat({skus:[],flavors:[],forms:[]});return;}
+    try{
+      const f='state_id=eq.'+encodeURIComponent(sid);
+      const r=await Promise.all([db.get('hx_skus',f+'&select=*&order=sort,name'),db.get('hx_flavors',f+'&select=*&order=sort,name'),isAdmin?db.get('hx_formulations',f+'&select=*').catch(function(){return [];}):Promise.resolve([])]);
+      setCat({skus:(r[0]||[]).filter(function(x){return x.state_id===sid;}),flavors:(r[1]||[]).filter(function(x){return x.state_id===sid;}),forms:r[2]||[]});
+    }catch(e){setErr(niceErr(e));setCat({skus:[],flavors:[],forms:[]});}
+  },[sid,isAdmin]);
+  const loadRows=useCallback(function(){
+    if(!lid||!sid){setRows([]);return Promise.resolve();}
+    let qs='license_id=eq.'+encodeURIComponent(lid)+'&state_id=eq.'+encodeURIComponent(sid)+'&batch_type=eq.'+type+'&select=id,state_id,license_id,batch_type,batch_number,sku_id,sku,flavor_id,flavor,status,data,attachments,performed_by,created_at,updated_at,voided,void_reason,voided_at&order=created_at.desc&limit=1000';
+    if(from)qs+='&created_at=gte.'+encodeURIComponent(from);
+    if(to)qs+='&created_at=lte.'+encodeURIComponent(to+'T23:59:59');
+    return db.get('hx_batches',qs).then(function(r){setRows((r||[]).filter(function(x){return x.license_id===lid&&x.state_id===sid;}));})
+      .catch(function(e){setErr(/hx_batches/.test(String(e.message))?'Database tables are missing - run hendrix_step7.sql in the Hendrix Supabase project.':String(e.message||e));setRows([]);});
+  },[lid,sid,type,from,to]);
+  useEffect(function(){loadCat();},[loadCat]);
+  useEffect(function(){setRows(null);setErr('');loadRows();},[loadRows]);
+  if(!st||!lic)return el('div',null,el('h1',null,'Batch ',el('span',{className:'g'},'Tracker')),el('div',{className:'empty'},'Pick a state and a license at the top first. Every batch belongs to exactly one license.'));
+  const allSkus=(cat&&cat.skus)||[];
+  const usable=allSkus.filter(function(k){return k.product_type===type&&k.active&&(!(k.license_ids||[]).length||k.license_ids.indexOf(lid)>=0);});
+  const skuOf=function(b){return allSkus.find(function(k){return k.id===b.sku_id;})||null;};
+  const list=(rows||[]).filter(function(b){return !q||(b.batch_number+' '+b.sku+' '+b.flavor+' '+b.status+' '+b.performed_by+' '+JSON.stringify(b.data||{})).toLowerCase().indexOf(q.toLowerCase())>=0;});
+  async function getFull(b){
+    const x=await db.get('hx_batches','id=eq.'+encodeURIComponent(b.id)+'&select=signature');
+    let h=null;if(isAdmin){try{h=await db.get('hx_audit_log','table_name=eq.hx_batches&row_id=eq.'+encodeURIComponent(b.id)+'&select=*&order=at.asc');}catch(e){h=null;}}
+    return {sig:(x&&x[0]&&x[0].signature)||'',hist:h};
+  }
+  async function view(b){setErr('');try{const r=await getFull(b);setModal({view:b,sig:r.sig,hist:r.hist});}catch(e){setErr(String(e.message||e));}}
+  async function printAll(){
+    setErr('');
+    try{const sl=list.slice(0,200),out=[];for(const b of sl){const r=await getFull(b);out.push(batchHtml(def,st,lic,b,r.sig,r.hist,skuOf(b)));}printRecords(def.name+' batches - '+lic.name,out);}
+    catch(e){setErr(String(e.message||e));}
+  }
+  function csv(){
+    const e=function(v){return '"'+String(v==null?'':v).replace(/"/g,'""')+'"';};
+    const cols=def.fields.filter(function(f){return f.k&&['batchno','sku','flavor','display'].indexOf(f.t)<0;});
+    const lines=[['State','License','License #','Batch type','Batch / Lot Number','SKU','Flavor','Status','Void'].concat(cols.map(function(f){return f.l.replace(/METRC/g,ts);})).concat(['Created','Submitted by']).map(e).join(',')];
+    list.forEach(function(b){const d=b.data||{};
+      lines.push([st.name,lic.name,lic.license_number,def.name,b.batch_number,b.sku,b.flavor,b.status,b.voided?'VOID: '+(b.void_reason||''):''].concat(cols.map(function(f){
+        const v=d[f.k];if(f.t==='checkbox')return v?'Yes':'No';if(f.t==='tags')return (v||[]).map(function(r){return r.tag+' ('+r.weight+')';}).join('; ');return v;})).concat([b.created_at,b.performed_by]).map(e).join(','));});
+    const blob=new Blob([lines.join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=type+'_batches_'+(lic.license_number||lic.id)+'.csv';document.body.appendChild(a);a.click();a.remove();
+  }
+  async function create(p){
+    await db.insert('hx_batches',{id:newId('bat'),state_id:sid,license_id:lid,batch_type:type,batch_number:p.batch_number,sku_id:p.sku_id,flavor_id:p.flavor_id,flavor:p.flavor,status:p.status,
+      data:p.data,attachments:p.attachments,performed_by:p.performed_by,signature:p.signature,source:'app'});
+    setModal(null);loadRows();
+  }
+  async function update(b,p){
+    await db.update('hx_batches',b.id,{batch_number:p.batch_number,sku_id:p.sku_id,flavor_id:p.flavor_id,flavor:p.flavor,status:p.status,data:p.data,attachments:p.attachments,edit_reason:p.edit_reason||null});
+    setModal(null);loadRows();
+  }
+  async function voidBatch(b,why){await db.update('hx_batches',b.id,{voided:true,void_reason:why});setModal(null);loadRows();}
+  async function openFull(b,mode){
+    setErr('');
+    try{const x=await db.get('hx_batches','id=eq.'+encodeURIComponent(b.id)+'&select=*');if(x&&x[0])setModal({form:mode,b:x[0]});}catch(e){setErr(String(e.message||e));}
+  }
+  const tone={ok:'ok',bad:'bad',warn:'bad'};
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,'Batch ',el('span',{className:'g'},'Tracker')),el('div',{className:'sub'},st.name+'  \u00b7  '+lic.name+(lic.license_number?'  \u00b7  '+lic.license_number:'')+'  \u00b7  Batch production records'))),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'tabs'},BATCH_TYPES.map(function(t){return el('button',{key:t.id,className:t.id===type?'on':'',onClick:function(){setType(t.id);lsSet('hx_btype',t.id);setQ('');}},t.name);})),
+    el('div',{className:'row',style:{marginBottom:12}},
+      el('input',{style:{maxWidth:260},placeholder:'Search batches...',value:q,onChange:function(e){setQ(e.target.value);}}),
+      el('span',{className:'muted'},'From'),el('input',{type:'date',style:{width:'auto'},value:from,onChange:function(e){setFrom(e.target.value);}}),
+      el('span',{className:'muted'},'To'),el('input',{type:'date',style:{width:'auto'},value:to,onChange:function(e){setTo(e.target.value);}}),
+      (from||to)&&el('button',{className:'btn ghost sm',onClick:function(){setFrom('');setTo('');}},'Clear'),
+      el('span',{style:{flex:1}}),
+      el('button',{className:'btn ghost',disabled:!list.length,onClick:csv},'CSV'),
+      el('button',{className:'btn ghost',disabled:!list.length,onClick:printAll},'Print / PDF'),
+      el('button',{className:'btn',disabled:!cat,onClick:function(){setModal({form:'new'});}},'+ New Batch')),
+    cat&&def.id!=='ethanol_extraction'&&!usable.length&&el('div',{className:'msg err'},'No '+def.name+' SKUs are switched on for '+lic.name+'. '+(isAdmin?'Add them under Products (each needs a formulation).':'Ask an admin to add them under Products.')),
+    el('div',{className:'card',style:{padding:'10px 16px'}},el('span',null,el('b',{style:{color:'var(--gold-hi)'}},list.length),' batches'),
+      el('span',{className:'muted',style:{marginLeft:18}},'Last: '+(rows&&rows[0]?new Date(rows[0].created_at).toLocaleDateString():'None'))),
+    rows===null?el('div',{className:'muted'},'Loading...'):
+    !list.length?el('div',{className:'empty'},'No '+def.name+' batches '+(q||from||to?'match.':'yet for '+lic.name+'.')):
+    list.map(function(b,i){
+      const d=b.data||{},sk=skuOf(b),m=btMetrc(def,d,sk,ts),full=m.total&&m.done===m.total;
+      return el('div',{key:b.id,className:'card'+(b.voided?' voidcard':''),style:{padding:'14px 16px'}},
+        el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+          el('div',{style:{flex:1,minWidth:240}},
+            el('div',{className:'row',style:{gap:8,marginBottom:6}},
+              el('b',{style:{color:'var(--gold-hi)'}},b.batch_number||'#'+(list.length-i)),
+              b.voided?el('span',{className:'badge bad',title:b.void_reason||''},'Void'):b.status&&el('span',{className:'badge'+(/Passed|Completed/.test(b.status)?' ok':/Failed/.test(b.status)?' bad':'')},b.status),
+              el('span',{className:'muted',style:{fontSize:12}},(d.date||'')+'  \u00b7  '+(b.performed_by||'')),
+              m.total>0&&el('span',{className:'badge'+(full?' ok':m.done?'':' bad')},ts+' '+m.done+'/'+m.total)),
+            el('div',{style:{fontSize:13}},[b.sku,b.flavor].filter(Boolean).join('  \u00b7  ')||(def.id==='ethanol_extraction'?(d.biomass_tags||[]).length+' biomass tag(s), '+(d.total_biomass_used||0)+' g':'')),
+            def.fields.filter(function(f){return f.t==='display'&&btVisible(def.id,f,d,sk,b);}).map(function(f){const c=btCheck(def.id,f.k,d,sk);
+              return c&&c[0]!=='none'&&c[0]!=='info'?el('span',{key:f.k,className:'badge '+(tone[c[0]]||''),style:{marginRight:6,marginTop:6}},btLabel(def.id,{l:BT_SHORT[f.k]||f.l},ts,sk)+': '+c[1]):null;})),
+          el('div',{className:'row',style:{gap:6}},
+            el('button',{className:'btn ghost sm',onClick:function(){view(b);}},'View'),
+            !b.voided&&!isAdmin&&el('button',{className:'btn ghost sm',onClick:function(){openFull(b,'fill');}},'Continue'),
+            !b.voided&&isAdmin&&el('button',{className:'btn ghost sm',onClick:function(){openFull(b,'edit');}},'Edit'),
+            !b.voided&&isAdmin&&el('button',{className:'btn danger sm',onClick:function(){setModal({voidb:b});}},'Void'))));
+    }),
+    modal&&modal.form&&el(Modal,{title:(modal.form==='new'?'New ':modal.form==='fill'?'Continue ':'Edit ')+def.name+' batch'+(modal.b?' \u00b7 '+modal.b.batch_number:''),wide:true,onClose:function(){setModal(null);}},
+      el(BatchForm,{def:def,ts:ts,mode:modal.form,initial:modal.b||null,skus:usable,allSkus:allSkus,flavors:(cat&&cat.flavors)||[],formulas:isAdmin?(cat&&cat.forms):null,defaultName:props.profile.name||'',
+        onCancel:function(){setModal(null);},onSubmit:function(p){return modal.form==='new'?create(p):update(modal.b,p);}})),
+    modal&&modal.voidb&&el(VoidModal,{what:'batch '+modal.voidb.batch_number,onClose:function(){setModal(null);},onVoid:function(why){return voidBatch(modal.voidb,why);}}),
+    modal&&modal.view&&el(Modal,{title:def.name+' batch '+modal.view.batch_number,wide:true,onClose:function(){setModal(null);}},
+      el('div',{dangerouslySetInnerHTML:{__html:REC_CSS+batchHtml(def,st,lic,modal.view,modal.sig,modal.hist,skuOf(modal.view))}}),
+      (modal.view.attachments||[]).length>0&&el('div',{className:'row',style:{marginTop:10}},(modal.view.attachments||[]).map(function(a){return el('button',{key:a.id,className:'btn ghost sm',onClick:function(){openAttachment(a);}},'Open '+a.name);})),
+      el('div',{className:'row',style:{justifyContent:'flex-end',marginTop:12}},el('button',{className:'btn ghost',onClick:function(){setModal(null);}},'Close'),
+        el('button',{className:'btn',onClick:function(){printRecords(def.name+' batch '+modal.view.batch_number,[batchHtml(def,st,lic,modal.view,modal.sig,modal.hist,skuOf(modal.view))]);}},'Print / PDF'))));
 }
 
 /* ---------- App shell ---------- */
@@ -2021,6 +2551,7 @@ function App(){
   let body;
   if(page==='locations')body=el(Locations,{profile:profile,states:states,licenses:licenses,reload:loadData,openRulebook:function(id){pickState(id);setPage('rulebook');}});
   else if(page==='visitors')body=el(VisitorLog,{key:licId,state:st,license:lic});
+  else if(page==='batches')body=el(BatchTracker,{key:licId,state:st,license:lic,profile:profile});
   else if(page==='products')body=el(Products,{key:stateId,state:st,licenses:licenses,profile:profile});
   else if(page==='logs')body=el(FacilityLogs,{key:licId,state:st,license:lic,profile:profile});
   else if(page==='rulebook')body=el(Rulebook,{key:stateId,profile:profile,state:st,onCount:setRuleCount});
@@ -2051,7 +2582,8 @@ function App(){
       el('button',{className:page==='visitors'?'on':'',onClick:function(){setPage('visitors');}},'Visitor Log'),
       el('button',{className:page==='logs'?'on':'',onClick:function(){setPage('logs');}},'Facility Logs'),
       el('button',{className:page==='products'?'on':'',onClick:function(){setPage('products');}},'Products'),
-      ['Batch Tracker','Testing','SOPs','QMS'].map(function(m){return el('button',{key:m,className:'soon',disabled:true},m,el('span',{className:'tag'},'Soon'));}))),
+      el('button',{className:page==='batches'?'on':'',onClick:function(){setPage('batches');}},'Batch Tracker'),
+      ['Testing','SOPs','QMS'].map(function(m){return el('button',{key:m,className:'soon',disabled:true},m,el('span',{className:'tag'},'Soon'));}))),
     el('div',{className:'main'},body));
 }
 
