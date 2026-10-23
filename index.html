@@ -7,6 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 :root{
   --bg:#0a0a0a; --panel:#121212; --panel2:#181818; --line:#2a2a2a;
@@ -169,7 +170,7 @@ async function sb(path,opt){
   if(!r.ok){
     const m=(j&&(j.message||j.hint||j.details))||txt||('Error '+r.status);
     if(/schema cache|Could not find the table|relation .* does not exist/i.test(m)){
-      const step=/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
+      const step=/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
       throw new Error('Database tables are missing - run '+step+' in the Hendrix Supabase project.');
     }
     if(/row-level security|permission denied/i.test(m))throw new Error('Not allowed - your access level does not allow this here. Ask a system admin.');
@@ -269,7 +270,7 @@ function LoginScreen(props){
 }
 
 /* ---------- Dashboard ---------- */
-const MODULES_SOON=['Compliance Stickers','SOPs','QMS (Deviations, CAPAs, Audits)','Time Clock and Badges','Production Planner'];
+const MODULES_SOON=['SOPs','QMS (Deviations, CAPAs, Audits)','Time Clock and Badges','Production Planner'];
 function Dashboard(props){
   const st=props.state,lic=props.license;
   const isAdmin=props.profile.role==='admin';
@@ -1879,7 +1880,7 @@ function Products(props){
 /* ---------- Audit trail: history, void, admin page ----------
    The database writes every change to hx_audit_log (append-only). Records are never deleted:
    they are voided with a reason. Every change to a record needs a reason for change. */
-const AUDIT_AREAS={hx_tests:'Testing record',hx_roles:'Roles',hx_batches:'Batch record',hx_facility_log:'Facility log entry',hx_visitor_log:'Visitor log',hx_log_lists:'Facility log lists',hx_rules:'Rulebook',
+const AUDIT_AREAS={hx_label_templates:'Label templates',hx_tests:'Testing record',hx_roles:'Roles',hx_batches:'Batch record',hx_facility_log:'Facility log entry',hx_visitor_log:'Visitor log',hx_log_lists:'Facility log lists',hx_rules:'Rulebook',
   hx_states:'States',hx_licenses:'Licenses',hx_profiles:'Team and access',hx_skus:'SKUs',hx_flavors:'Flavors',hx_formulations:'Formulations',hx_cost_library:'Ingredient prices'};
 const AUDIT_SKIP=['voided_by','voided_at','updated_at','edit_reason'];
 function auditVal(v){
@@ -2540,6 +2541,7 @@ const ACCESS_MODULES=[
   {id:'products',label:'Products (SKUs and flavors)',grp:'Production',help:'View / add and edit / delete'},
   {id:'formbank',label:'Formulation Bank (recipes)',grp:'Production',help:'View / add and edit / delete'},
   {id:'cogs',label:'Ingredient Prices',grp:'Production',help:'View / add and edit / delete'},
+  {id:'stickers',label:'Compliance Stickers',grp:'Production',help:'View = print stickers / Edit = add and change label templates / Full = delete templates'},
   {id:'testing',label:'Testing (lab results, COAs)',grp:'Production',help:'View / submit, upload COAs and record results / change final results with a reason and void'},
   {id:'logs',label:'Facility Logs (all)',grp:'Facility Logs',help:'Default for every log below that has no setting of its own'},
   {id:'logs_sanitation',label:'Sanitation Log',grp:'Facility Logs',child:1},
@@ -2696,18 +2698,18 @@ function Team(props){
 const LOGS_PROD=['logs_sanitation','logs_waste','logs_scale','logs_equipment','logs_temp','logs_env'];
 function pm(o,list,lv){const x={...o};(list||[]).forEach(function(k){x[k]=lv;});return x;}
 const STARTER_ROLES=[
-  ['General Manager','Leadership. Edit everywhere; Full on batches and every log; sees recipes, prices and the audit trail.',{rulebook:'editor',audit:'read',batch:'admin',testing:'admin',products:'editor',formbank:'read',cogs:'read',logs:'admin'}],
+  ['General Manager','Leadership. Edit everywhere; Full on batches and every log; sees recipes, prices and the audit trail.',{rulebook:'editor',audit:'read',batch:'admin',testing:'admin',stickers:'admin',products:'editor',formbank:'read',cogs:'read',logs:'admin'}],
   ['Assistant of General Manager','Leadership support. Edit on batches, products and every log; sees recipes and the audit trail.',{rulebook:'editor',audit:'read',batch:'editor',testing:'editor',products:'editor',formbank:'read',logs:'editor'}],
-  ['Compliance Officer','Full on every log and the rulebook; sees batches, products and the audit trail.',{rulebook:'admin',audit:'read',logs:'admin',batch:'read',testing:'admin',products:'read'}],
+  ['Compliance Officer','Full on every log and the rulebook; sees batches, products and the audit trail.',{rulebook:'admin',audit:'read',logs:'admin',batch:'read',testing:'admin',stickers:'admin',products:'read'}],
   ['Security Manager','Full on the security and visitor logs.',{rulebook:'read',logs_security:'admin',logs_visitor:'admin'}],
   ['Security Officer','Fills the security and visitor logs.',{rulebook:'read',logs_security:'editor',logs_visitor:'editor'}],
   ['Sanitation','Fills the sanitation, waste and pest control logs.',{logs_sanitation:'editor',logs_waste:'editor',logs_pest:'editor'}],
   ['Team Member','Continues batches; fills the sanitation and temp / humidity logs.',{batch:'editor',products:'read',logs_temp:'editor',logs_sanitation:'editor'}],
   ['Inventory Manager','Sees products and batches; fills the waste log.',{products:'read',batch:'read',logs_waste:'editor'}],
   ['Extraction Manager','Full on batches; fills the scale, equipment and temp / humidity logs.',{batch:'admin',testing:'editor',products:'read',formbank:'read',logs_scale:'editor',logs_equipment:'editor',logs_temp:'editor'}],
-  ['Production Manager','Full on batches; edits products; fills the production logs.',pm({batch:'admin',testing:'editor',products:'editor',formbank:'read',rulebook:'read'},LOGS_PROD,'editor')],
+  ['Production Manager','Full on batches; edits products; fills the production logs.',pm({batch:'admin',testing:'editor',stickers:'editor',products:'editor',formbank:'read',rulebook:'read'},LOGS_PROD,'editor')],
   ['Sales Manager','Sees products.',{products:'read'}],
-  ['Production Lead','Creates and continues batches; fills the production logs.',pm({batch:'editor',testing:'read',products:'read'},['logs_sanitation','logs_scale','logs_equipment','logs_temp'],'editor')]];
+  ['Production Lead','Creates and continues batches; fills the production logs.',pm({batch:'editor',testing:'read',stickers:'read',products:'read'},['logs_sanitation','logs_scale','logs_equipment','logs_temp'],'editor')]];
 function accessSummary(perms){
   const p=perms||{},out=[];
   ACCESS_MODULES.forEach(function(m){if(has(p,m.id)&&lvRank(p[m.id]))out.push(m.label.replace(/ \(.*\)$/,'')+': '+LV_NAME[p[m.id]]);});
@@ -3022,13 +3024,405 @@ function TestingPage(props){
             canE&&!r.voided&&el('label',{className:'btn ghost sm',style:{cursor:'pointer'}},busy[r.id]||(r.coa_path?'Replace COA':'Upload COA'),
               el('input',{type:'file',accept:'application/pdf,image/*',style:{display:'none'},disabled:!!busy[r.id],onChange:function(e){const f=e.target.files&&e.target.files[0];e.target.value='';if(f)runCoa(r,f);}})),
             canE&&!r.voided&&r.coa_path&&el('button',{className:'btn ghost sm',disabled:!!busy[r.id],onClick:function(){runCoa(r,null);}},'Re-read COA'),
+            r.coa_analysis&&!r.voided&&can('stickers',1)&&el('button',{className:'btn sm',onClick:function(){setModal({stick:r});}},'Compliance Sticker'),
             canE&&!r.voided&&el('button',{className:'btn ghost sm',onClick:function(){setModal({upd:r});}},'Update'),
             canF&&!r.voided&&el('button',{className:'btn danger sm',onClick:function(){setModal({voidr:r});}},'Void'))),
         open[r.id]&&el(CoaPanel,{rec:r}));
     }),
     modal&&modal.nw&&el(TestNew,{st:st,lic:lic,name:(ACC.profile&&ACC.profile.name)||'',onClose:function(){setModal(null);},onDone:function(){setModal(null);load();}}),
+    modal&&modal.stick&&el(StickerModal,{rec:modal.stick,st:st,lic:lic,onClose:function(){setModal(null);}}),
     modal&&modal.upd&&el(TestUpdate,{rec:modal.upd,full:canF,onClose:function(){setModal(null);},onDone:function(){setModal(null);load();}}),
     modal&&modal.voidr&&el(VoidModal,{what:'test record '+(modal.voidr.batch_number||''),onClose:function(){setModal(null);},onVoid:async function(why){await db.update('hx_tests',modal.voidr.id,{voided:true,void_reason:why});setModal(null);load();}}));
+}
+
+/* Label drawing ported from Black Fox (pdfSafe, drawLabel, drawLabelTri, alignment sheet) */
+function pdfSafe(s){
+  if(s==null) return s;
+  if(Array.isArray(s)) return s.map(pdfSafe);
+  return String(s)
+    .replace(/[\u{1F300}-\u{1FAFF}]/gu,'')   // emoji (misc symbols/pictographs, supplemental, transport, etc.)
+    .replace(/[\u2600-\u27BF]/g,'')          // misc symbols & dingbats (checkmarks, warning signs, scales, stars...)
+    .replace(/\uFE0F/g,'')                    // variation selector that often trails emoji
+    .replace(/\u2192/g,'->').replace(/\u2190/g,'<-').replace(/\u2194/g,'<->')
+    .replace(/[\u200B-\u200D]/g,'');          // zero-width joiners/spaces sometimes present in AI output
+}
+
+function pdfSafeDoc(doc){
+  const _text=doc.text.bind(doc);
+  doc.text=(txt,...rest)=>_text(pdfSafe(txt),...rest);
+  const _split=doc.splitTextToSize.bind(doc);
+  doc.splitTextToSize=(txt,...rest)=>_split(pdfSafe(txt),...rest);
+  return doc;
+}
+
+function drawLabelTri(doc,x,y,w,h,d,minK){
+  const pad=LABEL_PAD,gap=4,ih=h-pad*2;
+  const B=(t)=>({t:t,b:true}),N=(t)=>({t:t});
+  const flow=(runs,iw,sz)=>{
+    const lines=[];let cur=[],cw=0;
+    runs.forEach(run=>{
+      doc.setFont('helvetica',run.b?'bold':'normal');doc.setFontSize(sz);
+      run.t.split(/(\s+)/).forEach(tok=>{
+        if(tok==='') return;
+        const tw=doc.getTextWidth(tok);
+        if(cw+tw>iw&&/\S/.test(tok)&&cur.length){lines.push(cur);cur=[];cw=0;}
+        if(!cur.length&&!/\S/.test(tok)) return;
+        cur.push({t:tok,b:run.b,w:tw});cw+=tw;
+      });
+    });
+    if(cur.length) lines.push(cur);
+    return lines;
+  };
+  const LH=1.17;
+  const heightOf=(blocks,sz,iw)=>{
+    let tot=0;
+    for(const b of blocks){
+      if(b.k==='rule') tot+=sz*0.85;
+      else if(b.k==='text') tot+=flow(b.runs,iw,sz).length*sz*LH;
+      else if(b.k==='grid'){
+        for(const row of b.rows) for(const c of row){
+          const l=flow(c,iw/2,sz);
+          if(l.length>1) return Infinity;
+        }
+        tot+=b.rows.length*sz*LH;
+      }
+    }
+    return tot;
+  };
+  const colX=[[x+pad,x+w*0.375-gap],[x+w*0.375+gap,x+w*0.69-gap],[x+w*0.69+gap,x+w-pad]];
+  const info=(l,v)=>({k:'text',runs:[B(l),N(' '+(v||''))]});
+  const canna=d.canna;
+  const rows=[];
+  for(let i=0;i<canna.length;i+=2){
+    const r=[];
+    [canna[i],canna[i+1]].forEach(c=>{if(c) r.push([B(c.name+': '),N(c.mg)]);});
+    rows.push(r);
+  }
+  const cols=[
+    {max:4.6,blocks:[{k:'text',runs:[B('INGREDIENTS:')]},{k:'text',runs:[N(d.ingredients)]}]},
+    {max:4.6,blocks:[info('Servings/Doses:',d.servings),info('Best By:',d.bestBy),info('Produced By:',d.producedBy),info('Tested By:',d.testedBy),info('Tag #:',d.testTag),info('Weight:',d.weight),{k:'rule'},{k:'text',runs:[B(d.resultsHeading||'TEST RESULTS (mg/serving):')]},{k:'grid',rows:rows}]},
+    {max:4.6,blocks:[{k:'text',runs:[B('INSTRUCTIONS FOR USE AND LENGTH OF EFFECT:')]},{k:'text',runs:[N(d.instructions)]},{k:'rule'},{k:'text',runs:[B('PACKAGING APPROVAL #:')]},{k:'text',runs:[N(d.approval)]},{k:'rule'},{k:'text',runs:[B('WARNING:')]},{k:'text',runs:[N(d.warning)]}]},
+  ];
+  let allOk=true,minSz=99;
+  cols.forEach((c,ci)=>{
+    const x0=colX[ci][0],iw=colX[ci][1]-colX[ci][0];
+    let sz=c.max,ok=false;
+    for(;sz>=(minK||2.2);sz-=0.1){if(heightOf(c.blocks,sz,iw)<=ih){ok=true;break;}}
+    if(!ok) allOk=false;
+    if(sz<minSz) minSz=sz;
+    let cy=y+pad;
+    c.blocks.forEach(b=>{
+      if(b.k==='rule'){
+        const ly=cy+sz*0.4;doc.setDrawColor(0,0,0);doc.setLineWidth(0.8);doc.line(x0,ly,x0+iw,ly);cy+=sz*0.85;
+      }else if(b.k==='text'){
+        flow(b.runs,iw,sz).forEach(line=>{
+          cy+=sz*0.92;let cx=x0;
+          line.forEach(r=>{doc.setFont('helvetica',r.b?'bold':'normal');doc.setFontSize(sz);doc.setTextColor(0,0,0);doc.text(r.t,cx,cy);cx+=r.w;});
+          cy+=sz*(LH-0.92);
+        });
+      }else if(b.k==='grid'){
+        b.rows.forEach(row=>{
+          cy+=sz*0.92;
+          row.forEach((cell,i)=>{
+            let cx=x0+(iw/2)*i;
+            cell.forEach(r=>{doc.setFont('helvetica',r.b?'bold':'normal');doc.setFontSize(sz);doc.setTextColor(0,0,0);doc.text(r.t,cx,cy);cx+=doc.getTextWidth(r.t);});
+          });
+          cy+=sz*(LH-0.92);
+        });
+      }
+    });
+  });
+  // thick vertical dividers between columns
+  doc.setDrawColor(0,0,0);doc.setLineWidth(1.4);
+  [0.375,0.69].forEach(f=>doc.line(x+w*f,y+pad,x+w*f,y+h-pad));
+  drawLabel.lastSize=minSz;
+  return allOk;
+}
+
+function drawLabel(doc,x,y,w,h,d,minK){
+  if(d.layout==='tri') return drawLabelTri(doc,x,y,w,h,d,minK);
+  const pad=LABEL_PAD,iw=w-pad*2,ih=h-pad*2;
+  const paras=labelParagraphs(d);
+  const BASE=3.7;
+  let layout=null,fs=BASE,ok=false;
+  for(let sz=BASE;sz>=(minK||2.2);sz-=0.1){
+    const lines=[];
+    paras.forEach(p=>{
+      let cur=[],cw=0;
+      p.forEach(item=>{
+        if(item.chunk){
+          // label + value stay together on one line; wrap only between chunks
+          const toks=[];let tw=0;
+          item.chunk.forEach(run=>{doc.setFont('helvetica',run.b?'bold':'normal');doc.setFontSize(sz);
+            run.t.split(/(\s+)/).forEach(tok=>{if(tok==='')return;const w=doc.getTextWidth(tok);toks.push({t:tok,b:run.b,w:w});tw+=w;});});
+          if(cw+tw>iw&&cur.length){while(cur.length&&!/\S/.test(cur[cur.length-1].t))cur.pop();lines.push(cur);cur=[];cw=0;}
+          toks.forEach(t=>{cur.push(t);cw+=t.w;});
+          return;
+        }
+        const run=item;
+        doc.setFont('helvetica',run.b?'bold':'normal');doc.setFontSize(sz);
+        run.t.split(/(\s+)/).forEach(tok=>{
+          if(tok==='') return;
+          const tw=doc.getTextWidth(tok);
+          if(cw+tw>iw&&/\S/.test(tok)&&cur.length){lines.push(cur);cur=[];cw=0;}
+          if(!cur.length&&!/\S/.test(tok)) return;
+          cur.push({t:tok,b:run.b,w:tw});cw+=tw;
+        });
+      });
+      if(cur.length) lines.push(cur);
+    });
+    const tot=lines.length*sz*1.15;
+    layout=lines;fs=sz;
+    if(tot<=ih){ok=true;break;}
+  }
+  let cy=y+pad;
+  layout.forEach(line=>{
+    cy+=fs*0.92;let cx=x+pad;
+    line.forEach(r=>{doc.setFont('helvetica',r.b?'bold':'normal');doc.setFontSize(fs);doc.setTextColor(0,0,0);doc.text(r.t,cx,cy);cx+=r.w;});
+    cy+=fs*0.23;
+  });
+  drawLabel.lastSize=fs;
+  return ok;
+}
+
+function buildAlignmentSheet(stock,offX,offY){
+  const{jsPDF}=window.jspdf;
+  const doc=pdfSafeDoc(new jsPDF({unit:'pt',format:'letter'}));
+  const per=stock.cols*stock.rows;
+  for(let pos=0;pos<per;pos++){
+    const col=pos%stock.cols,row=Math.floor(pos/stock.cols);
+    const x=(stock.left+col*stock.pitchX+(offX||0))*72,y=(stock.top+row*stock.pitchY+(offY||0))*72,w=stock.w*72,h=stock.h*72;
+    doc.setDrawColor(0);doc.setLineWidth(.6);doc.rect(x,y,w,h);
+    doc.setDrawColor(120);doc.setLineWidth(.3);
+    if(doc.setLineDash)doc.setLineDash([2,2],0);
+    doc.rect(x+LABEL_PAD,y+LABEL_PAD,w-LABEL_PAD*2,h-LABEL_PAD*2);
+    if(doc.setLineDash)doc.setLineDash([],0);
+    doc.line(x+w/2-6,y+h/2,x+w/2+6,y+h/2);doc.line(x+w/2,y+h/2-6,x+w/2,y+h/2+6);
+    doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(0);
+    doc.text('#'+(pos+1)+'  4" x 1"  (dashed = print-safe area)',x+LABEL_PAD+2,y+LABEL_PAD+8);
+  }
+  // Ruler: if this does not measure exactly 7.00 in on paper, the print dialog is scaling the page.
+  doc.setDrawColor(0);doc.setLineWidth(.8);doc.line(54,770,558,770);
+  doc.line(54,764,54,776);doc.line(558,764,558,776);
+  doc.setFont('helvetica','bold');doc.setFontSize(8);
+  doc.text('This line must measure exactly 7.00 in. If not, set the print scale to 100% / Actual size (no "Fit", no margins).',56,761);
+  return doc;
+}
+
+const BF_LABEL_TEMPLATES=[{"name": "2G Infused Pre Roll \u2014 Banana Pie", "sku": "Muha Meds 2G Infused Pre Roll", "flavor": "Banana Pie", "metrc_approval": "M00002721406", "servings": "200", "weight": "2g", "instructions": "Heat Flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of Marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCA Isolate, Cannabis Live Resin, Cannabis Cured Resin, Cannabis Distillate, Cannabis Kief, Alpha-Pinene, Beta-Pinene, Beta-Caryophyllene, Myrcene, Nerolidol, Ocimene, Terpinolene, Valencene, Bisabolol, Camphene, Citronellol, Eugenol, Farnesene, Fenchyl Alcohol, Menthol, Maltol, 3-Hexenol, Isoamyl Acetate, Isoamyl Alcohol, Isoamyl Isovalerate, Butyl Butyrate, Ethyl Butyrate, Ethyl Isovalerate, Ethyl Propionate, Vanillin, Heliotropine, Delta-Decalactone, Gamma-Undecalactone, Delta-Dodecalactone, Gamma-Dodecalactone, Acetoin, Anise Alcohol, Anisaldehyde, P-Anisyl Acetate, D-Limonene, Sabinene, Delta-3-Carene, Alpha-Phellandrene, Beta-Phellandrene, Trans-Beta-Ocimene, Para-Cymene, Octanal, Cis-1,2-Limonene Oxide, Trans-1,2-Limonene Oxide, Decanal, 1-Octanol, Linalool, Arabic Gum, Rice Paper, Solvent (Butane, Propane, or Ethanol)", "layout": ""}, {"name": "2G Infused Pre Roll \u2014 Desert Gold Chocolate", "sku": "Muha Meds 2G Infused Pre Roll", "flavor": "Desert Gold Chocolate", "metrc_approval": "M00002721221", "servings": "200", "weight": "2g", "instructions": "Heat Flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of Marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCA Isolate, Cannabis Live Resin, Cannabis Cured Resin, Cannabis Distillate, Cannabis Kief, 2,5-Dimethylpyrazine, 5-Methyl-2-Phenyl-2-Hexenal, Anisaldehyde, Benzaldehyde, Beta-Caryophyllene, Beta-Pinene, Butyl Butyrolactate, Butyl Lactate, Dihydrocoumarin, Dimethylhydroxy Furanone, Ethyl Butyrate, Ethyl Lactate, Ethyl Propionate, Gamma-Dodecalactone, Gamma-Nonalactone, Gamma-Octalactone, Gamma-Undecalactone, Heliotropine, Hexyl Butyrate, Isoamyl Phenylacetate, Isopentanal, Maltol, Myrcene, Raspberry Ketone, Vanillin, Acetoin, Delta-Decalactone, Delta-Dodecalactone, Anise Alcohol, P-Anisyl Acetate, Butyric Acid, Caprylic Acid, D-Limonene, Alpha-Pinene, Sabinene, Delta-3-Carene, Alpha-Phellandrene, Beta-Phellandrene, Trans-Beta-Ocimene, Para-Cymene, Octanal, Cis-1,2-Limonene Oxide, Trans-1,2-Limonene Oxide, Decanal, 1-Octanol, Linalool, Arabic Gum, Rice Paper, Solvent (Butane, Propane, or Ethanol)", "layout": ""}, {"name": "2G Infused Pre Roll \u2014 PB Jelly", "sku": "Muha Meds 2G Infused Pre Roll", "flavor": "PB Jelly", "metrc_approval": "M00002721224", "servings": "200", "weight": "2g", "instructions": "Heat Flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of Marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCA Isolate, Cannabis Live Resin, Cannabis Cured Resin, Cannabis Distillate, Cannabis Kief, Beta-Caryophyllene, Beta-Pinene, Myrcene, Delta-3-Carene, Gamma-Undecalactone, Delta-Decalactone, Gamma-Dodecalactone, Delta-Dodecalactone, Vanillin, Heliotropine, Ethyl Butyrate, Ethyl Propionate, Isoamyl Butyrate, Isoamyl Salicylate, Ethyl Phenyl Acetate, Methyl Phenyl Acetate, Methyl Benzoate, Maltol, Cyclotene, Trimethyl Pyrazine, Pyrazine Mixture, Acetoin, Methyl Heptenone, Iso Jasmone, Anise Alcohol, Anisaldehyde, P-Anisyl Acetate, D-Limonene, Sabinene, Alpha-Phellandrene, Beta-Phellandrene, Trans-Beta-Ocimene, Para-Cymene, Octanal, Cis-1,2-Limonene Oxide, Trans-1,2-Limonene Oxide, Decanal, 1-Octanol, Linalool, Alpha-Pinene, Terpinyl Acetate, Eucalyptol, Alpha-Terpineol, Terpinolene, Alpha-Terpinene, Gamma-Terpinene, Citral, Nerol, Geraniol, Citronellol, Camphene, Borneol, Arabic Gum, Rice Paper, Solvent (Butane, Propane, or Ethanol)", "layout": ""}, {"name": "2G Infused Pre Roll \u2014 Cinnamon Cream OG", "sku": "Muha Meds 2G Infused Pre Roll", "flavor": "Cinnamon Cream OG", "metrc_approval": "M00002721329", "servings": "200", "weight": "2g", "instructions": "Heat Flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of Marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCA Isolate, Cannabis Live Resin, Cannabis Cured Resin, Cannabis Distillate, Cannabis Kief, Alpha-Pinene, Beta-Caryophyllene, Beta-Pinene, Myrcene, Linalool, Linalyl Acetate, Alpha-Terpineol, Delta-Decalactone, Gamma-Undecalactone, Delta-Dodecalactone, Gamma-Dodecalactone, Gamma-Octalactone, Vanillin, Heliotropine, Ethyl Propionate, Acetoin, Anise Alcohol, Anisaldehyde, P-Anisyl Acetate, Benzaldehyde, Cinnamyl Alcohol, Dihydrocoumarin, Ethyl 2,4-Decadienoate, Maltol, Trimethyl Pyrazine, Terpinolene, D-Limonene, Sabinene, Delta-3-Carene, Alpha-Phellandrene, Beta-Phellandrene, Trans-Beta-Ocimene, Para-Cymene, Octanal, Cis-1,2-Limonene Oxide, Trans-1,2-Limonene Oxide, Decanal, 1-Octanol, Sabinene, Alpha-Pinene, Beta-Pinene, Myrcene, Limonene, Terpinene, Terpineol, Eugenol, Safrole, Myristicin, Elemicin, Arabic Gum, Rice Paper, Solvent (Butane, Propane, or Ethanol)", "layout": ""}, {"name": "2G Infused Pre Roll \u2014 Lemon Cheesecake", "sku": "Muha Meds 2G Infused Pre Roll", "flavor": "Lemon Cheesecake", "metrc_approval": "M00002721223", "servings": "200", "weight": "2g", "instructions": "Heat Flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of Marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCA Isolate, Cannabis Live Resin, Cannabis Cured Resin, Cannabis Distillate, Cannabis Kief, Beta-Pinene, Myrcene, Linalool, Alpha-Pinene, Decanal, Citral, Allyl Caproate, Eucalyptol, Octanal, Styrallyl Acetate, Nonanal, Fenchol, Maltol, Ethyl 2-Methyl Butyrate, Citronellal, Acetoin, Alpha-Terpinene, Anisaldehyde, Anise Alcohol, Beta-Caryophyllene, Butyl Butyrolactate, Butyl Lactate, Delta-Decalactone, Delta-Dodecalactone, Ethyl Propionate, Gamma-Dodecalactone, Gamma-Undecalactone, Geranyl Acetate, Heliotropine, Pentanedione, Raspberry Ketone, Terpinolene, Vanillin, D-Limonene, Sabinene, Delta-3-Carene, Alpha-Phellandrene, Beta-Phellandrene, Trans-Beta-Ocimene, Para-Cymene, Cis-1,2-Limonene Oxide, Trans-1,2-Limonene Oxide, 1-Octanol, Terpinyl Acetate, Gamma-Terpinene, Camphene, Alpha-Fenchene, 1,4-Cineole, Ocimene Quintoxide, 1-Terpineol, Alpha-Fenchyl Alcohol, Terpinen-4-ol, Alpha-Terpineol, Geranial, Zingiberene, Beta-Sesquiphellandrene, Ar-Curcumene, Bisabolene, Alpha-Zingiberene, Arabic Gum, Rice Paper, Solvent (Butane, Propane, or Ethanol)", "layout": ""}, {"name": "2G Infused Pre Roll \u2014 Midnight Expresso", "sku": "Muha Meds 2G Infused Pre Roll", "flavor": "Midnight Expresso", "metrc_approval": "M00002721330", "servings": "200", "weight": "2g", "instructions": "Heat Flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of Marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCA Isolate, Cannabis Live Resin, Cannabis Cured Resin, Cannabis Distillate, Cannabis Kief, Beta-Caryophyllene, Alpha-Terpineol, Alpha-Pinene, Beta-Pinene, Nerolidol, Gamma-Octalactone, Furfural, Vanillin, Gamma-Undecalactone, Furfuryl Mercaptan, Myrcene, Acetoin, Pyrazine Mixture, Orange Terpenes, Delta-Decalactone, Ethyl Propionate, Delta-Dodecalactone, Gamma-Dodecalactone, Heliotropine, Anise Alcohol, Anisaldehyde, P-Anisyl Acetate, Butyric Acid, Caprylic Acid, Arabic Gum, Rice Paper, Solvent (Butane or Propane or Ethanol).", "layout": ""}, {"name": "2G Infused Pre Roll \u2014 Peaches & Cream", "sku": "Muha Meds 2G Infused Pre Roll", "flavor": "Peaches & Cream", "metrc_approval": "M00002721331", "servings": "200", "weight": "2g", "instructions": "Heat Flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of Marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCA Isolate, Cannabis Live Resin, Cannabis Cured Resin, Cannabis Distillate, Cannabis Kief, Alpha-Pinene, Beta-Pinene, D-Limonene, Ethyl Butyrate, Ethyl Lactate, Linalool, Myrcene, Arabic Gum, Rice Paper, Solvent (Butane or Propane or Ethanol).", "layout": ""}, {"name": "2G Infused Pre Roll \u2014 Pineapple Poison", "sku": "Muha Meds 2G Infused Pre Roll", "flavor": "Pineapple Poison", "metrc_approval": "M00002721332", "servings": "200", "weight": "2g", "instructions": "Heat Flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of Marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCA Isolate, Cannabis Live Resin, Cannabis Cured Resin, Cannabis Distillate, Cannabis Kief, Beta-Pinene, Linalool, Alpha-Pinene, Myrcene, Allyl Caproate, Ethyl Butyrate, Beta-Caryophyllene, Nerolidol, Ethyl Hexanoate, Geraniol, Vanillin, Butyl Butyrolactate, Butyl Lactate, Ethyl Propionate, Gamma-Octalactone, Heliotropine, Fenchyl Alcohol, Gamma-Nonalactone, Delta-Decalactone, Acetoin, Delta-Dodecalactone, Gamma-Undecalactone, Gamma-Dodecalactone, Maltol, Dimethylhydroxy Furanone, Pentanedione, Anisaldehyde, Anise Alcohol, P-Anisyl Acetate, Butyric Acid, D-Limonene, Sabinene, Delta-3-Carene, Alpha-Phellandrene, Beta-Phellandrene, Trans-Beta-Ocimene, Para-Cymene, Octanal, Cis-1,2-Limonene Oxide, Trans-1,2-Limonene Oxide, Decanal, 1-Octanol, Terpinyl Acetate, Eucalyptol, Alpha-Terpineol, Terpinolene, Alpha-Terpinene, Gamma-Terpinene, Citral, Nerol, Citronellol, Camphene, Borneol, Arabic Gum, Rice Paper, Solvent (Butane, Propane, or Ethanol)", "layout": ""}, {"name": "2G Infused Pre Roll \u2014 Strawberry Lava", "sku": "Muha Meds 2G Infused Pre Roll", "flavor": "Strawberry Lava", "metrc_approval": "M00002721333", "servings": "200", "weight": "2g", "instructions": "Heat Flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of Marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCA Isolate, Cannabis Live Resin, Cannabis Cured Resin, Cannabis Distillate, Cannabis Kief, Myrcene, Beta-Caryophyllene, Linalool, Beta-Pinene, Alpha-Terpineol, Alpha-Pinene, Fenchol, Octanal, Alpha-Bisabolol, Nootkatone, Ethyl Butyrate, Camphene, Terpinolene, Citronellal, Thiomenthone, Ethyl Hexanoate, Humulene, Geraniol, Camphor, Cedrene Alpha, Ocimene, Menthol, Sabinene, Borneol, Delta-3-Carene, Alpha-Phellandrene, Alpha-Terpinene, Gamma-Decalactone, Isoamyl Butyrate, Ethyl 2-Methylbutyrate, Ethyl Cinnamate, 3-Hexenol, 2-Methylbutyric Acid, Cis-3-Hexenyl Butyrate, Hexenyl Acetate, Dimethylhydroxy Furanone, Cis-3-Hexenyl Hexanoate, Beta-Ionone, Caproic Acid, Vanillin, Benzaldehyde, S-Methyl Butanethioate, D-Limonene, Beta-Phellandrene, Para-Cymene, Cis-1,2-Limonene Oxide, Trans-1,2-Limonene Oxide, Decanal, 1-Octanol, Terpinyl Acetate, Eucalyptol, Gamma-Terpinene, Citral, Nerol, Citronellol, Nonanal, Decanal, Allyl Caproate, Caprylic Acid, Capric Acid, Lauric Acid, Myristic Acid, Palmitic Acid, Stearic Acid, Oleic Acid, Arabic Gum, Rice Paper, Solvent (Butane, Propane, or Ethanol)", "layout": ""}, {"name": "2G Infused Pre Roll \u2014 Honey Melon", "sku": "Muha Meds 2G Infused Pre Roll", "flavor": "Honey Melon", "metrc_approval": "M00002721335", "servings": "200", "weight": "2g", "instructions": "Heat Flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of Marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCA Isolate, Cannabis Live Resin, Cannabis Cured Resin, Cannabis Distillate, Cannabis Kief, Acetic Acid, Alpha-Bisabolol, Alpha-Cedrene, Alpha-Phellandrene, Alpha-Pinene, Alpha-Terpinene, Alpha-Terpineol, Anisyl Acetate, Beta-Caryophyllene, Beta-Pinene, Borneol, Butyl Butyryl Lactate, Camphene, Caryophyllene Oxide, Cedrene Alpha, Citral, Citronellol, Cis-3-Hexenol, Cis-3-Nonenol, Cis-6-Nonenol, D-Camphor, D-Limonene, Delta-3-Carene, Diethyl Succinate, Ethyl 2-Methyl Butyrate, Ethyl Butyrate, Ethyl Furanone, Ethyl Isovalerate, Ethyl Maltol, Ethyl Propionate, Farnesene, Fenchol, Fenchyl Alcohol, Furfural, Gamma-Decalactone, Gamma-Octalactone, Gamma-Terpinene, Geraniol, Geranyl Acetate, Guaiol, Hexanal, Hexyl Acetate, Hexyl Butyrate, Hexyl Caproate, Hexanoic Acid, Humulene, Isoborneol, Isobutyl Acetate, Isobutyric Acid, Isopulegol Acetate, L-Menthol, Linalool, Linalool Oxide, Maltol, Melonal, Methyl Anthranilate, Methyl Heptenone, Methyl Thiobutyrate, Methyl-2-Nonenoate, Myrcene, Nerol, Nerolidol, Ocimene, Raspberry Ketone, Sabinene, Strawberry Furanone, Terpineol, Terpinolene, Triacetin, Trans-2-Hexen-1-Ol, Trans-2-Cis-6-Nonadienol, Valencene, Vanillin, Para-Cymene, Cis-1,2-Limonene Oxide, Trans-1,2-Limonene Oxide, Octanal, Decanal, 1-Octanol, Terpinyl Acetate, Eucalyptol, Camphor, Alpha-Fenchene, 1,4-Cineole, Ocimene Quintoxide, 1-Terpineol, Alpha-Fenchyl Alcohol, Terpinen-4-ol, Geranial, Beta-Phellandrene, Trans-Beta-Ocimene, Nonanal, Allyl Caproate, Alpha-Thujene, Safrole, Myristicin, Elemicin, Sabinene Hydrate, Sinensal, Nootkatone, Valencene, Benzyl Benzoate, Benzyl Cinnamate, Cinnamic Acid, Cinnamyl Alcohol, Eugenol, Nerolidol, Arabic Gum, Rice Paper, Solvent (Butane, Propane, or Ethanol)", "layout": ""}, {"name": "2G Infused Pre Roll \u2014 Blue Slushie", "sku": "Muha Meds 2G Infused Pre Roll", "flavor": "Blue Slushie", "metrc_approval": "M00002721407", "servings": "200", "weight": "2g", "instructions": "Heat Flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of Marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCA Isolate, Cannabis Live Resin, Cannabis Cured Resin, Cannabis Distillate, Cannabis Kief, Alpha-Pinene, Beta-Pinene, Beta-Caryophyllene, Myrcene, Linalool, Alpha-Terpineol, Terpinolene, Geraniol, Camphene, Alpha-Bisabolol, Nootkatone, Citronellal, Thiomenthone, Ethyl Butyrate, Ethyl Caproate, Humulene, Camphor, Cedrene Alpha, Ocimene, Menthol, Sabinene, Borneol, Delta-3-Carene, Alpha-Phellandrene, Alpha-Terpinene, Acetic Acid, Acetoin, Alpha-Ionone, Amyl Cinnamal, Anisaldehyde, Anise Alcohol, Benzaldehyde, Butyl Butyrolactate, Butyl Lactate, Butyric Acid, Caprylic Acid, Cis-3-Hexenyl Butyrate, Delta-Decalactone, Delta-Dodecalactone, Gamma-Dodecalactone, Gamma-Undecalactone, Ethyl Isovalerate, Ethyl Propionate, Geranyl Acetate, Heliotropine, Isoamyl Acetate, Isoamyl Butyrate, Isoamyl Isovalerate, Maltol, Methyl Anthranilate, Pentanedione, Raspberry Ketone, Vanillin, D-Limonene, Beta-Phellandrene, Trans-Beta-Ocimene, Para-Cymene, Octanal, Cis-1,2-Limonene Oxide, Trans-1,2-Limonene Oxide, Decanal, 1-Octanol, Terpinyl Acetate, Eucalyptol, Gamma-Terpinene, Citral, Nerol, Citronellol, Arabic Gum, Rice Paper, Solvent (Butane, Propane, or Ethanol)", "layout": ""}, {"name": "2G Infused Pre Roll \u2014 Grape Stomper", "sku": "Muha Meds 2G Infused Pre Roll", "flavor": "Grape Stomper", "metrc_approval": "M00002721408", "servings": "200", "weight": "2g", "instructions": "Heat Flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of Marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCA Isolate, Cannabis Live Resin, Cannabis Cured Resin, Cannabis Distillate, Cannabis Kief, Methyl Anthranilate, Beta-Caryophyllene, Ethyl Butyrate, Myrcene, Linalool, Alpha-Pinene, Alpha-Bisabolol, Beta-Pinene, Nerolidol, Methyl Isobutyrate, Cinnamyl Alcohol, Humulene, D-Limonene, Sabinene, Delta-3-Carene, Alpha-Phellandrene, Beta-Phellandrene, Trans-Beta-Ocimene, Para-Cymene, Octanal, Cis-1,2-Limonene Oxide, Trans-1,2-Limonene Oxide, Decanal, 1-Octanol, Arabic Gum, Rice Paper, Solvent (Butane, Propane, or Ethanol)", "layout": ""}, {"name": "2G Infused Pre Roll \u2014 Matcha Gold", "sku": "Muha Meds 2G Infused Pre Roll", "flavor": "Matcha Gold", "metrc_approval": "M00002721409", "servings": "200", "weight": "2g", "instructions": "Heat Flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of Marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCA Isolate, Cannabis Live Resin, Cannabis Cured Resin, Cannabis Distillate, Cannabis Kief, Alpha-Pinene, Beta-Pinene, Myrcene, Linalool, Beta-Caryophyllene, Linalyl Acetate, Geraniol, Beta-Ionone, 3-Hexenol, Vanillin, Cis-3-Hexenyl Hexanoate, Hexenyl Acetate, Fenchyl Alcohol, Cis-3-Hexenyl Isobutyrate, Eugenol, Nerolidol, Delta-Decalactone, Gamma-Undecalactone, Ethyl Propionate, Acetoin, Delta-Dodecalactone, Gamma-Dodecalactone, Anise Alcohol, Anisaldehyde, P-Anisyl Acetate, D-Limonene, Sabinene, Delta-3-Carene, Alpha-Phellandrene, Beta-Phellandrene, Trans-Beta-Ocimene, Para-Cymene, Octanal, Cis-1,2-Limonene Oxide, Trans-1,2-Limonene Oxide, Decanal, 1-Octanol, Terpinyl Acetate, Eucalyptol, Alpha-Terpineol, Terpinolene, Alpha-Terpinene, Gamma-Terpinene, Citral, Nerol, Citronellol, Camphene, Borneol, Caryophyllene Oxide, Vetiverol, Khusimol, Alpha-Vetivone, Beta-Vetivone, Sclareol, Linalyl Formate, Geranyl Acetate, Arabic Gum, Rice Paper, Solvent (Butane, Propane, or Ethanol)", "layout": ""}, {"name": "2G Infused Pre Roll \u2014 Pumpkin Bliss", "sku": "Muha Meds 2G Infused Pre Roll", "flavor": "Pumpkin Bliss", "metrc_approval": "M00002721410", "servings": "200", "weight": "2g", "instructions": "Heat Flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of Marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCA Isolate, Cannabis Live Resin, Cannabis Cured Resin, Cannabis Distillate, Cannabis Kief, Myrcene, Beta-Caryophyllene, Linalool, Beta-Pinene, Alpha-Terpineol, Alpha-Pinene, Fenchol, Octanal, Alpha-Bisabolol, Nootkatone, Ethyl Butyrate, Camphene, Terpinolene, Citronellal, Thiomenthone, Ethyl Caproate, Humulene, Geraniol, Camphor, Cedrene Alpha, Ocimene, Menthol, Sabinene, Borneol, Delta-3-Carene, Alpha-Phellandrene, Alpha-Terpinene, Eugenol, Phenethyl Alcohol, Vanillin, Gamma-Decalactone, Delta-Decalactone, Gamma-Dodecalactone, Delta-Dodecalactone, Gamma-Undecalactone, Cinnamyl Alcohol, Methylcyclopentenolone, Acetoin, Butyl Lactate, Butyl Butyrolactate, Maltol, Butyric Acid, Caprylic Acid, Benzaldehyde, D-Limonene, Beta-Phellandrene, Para-Cymene, Cis-1,2-Limonene Oxide, Trans-1,2-Limonene Oxide, Decanal, 1-Octanol, Terpinyl Acetate, Eucalyptol, Gamma-Terpinene, Citral, Nerol, Citronellol, Terpinen-4-ol, Alpha-Thujene, Safrole, Myristicin, Elemicin, Sabinene Hydrate, Arabic Gum, Rice Paper, Solvent (Butane, Propane, or Ethanol)", "layout": ""}, {"name": "2G Infused Pre Roll \u2014 Watermelon Punch", "sku": "Muha Meds 2G Infused Pre Roll", "flavor": "Watermelon Punch", "metrc_approval": "M00002721411", "servings": "200", "weight": "2g", "instructions": "Heat Flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of Marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCA Isolate, Cannabis Live Resin, Cannabis Cured Resin, Cannabis Distillate, Cannabis Kief, D-Limonene, Linalool, Alpha-Terpineol, Ethyl Butyrate, Valencene, Geraniol, Alpha-Pinene, Beta-Pinene, Melonal, Cis-3-Hexenol, Strawberry Furanone, Myrcene, Beta-Caryophyllene, Fenchol, Octanal, Alpha-Bisabolol, Nootkatone, Camphene, Terpinolene, Citronellal, Thiomenthone, Ethyl Caproate, Humulene, Camphor, Cedrene Alpha, Ocimene, Menthol, Sabinene, Borneol, Delta-3-Carene, Alpha-Phellandrene, Alpha-Terpinene, Beta-Phellandrene, Para-Cymene, Cis-1,2-Limonene Oxide, Trans-1,2-Limonene Oxide, Decanal, 1-Octanol, Terpinyl Acetate, Eucalyptol, Gamma-Terpinene, Citral, Nerol, Citronellol, Arabic Gum, Rice Paper, Solvent (Butane, Propane, or Ethanol)", "layout": ""}, {"name": "1G Plain Pre Roll", "sku": "Muha Meds 1G Plain Pre Roll", "flavor": "", "metrc_approval": "M00002674611", "servings": "100", "weight": "1g", "instructions": "Heat Flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of Marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, Rice Paper, Arabic Gum", "layout": ""}, {"name": "Bodega Boyz Shorties \u2014 Banana Honey", "sku": "Bodega Boyz - Shorties", "flavor": "Banana Honey", "metrc_approval": "M00002448282", "servings": "280", "weight": "2.8g", "instructions": "Heat flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCa Isolate, Cannabis Distillate, THCa Diamonds, Isoamyl Acetate, d-Limonene, Isoamyl Isovalerate, Valencene, Ethyl Butyrate, beta-Caryophyllene, Myrcene, L-Menthol, Ethyl Maltol, Isoamyl Isobutyrate, Isoamyl Propionate, Humulene, Isoamyl Alcohol, beta-Pinene, alpha-Pinene, Isoamyl 2-Methyl Butyrate 53049, Fenchyl Alcohol, alpha-Bisabolol, Terpineol, Linalool, Farnesene, Ocimene, Ethyl Isovalerate, Guaiene, Nerolidol, Camphene, Butyl Butyrate, Terpinolene, Isoborneol, Cis-3 Hexenol, Eugenol, alpha-Phellandrene, Trans-2 Hexenol, Caryophyllene Oxide, Ethyl Propionate, Citronellol, Nerol, Cedrene Alpha, D-Camphor, Geraniol, P-Cymene, Delta-3-Carene, alpha-Terpinene, Rice Paper, Arabic Gum, Solvent (Ethanol or Butane)", "layout": "tri"}, {"name": "Bodega Boyz Shorties \u2014 Sour Apple", "sku": "Bodega Boyz - Shorties", "flavor": "Sour Apple", "metrc_approval": "M00002448284", "servings": "280", "weight": "2.8g", "instructions": "Heat flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCa Isolate, Cannabis Distillate, THCa Diamonds, Ethyl 2-Methyl Butyrate, Isobutyl Acetate, alpha-Pinene, beta-Caryophyllene, Hexyl Acetate, d-Limonene, Myrcene, Ethyl Maltol, beta-Pinene, Linalool, Geranyl Acetate, Humulene, Trans-2-Hexenal, Valencene, alpha-Bisabolol, Terpineol, Fenchyl Alcohol, Isobutyl Caproate, Farnesene, Gamma-Terpinene, Ethyl Isovalerate, Hexyl Butyrate, Propyl Caproate, Camphene, Terpinolene, Allyl Caproate, p-Cymene, alpha-Phellandrene, Delta-3-Carene, Cedrene Alpha, Caryophyllene Oxide, Geraniol, alpha-Terpinene, Hexenyl Cis 3 Acetate, Nerol, Ocimene, Nerolidol, Ylang-Ylang Oil, Isoborneol, D-camphor, Citronellol, L-Menthol, Sabinene, Eugenol, Guaiene, Citral Diethylacetal, Rice Paper, Arabic Gum, Solvent (Ethanol or Butane)", "layout": "tri"}, {"name": "Bodega Boyz Shorties \u2014 Watermelon Zkittlez", "sku": "Bodega Boyz - Shorties", "flavor": "Watermelon Zkittlez", "metrc_approval": "M00002448285", "servings": "280", "weight": "2.8g", "instructions": "Heat flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCa Isolate, Cannabis Distillate, THCa Diamonds, Ethyl Butyrate, Hexanol, d-Limonene, Ethyl Maltol, Myrcene, beta-Caryophyllene, Ethyl Isovalerate, Methyl-3-Nonenoate, Benzyl Acetate, Hexenyl Cis 3 Acetate, Hexyl Acetate, Melonal, Gamma Decalactone, Orange Oil, Linalool, Ethyl Caproate, 2-Methyl Butyl Acetate, Peru Balsam Oil, Hexyl Caproate, beta-Pinene, Fenchyl Alcohol, alpha-Bisabolol, alpha-Pinene, Terpineol, Triacetin, Ethyl Furanone, Cis-5-Octen-1-Ol, Dihydro beta-Ionone, Camphene, Humulene, Terpinolene, Nerol, Geraniol, Ocimene, D-camphor, Cedrene Alpha, Citral, Citronellol, Trans-2 Cis-6 Nonadienal, Cis 6 Nonenol, Isoborneol, L-Menthol, Sabinene, Rice Paper, Arabic Gum, Solvent (Ethanol or Butane)", "layout": "tri"}, {"name": "Bodega Boyz Shorties \u2014 Guava Zkittlez", "sku": "Bodega Boyz - Shorties", "flavor": "Guava Zkittlez", "metrc_approval": "M00002448286", "servings": "280", "weight": "2.8g", "instructions": "Heat flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCa Isolate, Cannabis Distillate, THCa Diamonds, Ethyl Aceto Acetate, d-Limonene, Myrcene, beta-Caryophyllene, Ethyl Butyrate, Cis-3 Hexenol (Leaf Alcohol), Triacetin, Ethyl Cinnamate 500625, Ethyl Maltol N&A, Methyl Cinnamate, Linalool, Hexyl Butyrate, Cinnamic Alcohol, Orange Oil, beta-Pinene, Carrot Seed Oil, Citral, Gamma Decalactone, Terpineol, Ethyl Furanone, Hexyl Acetate, Hexyl Caproate, Methyl Cis-5 Octenoate, Oil Buchu South African, Strawberry Furanone, alpha-Pinene, Fenchyl Alcohol, alpha-Bisabolol, Benzyl Acetate, Blackcurrant Buds Absolute, Butyric Acid, Cinnamyl Acetate, Hexenyl Cis 3 Acetate, Peru Balsam Oil, Coriander Seed Oil, Methyl Anthranilate, Methyl-3-Nonenoate, Camphene, Terpinolene, 2-Methyl Butyric Acid, 2-Methyl-4-Propyl-1,3-Oxathiane, Humulene, Geraniol, D-camphor, Cedrene Alpha, Ocimene, L-Menthol, 3-Mercapto, Hexanol, Sabinene, Trans-2 Cis-6 Nonadienal, alpha-Phellandrene, alpha-Terpinene, Delta-3-Carene, Isoborneol, Cis 6 Nonenol, Passifloran, Methional, Rice Paper, Arabic Gum, Solvent (Ethanol or Butane)", "layout": "tri"}, {"name": "Bodega Boyz Shorties \u2014 OJ Hi-C", "sku": "Bodega Boyz - Shorties", "flavor": "OJ Hi-C", "metrc_approval": "M00002448349", "servings": "280", "weight": "2.8g", "instructions": "Heat flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCa Isolate, Cannabis Distillate, THCa Diamonds, Orange Oil Organic, Organic Mandarin Oil, Lemon Oil Organic, d-Limonene, Octyl Alcohol, Myrcene, beta-Caryophyllene, Ethyl Butyrate, Linalool, beta-Pinene, Strawberry Furanone, Fenchyl Alcohol, alpha-Bisabolol, Ethyl Maltol, alpha-Pinene, Terpineol, Aldehyde C-8, Decanal, Ethyl Vanillin, Peru Balsam Oil, Nootkatone, Camphene, Humulene, Terpinolene, Citronellal, Nerol, Ethyl Caproate, Geraniol, Vanillin, Maltol, Ocimene, D-camphor, Cedrene Alpha, Citral, Citronellol, Isoborneol, L-Menthol, Sabinene, 1-P-Menthene-8-Thiol, Rice Paper, Arabic Gum, Solvent (Ethanol or Butane)", "layout": "tri"}, {"name": "Bodega Boyz Shorties \u2014 Pineapple Kush", "sku": "Bodega Boyz - Shorties", "flavor": "Pineapple Kush", "metrc_approval": "M00002448350", "servings": "280", "weight": "2.8g", "instructions": "Heat flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCa Isolate, Cannabis Distillate, THCa Diamonds, Myrcene, alpha-Pinene, d-Limonene, beta-Pinene, beta-Caryophyllene, Humulene, Terpinolene, Strawberry Furanone, Allyl Caproate, Citral, Ethyl Caproate, Farnesene, gamma-Terpinene, Lime Terpenes, Nerolidol, Linalool, alpha-Bisabolol, Valencene, Vanillin, Ethyl Propionate, Ethyl Butyrate, Fenchyl Alcohol, Terpineol, Camphene, Aldehyde C18, Ocimene, Cedrene Alpha, L-Menthol, Geraniol, Sabinene, D-camphor, Isoborneol, Nerol, 1-P-Menthene-8-Thiol, Rice Paper, Arabic Gum, Solvent (Ethanol or Butane)", "layout": "tri"}, {"name": "Bodega Boyz Shorties \u2014 Peach Kush", "sku": "Bodega Boyz - Shorties", "flavor": "Peach Kush", "metrc_approval": "M00002448352", "servings": "280", "weight": "2.8g", "instructions": "Heat flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCa Isolate, Cannabis Distillate, THCa Diamonds, d-Limonene, Myrcene, beta-Caryophyllene, 2-(3,7-Dimethyl-2,6-Octadienyl)Cyclopentanone, Linalool, Gamma Decalactone, Ethyl Aceto Acetate, beta-Pinene, Hexenyl Cis 3 Acetate, Ethyl Maltol, Terpineol, Geraniol, alpha-Pinene, Fenchyl Alcohol, Gamma Valerolactone, Delta Decalactone, alpha-Bisabolol, Ethyl Butyrate, gamma-Hexalactone, Beta Damascenone, Geranyl Acetate, 2-Isopropyl-4-Methyl Thiazole, Butyl Butyryl Lactate, Ethyl Levulinate, Ethyl Propionate, Ethyl-2 5-Methyl 4-Hydroxy 3(2H)-Furanone, Oil Buchu South African, Raspberry Ketone, Camphene, Terpinolene, Ethyl Cinnamate, Orange Oil Organic, Humulene, Methyl 2 Nonenoate 1-Peak, D-camphor, Blackcurrant Buds Absolute, Peru Balsam Oil, Cedrene Alpha, 1-Octen-3-ol, 2-Methyl-4-Propyl-1,3-Oxathiane, Cis 6 Nonenol Concentrate, Ocimene, Ethyl Salicylate, L-Menthol, Methyl Thiobutyrate, Sabinene, alpha-Phellandrene, alpha-Terpinene, Delta-3-Carene, Isoborneol, Oct-2-En-4-One, Rice Paper, Arabic Gum, Solvent (Ethanol or Butane)", "layout": "tri"}, {"name": "Bodega Boyz Shorties \u2014 Strawberry Haze", "sku": "Bodega Boyz - Shorties", "flavor": "Strawberry Haze", "metrc_approval": "M00002448353", "servings": "280", "weight": "2.8g", "instructions": "Heat flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCa Isolate, Cannabis Distillate, THCa Diamonds, Ethyl Butyrate, Ethyl Caproate, Ethyl 2-Methyl Butyrate, Beta-Caryophyllene, D-Limonene, Strawberry Furanone, Ethyl Isovalerate, Myrcene, Ethyl Aceto Acetate, Isoamyl Acetate, Aldehyde C-16, Cis-3 Hexenol, Ethyl-3-Phenylglycidate, 2-Methyl-2-Pentenoic Acid, Benzyl Acetate, Citral, Linalool, Humulene, Raspberry Ketone, Beta-Pinene, Valencene, Hexenyl Cis 3 Acetate, Undecalactone Gamma, Peru Balsam Oil, 2-Methyl Butyric Acid, Alpha-Pinene, Ylang-Ylang Oil, Alpha-Bisabolol, Benzaldehyde, Fenchyl Alcohol, 4-Acetoxy-2,5-Dimethyl-3-Furanone, Terpineol, Maltol Isobutyrate, Dihydro Beta-Ionone, Gamma Decalactone, Camphene, Terpinolene, Isobutavan, Benzyl Benzoate, Guaiene, Ethyl Maltol, Geraniol, Eugenol, Delta-3-Carene, Ethyl Furanone, Valerian Root Oil, D-Camphor, Ocimene, Phenyl Ethyl Alcohol, L-Menthol, Cedrene Alpha, Farnesene, Nerol, Sabinene, Isoborneol, Alpha-Phellandrene, Alpha-Terpinene, Rice Paper, Arabic Gum, Solvent (Ethanol or Butane)", "layout": "tri"}, {"name": "Bodega Boyz Shorties \u2014 Lemon OG", "sku": "Bodega Boyz - Shorties", "flavor": "Lemon OG", "metrc_approval": "M00002448465", "servings": "280", "weight": "2.8g", "instructions": "Heat flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCa Isolate, Cannabis Distillate, THCa Diamonds, d-Limonene, Beta-Pinene, Gamma-Terpinene, Citral, Terpinolene, Alpha-Terpinene, P-Cymene, Alpha-Pinene, Nonanal, Camphene, Linalool, Citronellal, Geranyl Acetate, Geraniol, Ethyl Maltol, Alpha-Phellandrene, Decanal, Butyl Butyrate, Fenchyl Alcohol, Citronellyl Formate, Ethyl Butyrate, Rice Paper, Arabic Gum, Solvent (Ethanol or Butane)", "layout": "tri"}, {"name": "Bodega Boyz Shorties \u2014 Mango Gelato", "sku": "Bodega Boyz - Shorties", "flavor": "Mango Gelato", "metrc_approval": "M00002448467", "servings": "280", "weight": "2.8g", "instructions": "Heat flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCa Isolate, Cannabis Distillate, THCa Diamonds, Myrcene, Gamma Decalactone, Ethyl Maltol, Benzyl Acetate, Ethyl Furanone, alpha-Pinene, Hexyl Acetate, Ethyl Propionate, beta-Caryophyllene, Strawberry Furanone, Strawberry Furanone Butyrate 2,5-Dimethyl-3-Oxo-(2H)-Fur-4-Yl Butyrate, beta-Pinene, Methyl-2-Nonenoate, Octanoic Acid, Cis-3 Hexenol, Allyl Caproate, Ethyl Levulinate, d-Limonene, Methyl-3-Nonenoate, Octalactone Gamma, Trans-2 Hexenol, Coriander Seed Oil, Ethyl Butyrate, Raspberry Ketone, Humulene, Heliotropine, Hops Essential Oil, Farnesene, Oil Buchu South African, Linalool, Orange Oil, alpha-Bisabolol, Beta Ionone, Dimethyl Sulfide, Cis 6 Nonenol Concentrate, Peru Balsam Oil, Methyl Thiobutyrate, Anethole, Valencene, Beta Damascenone Concentrate, beta-Damascone, Vanillin, Fenchyl Alcohol, Terpineol, Camphene, Cedrene Alpha, 2-Methyl-4-Propyl-1,3-Oxathiane, L-Menthol, Geraniol, Sabinene, D-camphor, Isoborneol, Terpinolene, Nerol, Rice Paper, Arabic Gum, Solvent (Ethanol or Butane)", "layout": "tri"}];
+/* ---------- Compliance Stickers (Black Fox label engine, Avery sheets, jsPDF) ---------- */
+const LABEL_STOCKS={'avery-94202':{name:'Avery 94202 \u2014 1" x 4", 20 per sheet',w:4,h:1,cols:2,rows:10,left:0.15625,top:0.5,pitchX:4.1875,pitchY:1}};
+const LABEL_PAD=6;
+const LABEL_CANNABINOIDS=[['d9_thc','Delta-9-THC'],['thca','Delta-9-THCa'],['cbd','CBD'],['cbda','CBDa'],['cbn','CBN'],['thcv','THCV'],['cbdv','CBDV'],['d8_thc','Delta-8-THC']];
+function fmtUsDate(d){if(!(d instanceof Date)||isNaN(d.getTime()))return '';return String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0')+'/'+d.getFullYear();}
+// Best-by = one year after the test result date
+function labelDates(rec,an){
+  let d=null;const raw=(an&&an.report_date)||rec.result_at||'';
+  if(raw){const t=new Date(/^\d{4}-\d{2}-\d{2}$/.test(raw)?raw+'T00:00:00':raw);if(!isNaN(t.getTime()))d=t;}
+  if(!d)d=new Date();
+  const best=new Date(d.getTime());best.setFullYear(best.getFullYear()+1);
+  return {tested:fmtUsDate(d),bestBy:fmtUsDate(best)};
+}
+function labelData(rec,tpl,licNumber){
+  const an=(rec.coa_analysis&&typeof rec.coa_analysis==='object')?rec.coa_analysis:{},pot=an.potency||{},dts=labelDates(rec,an);
+  const servings=parseFloat(tpl.servings)||0,wt=parseFloat(String(tpl.weight||'').replace(/[^0-9.]/g,''))||0;
+  const canna=LABEL_CANNABINOIDS.map(function(x){const p=parseFloat(pot[x[0]]);
+    return {name:x[1],mg:(isFinite(p)&&p>0&&servings>0&&wt>0)?(p/100*wt*1000/servings).toFixed(2):'ND'};});   // % of package weight -> mg per serving
+  return {resultsHeading:tpl.results_heading||'TEST RESULTS (mg/serving):',infoHeading:tpl.info_heading||'MARIJUANA PRODUCT INFORMATION',approvalLabel:tpl.approval_label||'MARIJUANA PRODUCT APPROVAL NUMBER',
+    layout:tpl.layout||'',approval:tpl.approval_number||'',servings:tpl.servings||'',weight:tpl.weight||'',bestBy:dts.bestBy,producedBy:licNumber||'',
+    testedBy:an.lab_license_number||rec.lab_license||'',testTag:rec.sample_tag||'',canna:canna,ingredients:tpl.ingredients||'',instructions:tpl.instructions||'',
+    warning:tpl.warning||'',pkgTag:rec.tag||'',lab:an.lab_name||rec.lab_name||'',tested:dts.tested};
+}
+// Paragraphs of {t,b} runs, flowed word by word so bold labels and plain values share a line.
+function labelParagraphs(d){
+  const L=function(t){return {t:t,b:true};},V=function(t){return {t:t};};
+  const pairs=[['Servings/Doses Per Package: ',d.servings],['Best If Used By: ',d.bestBy],['Produced By: ',d.producedBy],['Tested By: ',d.testedBy],['Testing Tag#: ',d.testTag],['Weight: ',d.weight]];
+  const SEP=V('     '),info=[];pairs.forEach(function(p,i){if(i)info.push(SEP);info.push({chunk:[L(p[0]),V(String(p[1]||''))]});});
+  const prof=[L('CANNABINOID PROFILE: ')];
+  d.canna.forEach(function(c,i){if(i)prof.push(V('   '));prof.push({chunk:[L(c.name+': '),V(c.mg+' mg/serving-dose')]});});
+  return [[L('Active and Other Ingredients: '),V(d.ingredients)],[L(d.infoHeading+':')],info,prof,
+    [L('INSTRUCTION AND LENGTH OF EFFECT: '),V(d.instructions)],[L(d.approvalLabel+': '),V(d.approval)],[L('WARNING: '),L(d.warning)]];
+}
+function buildLabelSheet(d,stock,count,startPos,offX,offY,outline){
+  const doc=pdfSafeDoc(new window.jspdf.jsPDF({unit:'pt',format:'letter'}));
+  const per=stock.cols*stock.rows;let fit=true;
+  for(let n=0;n<count;n++){
+    const idx=(startPos-1)+n,page=Math.floor(idx/per),pos=idx%per;
+    while(doc.getNumberOfPages()<=page)doc.addPage();
+    doc.setPage(page+1);
+    const col=pos%stock.cols,row=Math.floor(pos/stock.cols);
+    const x=(stock.left+col*stock.pitchX+(offX||0))*72,y=(stock.top+row*stock.pitchY+(offY||0))*72;
+    if(outline){doc.setDrawColor(190,190,190);doc.setLineWidth(.3);doc.rect(x,y,stock.w*72,stock.h*72);}
+    if(!drawLabel(doc,x,y,stock.w*72,stock.h*72,d))fit=false;
+  }
+  return {doc:doc,fit:fit};
+}
+const SAMPLE_COA={batch_number:'SAMPLE',tag:'1A4000000000000000000000',sample_tag:'1A4000000000000000000001',lab_license:'TES000000',result_at:new Date().toISOString(),
+  coa_analysis:{lab_name:'Sample Lab',potency:{d9_thc:1.2,thca:85.0,cbd:0.1,cbn:0.3}}};
+function tplMatch(list,skuName,flavorName,names){
+  const same=function(a,b){return String(a||'').trim().toLowerCase()===String(b||'').trim().toLowerCase();};
+  return list.find(function(t){return same(names.sku(t.sku_id),skuName)&&t.flavor_id&&same(names.flavor(t.flavor_id),flavorName);})
+    ||list.find(function(t){return same(names.sku(t.sku_id),skuName)&&!t.flavor_id;})||null;
+}
+function useLabelCatalog(st,lic){
+  const[cat,setCat]=useState(null);
+  const sid=st?st.id:'',lid=lic?lic.id:'';
+  const load=useCallback(function(){
+    if(!sid||!lid){setCat({tpls:[],skus:[],flavors:[],err:''});return;}
+    Promise.all([db.get('hx_label_templates','license_id=eq.'+encodeURIComponent(lid)+'&select=*&order=name'),db.get('hx_skus','state_id=eq.'+encodeURIComponent(sid)+'&select=id,name,product_type,active&order=name'),
+      db.get('hx_flavors','state_id=eq.'+encodeURIComponent(sid)+'&select=id,name,sku_id,active&order=name')])
+      .then(function(r){setCat({tpls:(r[0]||[]).filter(function(t){return t.license_id===lid;}),skus:r[1]||[],flavors:r[2]||[],err:''});})
+      .catch(function(e){setCat({tpls:[],skus:[],flavors:[],err:/hx_label_templates/.test(String(e.message))?'Compliance Stickers are not set up yet - run hendrix_step10.sql.':String(e.message||e)});});
+  },[sid,lid]);
+  useEffect(load,[load]);
+  const names={sku:function(id){const k=cat&&cat.skus.find(function(x){return x.id===id;});return k?k.name:'';},flavor:function(id){const f=cat&&cat.flavors.find(function(x){return x.id===id;});return f?f.name:'';}};
+  return {cat:cat,reload:load,names:names};
+}
+function PdfPreview(props){
+  const[url,setUrl]=useState('');
+  useEffect(function(){
+    let u='';
+    try{u=props.make();setUrl(u||'');}catch(e){setUrl('');}
+    return function(){if(u)try{URL.revokeObjectURL(u);}catch(e){}};
+  },[props.dep]);
+  return url?el('iframe',{src:url,title:'Label preview',style:{width:'100%',height:props.h||'60vh',border:'1px solid var(--line)',borderRadius:8,background:'#fff'}}):el('div',{className:'muted'},'Preview unavailable.');
+}
+function StickerModal(props){
+  const rec=props.rec,lic=props.lic;
+  const L=useLabelCatalog(props.st,lic);
+  const[tplId,setTplId]=useState('');
+  const[count,setCount]=useState(20);
+  const[start,setStart]=useState(1);
+  const[offX,setOffXr]=useState(function(){return parseFloat(lsGet('hx_lbl_offX'))||0;});
+  const[offY,setOffYr]=useState(function(){return parseFloat(lsGet('hx_lbl_offY'))||0;});
+  const[outline,setOutline]=useState(true);
+  function setOffX(v){setOffXr(v);lsSet('hx_lbl_offX',String(v));}
+  function setOffY(v){setOffYr(v);lsSet('hx_lbl_offY',String(v));}
+  const list=(L.cat&&L.cat.tpls)||[];
+  const tpl=list.find(function(t){return t.id===tplId;})||tplMatch(list,rec.sku,rec.flavor,L.names);
+  const stock=tpl?(LABEL_STOCKS[tpl.stock]||LABEL_STOCKS['avery-94202']):null,per=stock?stock.cols*stock.rows:20;
+  const d=tpl?labelData(rec,tpl,lic.license_number):null;
+  const res=useMemo(function(){
+    if(!d||!window.jspdf)return null;
+    try{return buildLabelSheet(d,stock,Math.max(1,count),Math.min(Math.max(1,start),per),offX,offY,outline);}catch(e){return null;}
+  },[tpl&&tpl.id,count,start,offX,offY,outline,L.cat]);
+  function download(){
+    const r=buildLabelSheet(d,stock,Math.max(1,count),Math.min(Math.max(1,start),per),offX,offY,false);
+    r.doc.save('Compliance_Labels_'+String(rec.batch_number||rec.id).replace(/[^A-Za-z0-9_-]+/g,'_')+'.pdf');
+  }
+  const missing=d?[!d.approval&&'approval number (edit the label template)',!d.ingredients&&'ingredients',!d.testTag&&'sample testing tag (add it on the testing record)',
+    !d.testedBy&&'Tested By (lab license # not found \u2014 Re-read COA, or type it in Update)',d.canna.every(function(c){return c.mg==='ND';})&&'cannabinoid results'].filter(Boolean):[];
+  const num=function(v,set,step,w){return el('input',{type:'number',step:step||1,value:v,style:{width:w||90},onChange:function(e){set(step?parseFloat(e.target.value)||0:parseInt(e.target.value,10)||1);}});};
+  return el(Modal,{title:'Compliance stickers \u00b7 '+(rec.batch_number||'')+' \u00b7 '+(rec.sku||''),wide:true,onClose:props.onClose},
+    !window.jspdf&&el('div',{className:'msg err'},'The PDF library did not load. Check the internet connection and reload.'),
+    !L.cat?el('div',{className:'muted'},'Loading templates...'):L.cat.err?el('div',{className:'msg err'},L.cat.err):
+    !tpl?el('div',null,el('div',{style:{marginBottom:8}},'There is no label template for "'+(rec.sku||'this product')+(rec.flavor?' \u00b7 '+rec.flavor:'')+'" under '+lic.name+' yet. Pick one, or add one on the Compliance Stickers page.'),
+      el('select',{value:tplId,onChange:function(e){setTplId(e.target.value);}},el('option',{value:''},'Choose template...'),list.map(function(t){return el('option',{key:t.id,value:t.id},t.name);}))):
+    el('div',null,
+      el('div',{className:'row',style:{alignItems:'flex-end',marginBottom:10}},
+        el(Field,{label:'Template'},el('select',{value:tpl.id,onChange:function(e){setTplId(e.target.value);}},list.map(function(t){return el('option',{key:t.id,value:t.id},t.name);}))),
+        el(Field,{label:'Labels to print'},num(count,setCount)),
+        el(Field,{label:'Start at position (1-'+per+')'},num(start,setStart)),
+        el(Field,{label:'Shift right (in)'},num(offX,setOffX,0.01)),
+        el(Field,{label:'Shift down (in)'},num(offY,setOffY,0.01)),
+        el('label',{className:'ck',style:{marginBottom:12}},el('input',{type:'checkbox',checked:outline,onChange:function(e){setOutline(e.target.checked);}}),el('span',null,'Outlines in preview'))),
+      el('div',{className:'row',style:{marginBottom:8}},
+        el('button',{className:'btn ghost',onClick:function(){buildAlignmentSheet(stock,offX,offY).save('Label_Alignment_Test.pdf');}},'Alignment test sheet'),
+        el('button',{className:'btn',onClick:download},'Download PDF')),
+      el('div',{className:'muted',style:{fontSize:12,marginBottom:8}},stock.name+'. Print at 100% / "Actual size" on US Letter, never "Fit to page". First print the alignment sheet on plain paper and hold it over a label sheet against the light; use Shift right / down until the boxes sit inside the labels (remembered on this computer). Start position lets you use a partly used sheet.'),
+      missing.length>0&&el('div',{className:'msg err'},'Missing on this label: '+missing.join(', ')+'.'),
+      res&&!res.fit&&el('div',{className:'msg err'},'The text is too long to fit a 1" label even at the smallest size \u2014 shorten the ingredients or warning in the template.'),
+      res&&el(PdfPreview,{dep:[tpl.id,count,start,offX,offY,outline].join('|'),make:function(){return res.doc.output('bloburl');}})));
+}
+function TemplateEditor(props){
+  const t=props.tpl||{},cat=props.cat;
+  const[f,setF]=useState({name:t.name||'',sku_id:t.sku_id||'',flavor_id:t.flavor_id||'',stock:t.stock||'avery-94202',layout:t.layout||'',approval_number:t.approval_number||'',servings:t.servings||'',weight:t.weight||'',
+    instructions:t.instructions||'',ingredients:t.ingredients||'',warning:t.warning||'',info_heading:t.info_heading||'MARIJUANA PRODUCT INFORMATION',approval_label:t.approval_label||'MARIJUANA PRODUCT APPROVAL NUMBER',results_heading:t.results_heading||'TEST RESULTS (mg/serving):'});
+  const[err,setErr]=useState('');
+  const[adv,setAdv]=useState(false);
+  const fl=cat.flavors.filter(function(x){return x.sku_id===f.sku_id;});
+  function set(k,v){setF(function(p){const n={...p,[k]:v};if(k==='sku_id')n.flavor_id='';return n;});}
+  async function save(){
+    setErr('');
+    if(!f.sku_id){setErr('Choose the SKU.');return;}
+    const sk=cat.skus.find(function(k){return k.id===f.sku_id;}),fv=cat.flavors.find(function(x){return x.id===f.flavor_id;});
+    const rec={...f,flavor_id:f.flavor_id||null,name:f.name.trim()||((sk?sk.name:'')+(fv?' \u2014 '+fv.name:''))};
+    try{
+      if(t.id)await db.update('hx_label_templates',t.id,rec);
+      else await db.insert('hx_label_templates',{...rec,id:newId('lbl'),state_id:props.st.id,license_id:props.lic.id});
+      props.onDone();
+    }catch(e){setErr(/hx_label_templates_one/.test(String(e.message))?'This SKU / flavor already has a template under this license.':String(e.message||e));}
+  }
+  const inp=function(k,l,ph){return el(Field,{key:k,label:l},el('input',{value:f[k],placeholder:ph||'',onChange:function(e){set(k,e.target.value);}}));};
+  const area=function(k,l,ph){return el(Field,{key:k,label:l},el('textarea',{value:f[k],placeholder:ph||'',style:{minHeight:70},onChange:function(e){set(k,e.target.value);}}));};
+  const prev=window.jspdf&&f.sku_id?(function(){try{return buildLabelSheet(labelData(SAMPLE_COA,f,props.lic.license_number),LABEL_STOCKS[f.stock]||LABEL_STOCKS['avery-94202'],1,1,0,0,true);}catch(e){return null;}})():null;
+  return el(Modal,{title:(t.id?'Edit':'New')+' label template \u00b7 '+props.lic.name,wide:true,onClose:props.onClose},
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}},
+      el(Field,{label:'SKU *'},el('select',{style:{width:'100%'},value:f.sku_id,onChange:function(e){set('sku_id',e.target.value);}},el('option',{value:''},'Select...'),cat.skus.map(function(k){return el('option',{key:k.id,value:k.id},k.name+' ('+ptName(k.product_type)+')');}))),
+      el(Field,{label:'Flavor'},el('select',{style:{width:'100%'},value:f.flavor_id,onChange:function(e){set('flavor_id',e.target.value);}},el('option',{value:''},'Any flavor'),fl.map(function(x){return el('option',{key:x.id,value:x.id},x.name);}))),
+      inp('name','Template name','Auto-fills from SKU + flavor'),
+      el(Field,{label:'Label sheet'},el('select',{style:{width:'100%'},value:f.stock,onChange:function(e){set('stock',e.target.value);}},Object.keys(LABEL_STOCKS).map(function(k){return el('option',{key:k,value:k},LABEL_STOCKS[k].name);}))),
+      el(Field,{label:'Layout'},el('select',{style:{width:'100%'},value:f.layout,onChange:function(e){set('layout',e.target.value);}},el('option',{value:''},'Standard (paragraphs)'),el('option',{value:'tri'},'Three columns'))),
+      inp('approval_number','Product approval number','e.g. M00002721406'),inp('servings','Servings / doses per package','e.g. 200'),inp('weight','Weight','e.g. 2g')),
+    area('instructions','Instruction and length of effect'),area('ingredients','Active and other ingredients','Exactly as it should print'),area('warning','Warning','Required warning text'),
+    el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();setAdv(!adv);}},adv?'Hide heading wording':'Change heading wording (for other states)'),
+    adv&&el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))',gap:10,marginTop:8}},inp('info_heading','Product information heading'),inp('approval_label','Approval number label'),inp('results_heading','Test results heading (three-column)')),
+    prev&&el('div',{style:{marginTop:12}},el('div',{className:'k',style:{marginBottom:6}},'Preview with sample results'),!prev.fit&&el('div',{className:'msg err'},'Too much text for a 1" label \u2014 shorten the ingredients or warning.'),
+      el(PdfPreview,{h:'34vh',dep:JSON.stringify(f),make:function(){return prev.doc.output('bloburl');}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end',marginTop:10}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',onClick:save},'Save template')));
+}
+function StickersPage(props){
+  const st=props.state,lic=props.license;
+  const L=useLabelCatalog(st,lic);
+  const[modal,setModal]=useState(null);
+  const[msg,setMsg]=useState('');
+  const[q,setQ]=useState('');
+  if(!st||!lic)return el('div',null,el('h1',null,'Compliance ',el('span',{className:'g'},'Stickers')),el('div',{className:'empty'},'Pick a state and a license at the top first.'));
+  const canE=can('stickers',2),canF=can('stickers',3),cat=L.cat;
+  async function importBF(){
+    setMsg('');
+    const same=function(a,b){return String(a||'').trim().toLowerCase()===String(b||'').trim().toLowerCase();};
+    const add=[],skipped={};
+    BF_LABEL_TEMPLATES.forEach(function(b){
+      const k=cat.skus.find(function(x){return same(x.name,b.sku);});
+      if(!k){skipped['SKU "'+b.sku+'" not in Products']=1;return;}
+      let fid=null;
+      if(b.flavor){const fv=cat.flavors.find(function(x){return x.sku_id===k.id&&same(x.name,b.flavor);});if(!fv){skipped['flavor "'+b.flavor+'" not on '+k.name]=1;return;}fid=fv.id;}
+      if(cat.tpls.some(function(t){return t.sku_id===k.id&&(t.flavor_id||null)===fid;})||add.some(function(t){return t.sku_id===k.id&&t.flavor_id===fid;}))return;
+      add.push({id:newId('lbl'),state_id:st.id,license_id:lic.id,sku_id:k.id,flavor_id:fid,name:b.name,stock:'avery-94202',layout:b.layout||'',approval_number:b.metrc_approval||'',
+        servings:b.servings||'',weight:b.weight||'',instructions:b.instructions||'',ingredients:b.ingredients||'',warning:b.warning||''});
+    });
+    try{
+      if(add.length)await db.insert('hx_label_templates',add);
+      const sk=Object.keys(skipped);
+      setMsg('Imported '+add.length+' Black Fox template'+(add.length===1?'':'s')+'.'+(sk.length?' Skipped: '+sk.slice(0,6).join('; ')+(sk.length>6?' and '+(sk.length-6)+' more':'')+'.':''));
+      L.reload();
+    }catch(e){setMsg(String(e.message||e));}
+  }
+  async function del(t){if(!window.confirm('Delete template "'+t.name+'"?'))return;try{await db.remove('hx_label_templates',t.id);L.reload();}catch(e){setMsg(String(e.message||e));}}
+  const tpls=cat?cat.tpls.filter(function(t){return !q||(t.name+' '+L.names.sku(t.sku_id)+' '+t.approval_number).toLowerCase().indexOf(q.toLowerCase())>=0;}):[];
+  const bySku={};tpls.forEach(function(t){(bySku[t.sku_id]=bySku[t.sku_id]||[]).push(t);});
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,'Compliance ',el('span',{className:'g'},'Stickers')),el('div',{className:'sub'},st.name+'  \u00b7  '+lic.name+'  \u00b7  Label templates for this license. Print stickers from a Testing record that has a COA.')),
+      canE&&el('div',{className:'row'},el('button',{className:'btn ghost',disabled:!cat||!!cat.err,onClick:importBF},'Import Black Fox templates'),el('button',{className:'btn',disabled:!cat||!!cat.err,onClick:function(){setModal({edit:{}});}},'+ New template'))),
+    msg&&el('div',{className:'msg '+(/Imported/.test(msg)?'ok':'err')},msg),
+    !cat?el('div',{className:'muted'},'Loading...'):cat.err?el('div',{className:'msg err'},cat.err):
+    el('div',null,
+      el('div',{className:'row',style:{marginBottom:12}},el('input',{style:{maxWidth:300},placeholder:'Search templates...',value:q,onChange:function(e){setQ(e.target.value);}}),el('span',{className:'muted'},tpls.length+' template'+(tpls.length===1?'':'s'))),
+      !tpls.length?el('div',{className:'empty'},'No label templates for '+lic.name+' yet.'+(canE?' Click "+ New template", or "Import Black Fox templates" to bring in the 26 Black Fox templates for SKUs and flavors that exist in Products.':'')):
+      Object.keys(bySku).map(function(sid2){return el('div',{key:sid2,style:{marginBottom:16}},el('div',{className:'secth'},L.names.sku(sid2)||'Unknown SKU'),
+        el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))'}},bySku[sid2].map(function(t){
+          return el('div',{key:t.id,className:'card',style:{marginBottom:0}},
+            el('div',{style:{fontWeight:700}},t.name),
+            el('div',{className:'muted',style:{fontSize:12}},(t.flavor_id?L.names.flavor(t.flavor_id):'Any flavor')+'  \u00b7  '+(t.layout==='tri'?'Three columns':'Standard')),
+            el('div',{style:{fontSize:12,marginTop:6}},'Approval # '+(t.approval_number||'\u2014')+'  \u00b7  '+(t.servings||'?')+' servings  \u00b7  '+(t.weight||'?')),
+            !t.ingredients&&el('div',{className:'badge bad',style:{marginTop:6}},'No ingredients'),
+            el('div',{className:'row',style:{marginTop:10}},canE&&el('button',{className:'btn ghost sm',onClick:function(){setModal({edit:t});}},'Edit'),
+              canF&&el('button',{className:'btn danger sm',onClick:function(){del(t);}},'Delete')));
+        })));})),
+    modal&&modal.edit&&el(TemplateEditor,{tpl:modal.edit.id?modal.edit:null,cat:cat,st:st,lic:lic,onClose:function(){setModal(null);},onDone:function(){setModal(null);L.reload();}}));
 }
 
 /* ---------- App shell ---------- */
@@ -3110,10 +3504,11 @@ function App(){
   if(isAdmin)nav.push({id:'team',label:'Team and Access'},{id:'roles',label:'Roles'});
   if(can('audit',1))nav.push({id:'audit',label:'Audit Trail'});
   const anyLog=LOG_TYPES.some(function(t){return can(LOG_MOD[t.id],1);});
-  const mods=[can('logs_visitor',1)&&['visitors','Visitor Log'],anyLog&&['logs','Facility Logs'],(can('products',1)||can('formbank',1)||can('cogs',1))&&['products','Products'],can('batch',1)&&['batches','Batch Tracker'],can('testing',1)&&['testing','Testing']].filter(Boolean);
+  const mods=[can('logs_visitor',1)&&['visitors','Visitor Log'],anyLog&&['logs','Facility Logs'],(can('products',1)||can('formbank',1)||can('cogs',1))&&['products','Products'],can('batch',1)&&['batches','Batch Tracker'],can('testing',1)&&['testing','Testing'],can('stickers',1)&&['stickers','Compliance Stickers']].filter(Boolean);
   let body;
   if(page==='locations')body=el(Locations,{profile:profile,states:states,licenses:licenses,reload:loadData,openRulebook:function(id){pickState(id);setPage('rulebook');}});
   else if(page==='visitors'&&can('logs_visitor',1))body=el(VisitorLog,{key:licId,state:st,license:lic});
+  else if(page==='stickers'&&can('stickers',1))body=el(StickersPage,{key:licId,state:st,license:lic});
   else if(page==='testing'&&can('testing',1))body=el(TestingPage,{key:licId,state:st,license:lic,profile:profile});
   else if(page==='batches'&&can('batch',1))body=el(BatchTracker,{key:licId,state:st,license:lic,profile:profile});
   else if(page==='products')body=el(Products,{key:stateId,state:st,licenses:licenses,profile:profile});
@@ -3145,7 +3540,7 @@ function App(){
       nav.map(function(n){return el('button',{key:n.id,className:page===n.id?'on':'',onClick:function(){setPage(n.id);}},n.label);}),
       el('div',{className:'grp'},'Modules'),
       mods.map(function(m){return el('button',{key:m[0],className:page===m[0]?'on':'',onClick:function(){setPage(m[0]);}},m[1]);}),
-      ['Compliance Stickers','SOPs','QMS'].map(function(m){return el('button',{key:m,className:'soon',disabled:true},m,el('span',{className:'tag'},'Soon'));}))),
+      ['SOPs','QMS'].map(function(m){return el('button',{key:m,className:'soon',disabled:true},m,el('span',{className:'tag'},'Soon'));}))),
     el('div',{className:'main'},body));
 }
 
