@@ -95,6 +95,10 @@ td{padding:9px 10px;border-bottom:1px solid #1d1d1d;vertical-align:middle}
 .autov{background:#151515;border:1px dashed var(--line);border-radius:8px;padding:9px 11px;font-weight:700}
 .metrcck{background:#0f1a13;border:1px solid #23543a;border-radius:8px;padding:9px 12px;margin-bottom:12px;color:#a6e6c4;font-weight:700}
 .voidcard{opacity:.55}
+.barrow{display:flex;align-items:center;gap:8px;font-size:12px;margin:3px 0}.barrow .bl{width:130px;text-align:right;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.barrow .bt{flex:1;max-width:360px;height:10px;background:#1b1b1b;border-radius:5px;overflow:hidden}.barrow .bf{display:block;height:100%;background:var(--gold-grad)}.barrow .bf.alt{background:linear-gradient(90deg,#3f8f63,#5fbf8a)}
+.barrow .bv{width:70px;font-weight:700}
+.badge.warn{border-color:#6b5414;color:#f1d57a;background:#2a2108}
 .ck input{width:18px;height:18px;flex:0 0 auto;accent-color:#d4af37}
 .empty{border:1px dashed var(--gold-lo);border-radius:12px;padding:30px;text-align:center;color:var(--muted)}
 @media(max-width:820px){
@@ -165,7 +169,7 @@ async function sb(path,opt){
   if(!r.ok){
     const m=(j&&(j.message||j.hint||j.details))||txt||('Error '+r.status);
     if(/schema cache|Could not find the table|relation .* does not exist/i.test(m)){
-      const step=/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
+      const step=/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
       throw new Error('Database tables are missing - run '+step+' in the Hendrix Supabase project.');
     }
     if(/row-level security|permission denied/i.test(m))throw new Error('Not allowed - your access level does not allow this here. Ask a system admin.');
@@ -265,7 +269,7 @@ function LoginScreen(props){
 }
 
 /* ---------- Dashboard ---------- */
-const MODULES_SOON=['Testing','Compliance Stickers','SOPs','QMS (Deviations, CAPAs, Audits)','Time Clock and Badges','Production Planner'];
+const MODULES_SOON=['Compliance Stickers','SOPs','QMS (Deviations, CAPAs, Audits)','Time Clock and Badges','Production Planner'];
 function Dashboard(props){
   const st=props.state,lic=props.license;
   const isAdmin=props.profile.role==='admin';
@@ -1875,7 +1879,7 @@ function Products(props){
 /* ---------- Audit trail: history, void, admin page ----------
    The database writes every change to hx_audit_log (append-only). Records are never deleted:
    they are voided with a reason. Every change to a record needs a reason for change. */
-const AUDIT_AREAS={hx_roles:'Roles',hx_batches:'Batch record',hx_facility_log:'Facility log entry',hx_visitor_log:'Visitor log',hx_log_lists:'Facility log lists',hx_rules:'Rulebook',
+const AUDIT_AREAS={hx_tests:'Testing record',hx_roles:'Roles',hx_batches:'Batch record',hx_facility_log:'Facility log entry',hx_visitor_log:'Visitor log',hx_log_lists:'Facility log lists',hx_rules:'Rulebook',
   hx_states:'States',hx_licenses:'Licenses',hx_profiles:'Team and access',hx_skus:'SKUs',hx_flavors:'Flavors',hx_formulations:'Formulations',hx_cost_library:'Ingredient prices'};
 const AUDIT_SKIP=['voided_by','voided_at','updated_at','edit_reason'];
 function auditVal(v){
@@ -1914,6 +1918,7 @@ function auditRecord(a){
   const r=a.new_data||a.old_data||{};
   if(a.table_name==='hx_facility_log'){const d=auditDefOf(a);return (d?d.name:'Log')+(r.item?': '+r.item:'');}
   if(a.table_name==='hx_visitor_log')return r.visitor_name||a.row_id;
+  if(a.table_name==='hx_tests')return 'Test '+(r.batch_number||'')+(r.tag?' \u00b7 '+r.tag:'');
   if(a.table_name==='hx_batches'){const d=auditDefOf(a);return (d?d.name:'Batch')+' '+(r.batch_number||'');}
   if(a.table_name==='hx_profiles')return r.name||r.email||a.row_id;
   if(a.table_name==='hx_licenses')return (r.name||'')+(r.license_number?' ('+r.license_number+')':'');
@@ -2414,6 +2419,14 @@ function BatchTracker(props){
   },[lid,sid,type,from,to]);
   useEffect(function(){loadCat();},[loadCat]);
   useEffect(function(){setRows(null);setErr('');loadRows();},[loadRows]);
+  const[tests,setTests]=useState({});
+  const loadTests=useCallback(function(){
+    if(!rows||!rows.length||!can('testing',1)){setTests({});return;}
+    const ids=rows.map(function(r){return r.id;}),parts=[];for(let i=0;i<ids.length;i+=40)parts.push(ids.slice(i,i+40));
+    Promise.all(parts.map(function(p){return db.get('hx_tests','batch_id=in.('+p.map(encodeURIComponent).join(',')+')&voided=eq.false&select=id,batch_id,status,tag').catch(function(){return [];});}))
+      .then(function(rs){const m={};rs.reduce(function(a,b){return a.concat(b||[]);},[]).forEach(function(t){(m[t.batch_id]=m[t.batch_id]||[]).push(t);});setTests(m);});
+  },[rows]);
+  useEffect(loadTests,[loadTests]);
   if(!st||!lic)return el('div',null,el('h1',null,'Batch ',el('span',{className:'g'},'Tracker')),el('div',{className:'empty'},'Pick a state and a license at the top first. Every batch belongs to exactly one license.'));
   const allSkus=(cat&&cat.skus)||[];
   const usable=allSkus.filter(function(k){return k.product_type===type&&k.active&&(!(k.license_ids||[]).length||k.license_ids.indexOf(lid)>=0);});
@@ -2447,6 +2460,16 @@ function BatchTracker(props){
   async function update(b,p){
     await db.update('hx_batches',b.id,{batch_number:p.batch_number,sku_id:p.sku_id,flavor_id:p.flavor_id,flavor:p.flavor,status:p.status,data:p.data,attachments:p.attachments,edit_reason:p.edit_reason||null});
     setModal(null);loadRows();
+  }
+  async function submitTest(b){
+    const tags=testFinalTags(b);
+    if(!tags.length){setErr('Enter the final package '+ts+' tag on this batch first. That is the tag submitted for mandatory testing.');return;}
+    if(!window.confirm('Submit for testing?\n\n'+tags.map(function(t){return t.label+': '+t.tag;}).join('\n')))return;
+    setErr('');
+    try{
+      for(const t of tags)await db.insert('hx_tests',{id:newId('test'),state_id:sid,license_id:lid,batch_id:b.id,tag:t.tag,tag_label:t.label,status:'Submitted',performed_by:(props.profile.name||'')});
+      loadTests();
+    }catch(e){setErr(/hx_tests_batch_tag/.test(String(e.message))?'This batch was already submitted for testing.':/hx_tests/.test(String(e.message))?'Testing is not set up yet - run hendrix_step9.sql.':String(e.message||e));}
   }
   async function voidBatch(b,why){await db.update('hx_batches',b.id,{voided:true,void_reason:why});setModal(null);loadRows();}
   async function openFull(b,mode){
@@ -2485,9 +2508,11 @@ function BatchTracker(props){
               m.total>0&&el('span',{className:'badge'+(full?' ok':m.done?'':' bad')},ts+' '+m.done+'/'+m.total)),
             el('div',{style:{fontSize:13}},[b.sku,b.flavor].filter(Boolean).join('  \u00b7  ')||(def.id==='ethanol_extraction'?(d.biomass_tags||[]).length+' biomass tag(s), '+(d.total_biomass_used||0)+' g':'')),
             def.fields.filter(function(f){return f.t==='display'&&btVisible(def.id,f,d,sk,b);}).map(function(f){const c=btCheck(def.id,f.k,d,sk);
-              return c&&c[0]!=='none'&&c[0]!=='info'?el('span',{key:f.k,className:'badge '+(tone[c[0]]||''),style:{marginRight:6,marginTop:6}},btLabel(def.id,{l:BT_SHORT[f.k]||f.l},ts,sk)+': '+c[1]):null;})),
+              return c&&c[0]!=='none'&&c[0]!=='info'?el('span',{key:f.k,className:'badge '+(tone[c[0]]||''),style:{marginRight:6,marginTop:6}},btLabel(def.id,{l:BT_SHORT[f.k]||f.l},ts,sk)+': '+c[1]):null;}),
+            (tests[b.id]||[]).map(function(t){return el(TestBadge,{key:t.id,s:t.status,prefix:'Test: ',style:{marginRight:6,marginTop:6}});})),
           el('div',{className:'row',style:{gap:6}},
             el('button',{className:'btn ghost sm',onClick:function(){view(b);}},'View'),
+            can('testing',2)&&!b.voided&&!(tests[b.id]||[]).length&&testFinalTags(b).length>0&&el('button',{className:'btn sm',onClick:function(){submitTest(b);}},'Submit for testing'),
             !b.voided&&canAdd&&!isAdmin&&el('button',{className:'btn ghost sm',onClick:function(){openFull(b,'fill');}},'Continue'),
             !b.voided&&isAdmin&&el('button',{className:'btn ghost sm',onClick:function(){openFull(b,'edit');}},'Edit'),
             !b.voided&&isAdmin&&el('button',{className:'btn danger sm',onClick:function(){setModal({voidb:b});}},'Void'))));
@@ -2515,6 +2540,7 @@ const ACCESS_MODULES=[
   {id:'products',label:'Products (SKUs and flavors)',grp:'Production',help:'View / add and edit / delete'},
   {id:'formbank',label:'Formulation Bank (recipes)',grp:'Production',help:'View / add and edit / delete'},
   {id:'cogs',label:'Ingredient Prices',grp:'Production',help:'View / add and edit / delete'},
+  {id:'testing',label:'Testing (lab results, COAs)',grp:'Production',help:'View / submit, upload COAs and record results / change final results with a reason and void'},
   {id:'logs',label:'Facility Logs (all)',grp:'Facility Logs',help:'Default for every log below that has no setting of its own'},
   {id:'logs_sanitation',label:'Sanitation Log',grp:'Facility Logs',child:1},
   {id:'logs_waste',label:'Waste Destruction Log',grp:'Facility Logs',child:1},
@@ -2670,18 +2696,18 @@ function Team(props){
 const LOGS_PROD=['logs_sanitation','logs_waste','logs_scale','logs_equipment','logs_temp','logs_env'];
 function pm(o,list,lv){const x={...o};(list||[]).forEach(function(k){x[k]=lv;});return x;}
 const STARTER_ROLES=[
-  ['General Manager','Leadership. Edit everywhere; Full on batches and every log; sees recipes, prices and the audit trail.',{rulebook:'editor',audit:'read',batch:'admin',products:'editor',formbank:'read',cogs:'read',logs:'admin'}],
-  ['Assistant of General Manager','Leadership support. Edit on batches, products and every log; sees recipes and the audit trail.',{rulebook:'editor',audit:'read',batch:'editor',products:'editor',formbank:'read',logs:'editor'}],
-  ['Compliance Officer','Full on every log and the rulebook; sees batches, products and the audit trail.',{rulebook:'admin',audit:'read',logs:'admin',batch:'read',products:'read'}],
+  ['General Manager','Leadership. Edit everywhere; Full on batches and every log; sees recipes, prices and the audit trail.',{rulebook:'editor',audit:'read',batch:'admin',testing:'admin',products:'editor',formbank:'read',cogs:'read',logs:'admin'}],
+  ['Assistant of General Manager','Leadership support. Edit on batches, products and every log; sees recipes and the audit trail.',{rulebook:'editor',audit:'read',batch:'editor',testing:'editor',products:'editor',formbank:'read',logs:'editor'}],
+  ['Compliance Officer','Full on every log and the rulebook; sees batches, products and the audit trail.',{rulebook:'admin',audit:'read',logs:'admin',batch:'read',testing:'admin',products:'read'}],
   ['Security Manager','Full on the security and visitor logs.',{rulebook:'read',logs_security:'admin',logs_visitor:'admin'}],
   ['Security Officer','Fills the security and visitor logs.',{rulebook:'read',logs_security:'editor',logs_visitor:'editor'}],
   ['Sanitation','Fills the sanitation, waste and pest control logs.',{logs_sanitation:'editor',logs_waste:'editor',logs_pest:'editor'}],
   ['Team Member','Continues batches; fills the sanitation and temp / humidity logs.',{batch:'editor',products:'read',logs_temp:'editor',logs_sanitation:'editor'}],
   ['Inventory Manager','Sees products and batches; fills the waste log.',{products:'read',batch:'read',logs_waste:'editor'}],
-  ['Extraction Manager','Full on batches; fills the scale, equipment and temp / humidity logs.',{batch:'admin',products:'read',formbank:'read',logs_scale:'editor',logs_equipment:'editor',logs_temp:'editor'}],
-  ['Production Manager','Full on batches; edits products; fills the production logs.',pm({batch:'admin',products:'editor',formbank:'read',rulebook:'read'},LOGS_PROD,'editor')],
+  ['Extraction Manager','Full on batches; fills the scale, equipment and temp / humidity logs.',{batch:'admin',testing:'editor',products:'read',formbank:'read',logs_scale:'editor',logs_equipment:'editor',logs_temp:'editor'}],
+  ['Production Manager','Full on batches; edits products; fills the production logs.',pm({batch:'admin',testing:'editor',products:'editor',formbank:'read',rulebook:'read'},LOGS_PROD,'editor')],
   ['Sales Manager','Sees products.',{products:'read'}],
-  ['Production Lead','Creates and continues batches; fills the production logs.',pm({batch:'editor',products:'read'},['logs_sanitation','logs_scale','logs_equipment','logs_temp'],'editor')]];
+  ['Production Lead','Creates and continues batches; fills the production logs.',pm({batch:'editor',testing:'read',products:'read'},['logs_sanitation','logs_scale','logs_equipment','logs_temp'],'editor')]];
 function accessSummary(perms){
   const p=perms||{},out=[];
   ACCESS_MODULES.forEach(function(m){if(has(p,m.id)&&lvRank(p[m.id]))out.push(m.label.replace(/ \(.*\)$/,'')+': '+LV_NAME[p[m.id]]);});
@@ -2753,6 +2779,256 @@ function Roles(){
           el('button',{className:'btn danger sm',onClick:function(){del(r,n);}},'Delete')));
     })),
     edit&&el(RoleEditor,{role:edit,count:(roles||[]).length,onClose:function(){setEdit(null);},onDone:function(){setEdit(null);load();}}));
+}
+
+/* ---------- Testing: lab submissions, results and COAs (Black Fox Testing module) ---------- */
+const TEST_STATUSES=['Pending','Submitted','Passed','Failed','Retest'];
+const TEST_TONE={Pending:'off',Submitted:'',Passed:'ok',Failed:'bad',Retest:'warn'};
+// only the FINAL package tag goes to mandatory testing (never crude / in-progress / source tags)
+const TEST_FINAL_TAGS={butane_extraction:[['product_final_metrc','Final'],['thca_final_metrc','THCA Final'],['hte_final_metrc','HTE Final']],
+  ethanol_extraction:[['distillate_metrc_tag','Distillate']],pre_rolls:[['final_packaged_tag','Final Packaged']],infused_flower:[['metrc_tag','Final Packaging']],
+  cartridges:[['cart_packaged_metrc','Cart Packaged']],gummies:[['final_packaged_gummies_metrc','Final Packaged']],moon_rocks:[['metrc_tag','Final']],snow_caps:[['metrc_tag','Final']]};
+function testFinalTags(b){const d=(b&&b.data)||{};return (TEST_FINAL_TAGS[b.batch_type]||[]).map(function(x){return {tag:String(d[x[0]]||'').trim(),label:x[1]};}).filter(function(x){return x.tag;});}
+const TEST_CATS={'CONCENTRATES':['bho','ethanol','distillate','extract','rosin','wax','shatter','live_resin','concentrate','butane'],'FLOWER/TRIM':['flower','trim'],
+  'PRE ROLLS':['pre_roll','preroll','joint'],'EDIBLES':['edible','gummy','gummies','chocolate','beverage','tincture','capsule'],'VAPES':['cartridge','cart','aio','pod']};
+function testCats(r){const h=((r.batch_type||'')+' '+(r.sku||'')).toLowerCase().replace(/[^a-z0-9]+/g,'_');return Object.keys(TEST_CATS).filter(function(c){return TEST_CATS[c].some(function(k){return h.indexOf(k)>=0;});});}
+const COA_LABELS={pesticides:'Pesticides',microbials:'Microbials',mycotoxins:'Mycotoxins',heavy_metals:'Heavy Metals',residual_solvents:'Residual Solvents',foreign_matter:'Foreign Matter',moisture:'Moisture / Water Activity'};
+const COA_PROMPT='You are reading a cannabis laboratory Certificate of Analysis (COA) for a state-licensed cannabis facility. Extract what the document states. Do not invent values. Respond with ONLY valid JSON, no markdown:\n'+
+ '{"lab_name":"","lab_license_number":"","report_date":"","sample_name":"","sample_metrc_tag":"","overall_status":"Pass|Fail|Unknown",'+
+ '"potency":{"unit":"%","total_thc":null,"total_cbd":null,"thca":null,"d9_thc":null,"cbda":null,"cbd":null,"cbn":null,"cbg":null,"thcv":null,"cbdv":null,"d8_thc":null,"total_cannabinoids":null},'+
+ '"categories":{"pesticides":{"status":"Pass|Fail|Not tested","analytes":[{"name":"","result":"","limit":"","unit":"","status":"Pass|Fail|ND"}]},"microbials":{"status":"","analytes":[]},"mycotoxins":{"status":"","analytes":[]},'+
+ '"heavy_metals":{"status":"","analytes":[]},"residual_solvents":{"status":"","analytes":[]},"foreign_matter":{"status":"","analytes":[]},"moisture":{"status":"","analytes":[]}},'+
+ '"terpenes":[{"name":"","value":0}],"total_terpenes":null,"notes":""}\n'+
+ 'Rules: lab_license_number is the testing laboratory\'s state license number exactly as printed (search header, footer, accreditation and signature areas). sample_metrc_tag is the package / source tag the sample was taken from, exactly as printed. '+
+ 'Numbers as numbers where possible. overall_status is Pass only if the COA states the sample passed all required tests, Fail if any required test failed, otherwise Unknown. For analytes below the detection limit use status ND. Only list analytes that are detected or failed, plus the category status.';
+function normTag(t){return String(t||'').toUpperCase().replace(/[^A-Z0-9]/g,'');}
+function coaMismatch(rec,an){
+  const c=normTag(an&&an.sample_metrc_tag);if(!c)return null;
+  const mine=[rec.tag,rec.sample_tag].map(normTag).filter(Boolean);if(!mine.length)return null;
+  const ok=mine.some(function(m){return m===c||(Math.min(m.length,c.length)>=8&&(m.slice(-c.length)===c||c.slice(-m.length)===m));});
+  return ok?null:{coa:an.sample_metrc_tag,mine:[rec.tag,rec.sample_tag].filter(Boolean).join(' / ')};
+}
+function parseJsonLoose(t){const s=String(t||''),a=s.indexOf('{'),b=s.lastIndexOf('}');if(a<0||b<=a)throw new Error('The AI did not return a readable result.');return JSON.parse(s.slice(a,b+1));}
+function fileB64(file){return new Promise(function(res,rej){const r=new FileReader();r.onload=function(){res(String(r.result).split(',')[1]||'');};r.onerror=function(){rej(new Error('Could not read the file'));};r.readAsDataURL(file);});}
+async function storagePut(file,path){
+  const c=cfg(),tok=await freshToken();
+  const r=await fetch(c.url+'/storage/v1/object/hendrix-files/'+path,{method:'POST',headers:{'apikey':c.key,'Authorization':'Bearer '+(tok||c.key),'Content-Type':file.type||'application/octet-stream'},body:file});
+  if(!r.ok){const t=await r.text();throw new Error(/bucket|not found/i.test(t)?'File storage is not set up - run hendrix_step9.sql.':'Upload failed: '+t.slice(0,160));}
+  return path;
+}
+async function storageGet(path){
+  const c=cfg(),tok=await freshToken();
+  const r=await fetch(c.url+'/storage/v1/object/authenticated/hendrix-files/'+path,{headers:{'apikey':c.key,'Authorization':'Bearer '+(tok||c.key)}});
+  if(!r.ok)throw new Error('Could not open the file ('+r.status+').');
+  return await r.blob();
+}
+async function openStored(path,name){
+  const w=window.open('','_blank');
+  try{const b=await storageGet(path);const u=URL.createObjectURL(b);if(w)w.location.href=u;else{const a=document.createElement('a');a.href=u;a.download=name||'file';a.click();}}
+  catch(e){if(w)w.close();throw e;}
+}
+async function aiCall(body){
+  const c=cfg(),tok=await freshToken();
+  const r=await fetch(c.url+'/functions/v1/hendrix-ai',{method:'POST',headers:{'apikey':c.key,'Authorization':'Bearer '+(tok||c.key),'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(r.status===404)throw new Error('AI_NOT_SETUP');
+  const j=await r.json().catch(function(){return {};});
+  if(!r.ok||j.error)throw new Error((j.error&&j.error.message)||('AI request failed ('+r.status+')'));
+  return j;
+}
+async function readCoa(file){
+  const data=await fileB64(file),pdf=/pdf/i.test(file.type)||/\.pdf$/i.test(file.name||'');
+  const block=pdf?{type:'document',source:{type:'base64',media_type:'application/pdf',data:data}}:{type:'image',source:{type:'base64',media_type:file.type||'image/png',data:data}};
+  const j=await aiCall({max_tokens:6000,system:'You output ONLY valid, parseable JSON. Never include prose, explanation, or markdown fences.',messages:[{role:'user',content:[block,{type:'text',text:COA_PROMPT}]}]});
+  return parseJsonLoose((j.content&&j.content[0]&&j.content[0].text)||'');
+}
+function TestBadge(props){const s=TEST_STATUSES.indexOf(props.s)>=0?props.s:'Pending';return el('span',{className:'badge '+(TEST_TONE[s]||''),style:props.style},(props.prefix||'')+s);}
+function Bars(props){
+  const rows=(props.rows||[]).filter(function(r){return r&&isFinite(parseFloat(r[1]));}).map(function(r){return [r[0],parseFloat(r[1])];});
+  if(!rows.length)return null;
+  const mx=Math.max.apply(null,rows.map(function(r){return r[1];}))||1;
+  return el('div',null,rows.map(function(r,i){return el('div',{key:i,className:'barrow'},el('span',{className:'bl'},r[0]),
+    el('span',{className:'bt'},el('span',{className:'bf'+(props.alt?' alt':''),style:{width:Math.max(2,r[1]/mx*100)+'%'}})),el('span',{className:'bv'},r[1]+(props.unit||'')));}));
+}
+function CoaPanel(props){
+  const rec=props.rec,an=rec.coa_analysis;if(!an||typeof an!=='object')return null;
+  const mm=coaMismatch(rec,an),pot=an.potency||{},cats=an.categories&&typeof an.categories==='object'?an.categories:{};
+  const potRows=[['Total THC',pot.total_thc],['Total CBD',pot.total_cbd],['THCA',pot.thca],['\u03949-THC',pot.d9_thc],['CBDA',pot.cbda],['CBD',pot.cbd],['CBN',pot.cbn],['CBG',pot.cbg],['Total cannabinoids',pot.total_cannabinoids]].filter(function(r){return r[1]!==null&&r[1]!==undefined&&r[1]!=='';});
+  const sb=function(s){return el('span',{className:'badge '+(/pass|nd/i.test(s||'')?'ok':/fail/i.test(s||'')?'bad':'off')},s||'\u2014');};
+  const ov=an.overall_status;
+  return el('div',{style:{marginTop:10}},
+    mm&&el('div',{className:'msg err'},el('b',null,'Tag mismatch \u2014 '),'the COA lists '+mm.coa+' but this record is '+mm.mine+'. Confirm this is the right COA before accepting the result.'),
+    el('div',{className:'row',style:{marginBottom:8}},el('span',{className:'badge '+(ov==='Pass'?'ok':ov==='Fail'?'bad':'off')},'COA overall: '+(ov||'Unknown')),
+      [an.lab_name,an.lab_license_number,an.report_date,an.sample_metrc_tag&&'COA tag: '+an.sample_metrc_tag].filter(Boolean).map(function(x,i){return el('span',{key:i,className:'muted',style:{fontSize:12}},x);})),
+    potRows.length>0&&el('div',{className:'card',style:{padding:10}},el('div',{className:'k',style:{marginBottom:6}},'Potency ('+(pot.unit||'%')+')'),el(Bars,{rows:potRows,unit:' '+(pot.unit||'%')})),
+    Object.keys(cats).map(function(k){
+      const c=cats[k]||{},list=Array.isArray(c.analytes)?c.analytes:[];if(!list.length&&!c.status)return null;
+      return el('div',{key:k,className:'card',style:{padding:10}},el('div',{className:'row',style:{justifyContent:'space-between'}},el('span',{className:'k'},COA_LABELS[k]||k),sb(c.status)),
+        list.length>0&&el('table',{style:{marginTop:6}},el('thead',null,el('tr',null,['Analyte','Result','Limit','Status'].map(function(h){return el('th',{key:h},h);}))),
+          el('tbody',null,list.map(function(a,i){return el('tr',{key:i},el('td',null,a.name),el('td',null,String(a.result==null?'':a.result)+(a.unit?' '+a.unit:'')),el('td',null,String(a.limit==null?'':a.limit)),el('td',null,sb(a.status)));}))));
+    }),
+    Array.isArray(an.terpenes)&&an.terpenes.length>0&&el('div',{className:'card',style:{padding:10}},el('div',{className:'k',style:{marginBottom:6}},'Terpenes'+(an.total_terpenes!=null?' \u2014 total '+an.total_terpenes:'')),
+      el(Bars,{alt:1,rows:an.terpenes.slice(0,12).map(function(t){return [t.name,t.value];})})),
+    an.notes&&el('div',{className:'muted',style:{fontSize:12}},an.notes));
+}
+function TestNew(props){
+  const[batches,setBatches]=useState(null);
+  const[f,setF]=useState({batch_id:'',tag:'',tag_label:'',batch_number:'',batch_type:'',sku:'',flavor:'',sample_tag:'',lab_name:'',status:'Pending',notes:''});
+  const[err,setErr]=useState('');
+  useEffect(function(){
+    db.get('hx_batches','license_id=eq.'+encodeURIComponent(props.lic.id)+'&voided=eq.false&select=id,batch_number,batch_type,sku,flavor,data&order=created_at.desc&limit=300')
+      .then(function(r){setBatches(r||[]);}).catch(function(){setBatches([]);});
+  },[]);
+  const b=(batches||[]).find(function(x){return x.id===f.batch_id;});
+  const tags=b?testFinalTags(b):[];
+  async function save(){
+    setErr('');
+    if(!f.batch_id&&!f.batch_number.trim()){setErr('Pick a batch, or type the batch number.');return;}
+    if(!f.tag.trim()){setErr('Enter the package tag being tested.');return;}
+    try{
+      await db.insert('hx_tests',{id:newId('test'),state_id:props.st.id,license_id:props.lic.id,batch_id:f.batch_id||null,batch_number:f.batch_number.trim(),batch_type:f.batch_type,sku:f.sku.trim(),flavor:f.flavor.trim(),
+        tag:f.tag.trim(),tag_label:f.tag_label,sample_tag:f.sample_tag.trim(),lab_name:f.lab_name.trim(),status:f.status,notes:f.notes.trim(),performed_by:props.name});
+      props.onDone();
+    }catch(e){setErr(/hx_tests_batch_tag/.test(String(e.message))?'That batch and tag already has a test record.':String(e.message||e));}
+  }
+  return el(Modal,{title:'New test record - '+props.lic.name,wide:true,onClose:props.onClose},
+    el(Field,{label:'Batch'},el('select',{style:{width:'100%'},value:f.batch_id,onChange:function(e){const nb=(batches||[]).find(function(x){return x.id===e.target.value;});const t=nb?testFinalTags(nb):[];
+      setF({...f,batch_id:e.target.value,tag:t[0]?t[0].tag:'',tag_label:t[0]?t[0].label:''});}},
+      el('option',{value:''},batches===null?'Loading...':'No batch (type the details)'),(batches||[]).map(function(x){return el('option',{key:x.id,value:x.id},x.batch_number+'  \u00b7  '+(x.sku||ptName(x.batch_type))+(x.flavor?' \u00b7 '+x.flavor:''));}))),
+    !f.batch_id&&el('div',{className:'grid',style:{gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:10}},
+      el(Field,{label:'Batch number'},el('input',{value:f.batch_number,onChange:function(e){setF({...f,batch_number:e.target.value});}})),
+      el(Field,{label:'Product type'},el('select',{style:{width:'100%'},value:f.batch_type,onChange:function(e){setF({...f,batch_type:e.target.value});}},el('option',{value:''},'Other'),PRODUCT_TYPES.map(function(t){return el('option',{key:t.id,value:t.id},t.name);}))),
+      el(Field,{label:'SKU'},el('input',{value:f.sku,onChange:function(e){setF({...f,sku:e.target.value});}})),
+      el(Field,{label:'Flavor'},el('input',{value:f.flavor,onChange:function(e){setF({...f,flavor:e.target.value});}}))),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:10}},
+      el(Field,{label:'Package tag tested *'},tags.length>1?el('select',{style:{width:'100%'},value:f.tag,onChange:function(e){const t=tags.find(function(x){return x.tag===e.target.value;});setF({...f,tag:e.target.value,tag_label:t?t.label:''});}},tags.map(function(t){return el('option',{key:t.tag,value:t.tag},t.label+': '+t.tag);}))
+        :el('input',{value:f.tag,placeholder:b&&!tags.length?'This batch has no final package tag yet':'',onChange:function(e){setF({...f,tag:e.target.value});}})),
+      el(Field,{label:'Sample tag'},el('input',{value:f.sample_tag,onChange:function(e){setF({...f,sample_tag:e.target.value});}})),
+      el(Field,{label:'Lab'},el('input',{value:f.lab_name,onChange:function(e){setF({...f,lab_name:e.target.value});}})),
+      el(Field,{label:'Status'},el('select',{style:{width:'100%'},value:f.status,onChange:function(e){setF({...f,status:e.target.value});}},['Pending','Submitted'].map(function(s){return el('option',{key:s,value:s},s);})))),
+    el(Field,{label:'Notes'},el('textarea',{value:f.notes,style:{minHeight:50},onChange:function(e){setF({...f,notes:e.target.value});}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',onClick:save},'Create')));
+}
+function TestUpdate(props){
+  const r=props.rec,final=r.status==='Passed'||r.status==='Failed';
+  const[f,setF]=useState({status:r.status,lab_name:r.lab_name||'',lab_license:r.lab_license||'',tag:r.tag||'',sample_tag:r.sample_tag||'',result_thc:r.result_thc||'',result_cbd:r.result_cbd||'',result_notes:r.result_notes||'',notes:r.notes||''});
+  const[reason,setReason]=useState('');
+  const[err,setErr]=useState('');
+  const changingFinal=final&&f.status!==r.status;
+  async function save(){
+    setErr('');
+    if(changingFinal&&!reason.trim()){setErr('Changing a final result needs a reason.');return;}
+    try{await db.update('hx_tests',r.id,{...f,edit_reason:reason.trim()||null});props.onDone();}catch(e){setErr(String(e.message||e));}
+  }
+  function inp(k,l,ph){return el(Field,{key:k,label:l},el('input',{value:f[k],placeholder:ph||'',onChange:function(e){setF({...f,[k]:e.target.value});}}));}
+  const opts=final&&!props.full?[r.status]:TEST_STATUSES;
+  return el(Modal,{title:'Update test \u00b7 '+(r.batch_number||'')+' \u00b7 '+(r.tag||''),wide:true,onClose:props.onClose},
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:10}},
+      el(Field,{label:'Status'},el('select',{style:{width:'100%'},value:f.status,onChange:function(e){setF({...f,status:e.target.value});}},opts.map(function(s){return el('option',{key:s,value:s},s);}))),
+      inp('lab_name','Lab'),inp('lab_license','Lab license #'),inp('tag','Package tag'),inp('sample_tag','Sample tag'),inp('result_thc','Result THC %'),inp('result_cbd','Result CBD %')),
+    final&&!props.full&&el('div',{className:'muted',style:{fontSize:12,marginBottom:10}},'This result is final ('+r.status+'). Changing it needs Full access to Testing.'),
+    inp('result_notes','Result notes'),
+    el(Field,{label:'Notes'},el('textarea',{value:f.notes,style:{minHeight:50},onChange:function(e){setF({...f,notes:e.target.value});}})),
+    changingFinal&&el(Field,{label:'Reason for changing a final result *'},el('textarea',{value:reason,style:{minHeight:50},onChange:function(e){setReason(e.target.value);}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',onClick:save},'Save')));
+}
+function TestingPage(props){
+  const st=props.state,lic=props.license,sid=st?st.id:'',lid=lic?lic.id:'';
+  const[rows,setRows]=useState(null);
+  const[q,setQ]=useState('');
+  const[sf,setSf]=useState('ALL');
+  const[cat,setCat]=useState('ALL');
+  const[msg,setMsg]=useState('');
+  const[busy,setBusy]=useState({});
+  const[open,setOpen]=useState({});
+  const[modal,setModal]=useState(null);
+  const load=useCallback(function(){
+    if(!lid){setRows([]);return;}
+    db.get('hx_tests','license_id=eq.'+encodeURIComponent(lid)+'&state_id=eq.'+encodeURIComponent(sid)+'&select=*&order=created_at.desc&limit=1000')
+      .then(function(r){setRows((r||[]).filter(function(x){return x.license_id===lid;}));})
+      .catch(function(e){setMsg(/hx_tests/.test(String(e.message))?'Testing is not set up yet - run hendrix_step9.sql in the Hendrix Supabase project.':String(e.message||e));setRows([]);});
+  },[lid,sid]);
+  useEffect(load,[load]);
+  if(!st||!lic)return el('div',null,el('h1',null,el('span',{className:'g'},'Testing')),el('div',{className:'empty'},'Pick a state and a license at the top first.'));
+  const canE=can('testing',2),canF=can('testing',3),ts=st.tracking_system||'METRC';
+  function setB(id,v){setBusy(function(p){return {...p,[id]:v};});}
+  async function runCoa(r,file){
+    setMsg('');setB(r.id,file?'Uploading...':'Reading COA...');
+    try{
+      const patch={};let f=file;
+      if(file){
+        const ext=(file.name.split('.').pop()||'pdf').toLowerCase().replace(/[^a-z0-9]/g,'');
+        patch.coa_path=await storagePut(file,'coa/'+lid+'/'+r.id+'-'+Date.now()+'.'+ext);patch.coa_filename=file.name;
+        await db.update('hx_tests',r.id,patch);
+      }else{const blob=await storageGet(r.coa_path);f=new File([blob],r.coa_filename||'coa.pdf',{type:blob.type||'application/pdf'});}
+      setB(r.id,'Reading COA...');
+      let an;
+      try{an=await readCoa(f);}
+      catch(e){
+        if(String(e.message)==='AI_NOT_SETUP'){setMsg('COA saved. AI reading is not set up yet (deploy the hendrix-ai function). Enter the results with Update.');load();setB(r.id,false);return;}
+        throw e;
+      }
+      const p2={coa_analysis:an},pot=an.potency||{};
+      if(pot.total_thc!=null)p2.result_thc=String(pot.total_thc);
+      if(pot.total_cbd!=null)p2.result_cbd=String(pot.total_cbd);
+      if(an.lab_name&&!r.lab_name)p2.lab_name=an.lab_name;
+      if(an.lab_license_number&&!r.lab_license)p2.lab_license=String(an.lab_license_number);
+      const mm=coaMismatch(r,an),final=r.status==='Passed'||r.status==='Failed';
+      if(an.sample_metrc_tag&&!r.sample_tag&&!mm)p2.sample_tag=an.sample_metrc_tag;
+      let note='';
+      if(mm){p2.result_notes=((r.result_notes||'')+' Tag mismatch: COA '+mm.coa+' vs record '+mm.mine+'.').trim();note='COA read, but the tag does not match \u2014 status left unchanged.';}
+      else if(!final&&an.overall_status==='Pass'){p2.status='Passed';note='COA read \u2014 marked Passed.';}
+      else if(!final&&an.overall_status==='Fail'){p2.status='Failed';note='COA read \u2014 marked Failed.';}
+      else note=final?'COA read. The result was already final, so the status was not changed.':'COA read.';
+      p2.edit_reason='COA read by AI';
+      await db.update('hx_tests',r.id,p2);
+      setMsg(note);setOpen(function(p){return {...p,[r.id]:true};});load();
+    }catch(e){setMsg(String(e.message||e));}
+    setB(r.id,false);
+  }
+  const all=rows||[],counts={};TEST_STATUSES.forEach(function(s){counts[s]=all.filter(function(r){return !r.voided&&r.status===s;}).length;});
+  const ql=q.toLowerCase();
+  const shown=all.filter(function(r){return (sf==='ALL'||(!r.voided&&r.status===sf))&&(cat==='ALL'||testCats(r).indexOf(cat)>=0)&&
+    (!ql||[r.batch_number,r.sku,r.flavor,r.tag,r.sample_tag,r.lab_name,r.notes].join(' ').toLowerCase().indexOf(ql)>=0);});
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,el('span',{className:'g'},'Testing')),el('div',{className:'sub'},st.name+'  \u00b7  '+lic.name+'  \u00b7  Lab submissions, results and COAs  \u00b7  '+all.length+(all.length===1?' record':' records'))),
+      canE&&el('button',{className:'btn',onClick:function(){setModal({nw:1});}},'+ New test record')),
+    el('div',{className:'tabs'},[['ALL','All']].concat(TEST_STATUSES.map(function(s){return [s,s+' ('+counts[s]+')'];})).map(function(x){return el('button',{key:x[0],className:sf===x[0]?'on':'',onClick:function(){setSf(x[0]);}},x[1]);})),
+    el('div',{className:'row',style:{marginBottom:12}},
+      el('input',{style:{maxWidth:320},placeholder:'Search batch, SKU, flavor, tag, lab...',value:q,onChange:function(e){setQ(e.target.value);}}),
+      el('select',{value:cat,onChange:function(e){setCat(e.target.value);}},el('option',{value:'ALL'},'All categories'),Object.keys(TEST_CATS).map(function(c){return el('option',{key:c,value:c},c);})),
+      el('button',{className:'btn ghost sm',onClick:load},'Refresh')),
+    msg&&el('div',{className:'msg '+(/not|fail|could|mismatch|error/i.test(msg)?'err':'ok')},msg),
+    rows===null?el('div',{className:'muted'},'Loading...'):!shown.length?el('div',{className:'empty'},'No testing records match. Submit a batch for testing from the Batch Tracker, or create one here.'):
+    shown.map(function(r){
+      const mm=r.coa_analysis&&coaMismatch(r,r.coa_analysis);
+      return el('div',{key:r.id,className:'card'+(r.voided?' voidcard':''),style:{borderLeft:'3px solid '+(r.voided?'#5a2a26':r.status==='Passed'?'#23543a':r.status==='Failed'?'#5a2a26':'var(--gold-lo)')}},
+        el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+          el('div',{style:{flex:1,minWidth:240}},
+            el('div',{className:'row',style:{gap:8,marginBottom:4}},el('b',{style:{color:'var(--gold-hi)'}},r.batch_number||'(no batch #)'),
+              r.voided?el('span',{className:'badge bad',title:r.void_reason||''},'Void'):el(TestBadge,{s:r.status}),
+              testCats(r).map(function(c){return el('span',{key:c,className:'badge off'},c);}),mm&&el('span',{className:'badge bad'},'Tag mismatch')),
+            el('div',{style:{fontSize:13}},[r.sku,r.flavor].filter(Boolean).join('  \u00b7  ')),
+            el('div',{className:'muted',style:{fontSize:12,marginTop:2}},[r.tag&&(r.tag_label?r.tag_label+' ':'')+ts+' '+r.tag,r.sample_tag&&'Sample '+r.sample_tag,r.lab_name&&'Lab: '+r.lab_name,
+              r.submitted_at&&'Submitted '+new Date(r.submitted_at).toLocaleDateString(),r.result_at&&'Result '+new Date(r.result_at).toLocaleDateString()].filter(Boolean).join('  \u00b7  ')),
+            (r.result_thc||r.result_cbd)&&el('div',{style:{fontSize:13,marginTop:4}},'THC '+(r.result_thc||'\u2014')+'%   CBD '+(r.result_cbd||'\u2014')+'%'),
+            r.result_notes&&el('div',{style:{fontSize:12,color:'#f1d57a',marginTop:2}},r.result_notes),
+            r.notes&&el('div',{className:'muted',style:{fontSize:12,marginTop:2}},r.notes)),
+          el('div',{className:'row',style:{gap:6}},
+            r.coa_path&&el('button',{className:'btn ghost sm',onClick:function(){openStored(r.coa_path,r.coa_filename).catch(function(e){setMsg(String(e.message||e));});}},'COA'),
+            r.coa_analysis&&el('button',{className:'btn ghost sm',onClick:function(){setOpen(function(p){return {...p,[r.id]:!p[r.id]};});}},open[r.id]?'Hide analysis':'Show analysis'),
+            canE&&!r.voided&&el('label',{className:'btn ghost sm',style:{cursor:'pointer'}},busy[r.id]||(r.coa_path?'Replace COA':'Upload COA'),
+              el('input',{type:'file',accept:'application/pdf,image/*',style:{display:'none'},disabled:!!busy[r.id],onChange:function(e){const f=e.target.files&&e.target.files[0];e.target.value='';if(f)runCoa(r,f);}})),
+            canE&&!r.voided&&r.coa_path&&el('button',{className:'btn ghost sm',disabled:!!busy[r.id],onClick:function(){runCoa(r,null);}},'Re-read COA'),
+            canE&&!r.voided&&el('button',{className:'btn ghost sm',onClick:function(){setModal({upd:r});}},'Update'),
+            canF&&!r.voided&&el('button',{className:'btn danger sm',onClick:function(){setModal({voidr:r});}},'Void'))),
+        open[r.id]&&el(CoaPanel,{rec:r}));
+    }),
+    modal&&modal.nw&&el(TestNew,{st:st,lic:lic,name:(ACC.profile&&ACC.profile.name)||'',onClose:function(){setModal(null);},onDone:function(){setModal(null);load();}}),
+    modal&&modal.upd&&el(TestUpdate,{rec:modal.upd,full:canF,onClose:function(){setModal(null);},onDone:function(){setModal(null);load();}}),
+    modal&&modal.voidr&&el(VoidModal,{what:'test record '+(modal.voidr.batch_number||''),onClose:function(){setModal(null);},onVoid:async function(why){await db.update('hx_tests',modal.voidr.id,{voided:true,void_reason:why});setModal(null);load();}}));
 }
 
 /* ---------- App shell ---------- */
@@ -2834,10 +3110,11 @@ function App(){
   if(isAdmin)nav.push({id:'team',label:'Team and Access'},{id:'roles',label:'Roles'});
   if(can('audit',1))nav.push({id:'audit',label:'Audit Trail'});
   const anyLog=LOG_TYPES.some(function(t){return can(LOG_MOD[t.id],1);});
-  const mods=[can('logs_visitor',1)&&['visitors','Visitor Log'],anyLog&&['logs','Facility Logs'],(can('products',1)||can('formbank',1)||can('cogs',1))&&['products','Products'],can('batch',1)&&['batches','Batch Tracker']].filter(Boolean);
+  const mods=[can('logs_visitor',1)&&['visitors','Visitor Log'],anyLog&&['logs','Facility Logs'],(can('products',1)||can('formbank',1)||can('cogs',1))&&['products','Products'],can('batch',1)&&['batches','Batch Tracker'],can('testing',1)&&['testing','Testing']].filter(Boolean);
   let body;
   if(page==='locations')body=el(Locations,{profile:profile,states:states,licenses:licenses,reload:loadData,openRulebook:function(id){pickState(id);setPage('rulebook');}});
   else if(page==='visitors'&&can('logs_visitor',1))body=el(VisitorLog,{key:licId,state:st,license:lic});
+  else if(page==='testing'&&can('testing',1))body=el(TestingPage,{key:licId,state:st,license:lic,profile:profile});
   else if(page==='batches'&&can('batch',1))body=el(BatchTracker,{key:licId,state:st,license:lic,profile:profile});
   else if(page==='products')body=el(Products,{key:stateId,state:st,licenses:licenses,profile:profile});
   else if(page==='logs')body=el(FacilityLogs,{key:licId,state:st,license:lic,profile:profile});
@@ -2868,7 +3145,7 @@ function App(){
       nav.map(function(n){return el('button',{key:n.id,className:page===n.id?'on':'',onClick:function(){setPage(n.id);}},n.label);}),
       el('div',{className:'grp'},'Modules'),
       mods.map(function(m){return el('button',{key:m[0],className:page===m[0]?'on':'',onClick:function(){setPage(m[0]);}},m[1]);}),
-      ['Testing','SOPs','QMS'].map(function(m){return el('button',{key:m,className:'soon',disabled:true},m,el('span',{className:'tag'},'Soon'));}))),
+      ['Compliance Stickers','SOPs','QMS'].map(function(m){return el('button',{key:m,className:'soon',disabled:true},m,el('span',{className:'tag'},'Soon'));}))),
     el('div',{className:'main'},body));
 }
 
