@@ -6628,6 +6628,7 @@ async function aiCall(body){
   catch(e){throw new Error(await aiDiagnose(url,hdr,Date.now()-t0));}
   if(r.status===404)throw new Error('AI_NOT_SETUP');
   if(r.status===401){const j1=await r.json().catch(function(){return {};});const m1=(j1.error&&j1.error.message)||j1.message||j1.msg||'';
+    if(/x-api-key|authentication_error|api key/i.test(m1))throw new Error('Anthropic refused the ANTHROPIC_API_KEY saved in Supabase (Edge Functions > Secrets). Create a new key at console.anthropic.com > API Keys, paste it there and retry.');
     throw new Error(/hendrix/i.test(m1)?m1:'Supabase refused the sign-in before the AI function ran'+(m1?' ('+m1+')':'')+'. Open the hendrix-ai function in Supabase > Settings, turn "Verify JWT with legacy secret" OFF and save, then retry.');}
   if(r.status===502||r.status===503||r.status===504||r.status===546)throw new Error('The AI took too long and Supabase stopped the request ('+r.status+'). Try again; if it keeps happening, the request is too large.');
   const j=await r.json().catch(function(){return {};});
