@@ -170,7 +170,7 @@ async function sb(path,opt){
   if(!r.ok){
     const m=(j&&(j.message||j.hint||j.details))||txt||('Error '+r.status);
     if(/schema cache|Could not find the table|relation .* does not exist/i.test(m)&&!/Could not find the '[A-Za-z0-9_]+' column/.test(m)){
-      const step=/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
+      const step=/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
       throw new Error('Database tables are missing - run '+step+' in the Hendrix Supabase project.');
     }
     if(/row-level security|permission denied/i.test(m))throw new Error('Not allowed - your access level does not allow this here. Ask a system admin.');
@@ -279,7 +279,7 @@ function LoginScreen(props){
 }
 
 /* ---------- Dashboard ---------- */
-const MODULES_SOON=['Suppliers','Receiving and Recall','Internal Audits','HACCP','Time Clock and Badges','Production Planner'];
+const MODULES_SOON=['Receiving and Recall','Internal Audits','HACCP','Time Clock and Badges','Production Planner'];
 function Dashboard(props){
   const st=props.state,lic=props.license;
   const isAdmin=props.profile.role==='admin';
@@ -305,6 +305,7 @@ function Dashboard(props){
       el(QmsDashCard,{license:lic,go:props.go}),
       el(TrainingDashCard,{license:lic,go:props.go}),
       el(SopDashCard,{license:lic,go:props.go}),
+      el(SupplierDashCard,{license:lic,go:props.go}),
       el(StdDashCard,{license:lic,go:props.go})),
     !lic&&isAdmin&&el('div',{className:'empty',style:{marginBottom:14}},'This state has no license yet. ',el('a',{href:'#',style:{color:'var(--gold-hi)'},onClick:function(e){e.preventDefault();props.go('locations');}},'Add one')),
     el('div',{className:'card'},el('h3',null,'Coming next'),
@@ -1933,7 +1934,7 @@ function Products(props){
 /* ---------- Audit trail: history, void, admin page ----------
    The database writes every change to hx_audit_log (append-only). Records are never deleted:
    they are voided with a reason. Every change to a record needs a reason for change. */
-const AUDIT_AREAS={hx_training_courses:'Training course',hx_training_records:'Training record',hx_deviations:'Deviation',hx_capas:'CAPA',hx_sops:'SOP',hx_sop_acks:'SOP signature',hx_label_prints:'Sticker print',hx_standards:'Standards',hx_standard_clauses:'Standard clauses',hx_license_standards:'Standard adoption',hx_conformance:'Standard conformance',hx_label_templates:'Label templates',hx_tests:'Testing record',hx_roles:'Roles',hx_batches:'Batch record',hx_facility_log:'Facility log entry',hx_visitor_log:'Visitor log',hx_log_lists:'Facility log lists',hx_rules:'Rulebook',
+const AUDIT_AREAS={hx_suppliers:'Supplier',hx_supplier_reviews:'Supplier review',hx_training_courses:'Training course',hx_training_records:'Training record',hx_deviations:'Deviation',hx_capas:'CAPA',hx_sops:'SOP',hx_sop_acks:'SOP signature',hx_label_prints:'Sticker print',hx_standards:'Standards',hx_standard_clauses:'Standard clauses',hx_license_standards:'Standard adoption',hx_conformance:'Standard conformance',hx_label_templates:'Label templates',hx_tests:'Testing record',hx_roles:'Roles',hx_batches:'Batch record',hx_facility_log:'Facility log entry',hx_visitor_log:'Visitor log',hx_log_lists:'Facility log lists',hx_rules:'Rulebook',
   hx_states:'States',hx_licenses:'Licenses',hx_profiles:'Team and access',hx_skus:'SKUs',hx_flavors:'Flavors',hx_formulations:'Formulations',hx_cost_library:'Ingredient prices'};
 const AUDIT_SKIP=['voided_by','voided_at','updated_at','edit_reason'];
 function auditVal(v){
@@ -2596,6 +2597,7 @@ const ACCESS_MODULES=[
   {id:'qms',label:'QMS (Deviations, CAPA)',grp:'General',help:'View = see and report deviations / Edit = update deviations, create and work CAPAs / Full = root cause decision, close, verify effectiveness, cancel'},
   {id:'sops',label:'SOPs',grp:'General',help:'View = read and sign SOPs / Edit = write drafts (manual or AI) / Full = approve and publish, revise, archive, delete drafts'},
   {id:'standards',label:'Standards (CSQ)',grp:'General',help:'View the standard and conformance / update conformance, evidence and files / add the standard, adopt it for a license, set the target level'},
+  {id:'suppliers',label:'Suppliers',grp:'Production',help:'View the approved supplier list / add and edit suppliers and credentials / approve, review, suspend, disqualify, delete never-approved'},
   {id:'batch',label:'Batch Tracker',grp:'Production',help:'View / create and continue (fill blanks) / change filled values with a reason and void'},
   {id:'products',label:'Products (SKUs and flavors)',grp:'Production',help:'View / add and edit / delete'},
   {id:'formbank',label:'Formulation Bank (recipes)',grp:'Production',help:'View / add and edit / delete'},
@@ -2757,16 +2759,16 @@ function Team(props){
 const LOGS_PROD=['logs_sanitation','logs_waste','logs_scale','logs_equipment','logs_temp','logs_env'];
 function pm(o,list,lv){const x={...o};(list||[]).forEach(function(k){x[k]=lv;});return x;}
 const STARTER_ROLES=[
-  ['General Manager','Leadership. Edit everywhere; Full on batches and every log; sees recipes, prices and the audit trail.',{training:'admin',qms:'admin',sops:'admin',rulebook:'editor',standards:'editor',audit:'read',batch:'admin',testing:'admin',stickers:'admin',products:'editor',formbank:'read',cogs:'read',logs:'admin'}],
-  ['Assistant of General Manager','Leadership support. Edit on batches, products and every log; sees recipes and the audit trail.',{training:'editor',qms:'editor',sops:'editor',rulebook:'editor',standards:'read',audit:'read',batch:'editor',testing:'editor',products:'editor',formbank:'read',logs:'editor'}],
-  ['Compliance Officer','Full on every log, the rulebook and standards (CSQ); sees batches, products and the audit trail.',{training:'admin',qms:'admin',sops:'admin',rulebook:'admin',standards:'admin',audit:'read',logs:'admin',batch:'read',testing:'admin',stickers:'admin',products:'read'}],
+  ['General Manager','Leadership. Edit everywhere; Full on batches and every log; sees recipes, prices and the audit trail.',{training:'admin',qms:'admin',sops:'admin',suppliers:'admin',rulebook:'editor',standards:'editor',audit:'read',batch:'admin',testing:'admin',stickers:'admin',products:'editor',formbank:'read',cogs:'read',logs:'admin'}],
+  ['Assistant of General Manager','Leadership support. Edit on batches, products and every log; sees recipes and the audit trail.',{training:'editor',qms:'editor',sops:'editor',suppliers:'editor',rulebook:'editor',standards:'read',audit:'read',batch:'editor',testing:'editor',products:'editor',formbank:'read',logs:'editor'}],
+  ['Compliance Officer','Full on every log, the rulebook and standards (CSQ); sees batches, products and the audit trail.',{training:'admin',qms:'admin',sops:'admin',suppliers:'admin',rulebook:'admin',standards:'admin',audit:'read',logs:'admin',batch:'read',testing:'admin',stickers:'admin',products:'read'}],
   ['Security Manager','Full on the security and visitor logs.',{training:'editor',qms:'editor',sops:'read',rulebook:'read',logs_security:'admin',logs_visitor:'admin'}],
   ['Security Officer','Fills the security and visitor logs.',{training:'read',qms:'read',sops:'read',rulebook:'read',logs_security:'editor',logs_visitor:'editor'}],
   ['Sanitation','Fills the sanitation, waste and pest control logs.',{training:'read',qms:'read',sops:'read',logs_sanitation:'editor',logs_waste:'editor',logs_pest:'editor'}],
   ['Team Member','Continues batches; fills the sanitation and temp / humidity logs.',{training:'read',qms:'read',sops:'read',batch:'editor',products:'read',logs_temp:'editor',logs_sanitation:'editor'}],
-  ['Inventory Manager','Sees products and batches; fills the waste log.',{training:'editor',qms:'editor',sops:'read',products:'read',batch:'read',logs_waste:'editor'}],
-  ['Extraction Manager','Full on batches; fills the scale, equipment and temp / humidity logs.',{training:'editor',qms:'editor',sops:'editor',batch:'admin',testing:'editor',products:'read',formbank:'read',logs_scale:'editor',logs_equipment:'editor',logs_temp:'editor'}],
-  ['Production Manager','Full on batches; edits products; fills the production logs.',pm({batch:'admin',testing:'editor',stickers:'editor',products:'editor',formbank:'read',rulebook:'read',standards:'editor',sops:'editor',qms:'editor',training:'editor'},LOGS_PROD,'editor')],
+  ['Inventory Manager','Sees products and batches; fills the waste log.',{training:'editor',qms:'editor',sops:'read',suppliers:'editor',products:'read',batch:'read',logs_waste:'editor'}],
+  ['Extraction Manager','Full on batches; fills the scale, equipment and temp / humidity logs.',{training:'editor',qms:'editor',sops:'editor',suppliers:'read',batch:'admin',testing:'editor',products:'read',formbank:'read',logs_scale:'editor',logs_equipment:'editor',logs_temp:'editor'}],
+  ['Production Manager','Full on batches; edits products; fills the production logs.',pm({batch:'admin',testing:'editor',stickers:'editor',products:'editor',formbank:'read',rulebook:'read',standards:'editor',sops:'editor',qms:'editor',training:'editor',suppliers:'editor'},LOGS_PROD,'editor')],
   ['Sales Manager','Sees products.',{training:'read',qms:'read',sops:'read',products:'read'}],
   ['Production Lead','Creates and continues batches; fills the production logs.',pm({batch:'editor',testing:'read',stickers:'read',products:'read',sops:'read',qms:'editor',training:'read'},['logs_sanitation','logs_scale','logs_equipment','logs_temp'],'editor')]];
 function accessSummary(perms){
@@ -2842,6 +2844,195 @@ function Roles(){
           el('button',{className:'btn danger sm',onClick:function(){del(r,n);}},'Delete')));
     })),
     edit&&el(RoleEditor,{role:edit,count:(roles||[]).length,onClose:function(){setEdit(null);},onDone:function(){setEdit(null);load();}}));
+}
+
+/* ---------- Suppliers (Black Fox / Michigan Suppliers tab + CSQ 2A.11 supplier approval) ---------- */
+const SUP_CATS=['Cones/Pre-roll Supplies','Packaging','Distillate/Extract','Terpenes','Ingredients','Testing Lab','Equipment','Labels',
+  'Co-manufacturer','Pest Control','Waste Disposal','Chemicals / Sanitation','Gases / Solvents','Transport / Distribution','Service Provider','Other'];
+const SUP_STATUS={pending:'Pending approval',approved:'Approved',conditional:'Approved with conditions',emergency:'Emergency (temporary)',suspended:'Suspended',disqualified:'Disqualified'};
+const SUP_TONE={pending:'warn',approved:'ok',conditional:'warn',emergency:'warn',suspended:'bad',disqualified:'bad'};
+const SUP_CRED_KINDS=['ISO/IEC 17025 accreditation','State license','Pest control applicator license','Food-grade / GMP certificate','Inhalation-grade statement','Organic / other certification','Insurance','Spec sheet / COA','Audit report','Other'];
+function supErr(e){const m=String((e&&e.message)||e);return /hx_supplier/.test(m)&&/missing|does not exist|schema cache/i.test(m)?'Suppliers are not set up yet - run hendrix_step16.sql in the Hendrix Supabase project.':/hx_suppliers_name/.test(m)?'A supplier with that name is already on file for this license.':m;}
+function supActive(s){return s.status==='approved'||s.status==='conditional';}
+function supReviewLate(s){return (supActive(s)||s.status==='emergency')&&s.next_review&&s.next_review<todayStr();}
+function supCredState(c){if(!c.expires)return 'none';const t=todayStr();if(c.expires<t)return 'expired';if(c.expires<=trAddMonths(t,2))return 'soon';return 'ok';}
+function supCredIssues(s){return (s.credentials||[]).filter(function(c){const x=supCredState(c);return x==='expired'||x==='soon';});}
+function SupplierForm(props){
+  const x=props.sup||{},st=props.state,lic=props.license,canF=can('suppliers',3);
+  const[f,setF]=useState({name:x.name||'',category:x.category||'Other',status:x.status||'pending',risk:x.risk||'medium',products_supplied:x.products_supplied||'',specs:x.specs||'',contact_name:x.contact_name||'',contact_email:x.contact_email||'',
+    contact_phone:x.contact_phone||'',address:x.address||'',coa_expiry:x.coa_expiry||'',last_audit:x.last_audit||'',emergency_verification:x.emergency_verification||'',ethical_sourcing:!!x.ethical_sourcing,notes:x.notes||'',
+    credentials:(x.credentials||[]).map(function(c){return {...c};}),license_ids:(x.license_ids&&x.license_ids.length?x.license_ids:[lic.id]).slice()});
+  const[err,setErr]=useState('');const[busy,setBusy]=useState('');
+  const stLics=(props.licenses||[]).filter(function(l){return l.state_id===st.id&&l.active;});
+  function set(k,v){setF(function(p){return {...p,[k]:v};});}
+  function setCred(i,k,v){setF(function(p){return {...p,credentials:p.credentials.map(function(c,j){return j===i?{...c,[k]:v}:c;})};});}
+  async function upCred(i,file){if(!file)return;setBusy('Uploading...');try{const ext=(file.name.split('.').pop()||'pdf').toLowerCase().replace(/[^a-z0-9]/g,'');
+    const path=await storagePut(file,'suppliers/'+lic.id+'/'+Date.now()+'-'+Math.random().toString(36).slice(2,6)+'.'+ext);setCred(i,'file',{path:path,name:file.name});}catch(e){setErr(String(e.message||e));}setBusy('');}
+  async function save(){
+    setErr('');if(!f.name.trim()){setErr('Enter the supplier name.');return;}
+    if(f.status==='emergency'&&!f.emergency_verification.trim()){setErr('Say how materials from this emergency supplier are checked before use.');return;}
+    if(f.credentials.some(function(c){return !c.kind;})){setErr('Choose the type of each credential.');return;}
+    const rec={name:f.name.trim(),category:f.category,risk:f.risk,products_supplied:f.products_supplied.trim(),specs:f.specs.trim(),contact_name:f.contact_name.trim(),contact_email:f.contact_email.trim(),contact_phone:f.contact_phone.trim(),
+      address:f.address.trim(),coa_expiry:f.coa_expiry||null,last_audit:f.last_audit||null,emergency_verification:f.emergency_verification.trim(),ethical_sourcing:f.ethical_sourcing,notes:f.notes.trim(),
+      credentials:f.credentials.map(function(c){return {kind:c.kind,number:(c.number||'').trim(),expires:c.expires||'',file:c.file||null};}),license_ids:f.license_ids};
+    if(!x.id)rec.status=f.status;
+    setBusy('Saving...');
+    try{const out=x.id?await db.update('hx_suppliers',x.id,rec):await db.insert('hx_suppliers',{...rec,id:newId('sup'),state_id:st.id,license_id:lic.id});props.onDone(out&&out[0]);}
+    catch(e){setErr(supErr(e));}
+    setBusy('');
+  }
+  const inp=function(k,l,ph,type){return el(Field,{label:l},el('input',{type:type||'text',value:f[k]||'',placeholder:ph||'',onChange:function(e){set(k,e.target.value);}}));};
+  return el(Modal,{title:(x.id?'Edit supplier':'Add supplier')+' \u00b7 '+lic.name,wide:true,onClose:props.onClose},
+    el('div',{className:'grid',style:{gridTemplateColumns:'2fr 1fr 1fr',gap:10}},
+      inp('name','Supplier name *','e.g. Futurola USA'),
+      el(Field,{label:'Category / type'},el('select',{value:f.category,onChange:function(e){set('category',e.target.value);}},SUP_CATS.map(function(c){return el('option',{key:c,value:c},c);}))),
+      el(Field,{label:'Risk'},el('select',{value:f.risk,onChange:function(e){set('risk',e.target.value);}},['low','medium','high'].map(function(r){return el('option',{key:r,value:r},r.charAt(0).toUpperCase()+r.slice(1)+(r==='high'?' (review every 6 months)':''));})))),
+    !x.id&&el(Field,{label:'Status'},el('select',{value:f.status,onChange:function(e){set('status',e.target.value);}},el('option',{value:'pending'},'Pending approval'),el('option',{value:'emergency'},'Emergency (temporary, not yet approved)'))),
+    f.status==='emergency'&&el(Field,{label:'How materials are checked before use * (CSQ 2A.11 g)'},el('textarea',{rows:2,value:f.emergency_verification,placeholder:'e.g. COA reviewed and in-house test before release',onChange:function(e){set('emergency_verification',e.target.value);}})),
+    inp('products_supplied','Products / services supplied','e.g. 98mm cones, 109mm cones'),
+    el(Field,{label:'Specifications the supplier must meet'},el('textarea',{rows:2,value:f.specs,placeholder:'e.g. Food-grade, COA with every lot, inhalation-grade terpenes, ISO 17025 lab',onChange:function(e){set('specs',e.target.value);}})),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:10}},inp('contact_name','Contact name','Sales rep name'),inp('contact_email','Contact email','contact@supplier.com'),inp('contact_phone','Phone','')),
+    el('div',{className:'grid',style:{gridTemplateColumns:'2fr 1fr 1fr',gap:10}},inp('address','Address',''),inp('coa_expiry','COA expiry date','','date'),inp('last_audit','Last audit date','','date')),
+    el(Field,{label:'Applies to license(s)',plain:true},el('div',{className:'row',style:{gap:6}},stLics.map(function(l){const on=f.license_ids.indexOf(l.id)>=0,fixed=l.id===(x.license_id||lic.id);
+      return el('label',{key:l.id,className:'ck'},el('input',{type:'checkbox',checked:on,disabled:fixed,onChange:function(){setF(function(p){const a=p.license_ids.slice(),i=a.indexOf(l.id);if(i>=0)a.splice(i,1);else a.push(l.id);return {...p,license_ids:a};});}}),el('span',null,l.name));}))),
+    el('div',{className:'k',style:{margin:'8px 0 6px'}},'Credentials (licenses, accreditations, certificates)'),
+    f.credentials.map(function(c,i){const sx=supCredState(c);return el('div',{key:i,className:'grid',style:{gridTemplateColumns:'2fr 1.2fr 1fr auto auto',gap:6,alignItems:'end',marginBottom:6}},
+      el('select',{value:c.kind||'',onChange:function(e){setCred(i,'kind',e.target.value);}},el('option',{value:''},'(type)'),SUP_CRED_KINDS.map(function(k){return el('option',{key:k,value:k},k);})),
+      el('input',{value:c.number||'',placeholder:'Number',onChange:function(e){setCred(i,'number',e.target.value);}}),
+      el('input',{type:'date',value:c.expires||'',title:'Expires',style:{borderColor:sx==='expired'?'var(--red)':sx==='soon'?'var(--gold)':''},onChange:function(e){setCred(i,'expires',e.target.value);}}),
+      c.file?el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:12},onClick:function(e){e.preventDefault();openStored(c.file.path,c.file.name).catch(function(){});}},'\ud83d\udcce'):
+        el('label',{className:'btn ghost sm'},'File',el('input',{type:'file',style:{display:'none'},onChange:function(e){upCred(i,e.target.files[0]);e.target.value='';}})),
+      el('button',{className:'btn ghost sm',onClick:function(){setF(function(p){return {...p,credentials:p.credentials.filter(function(_,j){return j!==i;})};});}},'\u00d7'));}),
+    el('button',{className:'btn ghost sm',onClick:function(){setF(function(p){return {...p,credentials:p.credentials.concat([{kind:f.category==='Testing Lab'?'ISO/IEC 17025 accreditation':f.category==='Pest Control'?'Pest control applicator license':'',number:'',expires:''}])};});}},'+ Add credential'),
+    el('label',{className:'ck',style:{marginTop:10}},el('input',{type:'checkbox',checked:f.ethical_sourcing,onChange:function(e){set('ethical_sourcing',e.target.checked);}}),el('span',null,'Ethical sourcing confirmed (CSQ 2A.11 h)')),
+    el(Field,{label:'Notes / certifications'},el('textarea',{rows:2,value:f.notes,onChange:function(e){set('notes',e.target.value);}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:!!busy,onClick:save},busy==='Saving...'?'Saving...':x.id?'Save changes':'Add supplier')));
+}
+function SupApprove(props){
+  const s=props.sup;const[basis,setBasis]=useState('');const[cond,setCond]=useState(false);const[next,setNext]=useState(trAddMonths(todayStr(),s.risk==='high'?6:12));const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  async function go(){setErr('');if(!basis.trim()){setErr('Write what the approval is based on.');return;}setBusy(true);
+    try{await db.update('hx_suppliers',s.id,{status:cond?'conditional':'approved',approval_basis:basis.trim(),next_review:next||null});props.onDone();}catch(e){setErr(supErr(e));}setBusy(false);}
+  return el(Modal,{title:'Approve '+s.name,onClose:props.onClose},
+    s.category==='Testing Lab'&&!(s.credentials||[]).some(function(c){return c.kind==='ISO/IEC 17025 accreditation';})&&el('div',{className:'msg err'},'Add the lab\'s ISO/IEC 17025 accreditation (Edit) before approving.'),
+    s.category==='Co-manufacturer'&&!s.last_audit&&el('div',{className:'msg err'},'Record the second- or third-party audit date (Edit) before approving a contract manufacturer.'),
+    el(Field,{label:'Approval based on *'},el('textarea',{rows:3,value:basis,placeholder:'e.g. Supplier questionnaire, food-grade certificate and COA reviewed; trial lot passed incoming inspection',onChange:function(e){setBasis(e.target.value);}})),
+    el('label',{className:'ck'},el('input',{type:'checkbox',checked:cond,onChange:function(e){setCond(e.target.checked);}}),el('span',null,'Approve with conditions')),
+    el(Field,{label:'Next review'},el('input',{type:'date',value:next,onChange:function(e){setNext(e.target.value);}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:go},'Approve supplier')));
+}
+function SupReview(props){
+  const s=props.sup,lic=props.license;const[f,setF]=useState({review_date:todayStr(),rating:'Satisfactory',result:'Keep approved',notes:''});const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  async function go(){setErr('');if((f.result==='Suspend'||f.result==='Disqualify')&&!f.notes.trim()){setErr('Write the reason.');return;}setBusy(true);
+    try{await db.insert('hx_supplier_reviews',{id:newId('srv'),state_id:s.state_id,license_id:s.license_id,supplier_id:s.id,...f,notes:f.notes.trim()});props.onDone();}catch(e){setErr(supErr(e));}setBusy(false);}
+  return el(Modal,{title:'Supplier review \u00b7 '+s.name,onClose:props.onClose},
+    el('div',{className:'muted',style:{fontSize:12,marginBottom:8}},'CSQ 2A.11 j: review every approved supplier at least once a year. Consider quality, delivery, COAs, deviations and complaints since the last review.'),
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr 1fr',gap:10}},
+      el(Field,{label:'Review date'},el('input',{type:'date',value:f.review_date,max:todayStr(),onChange:function(e){setF({...f,review_date:e.target.value});}})),
+      el(Field,{label:'Rating'},el('select',{value:f.rating,onChange:function(e){setF({...f,rating:e.target.value});}},['Satisfactory','Needs improvement','Unsatisfactory'].map(function(r){return el('option',{key:r,value:r},r);}))),
+      el(Field,{label:'Result'},el('select',{value:f.result,onChange:function(e){setF({...f,result:e.target.value});}},['Keep approved','Approve with conditions','Suspend','Disqualify'].map(function(r){return el('option',{key:r,value:r},r);})))),
+    el(Field,{label:'Notes'+(f.result==='Suspend'||f.result==='Disqualify'?' *':'')},el('textarea',{rows:3,value:f.notes,placeholder:'What was reviewed and found',onChange:function(e){setF({...f,notes:e.target.value});}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:go},'Save review')));
+}
+function SupStatus(props){
+  const[why,setWhy]=useState('');const[err,setErr]=useState('');const lbl=props.to==='suspended'?'Suspend':'Disqualify';
+  return el(Modal,{title:lbl+' '+props.sup.name,onClose:props.onClose},el(Field,{label:'Reason *'},el('textarea',{rows:3,value:why,onChange:function(e){setWhy(e.target.value);}})),err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Back'),el('button',{className:'btn danger',disabled:!why.trim(),onClick:function(){db.update('hx_suppliers',props.sup.id,{status:props.to,status_reason:why.trim()}).then(props.onDone).catch(function(e){setErr(supErr(e));});}},lbl)));
+}
+function supLabCheck(sups,labs){
+  const ok=sups.filter(function(s){return s.category==='Testing Lab'&&supActive(s)&&(s.credentials||[]).some(function(c){return c.kind==='ISO/IEC 17025 accreditation'&&supCredState(c)!=='expired';});});
+  const norm=function(t){return String(t||'').toLowerCase().replace(/[^a-z0-9]/g,'');};
+  return labs.filter(function(l){return l&&!ok.some(function(s){const a=norm(s.name),b=norm(l);return a&&b&&(a.indexOf(b)>=0||b.indexOf(a)>=0);});});
+}
+function SuppliersPage(props){
+  const st=props.state,lic=props.license,lid=lic?lic.id:'';
+  const[sups,setSups]=useState(null);const[labs,setLabs]=useState([]);const[revs,setRevs]=useState([]);const[msg,setMsg]=useState('');
+  const[q,setQ]=useState('');const[cf,setCf]=useState('ALL');const[sf,setSf]=useState('ALL');const[selId,setSelId]=useState(null);const[modal,setModal]=useState(null);
+  const load=useCallback(function(){
+    if(!lid){setSups([]);return;}const enc=encodeURIComponent;
+    db.get('hx_suppliers','license_ids=cs.%7B'+enc(lid)+'%7D&select=*&order=name').then(function(r){setSups((r||[]).filter(function(s){return (s.license_ids||[s.license_id]).indexOf(lid)>=0;}));}).catch(function(e){setMsg(supErr(e));setSups([]);});
+    if(can('testing',1))db.get('hx_tests','license_id=eq.'+enc(lid)+'&select=lab_name,voided,license_id&limit=20000').then(function(r){const m={};(r||[]).forEach(function(t){if(t.license_id===lid&&!t.voided&&t.lab_name)m[t.lab_name.trim()]=1;});setLabs(Object.keys(m));}).catch(function(){setLabs([]);});
+  },[lid]);
+  useEffect(load,[load]);
+  useEffect(function(){if(!selId){setRevs([]);return;}db.get('hx_supplier_reviews','supplier_id=eq.'+encodeURIComponent(selId)+'&select=*&order=review_date.desc').then(function(r){setRevs((r||[]).filter(function(x){return x.supplier_id===selId;}));}).catch(function(){setRevs([]);});},[selId,sups]);
+  if(!st||!lic)return el('div',null,el('h1',null,el('span',{className:'g'},'Suppliers')),el('div',{className:'empty'},'Pick a state and a license at the top first.'));
+  const canE=can('suppliers',2),canF=can('suppliers',3),A=sups||[];
+  const approved=A.filter(supActive),late=A.filter(supReviewLate),credIss=A.filter(function(s){return s.status!=='disqualified'&&supCredIssues(s).length;}),labGap=supLabCheck(A,labs);
+  const shown=A.filter(function(s){if(cf!=='ALL'&&s.category!==cf)return false;if(sf==='ACTIVE'&&!supActive(s))return false;if(sf!=='ALL'&&sf!=='ACTIVE'&&s.status!==sf)return false;
+    if(q&&(s.name+' '+s.products_supplied+' '+s.contact_name+' '+s.category).toLowerCase().indexOf(q.toLowerCase())<0)return false;return true;});
+  const sel=A.find(function(s){return s.id===selId;})||null;
+  function done(t){setModal(null);if(t)setMsg(t);load();}
+  const stat=function(l,v,tone,sub){return el('div',{key:l,className:'card gold',style:{marginBottom:0}},el('div',{className:'k'},l),el('div',{className:'v',style:{fontSize:26,color:tone||'var(--text)'}},v),sub&&el('div',{className:'muted',style:{fontSize:11,marginTop:2}},sub));};
+  function printList(){
+    const e=esc3;let h='<div class="hxrec"><h2>Approved supplier list</h2><div class="m">'+e(lic.name)+(lic.license_number?' ('+e(lic.license_number)+')':'')+' \u00b7 '+e(st.name)+' \u00b7 CSQ 2A.11 \u00b7 printed '+e(new Date().toLocaleString())+'</div>';
+    h+='<table><tr><th>Supplier</th><th>Type</th><th>Status</th><th>Products / services</th><th>Credentials</th><th>Approved</th><th>Last / next review</th></tr>';
+    A.filter(function(s){return s.status!=='pending';}).forEach(function(s){h+='<tr><td>'+e(s.name)+'</td><td>'+e(s.category)+'</td><td class="'+(supActive(s)?'ok':s.status==='emergency'?'':'bad')+'">'+e(SUP_STATUS[s.status])+(s.status_reason?'<br>'+e(s.status_reason):'')+'</td><td>'+e(s.products_supplied)+'</td><td>'+
+      (s.credentials||[]).map(function(c){return e(c.kind)+(c.number?' #'+e(c.number):'')+(c.expires?' (exp '+e(c.expires)+')':'');}).join('<br>')+'</td><td>'+e(s.approved_by||'-')+(s.approved_at?'<br>'+e(String(s.approved_at).slice(0,10)):'')+'<br>'+e(s.approval_basis)+'</td><td>'+e(s.last_review||'-')+' / <span class="'+(supReviewLate(s)?'bad':'')+'">'+e(s.next_review||'-')+'</span></td></tr>';});
+    printRecords('Approved supplier list - '+lic.name,[h+'</table></div>']);
+  }
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,el('span',{className:'g'},'Suppliers')),el('div',{className:'sub'},'Approved suppliers and vendors \u00b7 '+lic.name+' \u00b7 approval, credentials and yearly review (CSQ 2A.11)')),
+      el('div',{className:'row'},el('button',{className:'btn ghost',onClick:printList},'Approved supplier list'),canE&&el('button',{className:'btn',onClick:function(){setModal({t:'form'});}},'+ Add supplier'))),
+    msg&&el('div',{className:/^(Saved|Added|Approved|Review|Suspended|Disqualified|Deleted)/.test(msg)?'msg':'msg err'},msg),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',marginBottom:14}},
+      stat('Approved',approved.length,'var(--green)'),stat('Pending',A.filter(function(s){return s.status==='pending';}).length,'var(--gold-hi)'),
+      stat('Emergency',A.filter(function(s){return s.status==='emergency';}).length,A.some(function(s){return s.status==='emergency';})?'var(--gold-hi)':'var(--text)','temporary, verified before use'),
+      stat('Reviews overdue',late.length,late.length?'var(--red)':'var(--green)'),stat('Credentials expiring',credIss.length,credIss.length?'var(--red)':'var(--green)','expired or within 60 days')),
+    labGap.length>0&&el('div',{className:'msg err',style:{marginBottom:12}},el('b',null,'Labs used in Testing that are not approved with a current ISO/IEC 17025 accreditation: '),labGap.join(', '),' (CSQ 2A.12.9 g)'),
+    el('div',{className:'row',style:{marginBottom:12}},el('input',{value:q,placeholder:'Search suppliers',style:{width:220},onChange:function(e){setQ(e.target.value);}}),
+      el('select',{value:cf,onChange:function(e){setCf(e.target.value);}},el('option',{value:'ALL'},'All types'),SUP_CATS.map(function(c){return el('option',{key:c,value:c},c);})),
+      el('select',{value:sf,onChange:function(e){setSf(e.target.value);}},el('option',{value:'ALL'},'Every status'),el('option',{value:'ACTIVE'},'Approved (all)'),Object.keys(SUP_STATUS).map(function(k){return el('option',{key:k,value:k},SUP_STATUS[k]);}))),
+    sups===null?el('div',{className:'muted'},'Loading...'):!shown.length?el('div',{className:'empty'},A.length?'No suppliers match.':'No suppliers yet for '+lic.name+'.'):
+    shown.map(function(s){const ci=supCredIssues(s);return el('div',{key:s.id,className:'card',style:{cursor:'pointer',padding:'12px 16px',borderLeft:'3px solid '+(supActive(s)?'var(--green)':s.status==='pending'||s.status==='emergency'?'var(--gold)':'var(--red)')},onClick:function(){setSelId(s.id);}},
+      el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start',flexWrap:'nowrap'}},
+        el('div',{style:{minWidth:0}},el('div',{className:'row',style:{gap:6,marginBottom:5}},el('span',{className:'badge '+SUP_TONE[s.status]},SUP_STATUS[s.status]),el('span',{className:'badge off'},s.category),s.risk==='high'&&el('span',{className:'badge bad'},'High risk'),
+            (s.credentials||[]).length>0&&el('span',{className:'badge off'},(s.credentials||[]).length+' credential'+((s.credentials||[]).length===1?'':'s')),ci.length>0&&el('span',{className:'badge bad'},ci.length+' expiring'),supReviewLate(s)&&el('span',{className:'badge bad'},'Review overdue')),
+          el('div',{style:{fontWeight:700}},s.name),s.products_supplied&&el('div',{className:'muted',style:{fontSize:12}},s.products_supplied)),
+        el('div',{className:'muted',style:{fontSize:11,textAlign:'right',flex:'0 0 auto'}},s.next_review&&el('div',{style:{color:supReviewLate(s)?'var(--red)':''}},'Review '+s.next_review),s.coa_expiry&&el('div',null,'COA '+s.coa_expiry))));}),
+    sel&&!modal&&el(Modal,{title:sel.name,wide:true,onClose:function(){setSelId(null);}},
+      el('div',{className:'row',style:{gap:6,marginBottom:10}},el('span',{className:'badge '+SUP_TONE[sel.status]},SUP_STATUS[sel.status]),el('span',{className:'badge off'},sel.category),el('span',{className:'badge off'},'Risk: '+sel.risk),sel.ethical_sourcing&&el('span',{className:'badge ok'},'Ethical sourcing confirmed')),
+      sel.status_reason&&(sel.status==='suspended'||sel.status==='disqualified')&&el('div',{className:'msg err'},SUP_STATUS[sel.status]+': '+sel.status_reason),
+      sel.status==='emergency'&&el('div',{className:'msg'},'Emergency supplier \u00b7 materials checked before use: '+sel.emergency_verification),
+      el('div',{className:'card gold',style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:10,padding:'10px 14px'}},
+        [['Products / services',sel.products_supplied],['Contact',[sel.contact_name,sel.contact_email,sel.contact_phone].filter(Boolean).join(' \u00b7 ')],['COA expiry',sel.coa_expiry],['Last audit',sel.last_audit],
+         ['Approved',sel.approved_by?sel.approved_by+' \u00b7 '+String(sel.approved_at).slice(0,10):'-'],['Last review',sel.last_review],['Next review',sel.next_review]].map(function(p){return el('div',{key:p[0]},el('div',{className:'k'},p[0]),el('div',{style:{fontSize:13,color:p[0]==='Next review'&&supReviewLate(sel)?'var(--red)':''}},p[1]||'-'));})),
+      sel.approval_basis&&el('div',{style:{fontSize:13,marginBottom:8}},el('b',null,'Approval basis: '),sel.approval_basis),
+      sel.specs&&el('div',{style:{fontSize:13,marginBottom:8}},el('b',null,'Specifications: '),sel.specs),
+      sel.notes&&el('div',{className:'muted',style:{fontSize:13,marginBottom:8}},sel.notes),
+      el('div',{className:'k',style:{margin:'6px 0'}},'Credentials'),
+      (sel.credentials||[]).length?(sel.credentials||[]).map(function(c,i){const sx=supCredState(c);return el('div',{key:i,className:'row',style:{gap:8,fontSize:13,padding:'4px 0',borderTop:'1px solid var(--line)'}},
+        el('b',null,c.kind),c.number&&el('span',null,'#'+c.number),c.expires&&el('span',{className:'badge '+(sx==='expired'?'bad':sx==='soon'?'warn':'ok')},(sx==='expired'?'Expired ':'Expires ')+c.expires),
+        c.file&&el('a',{href:'#',style:{color:'var(--gold-hi)'},onClick:function(e){e.preventDefault();openStored(c.file.path,c.file.name).catch(function(){});}},'\ud83d\udcce '+c.file.name));}):el('div',{className:'muted',style:{fontSize:12}},'None recorded'),
+      el('div',{className:'k',style:{margin:'12px 0 6px'}},'Reviews'),
+      revs.length?revs.map(function(r){return el('div',{key:r.id,style:{fontSize:13,padding:'4px 0',borderTop:'1px solid var(--line)'}},el('b',null,r.review_date),' \u00b7 '+r.rating+' \u00b7 '+r.result+' \u00b7 '+r.reviewer,r.notes&&el('div',{className:'muted',style:{fontSize:12}},r.notes));}):el('div',{className:'muted',style:{fontSize:12}},'No reviews yet'),
+      el('div',{className:'row',style:{justifyContent:'space-between',marginTop:14}},
+        el('div',{className:'row',style:{gap:6}},
+          canE&&sel.status!=='disqualified'&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'form',sup:sel});}},'Edit'),
+          canF&&['pending','emergency','suspended'].indexOf(sel.status)>=0&&el('button',{className:'btn sm',onClick:function(){setModal({t:'approve'});}},'Approve'),
+          canF&&sel.status!=='pending'&&sel.status!=='disqualified'&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'review'});}},'Record review'),
+          canF&&(supActive(sel)||sel.status==='emergency')&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'status',to:'suspended'});}},'Suspend'),
+          canF&&sel.status!=='disqualified'&&el('button',{className:'btn danger sm',onClick:function(){setModal({t:'status',to:'disqualified'});}},'Disqualify'),
+          canF&&!sel.ever_approved&&el('button',{className:'btn danger sm',onClick:function(){if(window.confirm('Delete '+sel.name+'? (Only suppliers never approved can be deleted.)'))db.remove('hx_suppliers',sel.id).then(function(){setSelId(null);done('Deleted '+sel.name);}).catch(function(e){setMsg(supErr(e));});}},'Delete')),
+        el('button',{className:'btn ghost sm',onClick:function(){setSelId(null);}},'Close'))),
+    modal&&modal.t==='form'&&el(SupplierForm,{sup:modal.sup,state:st,license:lic,licenses:props.licenses,onClose:function(){setModal(null);},onDone:function(r){if(r&&!modal.sup)setSelId(r.id);done(modal.sup?'Saved.':'Added '+(r?r.name:'supplier'));}}),
+    modal&&modal.t==='approve'&&sel&&el(SupApprove,{sup:sel,onClose:function(){setModal(null);},onDone:function(){done('Approved '+sel.name);}}),
+    modal&&modal.t==='review'&&sel&&el(SupReview,{sup:sel,license:lic,onClose:function(){setModal(null);},onDone:function(){done('Review saved for '+sel.name);}}),
+    modal&&modal.t==='status'&&sel&&el(SupStatus,{sup:sel,to:modal.to,onClose:function(){setModal(null);},onDone:function(){done((modal.to==='suspended'?'Suspended ':'Disqualified ')+sel.name);}}));
+}
+function SupplierDashCard(props){
+  const lid=props.license?props.license.id:'';const[d,setD]=useState(null);
+  useEffect(function(){if(!lid||!can('suppliers',1)){setD(null);return;}let dead=false;
+    db.get('hx_suppliers','license_ids=cs.%7B'+encodeURIComponent(lid)+'%7D&select=id,status,next_review,credentials,license_id,license_ids').then(function(r){const A=(r||[]).filter(function(s){return (s.license_ids||[s.license_id]).indexOf(lid)>=0;});
+      if(!dead)setD({n:A.length,ok:A.filter(supActive).length,pend:A.filter(function(s){return s.status==='pending';}).length,late:A.filter(supReviewLate).length,cred:A.filter(function(s){return s.status!=='disqualified'&&supCredIssues(s).length;}).length});}).catch(function(){if(!dead)setD(null);});
+    return function(){dead=true;};},[lid]);
+  if(!d)return null;
+  const link=el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go('suppliers');}},'Open suppliers');
+  const bad=d.late+d.cred;
+  return el('div',{className:'card gold'},el('div',{className:'k'},'Suppliers'),el('div',{className:'v',style:{color:!d.n?'var(--text)':bad?'var(--red)':'var(--green)'}},d.n?d.ok+' approved':'None yet'),
+    el('div',{className:'muted',style:{margin:'4px 0 8px'}},d.n?d.pend+' pending \u00b7 '+d.late+' review'+(d.late===1?'':'s')+' overdue \u00b7 '+d.cred+' with expiring credentials':'Build the approved supplier list.'),link);
 }
 
 /* ---------- Training (Black Fox / Michigan SOP training matrix + CSQ 2A.13.2 training program) ---------- */
@@ -4010,7 +4201,7 @@ const CSQ_MFG_CLAUSES=[
  ['2A.4.1','2A','Cannabinoid waste','Cannabinoid waste is never mixed with other waste streams.',['sops','logs'],'Waste Destruction Log. Waste SOP.',[]],
  ['2A.4.2','2A','Non-cannabinoid waste','Each non-cannabinoid waste stream (municipal, hazardous, recyclables) is kept separate.',['sops'],'Waste SOP.',[]],
  ['2A.5.1','2A','Integrated pest management program','Risk-based pest program reviewed yearly: responsibilities, an accurate trap and bait station map, stations placed safely, approved pesticides with SDS, monitoring frequency, sightings recorded and trended, contractor recommendations acted on, rules for touching trap contents, pesticide use and storage to label and law, and cleanup of exposed areas and product.',['logs','qms'],'Pest Control Log: numbered trap and bait stations checked on every visit, stations with activity, sightings counted, treatments and vendor license. Attach the station map here. Pest sightings can be raised as deviations from the log.',['Chemical register']],
- ['2A.5.2','2A','Integrated pest management personnel','Pest control staff and contractors are trained, licensed when required, use only approved products, and leave a written report of findings and products used.',[],'',['Suppliers']],
+ ['2A.5.2','2A','Integrated pest management personnel','Pest control staff and contractors are trained, licensed when required, use only approved products, and leave a written report of findings and products used.',['suppliers'],'Pest control contractor approved in Suppliers with applicator license on file.',[]],
  ['2A.6','2A','Facility air safety and quality','Air entering production areas is filtered and monitored by risk, tested at least yearly by an ISO/IEC 17025 lab, and air handling controls contaminants, fumes and odors.',['logs'],'Temp / Humidity Log.',['Facility tests']],
  ['2A.7','2A','Facility water safety and quality','Water is potable, filtered and monitored by risk, tested at least yearly by an ISO/IEC 17025 lab, tempered for washing, treated water meets spec, backflow devices are fitted and tested yearly, and the water system is monitored.',[],'',['Facility tests','Equipment register']],
  ['2A.8','2A','Environmental monitoring','Environmental monitoring program: who runs it and their competence, a risk assessment of hazards per area, sampling methods, frequency and limits, recording and trending, and a yearly review.',['logs'],'Environmental Monitoring Log.',[]],
@@ -4019,19 +4210,19 @@ const CSQ_MFG_CLAUSES=[
  ['2A.9.3','2A','Temperature and atmosphere controlled storage','Goods needing temperature or atmosphere control have defined specs; storage areas are identified, clean, working and fitted with monitoring devices; cold and frozen units have thermometers; goods off the floor and not mixed; condensation drains away from product.',['logs','qms'],'Temp / Humidity Log: min and max per room; out-of-range readings are marked automatically and need a corrective action. Out-of-range readings can be raised as deviations from the log.',[]],
  ['2A.9.4','2A','Shipping and receiving','Loading and unloading limit damage: inspection before loading or unloading, minimal exposure, no cross-contamination, goods secured from tampering, and cannabis shipped and received to regulation.',[],'',['Receiving','Shipping']],
  ['2A.10.1','2A','Identification and traceability','Every inventory item is identified through the process, finished product is traceable one step forward to the customer, materials and supplies one step back to the supplier, traceability is kept through rework, and it is tested at least yearly in a mock recall.',['batches','testing'],'Batch numbers, final package tags, state tracking system (METRC).',['Receiving','Shipping','Recall']],
- ['2A.10.2','2A','Acceptance and release','Incoming materials meet specs, are inspected for damage, arrive with a COA or certificate of conformance, are sampled and tested when needed, have their documents reviewed before approval or rejection, and rejected goods are returned or held apart.',[],'',['Receiving']],
+ ['2A.10.2','2A','Acceptance and release','Incoming materials meet specs, are inspected for damage, arrive with a COA or certificate of conformance, are sampled and tested when needed, have their documents reviewed before approval or rejection, and rejected goods are returned or held apart.',['suppliers'],'Approved supplier list and COA expiry in Suppliers.',['Receiving']],
  ['2A.10.3','2A','Stock management','FIFO (or similar) rotation for finished product, WIP, rework and supplies; nothing used past its date; overflow storage monitored; labels, packaging, devices and excise stamps counted in an inventory system and protected from theft.',[],'',['Inventory']],
  ['2A.10.4','2A','Hold and release (quarantine)','Nonconforming and returned goods are clearly marked, quarantined so they cannot be released by accident, decided on only by qualified authorized people, and released, moved or destroyed to regulation.',['testing','qms'],'Testing status (Pending, Failed, Retest); final results changed only with Full access and a reason. Nonconforming product recorded as a deviation (from a failed test or batch) with the decision documented.',['Hold and release']],
- ['2A.11','2A','Supplier approval and vendor qualification','Name each supplier and vendor type and the specs they must meet, verify them, select, approve and monitor them, keep an approved list, name who approves, allow emergency suppliers with checks, require ethical sourcing, audit contract manufacturers, and review all suppliers yearly.',[],'',['Suppliers']],
+ ['2A.11','2A','Supplier approval and vendor qualification','Name each supplier and vendor type and the specs they must meet, verify them, select, approve and monitor them, keep an approved list, name who approves, allow emergency suppliers with checks, require ethical sourcing, audit contract manufacturers, and review all suppliers yearly.',['suppliers'],'Approved supplier list per license: supplier type, specs, credentials with expiry, who approved and on what basis, emergency suppliers with verification, ethical sourcing, contract manufacturer audits, yearly reviews (6 months for high risk), suspend and disqualify with reasons.',[]],
  ['2A.12.1','2A','Standard operating procedures','Documented SOPs for producing and processing cannabinoid materials and products that conform to CSQ and regulation.',['sops','batches'],'Batch Tracker records follow each process. SOP library for every production process; Batch Tracker records follow them.',[]],
  ['2A.12.2','2A','Process flow and segregation','Document how people and product move through the facility to keep segregation, with a map of area designations and their risks.',['sops'],'Process flow and area map attached to an SOP.',[]],
  ['2A.12.3','2A','Pre-operational inspections (line clearance)','Before production, record a check that areas and equipment are clean, within maintenance and calibration dates and ready, with any problem and correction noted.',[],'',['Line clearance']],
- ['2A.12.4','2A','Materials and supplies','Every material and supply has specs and is identified by type, use and hazard; meets regulation and is approved for use; is fit for purpose; has a yearly risk assessment; label information is kept on file; and is stored and used to label instructions.',['products'],'Products: ingredient price library and formulations.',['Receiving','Suppliers']],
+ ['2A.12.4','2A','Materials and supplies','Every material and supply has specs and is identified by type, use and hazard; meets regulation and is approved for use; is fit for purpose; has a yearly risk assessment; label information is kept on file; and is stored and used to label instructions.',['products','suppliers'],'Products: ingredient price library and formulations. Material specs required of each supplier; only approved suppliers used.',['Receiving']],
  ['2A.12.5','2A','Rework','Rework is identified and dated for traceability, each batch inspected and analyzed before use, used before it would expire in the finished product, safe, and like-to-like.',[],'',['Rework']],
  ['2A.12.6','2A','Cross-contamination controls','Keep foreign matter out: exclude contamination sources, no loose objects overhead, inspection of facility and tools, a list of sources that cannot be removed with protective measures, control of blades, glass and brittle items, dust and chemicals, cleanup and release of contaminated areas, decisions on affected product, detection and removal methods, investigation, and calibrated detection equipment.',['sops','qms'],'Contamination incidents reported as deviations with correction and root cause.',[]],
  ['2A.12.7','2A','Allergen management','Allergen labeling meets the law, allergen labels are verified, allergens from materials, suppliers, staff and visitors are risk-assessed, and cleaning, changeover and storage prevent cross-contact.',['stickers','products'],'Label templates carry an allergen declaration that prints on every sticker.',[]],
  ['2A.12.8','2A','Product labeling and packaging','Label specs that meet CSQ and regulation; label content (potency, ingredients, allergens, warnings, claims, batch) verified against the batch; labels reviewed when materials, processes or rules change; only the labels and packaging a batch needs are issued, then reconciled; no mislabeled or damaged product; correct, inspected, clean packaging materials and tools.',['stickers','testing'],'Sticker templates per SKU and flavor with approval number; potency printed from the COA; every sticker print logged (batch, tag, count, who); template changes in the audit trail.',[]],
- ['2A.12.9','2A','Product sampling and testing','Finished product meets spec and regulation before release; samples are representative; samplers are competent; methods, frequency and limits are defined and results trended; held product is released after review; recognized methods; compliance labs accredited to ISO/IEC 17025; internal labs separated; retention samples kept when required.',['testing','batches'],'Testing: per final package tag, lab and lab license, COA stored privately, COA read by AI with tag check, retention samples (quantity, location, keep-until).',['Suppliers']],
+ ['2A.12.9','2A','Product sampling and testing','Finished product meets spec and regulation before release; samples are representative; samplers are competent; methods, frequency and limits are defined and results trended; held product is released after review; recognized methods; compliance labs accredited to ISO/IEC 17025; internal labs separated; retention samples kept when required.',['testing','batches','suppliers'],'Testing: per final package tag, lab and lab license, COA stored privately, COA read by AI with tag check, retention samples (quantity, location, keep-until). Testing labs approved in Suppliers with ISO/IEC 17025 accreditation; labs used in Testing are checked against the approved list.',[]],
  ['2A.13.1','2A','Personnel roles and responsibilities','Everyone in the facility is classified by role; each role has defined duties and requirements (certifications, education, experience, training).',['roles','team','training'],'Roles with duties, requirements (certifications, training, experience) and access per person. Each role\'s required training in the training matrix.',[]],
  ['2A.13.2','2A','Personnel training','Train everyone, including temps and contractors, before they work: minimum training for all, training per role, a training matrix, yearly refreshers, regular assessments, legal, cGMP, cannabis safety, hygiene, product defense and job training; at least one person with CSQ program overview training; qualified trainers; training in a language staff understand; records kept at least for the length of employment.',['sops','roles','training'],'Roles (the training matrix will hang off them). SOP signatures per person are part of the training record. Training matrix: required courses by role, refreshers, qualified trainers, assessments, certificates, SOP signatures; CSQ Program Overview holders counted.',[]],
  ['2A.13.3','2A','Personnel health (illness and injuries)','Staff know the symptoms that keep them off product and how to report them; no handling product with open wounds; minor cuts covered with bandage and glove; bodily fluid spills quarantined, cleaned and released by authorized people.',['sops'],'Health SOP signed by everyone.',[]],
@@ -4042,19 +4233,19 @@ const CSQ_MFG_CLAUSES=[
  ['2A.13.8','2A','Contractors, service providers and visitors','Visitors and contractors stay out of production when ill, acknowledge the facility\'s cGMP rules, wear suitable clothing and PPE, remove jewelry and loose items, and follow hygiene and handwashing rules.',['visitors'],'Visitor Log and QR kiosk: every visitor reads and accepts the GMP rules and answers an illness question before entering; anyone ill is marked to stay out of production.',[]],
  ['3C.1.1','3C','Manufacturing activities','Manufacturing follows cGMP and protects product from adulterants, foreign matter and residual solvents: areas identified with signage, simultaneous activities segregated, solvent and chemical levels in the final product within regulation and spec.',['batches','testing'],'Batch records; residual solvent results on COAs.',[],'All products'],
  ['3C.1.2','3C','Manufacturing inputs and controls','Every manufacturing input is declared with safety and quality specs, and its use is controlled, recorded and tracked.',['products','batches'],'Formulations; batch records capture inputs used.',['Receiving'],'All products'],
- ['3C.1.3','3C','Air, CO2 and other process gases','Process gases suit their use and are monitored: filtered, dry and oil-free; at least 99.5% pure unless specified; CO2 beverage grade or better (never medical grade).',[],'',['Receiving'],'Processes using gases'],
+ ['3C.1.3','3C','Air, CO2 and other process gases','Process gases suit their use and are monitored: filtered, dry and oil-free; at least 99.5% pure unless specified; CO2 beverage grade or better (never medical grade).',['suppliers'],'Gas suppliers approved with specs (purity, beverage grade CO2).',['Receiving'],'Processes using gases'],
  ['3C.1.4','3C','Ethanol and other liquid organic solvents','Solvents suit their use and are monitored: at least 99.5% pure; ethanol food grade and not denatured (approved denaturants reduced to legal levels if used); only ethanol may be an ingredient, and it must be food grade.',['batches'],'Ethanol and BHO batch records track solvent use.',['Receiving'],'Processes using solvents'],
  ['3C.1.5','3C','Water used during manufacturing','Water used as an ingredient or in processing is potable, at least 99.5% pure, evaluated as a contamination source, tested on a continuing basis, informed by past tests and land use, with wastewater monitored.',[],'',['Facility tests'],'Products made with water'],
  ['3C.1.6','3C','Water ice and dry ice','Ice meets water specs; ice machines installed to regulation with storage and production parts emptied and cleaned at least weekly; dry ice used sparingly and never touching product.',['sops','logs'],'',[],'Processes using ice or dry ice'],
- ['3C.1.7','3C','Other solid and liquid processing inputs','Media, catalysts, reactants and similar inputs are at least 99.5% pure and food grade, or justified by a toxicological risk assessment; non-food-grade inputs are declared and reduced to safe levels in the final product.',[],'',['Receiving'],'Processes using media or reagents'],
- ['3C.1.8','3C','Non-cannabinoid ingredients','Terpenes and other ingredients are food grade or justified by a toxicological risk assessment; non-food-grade ingredients are declared and reduced to safe levels.',['products'],'Formulations list ingredients.',['Receiving','Suppliers'],'Formulated products'],
+ ['3C.1.7','3C','Other solid and liquid processing inputs','Media, catalysts, reactants and similar inputs are at least 99.5% pure and food grade, or justified by a toxicological risk assessment; non-food-grade inputs are declared and reduced to safe levels in the final product.',['suppliers'],'Processing input suppliers approved with specs.',['Receiving'],'Processes using media or reagents'],
+ ['3C.1.8','3C','Non-cannabinoid ingredients','Terpenes and other ingredients are food grade or justified by a toxicological risk assessment; non-food-grade ingredients are declared and reduced to safe levels.',['products','suppliers'],'Formulations list ingredients. Ingredient suppliers approved with specs (food grade, COA).',['Receiving'],'Formulated products'],
  ['3C.1.9','3C','Indoor air quality, airflow and environment','Production areas have air quality specs; air is conditioned, filtered, treated and monitored; air handling is checked; airflow, humidity and temperature have min and max limits and air never stagnates; milling and grinding areas are monitored for dust with dust handling and PPE.',['logs'],'Temp / Humidity Log: min and max per room; out-of-range readings are marked automatically and need a corrective action.',[],'All products'],
  ['3C.1.10','3C','Blending, compounding, formulation and mixing','Defined procedures and equipment for blending; every ingredient measured and added at the right step; parameters documented to spec; batches homogeneous before dispensing; rework approved by qualified staff; equipment sized for the batch.',['products','batches'],'Formulations; Batch Tracker calculations; changes to filled values need Full access and a reason.',[],'Blended and formulated products'],
  ['3C.2.1','3C','Cannabinoid herbal material products','Dried or frozen flower is protected from foreign matter, chemical and microbial contamination, kept frozen when required, and handled with airflow, ventilation and dust control.',['sops','batches'],'Infused flower, moon rocks and snow caps batch records.',[],'Flower products'],
- ['3C.2.2','3C','Cannabinoid pre-roll products','Pre-rolls are protected from contamination with dust control; ingredients for infused pre-rolls are fit for inhalation (food grade or GRAS alone is not enough).',['batches','products'],'Pre-roll batch type with coating (Kief, Diamond).',['Suppliers'],'Pre-rolls'],
+ ['3C.2.2','3C','Cannabinoid pre-roll products','Pre-rolls are protected from contamination with dust control; ingredients for infused pre-rolls are fit for inhalation (food grade or GRAS alone is not enough).',['batches','products','suppliers'],'Pre-roll batch type with coating (Kief, Diamond). Infusion ingredient suppliers approved with an inhalation-grade statement.',[],'Pre-rolls'],
  ['3C.2.3','3C','Cannabinoid substance products','Concentrates and extracts are protected from contamination; residual solvents (also in solventless products) stay within the stricter of regulation or internal spec; converted or synthetic cannabinoids are declared, specified and tracked.',['testing','batches'],'Testing stores residual solvent results from COAs.',[],'Concentrates and distillate'],
  ['3C.2.4','3C','Formulated cannabinoid substance products','Formulated substances are protected from contamination, risk-assessed for route of administration and labeled with it, carry allergen declarations when used as ingredients, and use inhalation-grade ingredients when meant for inhalation.',['products'],'SKU specs and formulations.',[],'Cartridge oil and formulated extracts'],
- ['3C.2.5','3C','Inhalable cannabinoid products','Inhalable products are protected from contamination, risk-assessed for inhalation, and use only ingredients fit for inhalation (food grade or GRAS alone is not enough).',['products','batches'],'',['Suppliers'],'Cartridges and vapes'],
+ ['3C.2.5','3C','Inhalable cannabinoid products','Inhalable products are protected from contamination, risk-assessed for inhalation, and use only ingredients fit for inhalation (food grade or GRAS alone is not enough).',['products','batches','suppliers'],'Inhalable ingredient suppliers approved with an inhalation-grade statement.',[],'Cartridges and vapes'],
  ['3C.2.6','3C','Ingestible cannabinoid products','Ingestible products are protected from contamination and every label carries an accurate allergen declaration.',['stickers','batches'],'Sticker templates per SKU with an allergen declaration printed on the label.',[],'Gummies and edibles'],
  ['3C.2.7','3C','Topical-use cannabinoid products','Topicals are protected from contamination, risk-assessed for skin or mucosal absorption and duration of use, and labeled with fragrance, skin irritant and allergen declarations.',[],'',[],'Topicals'],
  ['4A.1','4A','HACCP system','Develop, document and run a HACCP system based on the 12 Codex Alimentarius steps as part of the quality system.',[],'',['HACCP']],
@@ -4074,7 +4265,7 @@ const CSQ_MFG_CLAUSES=[
  ['5.1.4','5','Continuous improvement','Measurable improvement goals with KPIs and effectiveness checks, continuing education per role, shared with staff and reviewed at least quarterly.',['training'],'Continued education per role in the training matrix.',['KPIs']],
  ['5.1.5','5','Change management','A change management plan for people, processes and products: what each change affects, how it is documented and approved, training before use, and who is told (including regulators and the certification body).',['audit'],'Audit trail records every change with a reason.',['Change control']],
  ['5.1.6','5','Risk management','Risk procedures: the hazard, its root cause, the owner, immediate action, timescale for a permanent fix, verification, and routine surveillance of product safety and quality.',['qms'],'',['Risk register']],
- ['5.1.7','5','Validation','Validate facilities and equipment with installation, operational and performance qualification (IQ, OQ, PQ), materials through supplier approval, and revalidate yearly and whenever critical limits, cGMPs or CSQ conformance change.',[],'',['Equipment register']],
+ ['5.1.7','5','Validation','Validate facilities and equipment with installation, operational and performance qualification (IQ, OQ, PQ), materials through supplier approval, and revalidate yearly and whenever critical limits, cGMPs or CSQ conformance change.',['suppliers'],'Materials validated through supplier approval.',['Equipment register']],
  ['5.1.8','5','Verification','Verification procedures that list the activities to verify, who does them, how often, and how they are monitored and recorded.',[],'',['Verification schedule']],
  ['5.2','5','Safety and quality culture','Everyone acknowledges the safety and quality commitments, training covers anyone who affects product, improvements are planned and measured, and the culture policy is reviewed yearly.',['sops','training'],'Quality policy as an SOP; every signature recorded per version. Training per person in the training matrix.',[]],
  ['5.3','5','Customer satisfaction','Know and meet customer requirements, have a channel for product information, feedback and complaints, and measure whether customers are satisfied.',[],'',['Complaints']],
@@ -4085,9 +4276,9 @@ const STD_STATUSES=['Not assessed','Conforming','Partial','Not conforming','Not 
 const STD_TONE={'Not assessed':'off','Conforming':'ok','Partial':'warn','Not conforming':'bad','Not applicable':'off'};
 const STD_COLOR={'Conforming':'#5fbf8a','Partial':'#d4af37','Not conforming':'#e5645a','Not applicable':'#4a473f','Not assessed':'#2a2a2a'};
 const ADOPT_STATUSES=['Following','Audit scheduled','Certified','Suspended','Withdrawn'];
-const HX_PAGE_LABEL={training:'Training',qms:'QMS (Deviations, CAPA)',sops:'SOPs',rulebook:'Rulebook',locations:'States and Licenses',audit:'Audit Trail',batches:'Batch Tracker',testing:'Testing',stickers:'Compliance Stickers',
+const HX_PAGE_LABEL={suppliers:'Suppliers',training:'Training',qms:'QMS (Deviations, CAPA)',sops:'SOPs',rulebook:'Rulebook',locations:'States and Licenses',audit:'Audit Trail',batches:'Batch Tracker',testing:'Testing',stickers:'Compliance Stickers',
   products:'Products',logs:'Facility Logs',visitors:'Visitor Log',roles:'Roles',team:'Team and Access'};
-const HX_PAGE_MOD={training:'training',qms:'qms',sops:'sops',rulebook:'rulebook',audit:'audit',batches:'batch',testing:'testing',stickers:'stickers',visitors:'logs_visitor'};
+const HX_PAGE_MOD={suppliers:'suppliers',training:'training',qms:'qms',sops:'sops',rulebook:'rulebook',audit:'audit',batches:'batch',testing:'testing',stickers:'stickers',visitors:'logs_visitor'};
 function stdLevelOf(m){return m==='4A'?2:m==='5'?3:1;}
 function stdErr(e){
   const m=String((e&&e.message)||e);
@@ -4282,6 +4473,14 @@ async function loadStdEvidence(st,lic){
       const ak=(await db.get('hx_sop_acks','sop_id=in.('+pub.map(function(x){return enc(x.id);}).join(',')+')&select=sop_id,version,user_id'))||[];let tot=0,dn=0;
       pub.forEach(function(x){const t=sopTargets(x,ro||[])||[];tot+=t.length;dn+=t.filter(function(u){return ak.some(function(a){return a.sop_id===x.id&&a.version===x.version&&a.user_id===u.id;});}).length;});rate=tot?Math.round(dn*100/tot):null;}catch(e){rate=null;}}
     return {pub:pub.length,drafts:l.filter(function(x){return x.status==='draft';}).length,late:pub.filter(sopReviewLate).length,rate:rate};}));
+  if(can('suppliers',1))jobs.push(tryGet('suppliers',async function(){
+    const A=((await db.get('hx_suppliers','license_ids=cs.%7B'+enc(lid)+'%7D&select=id,name,category,status,next_review,last_review,credentials,approved_at,license_id,license_ids'))||[]).filter(function(s){return (s.license_ids||[s.license_id]).indexOf(lid)>=0;});
+    let labs=[];if(can('testing',1)){try{const t=(await db.get('hx_tests','license_id=eq.'+enc(lid)+'&select=lab_name,voided,license_id&limit=20000'))||[];const m={};t.forEach(function(x){if(x.license_id===lid&&!x.voided&&x.lab_name)m[x.lab_name.trim()]=1;});labs=Object.keys(m);}catch(e){labs=[];}}
+    const rev=A.map(function(s){return s.last_review||'';}).sort().pop()||'';
+    return {n:A.length,ok:A.filter(supActive).length,pend:A.filter(function(s){return s.status==='pending';}).length,emer:A.filter(function(s){return s.status==='emergency';}).length,
+      out:A.filter(function(s){return s.status==='suspended'||s.status==='disqualified';}).length,late:A.filter(supReviewLate).length,cred:A.filter(function(s){return s.status!=='disqualified'&&supCredIssues(s).length;}).length,
+      cats:A.filter(supActive).reduce(function(m,s){m[s.category]=(m[s.category]||0)+1;return m;},{}),labGap:supLabCheck(A,labs),labs:A.filter(function(s){return s.category==='Testing Lab'&&supActive(s);}).length,
+      pest:A.filter(function(s){return s.category==='Pest Control'&&supActive(s);}).length,lastRev:rev};}));
   jobs.push(tryGet('roles',async function(){const rs=ACC.roles||[];return {n:rs.length,noReq:rs.filter(function(r){return !String(r.requirements||'').trim()||!String(r.description||'').trim();}).length};}));
   await Promise.all(jobs);
   return E;
@@ -4326,6 +4525,11 @@ function clauseEvidence(x,E){
     else if(p==='sops'&&E.sops){const O=E.sops;
       out.push({label:'SOP library',value:O.pub+' published, numbered and approved SOP'+(O.pub===1?'':'s')+' \u00b7 '+O.drafts+' draft'+(O.drafts===1?'':'s')+(O.rate!=null?' \u00b7 '+O.rate+'% of required signatures done':'')+(O.late?' \u00b7 '+O.late+' overdue for review':''),page:'sops',
         warn:!O.pub?'No published SOPs yet':(O.late?O.late+' SOP'+(O.late===1?'':'s')+' overdue for review':(O.rate!=null&&O.rate<100?(100-O.rate)+'% of signatures missing':''))});}
+    else if(p==='suppliers'&&E.suppliers){const U=E.suppliers,cl=x.clause;
+      out.push({label:'Approved supplier list',value:U.ok+' approved \u00b7 '+U.pend+' pending \u00b7 '+U.emer+' emergency \u00b7 '+U.out+' suspended or disqualified'+(U.cred?' \u00b7 '+U.cred+' with credentials expired or expiring':''),last:U.lastRev,page:'suppliers',
+        warn:!U.n?'No suppliers on file':(U.late?U.late+' supplier review'+(U.late===1?'':'s')+' overdue':(U.cred?U.cred+' with expiring credentials':''))});
+      if(cl==='2A.12.9')out.push({label:'Testing labs',value:U.labs+' approved lab'+(U.labs===1?'':'s')+' with ISO/IEC 17025'+(U.labGap.length?' \u00b7 not approved: '+U.labGap.join(', '):' \u00b7 every lab used in Testing is approved'),page:'suppliers',warn:U.labGap.length?U.labGap.length+' lab'+(U.labGap.length===1?'':'s')+' not approved':(!U.labs?'No approved lab':'')});
+      if(cl==='2A.5.2')out.push({label:'Pest control contractor',value:U.pest?U.pest+' approved pest control supplier'+(U.pest===1?'':'s')+' with licenses on file':'No approved pest control supplier',page:'suppliers',warn:U.pest?'':'Add the pest control contractor'});}
     else if(p==='roles'&&E.roles)out.push({label:'Roles',value:E.roles.n+' defined role'+(E.roles.n===1?'':'s')+(x.clause==='2A.13.1'?' \u00b7 '+(E.roles.n-E.roles.noReq)+' with duties and requirements':''),page:'roles',
       warn:!E.roles.n?'No roles defined':(x.clause==='2A.13.1'&&E.roles.noReq?E.roles.noReq+' role'+(E.roles.noReq===1?'':'s')+' missing duties or requirements':'')});
   });
@@ -5296,7 +5500,7 @@ function App(){
   if(isAdmin)nav.push({id:'team',label:'Team and Access'},{id:'roles',label:'Roles'});
   if(can('audit',1))nav.push({id:'audit',label:'Audit Trail'});
   const anyLog=LOG_TYPES.some(function(t){return can(LOG_MOD[t.id],1);});
-  const mods=[can('qms',1)&&['qms','QMS'],can('training',1)&&['training','Training'],can('sops',1)&&['sops','SOPs'],can('logs_visitor',1)&&['visitors','Visitor Log'],anyLog&&['logs','Facility Logs'],(can('products',1)||can('formbank',1)||can('cogs',1))&&['products','Products'],can('batch',1)&&['batches','Batch Tracker'],can('testing',1)&&['testing','Testing'],can('stickers',1)&&['stickers','Compliance Stickers']].filter(Boolean);
+  const mods=[can('qms',1)&&['qms','QMS'],can('training',1)&&['training','Training'],can('sops',1)&&['sops','SOPs'],can('suppliers',1)&&['suppliers','Suppliers'],can('logs_visitor',1)&&['visitors','Visitor Log'],anyLog&&['logs','Facility Logs'],(can('products',1)||can('formbank',1)||can('cogs',1))&&['products','Products'],can('batch',1)&&['batches','Batch Tracker'],can('testing',1)&&['testing','Testing'],can('stickers',1)&&['stickers','Compliance Stickers']].filter(Boolean);
   let body;
   if(page==='locations')body=el(Locations,{profile:profile,states:states,licenses:licenses,reload:loadData,openRulebook:function(id){pickState(id);setPage('rulebook');}});
   else if(page==='visitors'&&can('logs_visitor',1))body=el(VisitorLog,{key:licId,state:st,license:lic});
@@ -5309,6 +5513,7 @@ function App(){
   else if(page==='team'&&isAdmin)body=el(Team,{profile:profile,states:states,licenses:licenses,onSelfChange:boot});
   else if(page==='roles'&&isAdmin)body=el(Roles);
   else if(page==='audit'&&can('audit',1))body=el(AuditTrail,{state:st});
+  else if(page==='suppliers'&&can('suppliers',1))body=el(SuppliersPage,{key:licId,state:st,license:lic,licenses:licenses,go:setPage});
   else if(page==='training'&&can('training',1))body=el(TrainingPage,{key:licId,state:st,license:lic,go:setPage});
   else if(page==='qms'&&can('qms',1))body=el(QmsPage,{key:licId,state:st,license:lic,go:setPage});
   else if(page==='sops'&&can('sops',1))body=el(SopsPage,{key:licId,state:st,license:lic,licenses:licenses});
