@@ -1,75 +1,7430 @@
-// Hendrix QMS - Supabase Edge Function "hendrix-ai"
-// Claude for the Hendrix app: reads lab COAs (Testing), writes / revises SOPs (SOPs),
-// drafts online training courses from the state Rulebook (Training) and organizes an
-// uploaded rules PDF into the state Rulebook (Rulebook).
-//
-// Security: only a signed-in, approved Hendrix user with at least Edit access to the
-// module making the request (Testing, SOPs or Rulebook; Full access for Training) can use it, checked with the user's own
-// login through hx_perm. The Anthropic key stays in Supabase secrets and never reaches
-// the browser. After changing this file, deploy it again (same name: hendrix-ai).
-//
-// Deploy (Supabase dashboard, project bqrncllndvzbhmxanitq):
-//   1. Edge Functions > Deploy a new function > Via Editor. Name it exactly: hendrix-ai
-//   2. Paste this whole file, Deploy. Then Settings: turn "Verify JWT with legacy secret" OFF
-//      (this function checks the Hendrix sign-in and access level itself).
-//   3. Edge Functions > Secrets: add ANTHROPIC_API_KEY = your Anthropic API key.
-//      Optional: HX_AI_MODEL to choose another model.
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hendrix QMS</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0a0a0a; --panel:#121212; --panel2:#181818; --line:#2a2a2a;
+  --text:#f2efe6; --muted:#9a968a; --faint:#6c685e;
+  --gold:#d4af37; --gold-hi:#f1d57a; --gold-lo:#a8841c;
+  --red:#e5645a; --green:#5fbf8a;
+  --gold-grad:linear-gradient(135deg,#f1d57a 0%,#d4af37 45%,#a8841c 100%);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.5}
+button,input,select,textarea{font-family:inherit;font-size:14px}
+::selection{background:var(--gold);color:#000}
+.brand{display:flex;align-items:center;gap:10px}
+.box .brand{justify-content:center}
+.brand-name{font-weight:800;letter-spacing:.22em;font-size:15px;background:var(--gold-grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.brand-sub{font-size:10px;letter-spacing:.3em;color:var(--muted);margin-top:-2px}
+/* shell */
+.shell{display:grid;grid-template-columns:230px 1fr;grid-template-rows:auto 1fr;min-height:100vh}
+.top{grid-column:1/3;display:flex;align-items:center;gap:14px;padding:10px 18px;border-bottom:1px solid var(--line);background:#0d0d0d;position:sticky;top:0;z-index:20;flex-wrap:wrap}
+.top .sp{flex:1}
+.ctx{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ctx label{font-size:10px;letter-spacing:.18em;color:var(--gold);text-transform:uppercase}
+.side{border-right:1px solid var(--line);padding:16px 10px;background:#0d0d0d}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav .grp{font-size:10px;letter-spacing:.2em;color:var(--faint);text-transform:uppercase;margin:14px 10px 6px}
+.nav button{display:flex;align-items:center;gap:10px;background:none;border:0;color:var(--muted);text-align:left;padding:9px 12px;border-radius:8px;cursor:pointer;border-left:2px solid transparent}
+.nav button:hover{color:var(--text);background:#151515}
+.nav button.on{color:var(--gold-hi);background:#17140a;border-left-color:var(--gold)}
+.nav button.soon{opacity:.45;cursor:default}
+.nav .tag{margin-left:auto;font-size:9px;letter-spacing:.14em;color:var(--faint);text-transform:uppercase}
+.main{padding:24px 28px 60px;min-width:0}
+h1{font-size:24px;margin:0 0 4px;font-weight:700;letter-spacing:.02em}
+h1 .g{background:var(--gold-grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--muted);margin-bottom:20px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:14px;position:relative}
+.card.gold{border-top:2px solid var(--gold)}
+.card h3{margin:0 0 8px;font-size:15px;letter-spacing:.03em}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.k{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold)}
+.v{font-size:16px;margin-top:2px}
+.muted{color:var(--muted)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{border:0;border-radius:8px;padding:9px 16px;font-weight:700;cursor:pointer;background:var(--gold-grad);color:#0a0a0a;letter-spacing:.02em}
+.btn:hover{filter:brightness(1.08)}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.ghost{background:transparent;color:var(--gold-hi);border:1px solid var(--gold-lo)}
+.btn.ghost:hover{background:#17140a}
+.btn.danger{background:transparent;color:var(--red);border:1px solid #5a2a26}
+.btn.sm{padding:5px 11px;font-size:12px}
+input,select,textarea{background:#0f0f0f;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:9px 11px;width:100%}
+select{width:auto;min-width:150px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 2px rgba(212,175,55,.18)}
+textarea{min-height:90px;resize:vertical}
+label.f,div.f{display:block;margin-bottom:12px}
+label.f>span,div.f>span{display:block;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin-bottom:5px}
+.badge{display:inline-block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:2px 8px;border-radius:20px;border:1px solid var(--gold-lo);color:var(--gold-hi)}
+.badge.off{border-color:var(--line);color:var(--faint)}
+.msg{padding:9px 12px;border-radius:8px;margin:10px 0;font-size:13px}
+.msg.err{background:#2a1513;border:1px solid #5a2a26;color:#ffb4ac}
+.msg.ok{background:#112218;border:1px solid #23543a;color:#a6e6c4}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);padding:8px 10px;border-bottom:1px solid var(--line)}
+td{padding:9px 10px;border-bottom:1px solid #1d1d1d;vertical-align:middle}
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:50;display:flex;align-items:center;justify-content:center;padding:14px}
+.md{background:var(--panel);border:1px solid var(--gold-lo);border-radius:14px;width:min(520px,100%);max-height:92vh;overflow:auto;padding:20px}
+.md h2{margin:0 0 14px;font-size:18px}
+.auth{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(ellipse at top,#1a1507 0,#0a0a0a 55%)}
+.auth .box{width:min(400px,100%);background:var(--panel);border:1px solid var(--line);border-top:2px solid var(--gold);border-radius:14px;padding:26px}
+.badge.ok{border-color:#23543a;color:#a6e6c4}
+.badge.bad{border-color:#5a2a26;color:#ffb4ac;background:#2a1513}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 18px}
+.tabs button{background:#111;border:1px solid var(--line);color:var(--muted);border-radius:20px;padding:6px 14px;cursor:pointer;font-size:13px}
+.tabs button.on{background:#17140a;border-color:var(--gold);color:var(--gold-hi)}
+.chk{display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid #1d1d1d}
+.btn.selbad{background:#5a2a26;color:#fff}
+.secth{margin:18px 0 10px;padding:6px 10px;border-left:3px solid var(--gold);background:#141209;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold-hi);font-weight:700}
+.cklist{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:4px 12px}
+.ck{display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer}
+.li{display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
+.li input{width:auto;min-width:0}
+.voidrow td{opacity:.5;text-decoration:line-through}.voidrow td:last-child,.voidrow td:nth-child(5){text-decoration:none}
+.chkp{border-radius:10px;padding:12px 16px;text-align:center;border:1px solid var(--line)}
+.chkp .h{font-weight:800;font-size:15px;letter-spacing:.04em}.chkp .s{font-size:12px;opacity:.9;margin-top:3px}
+.chkp.ok{background:#112218;border-color:#23543a;color:#a6e6c4}.chkp.bad{background:#2a1513;border-color:#5a2a26;color:#ffb4ac}
+.chkp.warn{background:#2a2108;border-color:#6b5414;color:#f1d57a}.chkp.none,.chkp.info{background:#151515;color:var(--muted)}.chkp.info{color:var(--text)}
+.autov{background:#151515;border:1px dashed var(--line);border-radius:8px;padding:9px 11px;font-weight:700}
+.metrcck{background:#0f1a13;border:1px solid #23543a;border-radius:8px;padding:9px 12px;margin-bottom:12px;color:#a6e6c4;font-weight:700}
+.voidcard{opacity:.55}
+.barrow{display:flex;align-items:center;gap:8px;font-size:12px;margin:3px 0}.barrow .bl{width:130px;text-align:right;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.barrow .bt{flex:1;max-width:360px;height:10px;background:#1b1b1b;border-radius:5px;overflow:hidden}.barrow .bf{display:block;height:100%;background:var(--gold-grad)}.barrow .bf.alt{background:linear-gradient(90deg,#3f8f63,#5fbf8a)}
+.barrow .bv{width:70px;font-weight:700}
+.badge.warn{border-color:#6b5414;color:#f1d57a;background:#2a2108}
+.ck input{width:18px;height:18px;flex:0 0 auto;accent-color:#d4af37}
+.empty{border:1px dashed var(--gold-lo);border-radius:12px;padding:30px;text-align:center;color:var(--muted)}
+@media(max-width:820px){
+  .shell{grid-template-columns:1fr}
+  .top{grid-column:1}
+  .side{border-right:0;border-bottom:1px solid var(--line);padding:8px}
+  .nav{flex-direction:row;overflow-x:auto}
+  .nav .grp{display:none}
+  .nav button{white-space:nowrap}
+  .main{padding:16px 16px 50px}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+(function(){
+const {useState,useEffect,useCallback,useRef,useMemo}=React;
+const el=React.createElement;
 
-import { createClient } from "jsr:@supabase/supabase-js@2";
+/* ---------- Supabase connection (a NEW, separate project) ---------- */
+// Optional: paste the new project's URL and anon key here so every browser is pre-connected.
+const HX_URL='https://bqrncllndvzbhmxanitq.supabase.co';
+const HX_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxcm5jbGxuZHZ6YmhteGFuaXRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1OTI0MTgsImV4cCI6MjEwODE2ODQxOH0.OLIy8RzGxYSGulp7m2IdpD7KA5NiGDuEFYfWYT99_Bc';
 
-const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
+function lsGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}
+function lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
+function lsDel(k){try{localStorage.removeItem(k);}catch(e){}}
+function cfg(){
+  const url=(HX_URL||lsGet('hx_url')||'').replace(/\/+$/,'');
+  const key=HX_KEY||lsGet('hx_key')||'';
+  return {url:url,key:key,ok:!!(url&&key)};
+}
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
-  if (req.method !== "POST") return json({ error: { message: "POST only" } }, 405);
-  try {
-    const auth = req.headers.get("Authorization") || "";
-    const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: auth } },
-    });
-    // the signed-in user's token must be passed to getUser (an Edge Function has no stored session)
-    const token = auth.replace(/^Bearer\s+/i, "").trim();
-    if (!token) return json({ error: { message: "Sign in to Hendrix first." } }, 401);
-    const { data: u, error: uerr } = await sb.auth.getUser(token);
-    if (uerr || !u || !u.user) return json({ error: { message: "Hendrix sign-in was not accepted by the AI function" + (uerr ? " (" + uerr.message + ")" : "") + ". Sign out of Hendrix, sign in again and retry." } }, 401);
-    const body = await req.json();
-    const mod = body.module === "sops" ? "sops" : body.module === "training" ? "training" : body.module === "rulebook" ? "rulebook" : "testing";
-    const need = mod === "training" ? 3 : 2;
-    const { data: lvl, error: perr } = await sb.rpc("hx_perm", { p_mod: mod });
-    if (perr) return json({ error: { message: "Access check failed: " + perr.message } }, 500);
-    if (!lvl || lvl < need) {
-      return json({ error: { message: mod === "sops" ? "You need Edit access to SOPs to use the AI SOP tools." : mod === "training" ? "You need Full access to Training to draft courses with AI." : mod === "rulebook" ? "You need Edit access to the Rulebook to organize a rules PDF with AI." : "You need Edit access to Testing to read COAs." } }, 403);
+/* ---------- session + REST helpers ---------- */
+let SESSION=null;
+try{SESSION=JSON.parse(lsGet('hx_session')||'null');}catch(e){SESSION=null;}
+function saveSession(s){SESSION=s;if(s)lsSet('hx_session',JSON.stringify(s));else lsDel('hx_session');}
+
+async function authCall(path,body){
+  const c=cfg();
+  const r=await fetch(c.url+'/auth/v1/'+path,{method:'POST',headers:{'apikey':c.key,'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const j=await r.json().catch(function(){return {};});
+  if(!r.ok)throw new Error(j.error_description||j.msg||j.message||('Auth error '+r.status));
+  return j;
+}
+function toSession(j){
+  return {access_token:j.access_token,refresh_token:j.refresh_token,expires_at:Math.floor(Date.now()/1000)+(j.expires_in||3600),user:j.user};
+}
+async function freshToken(){
+  if(!SESSION)return null;
+  if(SESSION.expires_at-60>Math.floor(Date.now()/1000))return SESSION.access_token;
+  try{
+    const j=await authCall('token?grant_type=refresh_token',{refresh_token:SESSION.refresh_token});
+    saveSession(toSession(j));
+    return SESSION.access_token;
+  }catch(e){saveSession(null);return null;}
+}
+async function sb(path,opt){
+  opt=opt||{};
+  const c=cfg();
+  const tok=await freshToken();
+  const h={'apikey':c.key,'Authorization':'Bearer '+(tok||c.key),'Content-Type':'application/json'};
+  if(opt.prefer)h['Prefer']=opt.prefer;
+  const r=await fetch(c.url+'/rest/v1/'+path,{method:opt.method||'GET',headers:h,body:opt.body?JSON.stringify(opt.body):undefined});
+  const txt=await r.text();
+  let j=null;try{j=txt?JSON.parse(txt):null;}catch(e){j=null;}
+  if(!r.ok){
+    const m=(j&&(j.message||j.hint||j.details))||txt||('Error '+r.status);
+    if(/schema cache|Could not find the table|relation .* does not exist/i.test(m)&&!/Could not find the '[A-Za-z0-9_]+' column/.test(m)){
+      const step=/hx_rule_sources/.test(m)?'hendrix_step22.sql':/hx_training_keys|hx_training_attempts|hx_course_submit|content_status/.test(m)?'hendrix_step20.sql':/hx_complaints|hx_audits|hx_audit_findings/.test(m)?'hendrix_step19.sql':/hx_recall|hx_trace_data/.test(m)?'hendrix_step18.sql':/hx_lots|hx_lot_uses|hx_holds|hx_shipments/.test(m)?'hendrix_step17.sql':/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
+      throw new Error('Database tables are missing - run '+step+' in the Hendrix Supabase project.');
     }
-
-    const key = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!key) return json({ error: { message: "ANTHROPIC_API_KEY is not set in Supabase Edge Function secrets." } }, 500);
-
-    if (!Array.isArray(body.messages)) return json({ error: { message: "messages missing" } }, 400);
-    const payload = {
-      model: Deno.env.get("HX_AI_MODEL") || "claude-sonnet-4-6",
-      max_tokens: Math.min(Number(body.max_tokens) || 4000, 8000),
-      system: typeof body.system === "string" ? body.system : undefined,
-      messages: body.messages,
-    };
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (r.status === 401 || r.status === 403) {
-      return json({ error: { message: "Anthropic refused the ANTHROPIC_API_KEY saved in Supabase (Edge Functions > Secrets). Create a new key at console.anthropic.com > API Keys, paste it there (whole key, no spaces or quotes) and retry." } }, 502);
-    }
-    if (r.status === 400 && (await r.clone().text()).includes("credit balance")) {
-      return json({ error: { message: "The Anthropic account has no credit. Add credit at console.anthropic.com > Billing and retry." } }, 502);
-    }
-    return new Response(await r.text(), { status: r.status, headers: { ...cors, "Content-Type": "application/json" } });
-  } catch (e) {
-    return json({ error: { message: String((e as Error)?.message || e) } }, 500);
+    if(/row-level security|permission denied/i.test(m))throw new Error('Not allowed - your access level does not allow this here. Ask a system admin.');
+    throw new Error(m);
   }
-});
+  return j;
+}
+const db={
+  get:function(t,q){return sb(t+(q?'?'+q:''));},
+  insert:function(t,row){return sb(t,{method:'POST',body:row,prefer:'return=representation'});},
+  update:function(t,id,patch){return sb(t+'?id=eq.'+encodeURIComponent(id),{method:'PATCH',body:patch,prefer:'return=representation'});},
+  remove:function(t,id){return sb(t+'?id=eq.'+encodeURIComponent(id),{method:'DELETE'});}
+};
+async function rpc(name,args){
+  const c=cfg();
+  const r=await fetch(c.url+'/rest/v1/rpc/'+name,{method:'POST',headers:{'apikey':c.key,'Authorization':'Bearer '+c.key,'Content-Type':'application/json'},body:JSON.stringify(args||{})});
+  const txt=await r.text();let j=null;try{j=txt?JSON.parse(txt):null;}catch(e){j=null;}
+  if(!r.ok){
+    const m=(j&&(j.message||j.hint))||txt||('Error '+r.status);
+    if(/Could not find the function|does not exist/i.test(m))throw new Error('Kiosk setup is missing - run hendrix_step3.sql and hendrix_step4.sql in the Hendrix Supabase project.');
+    throw new Error(m);
+  }
+  return j;
+}
+function newId(p){return p+'-'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
+// insert / update that drops columns the database does not have yet (a newer SQL step not run), instead of failing
+async function dbSave(table,id,rec){
+  let r=rec;
+  for(let i=0;i<8;i++){
+    try{return id?await db.update(table,id,r):await db.insert(table,r);}
+    catch(e){const m=/Could not find the '([A-Za-z0-9_]+)' column/.exec(String(e&&e.message||e));if(m&&Object.prototype.hasOwnProperty.call(r,m[1])){r={...r};delete r[m[1]];continue;}throw e;}
+  }
+  throw new Error('Save failed.');
+}
+
+/* ---------- small UI pieces ---------- */
+function Logo(props){
+  const s=props.size||30;
+  return el('svg',{width:s,height:s,viewBox:'0 0 40 40','aria-hidden':'true'},
+    el('defs',null,el('linearGradient',{id:'hxg',x1:'0',y1:'0',x2:'1',y2:'1'},
+      el('stop',{offset:'0',stopColor:'#f1d57a'}),el('stop',{offset:'.5',stopColor:'#d4af37'}),el('stop',{offset:'1',stopColor:'#a8841c'}))),
+    el('polygon',{points:'20,2 36,11 36,29 20,38 4,29 4,11',fill:'none',stroke:'url(#hxg)',strokeWidth:'2.4'}),
+    el('path',{d:'M13 12v16M27 12v16M13 20h14',stroke:'url(#hxg)',strokeWidth:'3',strokeLinecap:'round',fill:'none'}));
+}
+function Brand(){
+  return el('div',{className:'brand'},el(Logo,{size:32}),el('div',null,el('div',{className:'brand-name'},'HENDRIX'),el('div',{className:'brand-sub'},'QUALITY MANAGEMENT')));
+}
+function Field(props){
+  // plain=true uses a div: a label would turn taps on a canvas into clicks on its first button
+  return el(props.plain?'div':'label',{className:'f'},el('span',null,props.label),props.children);
+}
+function Modal(props){
+  return el('div',{className:'mo',onClick:function(e){if(e.target===e.currentTarget&&props.onClose)props.onClose();}},
+    el('div',{className:'md',style:props.wide?{width:'min(860px,100%)'}:null},el('h2',null,props.title),props.children));
+}
+
+/* ---------- connect / login ---------- */
+function ConnectScreen(props){
+  const[url,setUrl]=useState(lsGet('hx_url')||'');
+  const[key,setKey]=useState(lsGet('hx_key')||'');
+  return el('div',{className:'auth'},el('div',{className:'box'},
+    el(Brand),
+    el('p',{className:'muted',style:{margin:'18px 0'}},'Connect this app to its own new Supabase project (Project Settings > API). This is separate from Black Fox and Michigan.'),
+    el(Field,{label:'Project URL'},el('input',{value:url,placeholder:'https://xxxx.supabase.co',onChange:function(e){setUrl(e.target.value.trim());}})),
+    el(Field,{label:'Anon (public) key'},el('input',{value:key,placeholder:'eyJ...',onChange:function(e){setKey(e.target.value.trim());}})),
+    el('button',{className:'btn',style:{width:'100%'},disabled:!url||!key,onClick:function(){lsSet('hx_url',url);lsSet('hx_key',key);props.onDone();}},'Connect')));
+}
+function LoginScreen(props){
+  const[mode,setMode]=useState('in');
+  const[email,setEmail]=useState('');
+  const[pw,setPw]=useState('');
+  const[name,setName]=useState('');
+  const[busy,setBusy]=useState(false);
+  const[err,setErr]=useState('');
+  const[info,setInfo]=useState('');
+  async function go(){
+    setErr('');setInfo('');setBusy(true);
+    try{
+      if(mode==='in'){
+        const j=await authCall('token?grant_type=password',{email:email.trim(),password:pw});
+        saveSession(toSession(j));props.onAuthed();
+      }else{
+        if(!name.trim())throw new Error('Enter your name.');
+        if(pw.length<8)throw new Error('Password must be at least 8 characters.');
+        const j=await authCall('signup',{email:email.trim(),password:pw,data:{name:name.trim()}});
+        if(j.access_token){saveSession(toSession(j));props.onAuthed();}
+        else{setInfo('Account created. If email confirmation is on, confirm your email, then sign in.');setMode('in');}
+      }
+    }catch(e){setErr(String(e.message||e));}
+    setBusy(false);
+  }
+  return el('div',{className:'auth'},el('div',{className:'box'},
+    el(Brand),
+    el('div',{style:{height:18}}),
+    mode==='up'&&el(Field,{label:'Full name'},el('input',{value:name,onChange:function(e){setName(e.target.value);}})),
+    el(Field,{label:'Email'},el('input',{type:'email',value:email,onChange:function(e){setEmail(e.target.value);},onKeyDown:function(e){if(e.key==='Enter')go();}})),
+    el(Field,{label:'Password'},el('input',{type:'password',value:pw,onChange:function(e){setPw(e.target.value);},onKeyDown:function(e){if(e.key==='Enter')go();}})),
+    err&&el('div',{className:'msg err'},err),
+    info&&el('div',{className:'msg ok'},info),
+    el('button',{className:'btn',style:{width:'100%'},disabled:busy||!email||!pw,onClick:go},busy?'Please wait...':(mode==='in'?'Sign in':'Create account')),
+    el('div',{className:'muted',style:{marginTop:14,textAlign:'center',fontSize:13}},
+      mode==='in'?'New here? ':'Already have an account? ',
+      el('a',{href:'#',style:{color:'var(--gold-hi)'},onClick:function(e){e.preventDefault();setMode(mode==='in'?'up':'in');setErr('');}},mode==='in'?'Create an account':'Sign in')),
+    el('div',{className:'muted',style:{marginTop:14,textAlign:'center',fontSize:11}},
+      el('a',{href:'#',style:{color:'var(--faint)'},onClick:function(e){e.preventDefault();lsDel('hx_url');lsDel('hx_key');props.onReconnect();}},'Change database connection'))));
+}
+
+/* ---------- Dashboard ---------- */
+const MODULES_SOON=['Cultivation records (CUL)','Equipment and Chemical registers','HACCP','Time Clock and Badges','Production Planner'];
+function Dashboard(props){
+  const st=props.state,lic=props.license;
+  const isAdmin=props.profile.role==='admin';
+  if(!props.states.length){
+    return el('div',null,el('h1',null,'Welcome to ',el('span',{className:'g'},'Hendrix QMS')),el('div',{className:'sub'},'Nothing is set up yet. Everything starts empty and you create it yourself.'),
+      el('div',{className:'empty'},
+        el('div',{style:{fontSize:16,color:'var(--text)',marginBottom:6}},'Step 1: create your first state'),
+        el('div',{style:{marginBottom:14}},'Then add the licenses that belong to it. Each state keeps its own rules, products, areas and logs.'),
+        isAdmin?el('button',{className:'btn',onClick:function(){props.go('locations');}},'Set up States and Licenses'):el('div',null,'Ask the admin to set up the first state.')));
+  }
+  const licsOfState=props.licenses.filter(function(l){return st&&l.state_id===st.id;});
+  return el('div',null,
+    el('h1',null,el('span',{className:'g'},st?st.name:'Hendrix QMS')),
+    el('div',{className:'sub'},lic?(lic.name+(lic.license_number?'  \u00b7  '+lic.license_number:'')):'No license selected for this state yet'),
+    el('div',{className:'grid'},
+      el('div',{className:'card gold'},el('div',{className:'k'},'Regulatory agency'),el('div',{className:'v'},(st&&st.agency)||'Not set'),
+        el('div',{className:'k',style:{marginTop:12}},'Governing code'),el('div',{className:'v'},(st&&st.code)||'Not set')),
+      el('div',{className:'card gold'},el('div',{className:'k'},'Active license'),el('div',{className:'v'},lic?lic.name:'None'),
+        el('div',{className:'muted',style:{marginTop:4}},lic?[lic.license_type,lic.license_number].filter(Boolean).join('  \u00b7  '):'Add one under Locations.'),
+        el('div',{className:'muted',style:{marginTop:10}},licsOfState.length+' license'+(licsOfState.length===1?'':'s')+' in '+(st?st.name:'this state'))),
+      el('div',{className:'card gold'},el('div',{className:'k'},'State rulebook'),el('div',{className:'v'},(props.ruleCount===null||props.ruleCount===undefined?'...':props.ruleCount)+' rules'),
+        el('div',{className:'muted',style:{marginTop:4}},'Only '+(st?st.name:'this state')+"'s own rules are ever loaded here."),el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go('rulebook');}},'Open rulebook')),
+      el(QmsDashCard,{license:lic,go:props.go}),
+      el(CmpDashCard,{license:lic,go:props.go}),
+      el(IaDashCard,{license:lic,go:props.go}),
+      el(TrainingDashCard,{license:lic,go:props.go}),
+      el(SopDashCard,{license:lic,go:props.go}),
+      el(SupplierDashCard,{license:lic,go:props.go}),
+      el(MatDashCard,{license:lic,go:props.go}),
+      el(RecallDashCard,{license:lic,go:props.go}),
+      el(StdDashCard,{license:lic,go:props.go})),
+    !lic&&isAdmin&&el('div',{className:'empty',style:{marginBottom:14}},'This state has no license yet. ',el('a',{href:'#',style:{color:'var(--gold-hi)'},onClick:function(e){e.preventDefault();props.go('locations');}},'Add one')),
+    el('div',{className:'card'},el('h3',null,'Coming next'),
+      el('div',{className:'muted',style:{marginBottom:10}},'Modules are added one at a time and tested before the next. Each starts blank for every state and license.'),
+      el('div',{className:'row'},MODULES_SOON.map(function(m){return el('span',{key:m,className:'badge off'},m);}))));
+}
+
+/* ---------- States and Licenses (admin) ---------- */
+function StateForm(props){
+  const[f,setF]=useState(props.initial?{...props.initial,tracking_system:props.initial.tracking_system||'METRC'}:{name:'',agency:'',code:'',tracking_system:'METRC'});
+  return el(Modal,{title:props.initial?'Edit state':'Add a state',onClose:props.onClose},
+    el(Field,{label:'State name'},el('input',{value:f.name,placeholder:'e.g. Michigan',onChange:function(e){setF({...f,name:e.target.value});}})),
+    el(Field,{label:'Regulatory agency'},el('input',{value:f.agency,placeholder:'e.g. the state cannabis regulator',onChange:function(e){setF({...f,agency:e.target.value});}})),
+    el(Field,{label:'Governing code / act'},el('input',{value:f.code,placeholder:'e.g. the regulation or act reference',onChange:function(e){setF({...f,code:e.target.value});}})),
+    el(Field,{label:'Track-and-trace system'},el('input',{value:f.tracking_system,placeholder:'e.g. METRC',onChange:function(e){setF({...f,tracking_system:e.target.value});}})),
+    el('div',{className:'muted',style:{fontSize:12,marginTop:-6,marginBottom:12}},'Used in batch record labels, e.g. "Recorded on METRC?".'),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},
+      el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),
+      el('button',{className:'btn',disabled:!f.name.trim(),onClick:function(){props.onSave({name:f.name.trim(),agency:f.agency.trim(),code:f.code.trim(),tracking_system:(f.tracking_system||'').trim()||'METRC'});}},'Save')));
+}
+function LicenseForm(props){
+  const[f,setF]=useState({operation:'',...(props.initial||{name:'',license_number:'',license_type:''})});
+  const guess=licOp({license_number:f.license_number,license_type:f.license_type});
+  return el(Modal,{title:props.initial?'Edit license':'Add a license to '+props.stateName,onClose:props.onClose},
+    el(Field,{label:'License / facility name'},el('input',{value:f.name,onChange:function(e){setF({...f,name:e.target.value});}})),
+    el(Field,{label:'License number'},el('input',{value:f.license_number,onChange:function(e){setF({...f,license_number:e.target.value});}})),
+    el(Field,{label:'License type'},el('input',{value:f.license_type,placeholder:'e.g. Manufacturer, Processor, Cultivation',onChange:function(e){setF({...f,license_type:e.target.value});}})),
+    el(Field,{label:'Operation (decides which CSQ standards apply)'},el('select',{value:f.operation||'',onChange:function(e){setF({...f,operation:e.target.value});}},
+      el('option',{value:''},'Automatic: '+LIC_OPS[guess]),Object.keys(LIC_OPS).map(function(k){return el('option',{key:k,value:k},LIC_OPS[k]);}))),
+    el('div',{className:'muted',style:{fontSize:12,marginTop:-6,marginBottom:10}},(f.operation||guess)==='cultivation'?'CSQ Standard for Cultivation (Module 3A).':(f.operation||guess)==='manufacturing'?'CSQ Standard for Manufacturing (3C) and CSQ Standard for Extraction (3B).':'No CSQ standard (CSQ covers manufacturing and cultivation).'),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},
+      el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),
+      el('button',{className:'btn',disabled:!f.name.trim(),onClick:function(){props.onSave({name:f.name.trim(),license_number:f.license_number.trim(),license_type:f.license_type.trim(),operation:f.operation||''});}},'Save')));
+}
+function Locations(props){
+  const isAdmin=props.profile.role==='admin';
+  const[modal,setModal]=useState(null);
+  const[err,setErr]=useState('');
+  async function run(fn){setErr('');try{await fn();await props.reload();setModal(null);}catch(e){setErr(String(e.message||e));}}
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,'States and ',el('span',{className:'g'},'Licenses')),el('div',{className:'sub'},'Each state carries its own rulebook. Licenses live under a state and never share its rules with another state.')),
+      isAdmin&&el('button',{className:'btn',onClick:function(){setModal({t:'state'});}},'+ Add state')),
+    err&&el('div',{className:'msg err'},err),
+    !isAdmin&&el('div',{className:'msg err'},'View only. Only an admin can add or change states and licenses.'),
+    !props.states.length&&el('div',{className:'empty'},'No states yet.'+(isAdmin?' Click "+ Add state" to create the first one.':'')),
+    props.states.map(function(st){
+      const lics=props.licenses.filter(function(l){return l.state_id===st.id;});
+      return el('div',{key:st.id,className:'card gold'},
+        el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+          el('div',null,el('h3',{style:{fontSize:18,marginBottom:2}},st.name),
+            el('div',{className:'muted'},[st.agency,st.code].filter(Boolean).join('  \u00b7  ')||'No agency or code set')),
+          isAdmin&&el('div',{className:'row'},
+            el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'state',s:st});}},'Edit'),
+            el('button',{className:'btn danger sm',onClick:function(){
+              if(lics.length){setErr('Delete or move this state\'s licenses first.');return;}
+              if(window.confirm('Delete state "'+st.name+'" and its rulebook?'))run(function(){return db.remove('hx_states',st.id);});
+            }},'Delete'))),
+        el('div',{style:{marginTop:16}},
+          el('div',{className:'row',style:{justifyContent:'space-between',marginBottom:6}},
+            el('div',{className:'k'},'Licenses'),
+            isAdmin&&el('button',{className:'btn sm',onClick:function(){setModal({t:'lic',st:st});}},'+ Add license')),
+          lics.length?el('table',null,el('thead',null,el('tr',null,['Name','License #','Type','CSQ','Status',''].map(function(h,i){return el('th',{key:i},h);}))),
+            el('tbody',null,lics.map(function(l){
+              return el('tr',{key:l.id},el('td',null,l.name),el('td',null,l.license_number||'-'),el('td',null,l.license_type||'-'),el('td',{style:{fontSize:12}},csqPartNames(csqDefaultScopes(licOp(l))).map(function(n){return n.replace('CSQ Standard for ','');}).join(' + ')||'-'),
+                el('td',null,el('span',{className:'badge'+(l.active?'':' off')},l.active?'Active':'Inactive')),
+                el('td',{style:{textAlign:'right',whiteSpace:'nowrap'}},isAdmin&&el('span',{className:'row',style:{justifyContent:'flex-end',flexWrap:'nowrap'}},
+                  el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'lic',st:st,l:l});}},'Edit'),
+                  el('button',{className:'btn ghost sm',onClick:function(){run(function(){return db.update('hx_licenses',l.id,{active:!l.active});});}},l.active?'Deactivate':'Activate'),
+                  el('button',{className:'btn danger sm',onClick:function(){if(window.confirm('Delete license "'+l.name+'"?'))run(function(){return db.remove('hx_licenses',l.id);});}},'Delete'))));
+            }))):el('div',{className:'muted'},'No licenses in this state yet.')),
+        el('div',{className:'row',style:{marginTop:16,justifyContent:'space-between'}},
+          el('div',{className:'muted'},'Laws and rules for '+st.name+' live in its own Rulebook.'),
+          el('button',{className:'btn ghost sm',onClick:function(){props.openRulebook(st.id);}},'Open '+st.name+' rulebook')));
+    }),
+    modal&&modal.t==='state'&&el(StateForm,{initial:modal.s,onClose:function(){setModal(null);},onSave:function(v){
+      run(function(){return modal.s?db.update('hx_states',modal.s.id,v):db.insert('hx_states',{id:newId('st'),name:v.name,agency:v.agency,code:v.code,tracking_system:v.tracking_system,rules:[]});});}}),
+    modal&&modal.t==='lic'&&el(LicenseForm,{stateName:modal.st.name,initial:modal.l,onClose:function(){setModal(null);},onSave:function(v){
+      run(function(){return modal.l?dbSave('hx_licenses',modal.l.id,v):db.insert('hx_licenses',{id:newId('lic'),state_id:modal.st.id,name:v.name,license_number:v.license_number,license_type:v.license_type,operation:v.operation||'',active:true}).catch(function(e){if(/operation/.test(String(e.message)))return db.insert('hx_licenses',{id:newId('lic'),state_id:modal.st.id,name:v.name,license_number:v.license_number,license_type:v.license_type,active:true});throw e;});});}}));
+}
+
+/* ---------- Rulebook: every rule row carries its state; only the active state's rules are ever loaded ---------- */
+const RULE_CATS=['General','Licensing','Labeling','Packaging','Testing','Facility','Security','Recordkeeping','Training','Inventory / Tracking','Advertising','Other'];
+function RuleForm(props){
+  const[f,setF]=useState(props.initial||{category:'Licensing',citation:'',title:'',body:''});
+  return el(Modal,{title:props.initial?'Edit rule':'Add a rule to '+props.stateName,onClose:props.onClose},
+    el(Field,{label:'Category'},el('input',{list:'hxcats',value:f.category,onChange:function(e){setF({...f,category:e.target.value});}}),
+      el('datalist',{id:'hxcats'},RULE_CATS.map(function(c){return el('option',{key:c,value:c});}))),
+    el(Field,{label:'Citation (section / rule number)'},el('input',{value:f.citation,placeholder:'e.g. the rule or statute number',onChange:function(e){setF({...f,citation:e.target.value});}})),
+    el(Field,{label:'Title'},el('input',{value:f.title,onChange:function(e){setF({...f,title:e.target.value});}})),
+    el(Field,{label:'Rule text / what it requires'},el('textarea',{value:f.body,onChange:function(e){setF({...f,body:e.target.value});}})),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},
+      el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),
+      el('button',{className:'btn',disabled:!f.title.trim(),onClick:function(){props.onSave({category:(f.category||'Other').trim()||'Other',citation:f.citation.trim(),title:f.title.trim(),body:f.body.trim()});}},'Save')));
+}
+function Rulebook(props){
+  const st=props.state;
+  const isAdmin=can('rulebook',2),canDel=can('rulebook',3);
+  const[rules,setRules]=useState(null);
+  const[q,setQ]=useState('');
+  const[modal,setModal]=useState(null);
+  const[err,setErr]=useState('');
+  const[ok,setOk]=useState('');
+  const[imp,setImp]=useState(null);
+  const[srcs,setSrcs]=useState([]);
+  const[openIds,setOpenIds]=useState({});
+  const sid=st?st.id:'';
+  const load=useCallback(function(){
+    if(!sid){setRules([]);return;}
+    db.get('hx_rule_sources','state_id=eq.'+encodeURIComponent(sid)+'&select=*&order=created_at.desc').then(function(r){setSrcs((r||[]).filter(function(x){return x.state_id===sid;}));}).catch(function(){setSrcs([]);});
+    return db.get('hx_rules','state_id=eq.'+encodeURIComponent(sid)+'&select=*&order=category,created_at').then(function(r){
+      // defensive: never show a rule that belongs to another state
+      const only=(r||[]).filter(function(x){return x.state_id===sid;});
+      // official order from the imported PDF; rules typed by hand follow, oldest first
+      only.sort(function(a,b){const sa=a.sort==null?1e9:a.sort,sb2=b.sort==null?1e9:b.sort;return (sa-sb2)||String(a.created_at||'').localeCompare(String(b.created_at||''));});
+      setRules(only);props.onCount(only.length);
+    }).catch(function(e){setErr(String(e.message||e));setRules([]);});
+  },[sid]);
+  useEffect(function(){setRules(null);setErr('');load();},[load]);
+  async function run(fn){setErr('');setOk('');try{await fn();await load();setModal(null);}catch(e){setErr(String(e.message||e));}}
+  function pickPdf(e){const f=e.target.files&&e.target.files[0];e.target.value='';if(!f)return;
+    if(!/pdf/i.test(f.type)&&!/\.pdf$/i.test(f.name||'')){setErr('Choose a PDF file.');return;}
+    setErr('');setOk('');setImp(f);}
+  if(!st)return el('div',null,el('h1',null,'Rulebook'),el('div',{className:'empty'},'Create a state first, then add its rules here.'));
+  const list=(rules||[]).filter(function(r){
+    const t=(r.title+' '+r.citation+' '+r.body+' '+r.category).toLowerCase();return !q||t.indexOf(q.toLowerCase())>=0;});
+  const cats=[];list.forEach(function(r){if(cats.indexOf(r.category)<0)cats.push(r.category);});
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,el('span',{className:'g'},st.name),' Rulebook'),
+        el('div',{className:'sub'},'Only '+st.name+"'s own rules appear here. Switching state loads that state's rules instead, and rules can never be moved between states.")),
+      isAdmin&&el('div',{className:'row'},
+        el('label',{className:'btn ghost',title:'Upload the official rules PDF: Hendrix splits it into rules and sorts them by category'},'Upload rules PDF',
+          el('input',{type:'file',accept:'application/pdf,.pdf',style:{display:'none'},onChange:pickPdf})),
+        el('button',{className:'btn',onClick:function(){setModal({});}},'+ Add rule'))),
+    err&&el('div',{className:'msg err'},err),
+    ok&&el('div',{className:'msg'},ok),
+    srcs.length>0&&el('div',{className:'card',style:{padding:'10px 14px'}},el('div',{className:'k',style:{marginBottom:6}},'Source PDFs'),
+      srcs.map(function(x,i){return el('div',{key:x.id,className:'row',style:{justifyContent:'space-between',padding:'4px 0',borderTop:i?'1px solid #1d1d1d':'none',fontSize:13}},
+        el('span',null,el('b',null,x.name),' \u00b7 '+String(x.created_at||'').slice(0,10)+(x.created_by_name?' \u00b7 '+x.created_by_name:'')+' \u00b7 '+x.rules_found+' rules found, '+x.added+' added, '+x.updated+' updated'+(x.removed?', '+x.removed+' removed':'')+(i===0?' \u00b7 latest':'')),
+        x.file_path&&el('button',{className:'btn ghost sm',onClick:function(){openStored(x.file_path,x.name).catch(function(e){setErr(String(e.message||e));});}},'Open PDF'));})),
+    el('div',{className:'row',style:{marginBottom:14}},el('input',{style:{maxWidth:340},placeholder:'Search '+st.name+' rules...',value:q,onChange:function(e){setQ(e.target.value);}}),
+      el('span',{className:'muted'},rules?(list.length+' of '+rules.length+' rules'):'Loading...')),
+    rules&&!rules.length&&el('div',{className:'empty'},'No rules in the '+st.name+' rulebook yet.'+(isAdmin?' Click "Upload rules PDF" to load the official rules PDF (Hendrix splits and sorts it), or "+ Add rule" to type one. It begins completely blank.':'')),
+    cats.map(function(c){
+      return el('div',{key:c,className:'card gold'},el('div',{className:'k',style:{marginBottom:8}},c),
+        list.filter(function(r){return r.category===c;}).map(function(r){
+          return el('div',{key:r.id,style:{padding:'10px 0',borderTop:'1px solid #1d1d1d'}},
+            el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start',flexWrap:'nowrap'}},
+              el('div',null,el('div',{style:{fontWeight:700}},r.title),r.citation&&el('div',{className:'muted',style:{fontSize:12}},r.citation)),
+              isAdmin&&el('div',{className:'row',style:{flexWrap:'nowrap'}},
+                el('button',{className:'btn ghost sm',onClick:function(){setModal({r:r});}},'Edit'),
+                canDel&&el('button',{className:'btn danger sm',onClick:function(){if(window.confirm('Delete this rule?'))run(function(){return db.remove('hx_rules',r.id);});}},'Delete'))),
+            r.body&&el('div',{style:{marginTop:6,whiteSpace:'pre-wrap',color:'var(--text)'}},(r.body.length>700&&!openIds[r.id]&&!q)?r.body.slice(0,600).replace(/\s+\S*$/,'')+' \u2026':r.body),
+            r.body&&r.body.length>700&&!q&&el('button',{className:'btn ghost sm',style:{marginTop:4},onClick:function(){setOpenIds(function(p){const n={...p};if(n[r.id])delete n[r.id];else n[r.id]=1;return n;});}},openIds[r.id]?'Show less':'Show all ('+r.body.length.toLocaleString()+' characters)'));
+        }));
+    }),
+    imp&&el(RuleImport,{state:st,file:imp,rules:rules||[],profile:props.profile,canDel:canDel,onClose:function(){setImp(null);},
+      onDone:function(m){setImp(null);load();setOk(m);}}),
+    modal&&el(RuleForm,{stateName:st.name,initial:modal.r,onClose:function(){setModal(null);},onSave:function(v){
+      run(function(){return modal.r?db.update('hx_rules',modal.r.id,v):db.insert('hx_rules',{id:newId('rule'),state_id:st.id,category:v.category,citation:v.citation,title:v.title,body:v.body});});}}));
+}
+
+/* ---------- Rulebook PDF import ----------
+   Upload the official rules PDF: the text is read in the browser (pdf.js), split at the rule numbers
+   (Missouri "19 CSR 100-1.010 Title", Michigan "R 420.101 Title.", sections, rules), the rule text is
+   kept word for word, each rule is sorted into a category, and a review screen shows what is new,
+   changed or the same before anything is saved. AI is only used when the PDF has no rule numbers
+   Hendrix recognizes, or when asked to sort the categories. */
+const PDFJS_V='3.11.174';
+let _pdfjsP=null;
+function loadPdfJs(){
+  if(window.pdfjsLib)return Promise.resolve(window.pdfjsLib);
+  if(_pdfjsP)return _pdfjsP;
+  _pdfjsP=new Promise(function(res,rej){
+    const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/'+PDFJS_V+'/pdf.min.js';
+    s.onload=function(){const L=window.pdfjsLib;if(!L){_pdfjsP=null;rej(new Error('The PDF reader did not load.'));return;}
+      L.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/'+PDFJS_V+'/pdf.worker.min.js';res(L);};
+    s.onerror=function(){_pdfjsP=null;rej(new Error('Could not load the PDF reader. Check the internet connection and try again.'));};
+    document.head.appendChild(s);});
+  return _pdfjsP;
+}
+function rbRows(arr){
+  const its=arr.slice().sort(function(a,b){return (b.y-a.y)||(a.x-b.x);});
+  const rows=[];let cur=null;
+  its.forEach(function(it){
+    if(cur&&Math.abs(cur.y-it.y)<=Math.max(2,0.45*Math.min(cur.h,it.h)))cur.items.push(it);
+    else{cur={y:it.y,h:it.h,items:[it]};rows.push(cur);}
+  });
+  return rows;
+}
+function rbGroupLines(arr){
+  return rbRows(arr).map(function(l){
+    l.items.sort(function(a,b){return a.x-b.x;});
+    let t='',end=null;
+    l.items.forEach(function(it){
+      if(t&&!/\s$/.test(t)&&!/^\s/.test(it.s)&&end!==null&&it.x-end>Math.max(1,l.h*0.18))t+=' ';
+      t+=it.s;end=it.x+it.w;});
+    return {t:t.replace(/\s+/g,' ').trim(),y:l.y,h:l.h};
+  }).filter(function(l){return l.t;});
+}
+function rbWithGaps(lines){
+  return lines.map(function(l,i){const p=lines[i-1];return {t:l.t,h:l.h,gap:!!(p&&p.y-l.y>Math.max(l.h,p.h)*1.75)};});
+}
+// one page of text items -> reading-order lines; two-column pages (Missouri CSR) are read left column, then right
+function rbLayout(items,W){
+  if(!items.length)return [];
+  // a vertical gutter that (almost) no line crosses = two columns
+  let split=null;
+  const rows=rbRows(items);
+  if(rows.length>=3){
+    let best=null;
+    for(let x=W*0.3;x<=W*0.7;x+=2){
+      let c=0;for(let k=0;k<rows.length;k++){if(rows[k].items.some(function(it){return it.x<x-1&&it.x+it.w>x+1;}))c++;}
+      if(best===null||c<best.c)best={x:x,c:c};
+    }
+    const nl=rows.filter(function(r){return r.items.some(function(it){return it.x+it.w<=best.x+1;});}).length;
+    const nr=rows.filter(function(r){return r.items.some(function(it){return it.x>=best.x-1;});}).length;
+    if(best.c<=Math.max(1,rows.length*0.08)&&nl>=1&&nr>=1&&nl+nr>=4)split=best.x;
+  }
+  if(split===null)return rbWithGaps(rbGroupLines(items));
+  const left=[],right=[],full=[];
+  items.forEach(function(it){if(it.x+it.w<=split+1)left.push(it);else if(it.x>=split-1)right.push(it);else full.push(it);});
+  const colTop=Math.max.apply(null,left.concat(right).map(function(it){return it.y;}));
+  const colBot=Math.min.apply(null,left.concat(right).map(function(it){return it.y;}));
+  const top=full.filter(function(it){return it.y>colTop;}),bot=full.filter(function(it){return it.y<colBot;}),mid=full.filter(function(it){return it.y<=colTop&&it.y>=colBot;});
+  return rbWithGaps(rbGroupLines(top)).concat(rbWithGaps(rbGroupLines(left.concat(mid))),rbWithGaps(rbGroupLines(right)),rbWithGaps(rbGroupLines(bot)));
+}
+async function rbExtract(file,onProg){
+  const L=await loadPdfJs();
+  const buf=await file.arrayBuffer();
+  const doc=await L.getDocument({data:new Uint8Array(buf)}).promise;
+  const raw=[];
+  for(let p=1;p<=doc.numPages;p++){
+    const pg=await doc.getPage(p);const vp=pg.getViewport({scale:1});const tc=await pg.getTextContent();
+    const items=tc.items.filter(function(i){return i.str&&i.str.trim();}).map(function(i){
+      return {s:i.str,x:i.transform[4],y:i.transform[5],w:i.width||0,h:Math.abs(i.transform[3])||Math.abs(i.height)||10};});
+    raw.push({items:items,W:vp.width});
+    if(onProg)onProg(p,doc.numPages);
+  }
+  // running headers / footers: the same line in the top or bottom rows of many pages (page numbers ignored)
+  const key=function(t){return t.toLowerCase().replace(/\d+/g,'#').replace(/\s+/g,' ').trim();};
+  const seen={};
+  raw.forEach(function(P){const rows=rbGroupLines(P.items);P.edge=rows.slice(0,4).concat(rows.length>4?rows.slice(-4):[]);
+    const ks={};P.edge.forEach(function(r){ks[key(r.t)]=1;});Object.keys(ks).forEach(function(k){seen[k]=(seen[k]||0)+1;});});
+  const lim=Math.max(2,Math.ceil(raw.length*0.4));
+  const lines=[];let chars=0;
+  raw.forEach(function(P,pi){
+    const drop=raw.length>=3?P.edge.filter(function(r){return seen[key(r.t)]>=lim;}).map(function(r){return r.y;}):[];
+    const keep=P.items.filter(function(it){return !drop.some(function(y){return Math.abs(it.y-y)<=1.5;});});
+    rbLayout(keep,P.W).forEach(function(l){
+      if(/^(page\s*)?\d{1,4}(\s*of\s*\d{1,4})?$/i.test(l.t))return;
+      chars+=l.t.length;lines.push({t:l.t,gap:l.gap,page:pi+1});});
+  });
+  return {pages:raw.length,lines:lines,chars:chars};
+}
+const RB_FORMATS=[
+  {id:'csr',name:'Missouri Code of State Regulations (CSR)',re:/^(\d{1,2}\s?CSR\s?\d{1,3}-\d{1,3}\.\d{2,4})\s+(\S.*)$/},
+  {id:'mac',name:'Michigan Administrative Code (R numbers)',re:/^(R\s?\d{2,4}\.\d{1,5}[a-z]?)\.?\s+(\S.*)$/},
+  {id:'sec',name:'Numbered sections',re:/^((?:\u00a7{1,2}|Sec\.|Section)\s?\d+(?:[.\-:]\d+)*[a-z]?)\.?\s+(\S.*)$/i},
+  {id:'rule',name:'Numbered rules',re:/^(Rule\s\d+(?:[.\-]\d+)*[a-z]?)\.?\s+(\S.*)$/i}
+];
+const RB_BODY_START=/^(PURPOSE:|Rule\s\d+\.|\(1\)|\(a\)|\(A\)|Sec\.\s?1\b)/;
+function rbJoin(ls){
+  let out='';
+  ls.forEach(function(l){
+    const t=String(l.t||'').replace(/\s+/g,' ').trim();if(!t)return;
+    if(!out){out=t;return;}
+    const brk=l.gap||/^(\(\d+\)|\([A-Za-z]{1,4}\)|\d+\.\s|[A-Z]\.\s|[\u2022\u25cf\u25aa\u2013\-]\s|PURPOSE:|AUTHORITY:|PUBLISHER|EDITOR|Editor|History:|Rule\s\d+\.|Sec\.\s|Section\s\d)/.test(t);
+    if(brk)out+='\n'+t;
+    else if(/[a-z]-$/.test(out)&&/^[a-z]/.test(t)&&!/\w-\w+-$/.test(out.slice(-40)))out=out.slice(0,-1)+t;
+    else out+=' '+t;
+  });
+  return out;
+}
+function rbCleanTitle(t){return String(t||'').replace(/\s*(\.\s?){3,}.*$/,'').replace(/\s*\u2026+.*$/,'').replace(/\s+/g,' ').trim();}
+function rbOkTitle(t){return /^[A-Z0-9"\u201c(]/.test(t)&&!/^(and|or|of|to|through|as|in|is|are|shall)\b/i.test(t)&&t.length<=200;}
+// split the lines at the given starts [{i, citation, title, category?}]
+function rbBuild(lines,starts){
+  const st=starts.slice().sort(function(a,b){return a.i-b.i;});
+  const out=[];
+  st.forEach(function(s,k){
+    const end=k+1<st.length?st[k+1].i:lines.length;
+    let title=s.title,b=s.i+1;
+    if(!s.ai){
+      for(let j=s.i+1;j<=Math.min(s.i+3,end-1);j++){
+        if(RB_BODY_START.test(lines[j].t)){
+          const mid=lines.slice(s.i+1,j);
+          if(mid.every(function(l){return l.t.length<100;})){title=rbCleanTitle([title].concat(mid.map(function(l){return l.t;})).join(' '));b=j;}
+          break;
+        }
+      }
+    }
+    out.push({citation:s.citation,title:title||s.citation,body:rbJoin(lines.slice(b,end)),page:lines[s.i]?lines[s.i].page:0,aiCat:s.category||''});
+  });
+  // the contents pages list every rule too: keep the copy with the most text
+  const by={},order=[];
+  out.forEach(function(e){const k=(e.citation||e.title).replace(/\s+/g,'').toLowerCase();
+    if(!by[k]){by[k]=e;order.push(k);}else if(e.body.length>by[k].body.length)by[k]=e;});
+  return order.map(function(k){return by[k];});
+}
+function rbParse(lines){
+  for(let f=0;f<RB_FORMATS.length;f++){
+    const F=RB_FORMATS[f],starts=[];
+    lines.forEach(function(l,i){const m=F.re.exec(l.t);if(!m)return;const title=rbCleanTitle(m[2]);if(!rbOkTitle(title))return;
+      let c=m[1].replace(/\s+/g,' ').trim();
+      if(F.id==='csr')c=c.replace(/^(\d+) ?CSR ?/,'$1 CSR ');
+      if(F.id==='mac')c=c.replace(/^R ?/,'R ');
+      starts.push({i:i,citation:c,title:title});});
+    const rules=rbBuild(lines,starts);
+    if(rules.filter(function(r){return r.body.length>=80;}).length>=3)return {format:F,rules:rules};
+  }
+  return null;
+}
+// a long rule split into its numbered sections (1), (2), ...
+function rbSections(r){
+  const paras=r.body.split('\n');let n=0;const secs=[],pre=[];let cur=null;
+  paras.forEach(function(p){const m=/^\((\d+)\)\s*/.exec(p);
+    if(m&&+m[1]===n+1){n++;cur={n:n,paras:[p]};secs.push(cur);}else if(cur)cur.paras.push(p);else pre.push(p);});
+  if(secs.length<2)return [r];
+  const out=[];
+  if(pre.join('').trim())out.push({citation:r.citation,title:r.title+' \u2014 Purpose',head:'Purpose',body:pre.join('\n'),page:r.page,aiCat:r.aiCat,parent:r.citation,parentTitle:r.title});
+  secs.forEach(function(s){
+    const txt=s.paras.join('\n'),after=txt.replace(/^\(\d+\)\s*/,'');
+    // a short lead-in heading ("Video surveillance. Each facility ...") names the section; otherwise its first words
+    const hm=/^([A-Z][^.;:]{2,60})\.\s+(?=[A-Z(])/.exec(after);
+    let head='';
+    if(hm&&hm[1].split(/\s+/).length<=7&&!/\b(shall|must|may|will|means|is|are)\b/i.test(hm[1]))head=hm[1];
+    else{const w=after.split(/\s+/).slice(0,9).join(' ');head=w+(after.split(/\s+/).length>9?'\u2026':'');}
+    out.push({citation:r.citation+'('+s.n+')',title:r.title+' \u2014 '+head,head:head,body:txt,page:r.page,aiCat:r.aiCat,parent:r.citation,parentTitle:r.title});
+  });
+  return out;
+}
+const RB_CAT_KW={
+  'General':{t:['definition','purpose','scope','general provision','severab','applicab','construction','interpretation'],b:[]},
+  'Licensing':{t:['licens','certificat','application','renewal','ownership','owner','change','fee','denial','revocat','suspen','penalt','violation','hearing','appeal','microbusiness','local','zoning','variance','enforcement','disciplin','inspection','agent','identification card','patient','caregiver','physician','eligib','tax','expunge'],b:['application','applicant','renewal','revocation','suspension','fee','hearing']},
+  'Labeling':{t:['label'],b:['label']},
+  'Packaging':{t:['packag','child-resistant','child resistant'],b:['packag','child-resistant']},
+  'Testing':{t:['test','laborator','sampl','potency','contaminant','analys'],b:['test','sampl','laborator','potency','contaminant','pesticide','residual solvent']},
+  'Facility':{t:['facilit','premises','sanitation','building','cultivat','manufactur','infused','extraction','dispensar','retail','operation','processor','grower','storage','equipment','hygiene','grow'],b:['sanitation','sanitary','premises','equipment','hygiene','cultivat','manufactur','extraction']},
+  'Security':{t:['security','surveillance','camera','alarm','access','visitor','theft'],b:['surveillance','camera','alarm','security','restricted access','visitor']},
+  'Recordkeeping':{t:['record','report','documentation','retention'],b:['record','retain','documentation']},
+  'Training':{t:['training','education'],b:['training']},
+  'Inventory / Tracking':{t:['inventory','tracking','seed-to-sale','seed to sale','monitoring system','metrc','transport','transfer','manifest','waste','disposal','destruction','delivery','recall'],b:['inventory','seed-to-sale','statewide monitoring','metrc','manifest','transport','waste','disposal']},
+  'Advertising':{t:['advertis','marketing','promot'],b:['advertis','marketing']}
+};
+function rbCount(s,w){let n=0,i=0;while((i=s.indexOf(w,i))>=0){n++;i+=w.length;if(n>=20)break;}return n;}
+function rbCategory(title,body){
+  const t=String(title||'').toLowerCase(),b=String(body||'').toLowerCase();
+  let best='Other',bs=0;
+  Object.keys(RB_CAT_KW).forEach(function(c){const K=RB_CAT_KW[c];
+    const s=K.t.reduce(function(a,w){return a+(t.indexOf(w)>=0?100:0);},0)+K.b.reduce(function(a,w){return a+rbCount(b,w);},0);
+    if(s>bs){bs=s;best=c;}});
+  return bs>=3?best:'Other';
+}
+// a section takes its own category, except sections of a definitions / general rule; weak matches fall back to the rule's
+function rbItemCategory(r){
+  if(!r.parent)return rbCategory(r.title,r.body);
+  const pc=rbCategory(r.parentTitle,'');
+  if(pc==='General')return 'General';
+  const sc=r.head==='Purpose'?'Other':rbCategory(r.head,r.body);
+  return sc!=='Other'?sc:rbCategory(r.parentTitle,r.body);
+}
+function rbKey(r){const c=String(r.citation||'').replace(/\s+/g,'').toLowerCase();return c?'c:'+c:'t:'+String(r.title||'').trim().toLowerCase();}
+function rbNorm(s){return String(s||'').replace(/\s+/g,' ').trim();}
+function rbAiErr(e){return String(e&&e.message)==='AI_NOT_SETUP'?new Error('AI is not set up yet - deploy the hendrix-ai function (see hendrix-ai.ts).'):e;}
+// no rule numbers found: AI reads the numbered lines and says where each rule starts (the text itself is never rewritten)
+async function rbAiStarts(lines,onProg){
+  const starts=[],CH=1200;
+  for(let a=0;a<lines.length;a+=CH){
+    if(onProg)onProg(a,lines.length);
+    const part=lines.slice(a,a+CH).map(function(l,k){return (a+k)+'|'+l.t.slice(0,140);}).join('\n');
+    const prompt='Below are numbered lines of text extracted from a government cannabis rules / regulations PDF (format: line number|text). '+
+      'Find the line where each separate rule, regulation or section BEGINS (its heading), not cross-references inside the text, and not table of contents lines. '+
+      'Return ONLY JSON: {"rules":[{"line":123,"citation":"the rule or section number, or empty","title":"the heading title","category":"one of: '+RULE_CATS.join(', ')+'"}]}\n\n'+part;
+    let j;try{j=await aiCall({module:'rulebook',max_tokens:6000,system:'You output ONLY valid, parseable JSON. Never include prose or markdown fences.',messages:[{role:'user',content:prompt}]});}catch(e){throw rbAiErr(e);}
+    const r=parseJsonLoose((j.content&&j.content[0]&&j.content[0].text)||'');
+    (Array.isArray(r.rules)?r.rules:[]).forEach(function(x){const i=parseInt(x.line,10);if(i>=a&&i<a+CH&&i<lines.length)starts.push({i:i,citation:rbNorm(x.citation),title:rbCleanTitle(x.title)||rbNorm(lines[i].t).slice(0,120),category:RULE_CATS.indexOf(x.category)>=0?x.category:'',ai:true});});
+  }
+  const u={};return starts.filter(function(s){if(u[s.i])return false;u[s.i]=1;return true;});
+}
+async function rbAiCategories(items,onProg){
+  const out={},B=60;
+  for(let a=0;a<items.length;a+=B){
+    if(onProg)onProg(a,items.length);
+    const part=items.slice(a,a+B).map(function(r,k){return (a+k)+'|'+(r.citation||'')+'|'+r.title+'|'+rbNorm(r.body).slice(0,300);}).join('\n');
+    const prompt='Sort each cannabis regulation below into exactly one category from this list: '+RULE_CATS.join(', ')+'. '+
+      'Lines are: number|citation|title|start of the text. Return ONLY JSON: {"c":[[number,"Category"],...]}\n\n'+part;
+    let j;try{j=await aiCall({module:'rulebook',max_tokens:3000,system:'You output ONLY valid, parseable JSON. Never include prose or markdown fences.',messages:[{role:'user',content:prompt}]});}catch(e){throw rbAiErr(e);}
+    const r=parseJsonLoose((j.content&&j.content[0]&&j.content[0].text)||'');
+    (Array.isArray(r.c)?r.c:[]).forEach(function(x){if(Array.isArray(x)&&RULE_CATS.indexOf(x[1])>=0)out[x[0]]=x[1];});
+  }
+  return out;
+}
+// insert many rows; drops columns the database does not have yet (step 22 not run)
+async function rbInsertAll(rows){
+  let rs=rows.slice();
+  for(let a=0;a<rs.length;a+=25){
+    let chunk=rs.slice(a,a+25);
+    for(let tries=0;;tries++){
+      try{await db.insert('hx_rules',chunk);break;}
+      catch(e){const m=/Could not find the '([A-Za-z0-9_]+)' column/.exec(String(e&&e.message||e));
+        if(m&&tries<4){const col=m[1];rs=rs.map(function(r){const x={...r};delete x[col];return x;});chunk=rs.slice(a,a+25);continue;}throw e;}
+    }
+  }
+}
+function RuleImport(props){
+  const st=props.state,file=props.file;
+  const[phase,setPhase]=useState('read');
+  const[prog,setProg]=useState('Opening the PDF...');
+  const[err,setErr]=useState('');
+  const[res,setRes]=useState(null);
+  const[split,setSplit]=useState(false);
+  const[ov,setOv]=useState({});
+  const[aiCats,setAiCats]=useState({});
+  const[open,setOpen]=useState(null);
+  const[delOld,setDelOld]=useState(false);
+  const[busy,setBusy]=useState('');
+  const[filter,setFilter]=useState('');
+  useEffect(function(){let dead=false;
+    (async function(){
+      try{
+        const x=await rbExtract(file,function(p,n){if(!dead)setProg('Reading page '+p+' of '+n+'...');});
+        if(x.chars<200)throw new Error('This PDF has no readable text (it looks like a scan or a picture). Download the official text PDF from the state website and upload that one.');
+        setProg('Finding the rules...');
+        let r=rbParse(x.lines);
+        if(!r){
+          setProg('No standard rule numbers found - asking AI where each rule begins...');
+          const s=await rbAiStarts(x.lines,function(a,n){if(!dead)setProg('AI is reading the text ('+Math.round(a/n*100)+'%)...');});
+          const rules=rbBuild(x.lines,s);
+          if(rules.length<1)throw new Error('No rules could be found in this PDF.');
+          r={format:{id:'ai',name:'Found by AI (no standard rule numbers)'},rules:rules};
+        }
+        if(!dead){setRes({pages:x.pages,format:r.format,rules:r.rules});setPhase('review');}
+      }catch(e){if(!dead){setErr(String(e.message||e));setPhase('error');}}
+    })();
+    return function(){dead=true;};},[]);
+  const existing=props.rules||[];
+  const exMap={};existing.forEach(function(r){exMap[rbKey(r)]=r;});
+  const items=useMemo(function(){
+    if(!res)return [];
+    const base=split?[].concat.apply([],res.rules.map(rbSections)):res.rules;
+    return base.map(function(r,i){
+      const k=rbKey(r),ex=exMap[k];
+      const status=!ex?'new':(rbNorm(ex.body)===rbNorm(r.body)&&rbNorm(ex.title)===rbNorm(r.title))?'same':'changed';
+      return {...r,key:k,i:i,ex:ex,status:status,short:r.body.length<80,cat:r.aiCat||rbItemCategory(r)};
+    });
+  },[res,split,existing]);
+  const row=function(it){const o=ov[it.key]||{};
+    return {inc:o.inc!==undefined?o.inc:(it.status!=='same'&&!it.short),cat:o.cat||aiCats[it.key]||(it.ex&&it.status!=='new'?it.ex.category:it.cat),title:o.title!==undefined?o.title:it.title};};
+  const setO=function(k,v){setOv(function(p){const n={...p};n[k]={...(n[k]||{}),...v};return n;});};
+  const keys={};items.forEach(function(it){keys[it.key]=1;});
+  const missing=existing.filter(function(r){return r.source_id&&!keys[rbKey(r)];});
+  const cats=RULE_CATS.slice();existing.forEach(function(r){if(r.category&&cats.indexOf(r.category)<0)cats.push(r.category);});
+  const cnt={new:0,changed:0,same:0};items.forEach(function(it){cnt[it.status]++;});
+  const chosen=items.filter(function(it){return row(it).inc;});
+  const catCount={};chosen.forEach(function(it){const c=row(it).cat;catCount[c]=(catCount[c]||0)+1;});
+  async function sortAi(){
+    setErr('');setBusy('AI is sorting the categories...');
+    try{const m=await rbAiCategories(items,function(a,n){setBusy('AI is sorting the categories ('+Math.round(a/n*100)+'%)...');});
+      const ac={};items.forEach(function(it,i){if(m[i])ac[it.key]=m[i];});
+      setAiCats(ac);setOv(function(p){const n={};Object.keys(p).forEach(function(k){const x={...p[k]};delete x.cat;n[k]=x;});return n;});}
+    catch(e){setErr(String(e.message||e));}
+    setBusy('');
+  }
+  async function save(){
+    setErr('');setPhase('saving');
+    const warn=[];let path='';
+    try{
+      setProg('Saving the PDF...');
+      try{path=await storagePut(file,'rulebook/'+st.id+'/'+Date.now()+'-'+String(file.name||'rules.pdf').replace(/[^A-Za-z0-9._-]+/g,'_'));}
+      catch(e){warn.push('The PDF file itself could not be kept ('+String(e.message||e)+').');path='';}
+      const srcId=newId('rsrc');let srcOk=true;
+      const me=(props.profile&&props.profile.name)||'';
+      try{await db.insert('hx_rule_sources',{id:srcId,state_id:st.id,name:file.name||'rules.pdf',file_path:path,pages:res.pages,format:res.format.name,rules_found:items.length,created_by_name:me});}
+      catch(e){srcOk=false;warn.push(/step22|missing/i.test(String(e.message))?'Run hendrix_step22.sql to keep a list of imported PDFs and the official order of the rules.':'The PDF was not added to the source list ('+String(e.message||e)+').');}
+      const add=[],upd=[];
+      items.forEach(function(it){const r=row(it);if(!r.inc)return;
+        const rec={category:(r.cat||'Other'),citation:it.citation||'',title:rbNorm(r.title)||it.citation||'Rule',body:it.body,sort:(it.i+1)*10};
+        if(srcOk)rec.source_id=srcId;
+        if(it.ex&&it.status!=='new')upd.push([it.ex.id,rec]);else add.push({id:newId('rule'),state_id:st.id,...rec});});
+      setProg('Adding '+add.length+' rules...');
+      await rbInsertAll(add);
+      for(let k=0;k<upd.length;k++){setProg('Updating rule '+(k+1)+' of '+upd.length+'...');await dbSave('hx_rules',upd[k][0],upd[k][1]);}
+      // rules that are the same keep their place in the official order
+      if(srcOk){const same=items.filter(function(it){return it.status==='same'&&it.ex&&it.ex.sort!==(it.i+1)*10&&!row(it).inc;});
+        for(let k=0;k<same.length;k++){try{await db.update('hx_rules',same[k].ex.id,{sort:(same[k].i+1)*10});}catch(e){break;}}}
+      let removed=0;
+      if(delOld&&props.canDel){for(let k=0;k<missing.length;k++){setProg('Removing rule '+(k+1)+' of '+missing.length+'...');await db.remove('hx_rules',missing[k].id);removed++;}}
+      if(srcOk){try{await db.update('hx_rule_sources',srcId,{added:add.length,updated:upd.length,removed:removed});}catch(e){}}
+      props.onDone('Imported from '+(file.name||'the PDF')+': '+add.length+' new, '+upd.length+' updated'+(removed?', '+removed+' removed':'')+'.'+(warn.length?' '+warn.join(' '):''));
+    }catch(e){setErr(String(e.message||e));setPhase('review');}
+  }
+  const title='Import rules PDF - '+st.name;
+  if(phase==='read'||phase==='saving')return el(Modal,{title:title,wide:true,onClose:phase==='read'?props.onClose:null},
+    el('div',{className:'muted',style:{padding:'14px 0'}},prog),err&&el('div',{className:'msg err'},err));
+  if(phase==='error')return el(Modal,{title:title,wide:true,onClose:props.onClose},
+    el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn',onClick:props.onClose},'Close')));
+  const shown=items.filter(function(it){if(!filter)return true;if(filter==='inc')return row(it).inc;if(filter.indexOf('cat:')===0)return row(it).cat===filter.slice(4);return it.status===filter;});
+  return el(Modal,{title:title,wide:true,onClose:props.onClose},
+    el('div',{className:'sub',style:{marginBottom:10}},el('b',null,file.name),' \u00b7 '+res.pages+' pages \u00b7 '+res.format.name+' \u00b7 ',el('b',null,res.rules.length+' rules found')),
+    el('div',{className:'muted',style:{fontSize:13,marginBottom:10}},'The rule text is kept word for word from the PDF. Each rule was given a category from its title and text - change any category below. Nothing is saved until you click Import.'),
+    err&&el('div',{className:'msg err'},err),
+    busy&&el('div',{className:'msg'},busy),
+    el('div',{className:'row',style:{marginBottom:10,gap:14}},
+      el('label',{className:'ck'},el('input',{type:'checkbox',checked:split,onChange:function(e){setSplit(e.target.checked);}}),' Split each rule into its numbered sections (1), (2)...'),
+      el('button',{className:'btn ghost sm',disabled:!!busy,onClick:sortAi},'Sort categories with AI')),
+    el('div',{className:'row',style:{marginBottom:10,gap:6}},
+      [['','All '+items.length],['new','New '+cnt.new],['changed','Changed '+cnt.changed],['same','Same '+cnt.same],['inc','To import '+chosen.length]].map(function(f){
+        return el('button',{key:f[0],className:'btn sm'+(filter===f[0]?'':' ghost'),onClick:function(){setFilter(f[0]);}},f[1]);})),
+    el('div',{className:'row',style:{marginBottom:10,gap:6,fontSize:12}},Object.keys(catCount).sort().map(function(c){
+      return el('span',{key:c,className:'badge',style:{cursor:'pointer'},onClick:function(){setFilter('cat:'+c);}},c+' '+catCount[c]);})),
+    el('div',{style:{maxHeight:'48vh',overflow:'auto',border:'1px solid #222',borderRadius:10}},
+      shown.map(function(it){const r=row(it);
+        return el('div',{key:it.key+'-'+it.i,className:'rbrow',style:{padding:'8px 10px',borderTop:'1px solid #1d1d1d'}},
+          el('div',{className:'row',style:{flexWrap:'nowrap',gap:8,alignItems:'center'}},
+            el('input',{type:'checkbox',checked:r.inc,onChange:function(e){setO(it.key,{inc:e.target.checked});},style:{width:'auto'}}),
+            el('span',{className:'badge'+(it.status==='new'?' ok':it.status==='changed'?' warn':''),style:{minWidth:64,textAlign:'center'}},it.status==='new'?'New':it.status==='changed'?'Changed':'Same'),
+            el('span',{className:'muted',style:{fontSize:12,minWidth:120,whiteSpace:'nowrap'}},it.citation||'-'),
+            el('input',{value:r.title,onChange:function(e){setO(it.key,{title:e.target.value});},style:{flex:1,minWidth:120}}),
+            el('select',{value:r.cat,onChange:function(e){setO(it.key,{cat:e.target.value});},style:{width:195}},cats.concat(cats.indexOf(r.cat)<0?[r.cat]:[]).map(function(c){return el('option',{key:c,value:c},c);})),
+            el('button',{className:'btn ghost sm',onClick:function(){setOpen(open===it.key?null:it.key);}},open===it.key?'Hide':'Text')),
+          it.short&&el('div',{className:'muted',style:{fontSize:12,marginTop:4}},'Very little text - probably a contents line, not a rule. Left unticked.'),
+          open===it.key&&el('div',{style:{marginTop:6,whiteSpace:'pre-wrap',fontSize:13,maxHeight:260,overflow:'auto',background:'#0b0b0b',padding:8,borderRadius:8}},
+            it.page?el('div',{className:'muted',style:{fontSize:12}},'Page '+it.page):null,it.body||'(no text)',
+            it.status==='changed'&&el('div',{className:'muted',style:{fontSize:12,marginTop:6}},'Changed from what the Rulebook has now. Importing replaces the title and text; the category stays as shown here.')));
+      })),
+    missing.length>0&&el('div',{style:{marginTop:10}},
+      props.canDel?el('label',{className:'ck'},el('input',{type:'checkbox',checked:delOld,onChange:function(e){setDelOld(e.target.checked);}}),
+        ' Delete the '+missing.length+' rule'+(missing.length===1?'':'s')+' from an earlier PDF that '+(missing.length===1?'is':'are')+' not in this one (repealed or renumbered)'):
+        el('div',{className:'muted',style:{fontSize:13}},missing.length+' rule'+(missing.length===1?'':'s')+' from an earlier PDF '+(missing.length===1?'is':'are')+' not in this one. They are kept (Full access can delete them).')),
+    el('div',{className:'row',style:{justifyContent:'flex-end',marginTop:12}},
+      el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),
+      el('button',{className:'btn',disabled:!!busy||(!chosen.length&&!(delOld&&missing.length)),onClick:save},'Import '+chosen.length+' rule'+(chosen.length===1?'':'s'))));
+}
+
+/* ---------- Team (admin) ---------- */
+
+/* ---------- QR + signature helpers ---------- */
+function QrBox(props){
+  const ref=useRef(null);
+  useEffect(function(){
+    const host=ref.current;if(!host)return;
+    host.innerHTML='';
+    if(window.QRCode){try{new window.QRCode(host,{text:props.text,width:props.size||180,height:props.size||180,colorDark:'#000000',colorLight:'#ffffff',correctLevel:window.QRCode.CorrectLevel.M});}catch(e){host.textContent=props.text;}}
+    else host.textContent=props.text;
+  },[props.text,props.size]);
+  return el('div',{ref:ref,style:{background:'#fff',padding:10,borderRadius:8,display:'inline-block',lineHeight:0}});
+}
+function SignaturePad(props){
+  const cv=useRef(null);const drawing=useRef(false);
+  useEffect(function(){
+    const c=cv.current;if(!c)return;const ctx=c.getContext('2d');
+    ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.lineWidth=2.4;ctx.lineCap='round';ctx.strokeStyle='#111';
+  },[]);
+  function pos(e){const c=cv.current,r=c.getBoundingClientRect();return {x:(e.clientX-r.left)*c.width/r.width,y:(e.clientY-r.top)*c.height/r.height};}
+  function down(e){drawing.current=true;const ctx=cv.current.getContext('2d'),q=pos(e);ctx.beginPath();ctx.moveTo(q.x,q.y);try{cv.current.setPointerCapture(e.pointerId);}catch(x){}e.preventDefault();}
+  function move(e){if(!drawing.current)return;const ctx=cv.current.getContext('2d'),q=pos(e);ctx.lineTo(q.x,q.y);ctx.stroke();e.preventDefault();}
+  function up(){if(!drawing.current)return;drawing.current=false;props.onChange(cv.current.toDataURL('image/png'));}
+  function clear(){const c=cv.current,ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);props.onChange('');}
+  return el('div',null,
+    el('canvas',{ref:cv,width:600,height:180,style:{width:'100%',height:140,background:'#fff',borderRadius:8,touchAction:'none',display:'block'},onPointerDown:down,onPointerMove:move,onPointerUp:up,onPointerLeave:up}),
+    el('button',{className:'btn ghost sm',style:{marginTop:6},onClick:clear},'Clear signature'));
+}
+const PURPOSES=['Vendor / delivery','Contractor / maintenance','Inspector / regulator','Customer / buyer','Interview','Meeting','Tour','Other'];
+
+/* ---------- Visitor kiosk (no login). The license comes from the QR link; the database re-checks it. ---------- */
+const VISITOR_GMP_RULES=['Wash your hands before entering any production area and after breaks or the restroom.',
+  'Wear the hair net, beard net, gloves and other PPE you are given wherever product is exposed.',
+  'Remove jewelry (a plain band or medical bracelet is allowed) and loose items from your pockets.',
+  'No eating, drinking, smoking, vaping or chewing gum outside the break areas.',
+  'Stay with your escort, do not touch product or equipment, and take no photos.',
+  'Tell your host right away if you feel ill or are injured.'];
+const VISITOR_ILL_Q='Do you have any symptoms of illness right now (fever, vomiting, diarrhea, jaundice, sore throat with fever) or an open cut or wound?';
+function GmpRulesBox(props){
+  return el('div',{style:{border:'1px solid var(--gold-lo)',borderRadius:10,padding:'10px 12px',margin:'6px 0 10px',background:'rgba(212,175,55,.05)'}},
+    el('div',{className:'k',style:{marginBottom:6}},'Facility GMP rules for visitors'),
+    VISITOR_GMP_RULES.map(function(r,i){return el('div',{key:i,style:{fontSize:13,lineHeight:1.5}},(i+1)+'. '+r);}));
+}
+function IllQuestion(props){
+  return el('div',{style:{margin:'4px 0 10px'}},el('div',{style:{fontSize:13,marginBottom:6}},VISITOR_ILL_Q),
+    el('div',{className:'row'},['no','yes'].map(function(v){return el('button',{key:v,type:'button',className:'btn sm'+(props.value===v?'':' ghost'),onClick:function(){props.onChange(v);}},v==='no'?'No':'Yes');})),
+    props.value==='yes'&&el('div',{className:'msg err',style:{marginTop:8}},'You may sign in, but you may NOT enter production or processing areas. Your host will be told.'));
+}
+function KioskVisitor(){
+  const q=new URLSearchParams(window.location.search);
+  const licId=q.get('lic')||'';
+  const stId=q.get('state')||'';
+  const[lic,setLic]=useState(null);
+  const[bad,setBad]=useState('');
+  const[tab,setTab]=useState('in');
+  const[f,setF]=useState({visitor_name:'',company:'',purpose:'',host:'',vehicle:'',signature:'',agree:false,ill:''});
+  const[busy,setBusy]=useState(false);
+  const[err,setErr]=useState('');
+  const[done,setDone]=useState('');
+  const[open,setOpen]=useState([]);
+  useEffect(function(){
+    if(!cfg().ok){setBad('This kiosk is not connected to a database.');return;}
+    if(!licId||!stId){setBad('This QR code is missing its state or license. Please ask a manager for the current code.');return;}
+    rpc('hx_kiosk_check',{p_state:stId,p_lic:licId}).then(function(r){if(r&&r.id)setLic(r);else setBad('This QR code is not linked to an active license in this state. Please ask a manager for the correct code.');}).catch(function(e){setBad(String(e.message||e));});
+  },[licId,stId]);
+  function loadOpen(){rpc('hx_kiosk_open_visitors',{p_lic:licId}).then(function(r){setOpen(r||[]);}).catch(function(e){setErr(String(e.message||e));});}
+  useEffect(function(){if(lic&&tab==='out')loadOpen();},[lic,tab]);
+  async function signIn(){
+    setErr('');
+    if(!f.visitor_name.trim()){setErr('Please enter your name.');return;}
+    if(!f.purpose){setErr('Please choose the purpose of your visit.');return;}
+    if(!f.signature){setErr('Please sign in the box.');return;}
+    if(!f.ill){setErr('Please answer the illness question.');return;}
+    if(!f.agree){setErr('Please confirm you have read and will follow the GMP rules.');return;}
+    setBusy(true);
+    try{
+      const base={visitor_name:f.visitor_name,company:f.company,purpose:f.purpose,host:f.host,vehicle:f.vehicle,signature:f.signature};
+      try{await rpc('hx_kiosk_visitor_in2',{p_lic:licId,p:{...base,gmp_ack:true,ill:f.ill==='yes'}});}
+      catch(e2){if(/Kiosk setup is missing/.test(String(e2.message)))await rpc('hx_kiosk_visitor_in',{p_lic:licId,p:base});else throw e2;}
+      setDone('Thank you, '+f.visitor_name.trim()+'. You are signed in.'+(f.ill==='yes'?' Please do NOT enter production or processing areas; your host has been told.':'')+' Please remember to sign out when you leave.');
+      setF({visitor_name:'',company:'',purpose:'',host:'',vehicle:'',signature:'',agree:false,ill:''});
+    }catch(e){setErr(String(e.message||e));}
+    setBusy(false);
+  }
+  async function signOut(v){
+    setErr('');setBusy(true);
+    try{await rpc('hx_kiosk_visitor_out',{p_lic:licId,p_id:v.id});setDone('Goodbye, '+v.visitor_name+'. You are signed out.');loadOpen();}
+    catch(e){setErr(String(e.message||e));}
+    setBusy(false);
+  }
+  if(bad)return el('div',{className:'auth'},el('div',{className:'box'},el(Brand),el('div',{className:'msg err',style:{marginTop:18}},bad)));
+  if(!lic)return el('div',{className:'auth'},el(Brand));
+  const head=el('div',{style:{textAlign:'center',marginBottom:16}},
+    el(Brand),
+    el('div',{className:'k',style:{marginTop:16}},lic.state),
+    el('div',{style:{fontSize:20,fontWeight:700}},lic.name),
+    el('div',{className:'muted'},'License '+(lic.license_number||'-')));
+  if(done)return el('div',{className:'auth'},el('div',{className:'box'},head,el('div',{className:'msg ok',style:{fontSize:15}},done),
+    el('button',{className:'btn',style:{width:'100%'},onClick:function(){setDone('');}},'Done')));
+  return el('div',{className:'auth',style:{alignItems:'flex-start'}},el('div',{className:'box',style:{width:'min(560px,100%)'}},head,
+    el('div',{className:'row',style:{marginBottom:14}},
+      el('button',{className:'btn'+(tab==='in'?'':' ghost'),style:{flex:1},onClick:function(){setTab('in');setErr('');}},'Sign in'),
+      el('button',{className:'btn'+(tab==='out'?'':' ghost'),style:{flex:1},onClick:function(){setTab('out');setErr('');}},'Sign out')),
+    err&&el('div',{className:'msg err'},err),
+    tab==='in'?el('div',null,
+      el(Field,{label:'Full name'},el('input',{value:f.visitor_name,onChange:function(e){setF({...f,visitor_name:e.target.value});}})),
+      el(Field,{label:'Company'},el('input',{value:f.company,onChange:function(e){setF({...f,company:e.target.value});}})),
+      el(Field,{label:'Purpose of visit'},el('select',{style:{width:'100%'},value:f.purpose,onChange:function(e){setF({...f,purpose:e.target.value});}},el('option',{value:''},'Select...'),PURPOSES.map(function(x){return el('option',{key:x,value:x},x);}))),
+      el(Field,{label:'Who are you visiting?'},el('input',{value:f.host,onChange:function(e){setF({...f,host:e.target.value});}})),
+      el(Field,{label:'Vehicle plate (optional)'},el('input',{value:f.vehicle,onChange:function(e){setF({...f,vehicle:e.target.value});}})),
+      el(Field,{label:'Signature',plain:true},el(SignaturePad,{onChange:function(v){setF(function(p){return {...p,signature:v};});}})),
+      el(IllQuestion,{value:f.ill,onChange:function(v){setF(function(p){return {...p,ill:v};});}}),
+      el(GmpRulesBox),
+      el('label',{style:{display:'flex',gap:8,alignItems:'flex-start',margin:'6px 0 14px'}},el('input',{type:'checkbox',style:{width:'auto',marginTop:4},checked:f.agree,onChange:function(e){setF({...f,agree:e.target.checked});}}),
+        el('span',{className:'muted'},'I have read the GMP rules above and will follow them.')),
+      el('button',{className:'btn',style:{width:'100%',padding:'13px'},disabled:busy,onClick:signIn},busy?'Saving...':'Sign in'))
+    :el('div',null,
+      !open.length&&el('div',{className:'empty'},'Nobody is currently signed in.'),
+      open.map(function(v){return el('div',{key:v.id,className:'card',style:{padding:'12px 14px'}},el('div',{className:'row',style:{justifyContent:'space-between'}},
+        el('div',null,el('div',{style:{fontWeight:700}},v.visitor_name),el('div',{className:'muted',style:{fontSize:12}},'In at '+new Date(v.time_in).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}))),
+        el('button',{className:'btn sm',disabled:busy,onClick:function(){signOut(v);}},'Sign out')));}))));
+}
+
+/* ---------- Visitor Log (staff) ---------- */
+function VisitorLog(props){
+  const st=props.state,lic=props.license;
+  const[rows,setRows]=useState(null);
+  const[range,setRange]=useState('30');
+  const[q,setQ]=useState('');
+  const[err,setErr]=useState('');
+  const[modal,setModal]=useState(false);
+  const[copied,setCopied]=useState(false);
+  const[view,setView]=useState(null);
+  const licId=lic?lic.id:'';
+  const link=window.location.origin+window.location.pathname+'?kiosk=visitor&state='+encodeURIComponent(st?st.id:'')+'&lic='+encodeURIComponent(licId);
+  const load=useCallback(function(){
+    if(!lic||!st){setRows([]);return;}
+    let qs='license_id=eq.'+encodeURIComponent(lic.id)+'&state_id=eq.'+encodeURIComponent(st.id)+'&select=*&order=time_in.desc&limit=1000';
+    if(range!=='all'){qs+='&time_in=gte.'+encodeURIComponent(new Date(Date.now()-parseInt(range,10)*86400000).toISOString());}
+    return db.get('hx_visitor_log',qs).then(function(r){
+      // defensive: only ever show rows of the active license
+      setRows((r||[]).filter(function(x){return x.license_id===lic.id;}));
+    }).catch(function(e){setErr(String(e.message||e));setRows([]);});
+  },[licId,range]);
+  useEffect(function(){setRows(null);setErr('');load();},[load]);
+  if(!lic||!st)return el('div',null,el('h1',null,'Visitor ',el('span',{className:'g'},'Log')),el('div',{className:'empty'},'Pick a state and a license at the top first. Every visitor log belongs to exactly one license.'));
+  async function outNow(r){setErr('');try{await db.update('hx_visitor_log',r.id,{time_out:new Date().toISOString()});load();}catch(e){setErr(String(e.message||e));}}
+  function fmt(t){return t?new Date(t).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'';}
+  const list=(rows||[]).filter(function(r){const t=(r.visitor_name+' '+r.company+' '+r.purpose+' '+r.host).toLowerCase();return !q||t.indexOf(q.toLowerCase())>=0;});
+  function csv(){
+    const esc=function(v){return '"'+String(v==null?'':v).replace(/"/g,'""')+'"';};
+    const lines=[['State','License','License #','Name','Company','Purpose','Host','Vehicle','GMP rules accepted','Declared illness','Time in','Time out'].map(esc).join(',')];
+    list.forEach(function(r){lines.push([st.name,lic.name,lic.license_number,r.visitor_name,r.company,r.purpose,r.host,r.vehicle,r.gmp_ack?'Yes':'Not recorded',r.ill==null?'Not recorded':r.ill?'Yes':'No',r.time_in,r.time_out||''].map(esc).join(','));});
+    const b=new Blob([lines.join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='visitor_log_'+(lic.license_number||lic.id)+'.csv';document.body.appendChild(a);a.click();a.remove();
+  }
+  function printSign(){
+    printSignSheet({link:link,lic:lic,stName:st.name,eyebrow:st.name+'  \u00b7  Visitor Sign-In',title:'Welcome, Visitors',cta:'Scan to sign in',ctaSub:'Every visitor must sign in on arrival and sign out when leaving.',
+      steps:[['Scan','Point your phone camera at the code'],['Sign in','Enter your details and sign'],['Sign out','Scan again when you leave']]});
+  }
+
+  function esc2(x){return String(x==null?'':x).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,'Visitor ',el('span',{className:'g'},'Log')),el('div',{className:'sub'},st.name+'  \u00b7  '+lic.name+(lic.license_number?'  \u00b7  '+lic.license_number:''))),
+      el('div',{className:'row'},el('button',{className:'btn ghost',onClick:csv},'Export CSV'),can('logs_visitor',2)&&el('button',{className:'btn',onClick:function(){setModal(true);}},'+ Manual entry'))),
+    err&&el('div',{className:'msg err'},err),
+    can('logs_visitor',2)&&el('div',{className:'card gold'},el('div',{className:'row',style:{alignItems:'flex-start',gap:20}},
+      el('div',{id:'hxqr'},el(QrBox,{text:link,size:150})),
+      el('div',{style:{flex:1,minWidth:220}},
+        el('div',{className:'k'},'Kiosk QR for this license only'),
+        el('div',{style:{margin:'4px 0 8px'}},'Visitors scanning this code sign in to ',el('b',null,lic.name),' ('+st.name+'). It cannot save to any other license.'),
+        el('input',{readOnly:true,value:link,onFocus:function(e){e.target.select();}}),
+        el('div',{className:'row',style:{marginTop:8}},
+          el('button',{className:'btn sm',onClick:function(){try{navigator.clipboard.writeText(link);setCopied(true);setTimeout(function(){setCopied(false);},1500);}catch(e){}}},copied?'Copied':'Copy link'),
+          el('button',{className:'btn ghost sm',onClick:printSign},'Print QR sign'))))),
+    el('div',{className:'row',style:{margin:'4px 0 12px'}},
+      el('input',{style:{maxWidth:300},placeholder:'Search name, company, host...',value:q,onChange:function(e){setQ(e.target.value);}}),
+      el('select',{value:range,onChange:function(e){setRange(e.target.value);}},el('option',{value:'1'},'Last 24 hours'),el('option',{value:'7'},'Last 7 days'),el('option',{value:'30'},'Last 30 days'),el('option',{value:'365'},'Last year'),el('option',{value:'all'},'All time')),
+      el('span',{className:'muted'},rows?list.length+' entries':'Loading...')),
+    rows&&!list.length&&el('div',{className:'empty'},'No visitors in this period for '+lic.name+'.'),
+    list.length>0&&el('div',{className:'card',style:{overflowX:'auto'}},el('table',null,
+      el('thead',null,el('tr',null,['Time in','Name','Company','Purpose','Host','Vehicle','GMP / Health','Time out',''].map(function(h,i){return el('th',{key:i},h);}))),
+      el('tbody',null,list.map(function(r){
+        return el('tr',{key:r.id},el('td',null,fmt(r.time_in)),el('td',null,r.visitor_name),el('td',null,r.company||'-'),el('td',null,r.purpose||'-'),el('td',null,r.host||'-'),el('td',null,r.vehicle||'-'),
+          el('td',null,r.ill?el('span',{className:'badge bad',title:'Declared illness: no production areas'},'Ill \u2014 no production'):r.gmp_ack?el('span',{className:'badge ok'},'GMP accepted'):el('span',{className:'badge off'},'Not recorded')),
+          el('td',null,r.time_out?fmt(r.time_out):el('span',{className:'badge'},'On site')),
+          el('td',{style:{textAlign:'right',whiteSpace:'nowrap'}},
+            r.signature&&el('button',{className:'btn ghost sm',style:{marginRight:6},onClick:function(){setView(r);}},'Signature'),
+            !r.time_out&&can('logs_visitor',2)&&el('button',{className:'btn sm',onClick:function(){outNow(r);}},'Sign out')));
+      })))),
+    modal&&el(ManualVisitor,{st:st,lic:lic,onClose:function(){setModal(false);},onSaved:function(){setModal(false);load();}}),
+    view&&el(Modal,{title:view.visitor_name+' - signature',onClose:function(){setView(null);}},el('img',{src:view.signature,style:{width:'100%',background:'#fff',borderRadius:8}}),el('div',{className:'muted',style:{marginTop:8}},fmt(view.time_in))));
+}
+function ManualVisitor(props){
+  const[f,setF]=useState({visitor_name:'',company:'',purpose:'',host:'',vehicle:'',ill:'',agree:false});
+  const[err,setErr]=useState('');
+  async function save(){
+    setErr('');
+    if(!f.ill){setErr('Ask the visitor the illness question and record the answer.');return;}
+    if(!f.agree){setErr('The visitor must read and accept the GMP rules.');return;}
+    try{
+      await dbSave('hx_visitor_log',null,{id:newId('vis'),state_id:props.st.id,license_id:props.lic.id,visitor_name:f.visitor_name.trim(),company:f.company.trim(),purpose:f.purpose,host:f.host.trim(),vehicle:f.vehicle.trim(),source:'manual',gmp_ack:true,ill:f.ill==='yes',ack_at:new Date().toISOString()});
+      props.onSaved();
+    }catch(e){setErr(String(e.message||e));}
+  }
+  return el(Modal,{title:'Manual visitor entry - '+props.lic.name,onClose:props.onClose},
+    err&&el('div',{className:'msg err'},err),
+    el(Field,{label:'Full name'},el('input',{value:f.visitor_name,onChange:function(e){setF({...f,visitor_name:e.target.value});}})),
+    el(Field,{label:'Company'},el('input',{value:f.company,onChange:function(e){setF({...f,company:e.target.value});}})),
+    el(Field,{label:'Purpose'},el('select',{style:{width:'100%'},value:f.purpose,onChange:function(e){setF({...f,purpose:e.target.value});}},el('option',{value:''},'Select...'),PURPOSES.map(function(x){return el('option',{key:x,value:x},x);}))),
+    el(Field,{label:'Visiting'},el('input',{value:f.host,onChange:function(e){setF({...f,host:e.target.value});}})),
+    el(Field,{label:'Vehicle plate'},el('input',{value:f.vehicle,onChange:function(e){setF({...f,vehicle:e.target.value});}})),
+    el(IllQuestion,{value:f.ill,onChange:function(v){setF({...f,ill:v});}}),
+    el(GmpRulesBox),
+    el('label',{style:{display:'flex',gap:8,alignItems:'flex-start',margin:'6px 0 14px'}},el('input',{type:'checkbox',style:{width:'auto',marginTop:4},checked:f.agree,onChange:function(e){setF({...f,agree:e.target.checked});}}),
+      el('span',{className:'muted'},'The visitor read the GMP rules and agreed to follow them.')),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:!f.visitor_name.trim(),onClick:save},'Save')));
+}
+
+/* ---------- Facility Logs: field-for-field with Black Fox ----------
+   Nine logs, one table (hx_facility_log, every form field in data). Facility-specific lists
+   (areas, cameras, doors, alarms, scales, rooms, waste methods...) are created per license by the admin
+   and start EMPTY; a list with no items becomes a type-in box, same as Black Fox.
+   Generic process choices (shift, pest type, maintenance type...) start with the Black Fox defaults
+   and can be replaced per license. No regulator names are hard-coded: the state's rules come from its Rulebook. */
+function pad2(n){return String(n).padStart(2,'0');}
+function todayStr(){const d=new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());}
+function nowTime(){const d=new Date();return pad2(d.getHours())+':'+pad2(d.getMinutes());}
+function numOk(v){if(v===''||v==null)return false;const n=parseFloat(String(v).replace(/,/g,''));return !isNaN(n)&&isFinite(n);}
+function num(v){return parseFloat(String(v).replace(/,/g,''));}
+function esc3(x){return String(x==null?'':x).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+const FLAG_RES=['Fail','Flag','Open'];
+const OK_RES=['Pass','OK','Resolved','Verified'];
+const LOG_DEV_CAT={sanitation:'Sanitation',temperature:'Environment / temperature',environmental:'Environment / temperature',pest:'Pest',security:'Security',security_inspection:'Security',equipment:'Equipment',scale_calibration:'Equipment',waste:'Documentation'};
+const SHIFTS={key:'common.shifts',title:'Shifts',ph:'e.g. Day',def:['Day','Evening','Night']};
+const SCALE_POINTS=['Front Left','Front Right','Back Left','Back Right','Middle'];
+const SCALE_DEFAULT_TOL=0.1;
+const TEMP_IN='Yes \u2014 within range',TEMP_OUT='No \u2014 out of range (action taken)';
+const SEC_STATUS=['OK','FAIL','N/A'];
+const SEC_PARTS=[
+  {id:'cameras',list:'security_inspection.cameras',title:'Cameras',name:'Camera name',col:'Camera view',opts:['Clear','Partial','Obstructed','Offline']},
+  {id:'doors',list:'security_inspection.doors',title:'Door Locks',name:'Door name',col:'Battery level',opts:['Good (100-60%)','Low (59-20%)','Critical (<20%)','N/A - Wired']},
+  {id:'alarms',list:'security_inspection.alarms',title:'Alarm System',name:'Component name',col:'Battery level',opts:['Good (100-60%)','Low (59-20%)','Critical (<20%)','N/A - Wired','N/A']}];
+
+function scaleCheck(d){
+  d=d||{};
+  const tol=numOk(d.scale_tolerance)?num(d.scale_tolerance):SCALE_DEFAULT_TOL;
+  const pts=[1,2,3,4,5].map(function(i){
+    const nom=numOk(d['tw'+i+'_nominal'])?num(d['tw'+i+'_nominal']):null,rd=numOk(d['tw'+i+'_reading'])?num(d['tw'+i+'_reading']):null;
+    if(nom===null||rd===null)return {i:i,name:SCALE_POINTS[i-1],nom:nom,rd:rd,diff:null,ok:null};
+    const diff=Math.round((rd-nom)*10000)/10000;
+    return {i:i,name:SCALE_POINTS[i-1],nom:nom,rd:rd,diff:diff,ok:Math.abs(diff)<=tol+1e-9};
+  });
+  let cert={status:'unknown',days:null,due:''};
+  if(d.last_cert_date){
+    const c=new Date(d.last_cert_date+'T00:00:00');
+    if(!isNaN(c.getTime())){
+      const due=new Date(c.getTime());due.setFullYear(due.getFullYear()+1);
+      const t=new Date();t.setHours(0,0,0,0);
+      const days=Math.round((due.getTime()-t.getTime())/86400000);
+      cert={status:days<0?'overdue':days<=30?'due-soon':'current',days:days,due:due.getFullYear()+'-'+pad2(due.getMonth()+1)+'-'+pad2(due.getDate())};
+    }
+  }
+  const evald=pts.filter(function(p){return p.ok!==null;});
+  const anyFail=evald.some(function(p){return !p.ok;});
+  let result='';
+  if(cert.status==='overdue'||anyFail)result='Fail';
+  else if(evald.length===5)result='Pass';
+  let nextDue='';
+  if(d.date){const n=new Date(d.date+'T00:00:00');if(!isNaN(n.getTime())){n.setDate(n.getDate()+7);nextDue=n.getFullYear()+'-'+pad2(n.getMonth()+1)+'-'+pad2(n.getDate());}}
+  return {pts:pts,cert:cert,result:result,nextDue:nextDue,tol:tol};
+}
+function inspCount(insp,lists){
+  let total=0,done=0,fails=0;
+  SEC_PARTS.forEach(function(p){(lists[p.list]||[]).forEach(function(it){total++;const s=((insp||{})[p.id]||{})[it.name]||{};if(s.s)done++;if(s.s==='FAIL')fails++;});});
+  return {total:total,done:done,fails:fails};
+}
+
+const LOG_TYPES=[
+  {id:'sanitation',name:'Sanitation Log',freq:'Daily / Weekly / Monthly',ruleCat:'Facility',person:'cleaned_by',itemKey:'shift',itemLabel:'Shift',
+    lists:[SHIFTS,
+      {key:'sanitation.areas',title:'Daily: Areas Cleaned',ph:'e.g. Production Floor'},
+      {key:'sanitation.equip_san',title:'Daily: Facility Equipment Sanitized',ph:'e.g. Mop Sink'},
+      {key:'sanitation.equip_clean',title:'Daily: Equipment Cleaned',ph:'e.g. Towels'},
+      {key:'sanitation.weekly',title:'Weekly: Areas Cleaned',ph:'e.g. Warehouse'},
+      {key:'sanitation.monthly',title:'Monthly: Areas Cleaned',ph:'e.g. Extraction Room'}],
+    fields:[
+      {k:'date',l:'Date',t:'date',req:1},{k:'time',l:'Time Completed',t:'time'},
+      {k:'shift',l:'Shift',t:'select',list:'common.shifts'},
+      {k:'cleaned_by',l:'Cleaned By',t:'text',req:1,ph:'Employee name'},
+      {k:'sanitizer_used',l:'Sanitizer / Chemical Used',t:'text',ph:'e.g. 70% IPA'},
+      {k:'concentration',l:'Concentration / Dilution',t:'text',ph:'e.g. 1:64 dilution'},
+      {t:'section',l:'Daily: Areas Cleaned'},{k:'areas',t:'checklist',list:'sanitation.areas'},
+      {t:'section',l:'Daily: Facility Equipment Sanitized'},{k:'equip_san',t:'checklist',list:'sanitation.equip_san'},
+      {t:'section',l:'Daily: Equipment Cleaned'},{k:'equip_clean',t:'checklist',list:'sanitation.equip_clean'},
+      {t:'section',l:'Weekly: Areas Cleaned'},{k:'weekly',t:'checklist',list:'sanitation.weekly'},
+      {t:'section',l:'Monthly: Areas Cleaned'},{k:'monthly',t:'checklist',list:'sanitation.monthly'},
+      {t:'section',l:'Notes'},{k:'notes',l:'Additional Notes',t:'textarea',ph:'Any observations, issues found, or comments'},
+      {t:'section',l:'Cleaning Verification (CSQ 2A.3)'},
+      {k:'verified_by',l:'Verified By',t:'text',ph:'Supervisor or QA - not the person who cleaned',blank:1},
+      {k:'verify_method',l:'Verification Method',t:'select',o:['Visual inspection','ATP swab','Checklist review'],blank:1},
+      {k:'verify_result',l:'Verification Result',t:'select',o:['Acceptable','Re-clean required'],blank:1}],
+    res:function(d){if(d.verify_result==='Re-clean required')return 'Flag';return String(d.verified_by||'').trim()?'Verified':'Logged';}},
+  {id:'waste',name:'Waste Destruction Log',freq:'Every destruction event',ruleCat:'Facility',person:'personnel_involved',itemKey:'category',itemLabel:'Category',
+    lists:[
+      {key:'waste.categories',title:'Categories',ph:'e.g. Concentrate',hint:'The Category dropdown'},
+      {key:'waste.camera_one',title:'Camera #1 names (Angle 1 of destruction)',ph:'e.g. Waste 1'},
+      {key:'waste.camera_two',title:'Camera #2 names (Angle 2 of destruction)',ph:'e.g. Waste 2'},
+      {key:'waste.camera_three',title:'Camera #3 names (Angle 3 of destruction)',ph:'e.g. Waste 3'},
+      {key:'waste.camera_four',title:'Camera #4 names (Angle 4 of destruction)',ph:'e.g. Waste 4'},
+      {key:'waste.cameras',title:'Old shared camera list (feeds Camera #1 and #2 until they have their own names)',ph:'e.g. Waste 1',hideEmpty:1},
+      {key:'waste.render_locations',title:'Locations of Rendering',ph:'e.g. Waste Area'},
+      {key:'waste.disposal_locations',title:'Locations of Disposal',ph:'Address or facility name'},
+      {key:'waste.methods',title:'Methods Used',ph:'Write each full method as your state requires it',hint:'Write each full destruction method; they become the dropdown'}],
+    fields:[
+      {k:'date',l:'Date of Waste Generation',t:'date',req:1},{k:'time',l:'Time of Waste Generation',t:'time'},
+      {k:'personnel_involved',l:'Personnel Involved',t:'text',req:1,ph:'Names of all staff involved'},
+      {k:'agent_ids',l:'Agent / Badge ID(s)',t:'text',req:1,ph:'State agent ID numbers'},
+      {k:'category',l:'Category',t:'select',list:'waste.categories',req:1},
+      {k:'strain',l:'Strain / Flavor',t:'text',ph:'Strain or flavor name'},
+      {k:'waste_tags',l:'Track-and-Trace Tag(s)',t:'text',req:1,ph:'e.g. METRC package tags, comma separated'},
+      {k:'qty_unit',l:'Unit of Measure',t:'select',o:['Grams','EA (Each)'],req:1},
+      {k:'qty_expired',l:'Quantity of Waste / Expired Product',t:'text',req:1,ph:'e.g. 14.2 or 50'},
+      {k:'camera_1',l:'Camera #1 Name (Angle 1 of Destruction)',t:'select',list:'waste.camera_one',legacy:'waste.cameras'},
+      {k:'camera_2',l:'Camera #2 Name (Angle 2 of Destruction)',t:'select',list:'waste.camera_two',legacy:'waste.cameras'},
+      {k:'camera_3',l:'Camera #3 Name (Angle 3 of Destruction)',t:'select',list:'waste.camera_three'},
+      {k:'camera_4',l:'Camera #4 Name (Angle 4 of Destruction)',t:'select',list:'waste.camera_four'},
+      {k:'rendering_location',l:'Location of Rendering',t:'select',list:'waste.render_locations'},
+      {k:'method_used',l:'Method Used',t:'select',list:'waste.methods',req:1},
+      {k:'qty_rendered',l:'Quantity of Rendered Waste',t:'text',ph:'Total weight/quantity after rendering'},
+      {k:'disposal_date',l:'Date of Disposal',t:'date',blank:1},{k:'disposal_time',l:'Time of Disposal',t:'time',blank:1},
+      {k:'waste_company',l:'Waste Management Company / Facility Used',t:'text',ph:'Licensed waste disposal company name'},
+      {k:'manifest_number',l:'Waste Manifest Number',t:'text',ph:'Manifest #'},
+      {k:'receipt_number',l:'Disposal Receipt Number',t:'text',ph:'Receipt #'},
+      {k:'disposal_location',l:'Location of Disposal',t:'select',list:'waste.disposal_locations',ph:'Address or facility name'},
+      {t:'section',l:'Notes & Compliance'},
+      {k:'notes',l:'Additional Notes / Comments',t:'textarea',ph:'Any additional information'},
+      {k:'tracking_recorded',l:'Recorded in Track-and-Trace?',t:'select',o:['Yes - recorded before destruction','Yes - recorded after destruction','Pending']},
+      {k:'compliance_verification',l:'Compliance Verification',t:'checkbox'},
+      {k:'supervisor_name',l:'Supervisor Name',t:'text',req:1,ph:'Verifying supervisor full name'}],
+    res:function(d){return d.tracking_recorded==='Pending'?'Open':'Logged';}},
+  {id:'scale_calibration',name:'Scale Calibration Log',freq:'Weekly, and each time the scale is moved',ruleCat:'Facility',person:'performed_by',itemKey:'scale_id',itemLabel:'Scale',
+    lists:[
+      {key:'scale_calibration.scales',title:'Scales',ph:'Scale ID / asset tag, e.g. SCALE-03',hint:'Each physical scale. Picking it on the form fills in its details.',
+        spec:[{k:'location',l:'Location / Room'},{k:'make',l:'Make / Model'},{k:'model',l:'Model Number'},{k:'serial',l:'Serial Number'},
+          {k:'capacity',l:'Capacity / Readability'},{k:'ntep',l:'NTEP Certificate #'},{k:'cert_date',l:'Last Annual Certification',t:'date'},
+          {k:'cert_company',l:'Certified By'},{k:'tol',l:'Tolerance \u00b1 g (blank = 0.1)',num:1}]},
+      {key:'scale_calibration.locations',title:'Locations / Rooms',ph:'e.g. Production Floor'}],
+    fields:[
+      {k:'date',l:'Date',t:'date',req:1},{k:'time',l:'Time',t:'time',req:1},
+      {k:'scale_id',l:'Scale ID / Asset Tag',t:'pick',list:'scale_calibration.scales',req:1,
+        fill:{scale_location:'location',scale_make_model:'make',scale_model_number:'model',scale_serial:'serial',scale_capacity:'capacity',ntep_cc:'ntep',last_cert_date:'cert_date',cert_company:'cert_company',scale_tolerance:'tol'}},
+      {k:'scale_location',l:'Location / Room',t:'select',list:'scale_calibration.locations',req:1},
+      {k:'scale_make_model',l:'Scale Make / Model',t:'text',req:1},
+      {k:'scale_model_number',l:'Model Number',t:'text'},{k:'scale_serial',l:'Serial Number',t:'text'},
+      {k:'scale_capacity',l:'Capacity / Readability',t:'text'},{k:'ntep_cc',l:'NTEP Certificate of Conformance #',t:'text'},
+      {t:'section',l:'Annual Certification'},
+      {k:'last_cert_date',l:'Last Annual Certification Date',t:'date',req:1,blank:1},
+      {k:'cert_company',l:'Certified By (Service Company / Registered Serviceperson)',t:'text',ph:'Company or technician name'},
+      {k:'cert_seal_present',l:'Certification seal / sticker is present and current',t:'checkbox'},
+      {t:'section',l:'Pre-Checks'},
+      {k:'check_clean',l:'Scale and weighing pan are clean',t:'checkbox'},
+      {k:'check_level',l:'Scale is level and on a stable surface',t:'checkbox'},
+      {k:'check_shield',l:'No draft, vibration or debris affecting the reading',t:'checkbox'},
+      {k:'check_zero',l:'Display reads zero with an empty pan',t:'checkbox'},
+      {k:'check_moved',l:'Scale moved since the last check?',t:'select',o:['No','Yes \u2014 full verification performed'],req:1},
+      {t:'section',l:'Test Weights (grams)'},
+      {k:'test_weight_cal_due',l:'Test Weight Calibration Due Date',t:'date',blank:1}]
+      .concat([1,2,3,4,5].reduce(function(a,i){return a.concat([
+        {k:'tw'+i+'_nominal',l:'Point '+i+' \u2014 '+SCALE_POINTS[i-1]+' \u2014 Test Weight',t:'text',num:1,req:1,ph:'e.g. 500',half:1},
+        {k:'tw'+i+'_reading',l:'Point '+i+' \u2014 '+SCALE_POINTS[i-1]+' \u2014 Scale Reading',t:'text',num:1,req:1,ph:'e.g. 500.0',half:1}]);},[]))
+      .concat([
+      {k:'scale_check',l:'Calibration Check Result',t:'scalecheck'},
+      {t:'section',l:'Action & Sign-off'},
+      {k:'out_of_service',l:'Scale status after check',t:'select',o:['In service \u2014 passed','Tagged out of service','Adjusted / repaired and re-verified']},
+      {k:'corrective_action',l:'Corrective Action (required if any point fails)',t:'textarea',ph:'What was done: re-level, clean, re-zero, service call, removed from service...'},
+      {k:'performed_by',l:'Performed By',t:'text',req:1,ph:'Facility agent name'},
+      {k:'verified_by',l:'Reviewed / Verified By',t:'text',ph:'Supervisor or QA'},
+      {k:'notes',l:'Notes',t:'textarea'}]),
+    res:function(d){return scaleCheck(d).result;},
+    needs:function(d,r){return r==='Fail'?'corrective_action':'';}},
+  {id:'security',name:'Security Malfunction Log',freq:'Every malfunction event',ruleCat:'Security',person:'reported_by',itemKey:'system_type',itemLabel:'System',
+    lists:[{key:'security.system_types',title:'System Types',ph:'e.g. CCTV Camera',def:['CCTV Camera','DVR/NVR Recorder','Motion Sensor','Door Access Control','Alarm System','Perimeter Fence/Gate','Safe/Vault','Other']}],
+    fields:[
+      {k:'date',l:'Date',t:'date',req:1},{k:'time',l:'Time Discovered',t:'time'},
+      {k:'reported_by',l:'Reported By',t:'text',req:1,ph:'Your name'},
+      {k:'system_type',l:'System Type',t:'select',list:'security.system_types',req:1},
+      {k:'location',l:'Location',t:'text',req:1,ph:'e.g. Front entrance camera'},
+      {k:'description',l:'Description of Malfunction',t:'textarea',req:1,ph:'What malfunctioned and how discovered'},
+      {k:'regulator_notified',l:'Regulator Notified?',t:'select',o:['Yes \u2014 within 24 hours','Yes \u2014 within 48 hours','Not required \u2014 minor','Pending']},
+      {k:'temp_measure',l:'Temporary Security Measure',t:'textarea',ph:'Interim measures while system is down'},
+      {k:'repair_date',l:'Repair Completed Date',t:'date',blank:1},
+      {k:'resolution',l:'Resolution / Repair',t:'textarea',ph:'How was it resolved?'},
+      {k:'verified_by',l:'Verified Operational By',t:'text',ph:'Name of verifying person'},
+      {k:'notes',l:'Notes',t:'textarea'}],
+    res:function(d){return (d.repair_date||String(d.resolution||'').trim())?'Resolved':'Open';}},
+  {id:'security_inspection',name:'Security Equipment Inspection',freq:'Weekly',ruleCat:'Security',person:'inspected_by',itemText:'Weekly inspection',itemLabel:'Inspection',sigReq:1,
+    lists:SEC_PARTS.map(function(p){return {key:p.list,title:p.title,ph:p.id==='cameras'?'e.g. VAULT 1':p.id==='doors'?'e.g. MAIN ENTRANCE':'e.g. MAIN ENTRANCE CONTACT SENSOR'};}),
+    fields:[
+      {k:'date',l:'Date',t:'date',req:1},{k:'time',l:'Time',t:'time'},
+      {k:'inspected_by',l:'Inspected By',t:'text',req:1,ph:'Inspector full name'},
+      {k:'_insp',t:'inspection'},
+      {k:'notes',l:'Notes / Issues Found',t:'textarea',ph:'Describe any failures, offline cameras, low batteries, or issues found during inspection...'}],
+    res:function(d,ctx){const c=inspCount(ctx.insp,ctx.lists);if(!c.done)return '';return c.fails?'Fail':c.done===c.total?'Pass':'Incomplete';},
+    needs:function(d,r){return r==='Fail'?'notes':'';}},
+  {id:'pest',name:'Pest Control Log',freq:'Each inspection / treatment',ruleCat:'Facility',person:'performed_by',itemKey:'type',itemLabel:'Type',
+    lists:[
+      {key:'pest.types',title:'Type',ph:'e.g. Routine inspection',def:['Routine inspection','Pest sighting report','Treatment / Extermination','Follow-up inspection','Bait station check','Glue trap check']},
+      {key:'pest.found',title:'Pests Found',ph:'e.g. Rodent evidence',hint:'Keep a "None..." choice: anything else marks the entry Flag',def:['None observed','Rodent evidence','Insects','Birds','Other']},
+      {key:'pest.stations',title:'Trap / Bait Stations',ph:'e.g. BS-01',hint:'Every numbered station on the station map (CSQ 2A.5.1). Attach the map itself on Standards, clause 2A.5.1.',
+        spec:[{k:'type',l:'Type (bait, glue board, snap trap, insect light)'},{k:'location',l:'Location'}]}],
+    fields:[
+      {k:'date',l:'Date',t:'date',req:1},
+      {k:'type',l:'Type',t:'select',list:'pest.types',req:1},
+      {k:'performed_by',l:'Performed By',t:'text',req:1,ph:'Name or licensed vendor'},
+      {k:'vendor_license',l:'Vendor License #',t:'text',ph:'PCO license number'},
+      {k:'areas_inspected',l:'Areas Inspected',t:'textarea',req:1,ph:'List all areas inspected'},
+      {k:'pests_found',l:'Pests Found',t:'select',list:'pest.found'},
+      {t:'section',l:'Stations Checked'},{k:'stations',t:'checklist',list:'pest.stations'},
+      {k:'station_activity',l:'Stations With Activity',t:'text',ph:'Station numbers with activity, e.g. BS-04, GT-02'},
+      {k:'pest_detail',l:'Pest Detail (if found)',t:'textarea',ph:'Type, quantity, location'},
+      {k:'treatment_applied',l:'Treatment / Chemical Applied',t:'text',ph:'Product name and EPA reg #'},
+      {k:'corrective_action',l:'Corrective Action',t:'textarea',ph:'Gaps sealed, entry points addressed'},
+      {k:'next_scheduled',l:'Next Scheduled Inspection',t:'date',blank:1},
+      {k:'notes',l:'Notes',t:'textarea'}],
+    res:function(d){if(!d.pests_found)return '';return /^none/i.test(d.pests_found)?'OK':'Flag';}},
+  {id:'equipment',name:'Equipment Maintenance Log',freq:'Each maintenance event',ruleCat:'Facility',person:'performed_by',itemKey:'equipment_name',itemLabel:'Equipment',
+    lists:[
+      {key:'equipment.equipment',title:'Equipment',ph:'e.g. Filling Machine #2',hint:'Picking it on the form fills in its ID / serial',spec:[{k:'serial',l:'Equipment ID / Serial #'}]},
+      {key:'equipment.maint_types',title:'Maintenance Types',ph:'e.g. Routine/Preventive',def:['Routine/Preventive','Corrective/Repair','Calibration','Deep clean','Inspection','Part replacement']}],
+    fields:[
+      {k:'date',l:'Date',t:'date',req:1},
+      {k:'equipment_name',l:'Equipment Name',t:'pick',list:'equipment.equipment',req:1,ph:'e.g. Filling Machine #2',fill:{equipment_id:'serial'}},
+      {k:'equipment_id',l:'Equipment ID / Serial #',t:'text',ph:'Asset tag or serial number'},
+      {k:'maintenance_type',l:'Maintenance Type',t:'select',list:'equipment.maint_types',req:1},
+      {k:'performed_by',l:'Performed By',t:'text',req:1,ph:'Technician name'},
+      {k:'description',l:'Work Performed',t:'textarea',req:1,ph:'Describe maintenance performed'},
+      {k:'parts_replaced',l:'Parts Replaced',t:'text',ph:'Part names and numbers'},
+      {k:'downtime_hours',l:'Downtime (hours)',t:'text',ph:'e.g. 2.5'},
+      {k:'pass_fail',l:'Equipment Status After',t:'select',o:['Pass \u2014 returned to service','Conditional \u2014 monitor closely','Fail \u2014 out of service','Pending parts / repair']},
+      {k:'next_maintenance',l:'Next Scheduled Maintenance',t:'date',blank:1},
+      {k:'notes',l:'Notes',t:'textarea'}],
+    res:function(d){if(!d.pass_fail)return '';return /^pass/i.test(d.pass_fail)?'OK':/^fail/i.test(d.pass_fail)?'Fail':'Flag';}},
+  {id:'temperature',name:'Temp / Humidity Log',freq:'Every shift',ruleCat:'Facility',person:'recorded_by',itemKey:'location',itemLabel:'Location',
+    lists:[SHIFTS,
+      {key:'temperature.rooms',title:'Locations / Rooms',ph:'e.g. Storage Vault',hint:'Optional ranges set "Within Acceptable Range?" automatically',
+        spec:[{k:'min',l:'Min \u00b0F',num:1},{k:'max',l:'Max \u00b0F',num:1},{k:'hmin',l:'Min RH %',num:1},{k:'hmax',l:'Max RH %',num:1}]}],
+    fields:[
+      {k:'date',l:'Date',t:'date',req:1},{k:'time',l:'Time',t:'time',req:1},
+      {k:'shift',l:'Shift',t:'select',list:'common.shifts'},
+      {k:'recorded_by',l:'Recorded By',t:'text',req:1,ph:'Employee name'},
+      {k:'location',l:'Location / Room',t:'pick',list:'temperature.rooms',req:1,ph:'e.g. Pre-Roll Room, Storage Vault'},
+      {k:'temperature_f',l:'Temperature (\u00b0F)',t:'text',num:1,req:1,ph:'e.g. 68.5',half:1},
+      {k:'humidity_pct',l:'Relative Humidity (%)',t:'text',num:1,req:1,ph:'e.g. 55',half:1},
+      {k:'in_range',l:'Within Acceptable Range?',t:'select',o:[TEMP_IN,TEMP_OUT,'No \u2014 equipment malfunction']},
+      {k:'corrective_action',l:'Corrective Action (if out of range)',t:'textarea',ph:'Action taken to correct'},
+      {k:'notes',l:'Notes',t:'textarea'}],
+    recalc:function(d,k,lists){
+      if(['temperature_f','humidity_pct','location'].indexOf(k)<0||!numOk(d.temperature_f))return d;
+      const room=(lists['temperature.rooms']||[]).find(function(i){return i.name===d.location;});const s=(room&&room.spec)||{};
+      if(!(numOk(s.min)||numOk(s.max)||numOk(s.hmin)||numOk(s.hmax)))return d;
+      let bad=false;const t=num(d.temperature_f);
+      if(numOk(s.min)&&t<num(s.min))bad=true;if(numOk(s.max)&&t>num(s.max))bad=true;
+      if(numOk(d.humidity_pct)){const h=num(d.humidity_pct);if(numOk(s.hmin)&&h<num(s.hmin))bad=true;if(numOk(s.hmax)&&h>num(s.hmax))bad=true;}
+      return {...d,in_range:bad?TEMP_OUT:TEMP_IN};
+    },
+    res:function(d){if(!d.in_range)return '';return /^yes/i.test(d.in_range)?'Pass':'Fail';},
+    needs:function(d,r){return r==='Fail'?'corrective_action':'';}},
+  {id:'environmental',name:'Environmental Monitoring Log',freq:'Monthly minimum',ruleCat:'Facility',person:'performed_by',itemKey:'location',itemLabel:'Location',
+    lists:[
+      {key:'environmental.locations',title:'Sampling Locations',ph:'e.g. Pre-Roll Room - floor drain'},
+      {key:'environmental.sample_types',title:'Sample Types',ph:'e.g. ATP swab (surface)',def:['ATP swab (surface)','Air sample','Water sample','Drain swab','Equipment surface swab','Hand swab']}],
+    fields:[
+      {k:'date',l:'Date',t:'date',req:1},
+      {k:'performed_by',l:'Performed By',t:'text',req:1,ph:'QC technician name'},
+      {k:'location',l:'Sampling Location',t:'select',list:'environmental.locations',req:1,ph:'e.g. Pre-Roll Room - floor drain'},
+      {k:'sample_type',l:'Sample Type',t:'select',list:'environmental.sample_types',req:1},
+      {k:'test_method',l:'Test Method / Equipment',t:'text',ph:'e.g. ATP luminometer'},
+      {k:'result_value',l:'Result Value',t:'text',ph:'e.g. 245 RLU'},
+      {k:'pass_fail',l:'Pass / Fail',t:'select',o:['Pass \u2014 within limit','Fail \u2014 exceeds limit','Inconclusive \u2014 retest required'],req:1},
+      {k:'corrective_action',l:'Corrective Action (if fail)',t:'textarea',ph:'Immediate corrective action taken'},
+      {k:'retest_date',l:'Retest Date (if required)',t:'date',blank:1},
+      {k:'notes',l:'Notes',t:'textarea'}],
+    res:function(d){if(!d.pass_fail)return '';return /^pass/i.test(d.pass_fail)?'Pass':/^fail/i.test(d.pass_fail)?'Fail':'Flag';},
+    needs:function(d,r){return r==='Fail'?'corrective_action':'';}}
+];
+function listDef(key){
+  for(let i=0;i<LOG_TYPES.length;i++){const l=LOG_TYPES[i].lists.find(function(x){return x.key===key;});if(l)return l;}
+  return null;
+}
+// choices for a select: the license's own list, else the built-in defaults, else the field's fixed options; null = type-in
+function fieldOptions(f,lists){
+  if(f.list){
+    let own=(lists[f.list]||[]).map(function(i){return i.name;});
+    if(!own.length&&f.legacy)own=(lists[f.legacy]||[]).map(function(i){return i.name;});
+    if(own.length)return own;
+    const L=listDef(f.list);if(L&&L.def)return L.def;
+    return null;
+  }
+  return f.o||null;
+}
+function groupLists(rows,activeOnly){
+  const g={};(rows||[]).forEach(function(r){if(activeOnly&&!r.active)return;(g[r.list_key]=g[r.list_key]||[]).push(r);});
+  Object.keys(g).forEach(function(k){g[k].sort(function(a,b){return (a.sort||0)-(b.sort||0)||String(a.name).localeCompare(String(b.name));});});
+  return g;
+}
+function ResultBadge(props){
+  const r=props.r||'';if(!r)return null;
+  return el('span',{className:'badge'+(OK_RES.indexOf(r)>=0?' ok':FLAG_RES.indexOf(r)>=0?' bad':'')},r);
+}
+
+/* Calibration check box (live on the form, same rules as Black Fox) */
+function ScaleCheckBox(props){
+  const c=scaleCheck(props.d);
+  const certTxt=c.cert.status==='unknown'?'Enter the last annual certification date':c.cert.status==='overdue'?'Annual certification OVERDUE (was due '+c.cert.due+')':'Annual certification due '+c.cert.due+' ('+c.cert.days+' days)'+(c.cert.status==='due-soon'?' - due soon':'');
+  return el('div',{className:'card',style:{padding:12,background:'#0f0f0f'}},
+    el('div',{className:'row',style:{justifyContent:'space-between'}},el('span',{className:'k'},'Calibration check  \u00b7  tolerance \u00b1'+c.tol+' g'),el(ResultBadge,{r:c.result||'Incomplete'})),
+    el('table',{style:{marginTop:6}},el('tbody',null,c.pts.map(function(p){
+      return el('tr',{key:p.i},el('td',null,p.i+'. '+p.name),el('td',null,p.nom===null?'-':p.nom+' g'),el('td',null,p.rd===null?'-':p.rd+' g'),
+        el('td',null,p.diff===null?'':(p.diff>0?'+':'')+p.diff+' g'),el('td',null,p.ok===null?'':el('span',{className:'badge '+(p.ok?'ok':'bad')},p.ok?'OK':'FAIL')));}))),
+    el('div',{className:c.cert.status==='overdue'?'msg err':'muted',style:{marginTop:8,fontSize:13}},certTxt),
+    c.nextDue&&el('div',{className:'muted',style:{fontSize:13}},'Next weekly check due '+c.nextDue));
+}
+
+/* Weekly security inspection grid: Cameras / Door Locks / Alarm System */
+function InspectionGrid(props){
+  const insp=props.insp,lists=props.lists;
+  const[tab,setTab]=useState('cameras');
+  const c=inspCount(insp,lists);
+  const part=SEC_PARTS.find(function(p){return p.id===tab;});
+  const items=lists[part.list]||[];
+  function set(pid,name,field,v){props.setInsp(function(p){const P={...(p[pid]||{})};P[name]={...(P[name]||{}),[field]:v};return {...p,[pid]:P};});}
+  return el('div',{style:{marginBottom:14}},
+    el('div',{className:'row',style:{marginBottom:8}},
+      el('span',{className:'k'},'Progress'),el('span',null,c.done+' / '+c.total+' checked'),
+      c.fails>0&&el('span',{className:'badge bad'},c.fails+' FAIL'+(c.fails===1?'':'S')+' found'),
+      !c.fails&&c.done>0&&el('span',{className:'badge ok'},c.done===c.total?'All clear':'In progress')),
+    el('div',{className:'tabs',style:{marginBottom:8}},SEC_PARTS.map(function(p){return el('button',{key:p.id,type:'button',className:tab===p.id?'on':'',onClick:function(){setTab(p.id);}},p.title+' ('+(lists[p.list]||[]).length+')');})),
+    !items.length?el('div',{className:'empty',style:{padding:16}},'No '+part.title.toLowerCase()+' set up for this license yet.'):
+    el('div',{style:{overflowX:'auto'}},el('table',null,
+      el('thead',null,el('tr',null,el('th',null,part.name),el('th',null,part.col),el('th',null,'Functionality'))),
+      el('tbody',null,items.map(function(it){
+        const s=((insp[part.id]||{})[it.name])||{};
+        return el('tr',{key:it.id},el('td',{style:{fontWeight:600}},it.name),
+          el('td',null,el('select',{value:s.a||'',style:{minWidth:120},onChange:function(e){set(part.id,it.name,'a',e.target.value);}},el('option',{value:''},'--'),part.opts.map(function(o){return el('option',{key:o,value:o},o);}))),
+          el('td',{style:{whiteSpace:'nowrap'}},SEC_STATUS.map(function(o){const on=s.s===o;
+            return el('button',{key:o,type:'button',className:'btn sm'+(on?(o==='FAIL'?' selbad':''):' ghost'),style:{marginRight:4},onClick:function(){set(part.id,it.name,'s',o);}},o);})));
+      })))));
+}
+
+/* The entry form: used by staff inside the app (new + admin edit) and by the QR kiosk */
+function LogForm(props){
+  const def=props.def,lists=props.lists||{};
+  function initD(){
+    const d={};
+    def.fields.forEach(function(f){
+      if(!f.k||f.t==='section'||f.t==='scalecheck'||f.t==='inspection'||f.t==='checklist')return;
+      if(f.t==='date')d[f.k]=f.blank?'':todayStr();
+      else if(f.t==='time')d[f.k]=f.blank?'':nowTime();
+      else if(f.t==='checkbox')d[f.k]=false;
+      else if(f.t==='select'){const o=fieldOptions(f,lists);d[f.k]=o&&o.length?o[0]:'';} // first choice, as Black Fox
+      else d[f.k]='';
+    });
+    if(def.person&&props.defaultName)d[def.person]=props.defaultName;
+    if(props.initial){const x=props.initial.data||{};Object.keys(x).forEach(function(k){if(['cameras','doors','alarms','item_spec'].indexOf(k)<0)d[k]=x[k];});d._item_id=props.initial.item_id||'';}
+    return d;
+  }
+  function initInsp(){
+    const o={};const x=(props.initial&&props.initial.data)||{};
+    SEC_PARTS.forEach(function(p){o[p.id]={};(x[p.id]||[]).forEach(function(r){o[p.id][r.name]={a:r.detail||'',s:r.status||''};});});
+    return o;
+  }
+  const[d,setD]=useState(initD);
+  const[insp,setInsp]=useState(initInsp);
+  const[sig,setSig]=useState('');
+  const[reason,setReason]=useState('');
+  const[sigKey,setSigKey]=useState(0);
+  const[err,setErr]=useState('');
+  const[busy,setBusy]=useState(false);
+  const ctx={lists:lists,insp:insp};
+  const res=def.res(d,ctx)||'';
+  const need=def.needs?def.needs(d,res):'';
+  const needField=need?def.fields.find(function(f){return f.k===need;}):null;
+  const editing=!!props.initial;
+  function setF(k,v){setD(function(p){let n={...p,[k]:v};if(def.recalc)n=def.recalc(n,k,lists);return n;});}
+  function pick(f,v){
+    const it=(lists[f.list]||[]).find(function(i){return i.id===v;});
+    setD(function(p){
+      let n={...p,[f.k]:it?it.name:'',_item_id:it?it.id:''};
+      if(it&&f.fill)Object.keys(f.fill).forEach(function(dst){const sv=(it.spec||{})[f.fill[dst]];if(sv!==undefined&&sv!==null&&sv!=='')n[dst]=String(sv);});
+      if(def.recalc)n=def.recalc(n,f.k,lists);
+      return n;
+    });
+  }
+  function checkAll(f,on){const o={};(lists[f.list]||[]).forEach(function(i){o[i.name]=on;});setF(f.k,o);}
+  async function submit(){
+    setErr('');
+    for(let i=0;i<def.fields.length;i++){
+      const f=def.fields[i];if(!f.k||f.t==='checkbox'||f.t==='section'||f.t==='checklist'||f.t==='scalecheck'||f.t==='inspection')continue;
+      const v=String(d[f.k]==null?'':d[f.k]).trim();
+      if(f.req&&!v){setErr((f.l||f.k)+' is required.');return;}
+      if(f.num&&v&&!numOk(v)){setErr(f.l+' must be a number.');return;}
+    }
+    if(need&&!String(d[need]||'').trim()){setErr('Result is '+res+'. Fill in "'+(needField?needField.l:need)+'" before saving.');return;}
+    if((props.kiosk||(def.sigReq&&!editing))&&!sig){setErr('Please sign in the box.');return;}
+    if(editing&&!reason.trim()){setErr('Enter the reason for change. It is saved permanently in the audit trail.');return;}
+    const data={};
+    def.fields.forEach(function(f){
+      if(!f.k||f.t==='section'||f.t==='scalecheck'||f.t==='inspection')return;
+      if(f.t==='checklist'){const cur=d[f.k]||{},o={};(lists[f.list]||[]).forEach(function(i){o[i.name]=!!cur[i.name];});Object.keys(cur).forEach(function(n){if(!(n in o))o[n]=!!cur[n];});data[f.k]=o;return;}
+      if(f.t==='checkbox'){data[f.k]=!!d[f.k];return;}
+      const v=String(d[f.k]==null?'':d[f.k]).trim();if(v)data[f.k]=v;
+    });
+    if(def.id==='scale_calibration'){data.scale_tolerance=String(scaleCheck(d).tol);data.scale_next_due=scaleCheck(d).nextDue;}
+    if(def.fields.some(function(f){return f.t==='inspection';}))SEC_PARTS.forEach(function(p){
+      data[p.id]=(lists[p.list]||[]).map(function(it){const s=(insp[p.id]||{})[it.name]||{};return {name:it.name,detail:s.a||'',status:s.s||''};});});
+    let itemId=d._item_id||'';
+    const pf=def.fields.find(function(f){return f.t==='pick'&&f.k===def.itemKey;});
+    if(pf&&itemId){const it=(lists[pf.list]||[]).find(function(i){return i.id===itemId;});if(!it||it.name!==d[pf.k])itemId='';else if(it.spec&&Object.keys(it.spec).length)data.item_spec=it.spec;}
+    setBusy(true);
+    try{
+      await props.onSubmit({item_id:itemId,item:def.itemKey?String(d[def.itemKey]||''):def.itemText,data:data,result:res||'Logged',performed_by:String(d[def.person]||'').trim(),signature:sig,edit_reason:reason.trim()});
+      if(props.kiosk){setD(initD());setInsp(initInsp());setSig('');setSigKey(function(k){return k+1;});}
+    }catch(e){setErr(String(e.message||e));}
+    setBusy(false);
+  }
+  function input(f){
+    const v=d[f.k]==null?'':d[f.k];
+    const set=function(e){setF(f.k,e.target.value);};
+    if(f.t==='date')return el('input',{type:'date',value:v,onChange:set});
+    if(f.t==='time')return el('input',{type:'time',value:v,onChange:set});
+    if(f.t==='textarea')return el('textarea',{value:v,placeholder:f.ph||'',style:{minHeight:70},onChange:set});
+    if(f.t==='pick'){
+      const items=lists[f.list]||[];
+      if(!items.length)return el('input',{value:v,placeholder:f.ph||'Type it in (no list set up yet)',onChange:set});
+      const cur=d._item_id&&items.some(function(i){return i.id===d._item_id;})?d._item_id:'';
+      return el('select',{style:{width:'100%'},value:cur,onChange:function(e){pick(f,e.target.value);}},
+        el('option',{value:''},v&&!cur?v+' (not in list)':'Select...'),items.map(function(i){return el('option',{key:i.id,value:i.id},i.name);}));
+    }
+    if(f.t==='select'){
+      const opts=fieldOptions(f,lists);
+      if(!opts)return el('input',{value:v,placeholder:f.ph||'Type it in (no list set up yet)',onChange:set});
+      return el('select',{style:{width:'100%'},value:v,onChange:set},
+        f.list&&el('option',{value:''},'Select...'),v&&opts.indexOf(v)<0&&el('option',{value:v},v),
+        opts.map(function(o){return el('option',{key:o,value:o},o);}));
+    }
+    return el('input',{value:v,placeholder:f.ph||'',inputMode:f.num?'decimal':undefined,onChange:set});
+  }
+  const out=[];let halves=[];
+  function flush(){if(halves.length){out.push(el('div',{key:'h'+out.length,className:'grid',style:{gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:10}},halves));halves=[];}}
+  def.fields.forEach(function(f,idx){
+    const key=f.k||('s'+idx);
+    let node;
+    if(f.t==='section')node=el('div',{key:key,className:'secth'},f.l);
+    else if(f.t==='scalecheck')node=el(ScaleCheckBox,{key:key,d:d});
+    else if(f.t==='inspection')node=el(InspectionGrid,{key:key,insp:insp,setInsp:setInsp,lists:lists});
+    else if(f.t==='checklist'){
+      const items=lists[f.list]||[];const cur=d[f.k]||{};
+      node=items.length?el('div',{key:key,style:{marginBottom:12}},
+        el('div',{className:'row',style:{marginBottom:6}},el('button',{type:'button',className:'btn ghost sm',onClick:function(){checkAll(f,true);}},'Check all'),el('button',{type:'button',className:'btn ghost sm',onClick:function(){checkAll(f,false);}},'Clear'),
+          el('span',{className:'muted',style:{fontSize:12}},items.filter(function(i){return cur[i.name];}).length+' of '+items.length)),
+        el('div',{className:'cklist'},items.map(function(i){return el('label',{key:i.id,className:'ck'},el('input',{type:'checkbox',checked:!!cur[i.name],onChange:function(e){const on=e.target.checked;setD(function(p){return {...p,[f.k]:{...(p[f.k]||{}),[i.name]:on}};});}}),el('span',null,i.name));})))
+        :el('div',{key:key,className:'muted',style:{fontSize:13,marginBottom:12}},'No items set up for this license yet.');
+    }
+    else if(f.t==='checkbox')node=el('label',{key:key,className:'ck',style:{marginBottom:10}},el('input',{type:'checkbox',checked:!!d[f.k],onChange:function(e){setF(f.k,e.target.checked);}}),el('span',null,f.l));
+    else node=el(Field,{key:key,label:f.l+(f.req||(f.k===need)?' *':'')},input(f));
+    if(f.half){halves.push(node);return;}
+    flush();out.push(node);
+  });
+  flush();
+  return el('div',null,
+    el('div',{className:'muted',style:{fontSize:12,marginBottom:10}},'Fields marked * are required.'),
+    out,
+    res&&el('div',{className:'row',style:{margin:'4px 0 12px'}},el('span',{className:'k'},'Result'),el(ResultBadge,{r:res})),
+    (props.kiosk||!editing)&&el(Field,{label:'Signature'+((props.kiosk||def.sigReq)?' *':' (optional)'),plain:true},el(SignaturePad,{key:sigKey,onChange:function(v){setSig(v);}})),
+    editing&&el('div',{className:'card',style:{borderColor:'var(--gold-lo)',padding:12}},
+      el(Field,{label:'Reason for change *'},el('textarea',{value:reason,style:{minHeight:60},placeholder:'Why is this record being changed? Saved permanently in the audit trail.',onChange:function(e){setReason(e.target.value);}})),
+      el('div',{className:'muted',style:{fontSize:12}},'The original values, who changed them and when are kept in the audit trail.')),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},
+      props.onCancel&&el('button',{className:'btn ghost',onClick:props.onCancel},'Cancel'),
+      el('button',{className:'btn',style:props.kiosk?{width:'100%',padding:13}:null,disabled:busy,onClick:submit},busy?'Saving...':editing?'Save changes':'Submit entry')));
+}
+
+/* Full record as HTML: used for View, Print and PDF (browser print) */
+const REC_CSS='<style>.hxrec{font-family:Arial,sans-serif;color:#111;background:#fff;padding:18px;border-radius:8px;font-size:13px}.hxrec h2{margin:0 0 2px;font-size:18px}.hxrec .m{color:#555;font-size:12px}.hxrec table{width:100%;border-collapse:collapse;margin:8px 0}.hxrec td,.hxrec th{border:1px solid #ccc;padding:5px 7px;text-align:left;vertical-align:top;font-size:12px;color:#111}.hxrec th{background:#f2f2f2;width:38%;text-transform:none;letter-spacing:0;font-weight:700}.hxrec .sec td{background:#222;color:#fff;font-weight:700;letter-spacing:.06em}.hxrec .bad{color:#b00020;font-weight:700}.hxrec .void{border:2px solid #b00020;color:#b00020;font-weight:700;padding:8px 10px;margin:8px 0;border-radius:6px}.hxrec .hist td{font-size:11px}.hxrec .ok{color:#0a7a3a;font-weight:700}.hxrec img{max-width:320px;border:1px solid #ccc}.pb{page-break-after:always}</style>';
+function entryHtml(def,st,lic,r,sig,hist){
+  const d=r.data||{};const e=esc3;
+  const rows=[];
+  def.fields.forEach(function(f){
+    if(f.t==='section'){rows.push('<tr class="sec"><td colspan="2">'+e(f.l.toUpperCase())+'</td></tr>');return;}
+    if(f.t==='checklist'){const o=d[f.k]||{};const ks=Object.keys(o);
+      rows.push('<tr><th>Completed</th><td>'+(ks.length?ks.map(function(n){return (o[n]?'<span class="ok">[x]</span> ':'[ ] ')+e(n);}).join('<br>'):'-')+'</td></tr>');return;}
+    if(f.t==='scalecheck'){const c=scaleCheck(d);
+      rows.push('<tr><th>Calibration check (tolerance &plusmn;'+c.tol+' g)</th><td>'+c.pts.map(function(p){return e(p.i+'. '+p.name)+': '+(p.nom===null?'-':p.nom)+' / '+(p.rd===null?'-':p.rd)+(p.ok===null?'':' <span class="'+(p.ok?'ok':'bad')+'">'+(p.ok?'OK':'FAIL')+' ('+(p.diff>0?'+':'')+p.diff+')</span>');}).join('<br>')+
+        '<br>Certification: '+e(c.cert.status==='unknown'?'not entered':c.cert.status+' (due '+c.cert.due+')')+(d.scale_next_due?'<br>Next check due: '+e(d.scale_next_due):'')+'</td></tr>');return;}
+    if(f.t==='inspection'){SEC_PARTS.forEach(function(p){const a=d[p.id]||[];
+      rows.push('<tr class="sec"><td colspan="2">'+e(p.title.toUpperCase())+'</td></tr>');
+      rows.push('<tr><td colspan="2">'+(a.length?'<table><tr><th>'+e(p.name)+'</th><th>'+e(p.col)+'</th><th>Functionality</th></tr>'+a.map(function(x){return '<tr><td>'+e(x.name)+'</td><td>'+e(x.detail||'')+'</td><td class="'+(x.status==='FAIL'?'bad':x.status==='OK'?'ok':'')+'">'+e(x.status||'-')+'</td></tr>';}).join('')+'</table>':'None')+'</td></tr>');});return;}
+    if(!f.k)return;
+    const v=d[f.k];
+    rows.push('<tr><th>'+e(f.l)+'</th><td>'+(f.t==='checkbox'?(v?'Yes':'No'):e(v==null||v===''?'-':v))+'</td></tr>');
+  });
+  const resCls=OK_RES.indexOf(r.result)>=0?'ok':FLAG_RES.indexOf(r.result)>=0?'bad':'';
+  return '<div class="hxrec"><div class="m">'+e((st.name||'').toUpperCase())+' &middot; '+e(lic.name)+' &middot; License '+e(lic.license_number||'-')+'</div>'+
+    '<h2>'+e(def.name)+'</h2><div class="m">Entry '+e(r.id)+' &middot; saved '+e(new Date(r.created_at).toLocaleString())+' &middot; '+(r.source==='kiosk'?'QR kiosk':'App')+'</div>'+
+    '<table>'+rows.join('')+'<tr class="sec"><td colspan="2">SIGN-OFF</td></tr><tr><th>Result</th><td class="'+resCls+'">'+e(r.result||'-')+'</td></tr><tr><th>Submitted by</th><td>'+e(r.performed_by||'-')+'</td></tr>'+
+    '<tr><th>Signature</th><td>'+(sig?'<img src="'+e(sig)+'">':'Not signed')+'</td></tr></table>'+
+    (r.voided?'<div class="void">VOID'+(r.voided_at?' &middot; '+e(new Date(r.voided_at).toLocaleString()):'')+'<br>Reason: '+e(r.void_reason||'-')+'</div>':'')+
+    (hist?historyHtml(hist,def):'')+'</div>';
+}
+function printRecords(title,htmls){
+  const w=window.open('','_blank');if(!w)return;
+  w.document.write('<html><head><title>'+esc3(title)+'</title>'+REC_CSS+'</head><body style="margin:0">'+htmls.map(function(h,i){return '<div'+(i<htmls.length-1?' class="pb"':'')+'>'+h+'</div>';}).join('')+'</body></html>');
+  w.document.close();setTimeout(function(){w.print();},500);
+}
+
+/* ---------- Printable QR signs (letter size, Black & Gold or Light) ---------- */
+function qrDataUrl(text,size){
+  const d=document.createElement('div');
+  try{new window.QRCode(d,{text:text,width:size,height:size,colorDark:'#0a0a0a',colorLight:'#ffffff',correctLevel:window.QRCode.CorrectLevel.Q});}catch(e){return '';}
+  const c=d.querySelector('canvas');if(c)return c.toDataURL('image/png');
+  const i=d.querySelector('img');return i?i.src:'';
+}
+const SIGN_LOGO='<svg viewBox="0 0 40 40" width="54" height="54"><defs><linearGradient id="sg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6e39a"/><stop offset=".5" stop-color="#d4af37"/><stop offset="1" stop-color="#9c7a17"/></linearGradient></defs>'+
+  '<polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="none" stroke="url(#sg)" stroke-width="2.4"/><path d="M13 12v16M27 12v16M13 20h14" stroke="url(#sg)" stroke-width="3" stroke-linecap="round" fill="none"/></svg>';
+const SIGN_CSS='@page{size:letter;margin:0}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
+  'html,body{margin:0;background:#3a3a3a;font-family:Montserrat,"Helvetica Neue",Arial,sans-serif}'+
+  '.bar{position:sticky;top:0;z-index:5;display:flex;gap:8px;justify-content:center;align-items:center;padding:12px;background:#111;border-bottom:1px solid #333;font-size:13px;color:#ccc}'+
+  '.bar button{font:inherit;font-weight:700;border-radius:8px;padding:8px 16px;cursor:pointer;border:1px solid #a8841c;background:transparent;color:#f1d57a}'+
+  '.bar button.on,.bar .print{background:linear-gradient(135deg,#f1d57a,#d4af37 45%,#a8841c);color:#111;border-color:#d4af37}'+
+  '.sheet{width:8.5in;height:11in;margin:20px auto;position:relative;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.5)}'+
+  '.frame{position:absolute;inset:.35in;border:2px solid #d4af37;padding:.3in .45in;display:flex;flex-direction:column;align-items:center;text-align:center}'+
+  '.frame:before{content:"";position:absolute;inset:6px;border:1px solid rgba(212,175,55,.45);pointer-events:none}'+
+  '.cn{position:absolute;width:26px;height:26px;border-color:#d4af37;border-style:solid}.cn.a{top:-2px;left:-2px;border-width:6px 0 0 6px}.cn.b{top:-2px;right:-2px;border-width:6px 6px 0 0}.cn.c{bottom:-2px;left:-2px;border-width:0 0 6px 6px}.cn.d{bottom:-2px;right:-2px;border-width:0 6px 6px 0}'+
+  '.brand{display:flex;align-items:center;gap:12px;margin-top:.05in}.bn{font-weight:800;letter-spacing:.32em;font-size:20px;text-align:left}.bs{font-size:9px;letter-spacing:.42em;margin-top:2px;text-align:left}'+
+  '.eyebrow{margin-top:.32in;font-size:12px;letter-spacing:.45em;font-weight:700;text-transform:uppercase}'+
+  'h1{font-family:"Cormorant Garamond",Georgia,serif;font-weight:700;font-size:50px;line-height:1.02;margin:.08in 0 0;letter-spacing:.01em}'+
+  '.rule{display:flex;align-items:center;gap:12px;width:60%;margin:.16in 0 .2in}.rule i{flex:1;height:1px;background:linear-gradient(90deg,transparent,#d4af37,transparent)}.rule b{width:9px;height:9px;transform:rotate(45deg);background:#d4af37}'+
+  '.qrbox{position:relative;padding:18px;border-radius:18px;background:#fff;box-shadow:0 0 0 2px #d4af37,0 0 0 9px rgba(212,175,55,.18)}.qrbox img{display:block;width:3.7in;height:3.7in;image-rendering:pixelated}'+
+  '.cta{margin-top:.24in;font-weight:800;font-size:24px;letter-spacing:.24em;text-transform:uppercase}'+
+  '.ctas{font-size:13px;margin-top:4px}'+
+  '.steps{display:flex;gap:.22in;margin-top:.3in;width:100%;justify-content:center}.st{flex:1;max-width:1.95in;padding:12px 10px;border-radius:12px}'+
+  '.st .n{width:30px;height:30px;border-radius:50%;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;background:linear-gradient(135deg,#f1d57a,#d4af37 45%,#a8841c);color:#111}'+
+  '.st .t{font-weight:800;font-size:12px;letter-spacing:.12em;text-transform:uppercase}.st .d{font-size:11px;margin-top:3px;line-height:1.35}'+
+  '.foot{margin-top:auto;width:100%;display:flex;justify-content:space-between;align-items:flex-end;padding-top:.14in;border-top:1px solid rgba(212,175,55,.5);text-align:left;font-size:11px}'+
+  '.foot .ln{font-weight:800;font-size:15px}.foot .r{text-align:right}'+
+  /* Black & Gold */
+  '.dark .sheet{background:radial-gradient(ellipse at 50% 0,#2a220c 0,#0d0d0d 55%,#060606 100%);color:#f2efe6}'+
+  '.dark .bn,.dark h1,.dark .cta{background:linear-gradient(135deg,#f6e39a 0,#d4af37 45%,#b08a1e 100%);-webkit-background-clip:text;background-clip:text;color:transparent}'+
+  '.dark .bs,.dark .ctas,.dark .st .d,.dark .foot{color:#b9b4a5}.dark .eyebrow,.dark .st .t{color:#d4af37}.dark .st{background:rgba(212,175,55,.07);border:1px solid rgba(212,175,55,.3)}.dark .foot .ln{color:#f2efe6}'+
+  /* Light (ink saver) */
+  '.light .sheet{background:#fbf8f0;color:#141414}.light .bn,.light h1,.light .cta{color:#141414}.light .bs,.light .ctas,.light .st .d,.light .foot{color:#5b574d}'+
+  '.light .eyebrow,.light .st .t{color:#9c7a17}.light .st{background:#fff;border:1px solid rgba(156,122,23,.35)}'+
+  '@media print{html,body{background:none}.bar{display:none}.sheet{margin:0;box-shadow:none}}';
+function printSignSheet(o){
+  const e=esc3,qr=qrDataUrl(o.link,640);
+  if(!qr){window.alert('Could not create the QR code.');return;}
+  const steps=(o.steps||[]).map(function(s,i){return '<div class="st"><div class="n">'+(i+1)+'</div><div class="t">'+e(s[0])+'</div><div class="d">'+e(s[1])+'</div></div>';}).join('');
+  const html='<!doctype html><html><head><meta charset="utf-8"><title>'+e(o.title+' - '+o.lic.name)+'</title>'+
+    '<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">'+
+    '<style>'+SIGN_CSS+'</style></head><body class="dark">'+
+    '<div class="bar"><span>Sign style</span><button id="bd" class="on" onclick="document.body.className=\'dark\';this.className=\'on\';document.getElementById(\'bl\').className=\'\'">Black &amp; Gold</button>'+
+    '<button id="bl" onclick="document.body.className=\'light\';this.className=\'on\';document.getElementById(\'bd\').className=\'\'">Light (saves ink)</button>'+
+    '<button class="print" onclick="window.print()">Print</button><span>Letter size &middot; turn on &ldquo;Background graphics&rdquo; if colours are missing</span></div>'+
+    '<div class="sheet"><div class="frame"><span class="cn a"></span><span class="cn b"></span><span class="cn c"></span><span class="cn d"></span>'+
+      '<div class="brand">'+SIGN_LOGO+'<div><div class="bn">HENDRIX</div><div class="bs">QUALITY MANAGEMENT</div></div></div>'+
+      '<div class="eyebrow">'+e(o.eyebrow)+'</div><h1>'+e(o.title)+'</h1>'+
+      '<div class="rule"><i></i><b></b><i></i></div>'+
+      '<div class="qrbox"><img src="'+qr+'" alt="QR code"></div>'+
+      '<div class="cta">'+e(o.cta)+'</div><div class="ctas">'+e(o.ctaSub)+'</div>'+
+      '<div class="steps">'+steps+'</div>'+
+      '<div class="foot"><div><div class="ln">'+e(o.lic.name)+'</div>License '+e(o.lic.license_number||'-')+' &middot; '+e(o.stName)+'</div>'+
+        '<div class="r">This code records for this license only.<br>Questions? Ask a manager on duty.</div></div>'+
+    '</div></div></body></html>';
+  const w=window.open('','_blank');if(!w){window.alert('Allow pop-ups for this site to print the sign.');return;}
+  w.document.open();w.document.write(html);w.document.close();
+}
+
+/* Admin: one editable list */
+function ListSection(props){
+  const L=props.L,items=props.items;
+  const blank={name:'',spec:{}};
+  const[f,setF]=useState(blank);
+  const[editId,setEditId]=useState('');
+  const[err,setErr]=useState('');
+  async function run(fn){setErr('');try{await fn();await props.onChanged();}catch(e){setErr(String(e.message||e));}}
+  function save(){
+    const nm=f.name.trim();if(!nm)return;
+    const spec={};(L.spec||[]).forEach(function(s){const v=String(f.spec[s.k]==null?'':f.spec[s.k]).trim();if(v!=='')spec[s.k]=s.num&&numOk(v)?num(v):v;});
+    run(async function(){
+      if(editId)await db.update('hx_log_lists',editId,{name:nm,spec:spec});
+      else await db.insert('hx_log_lists',{id:newId('li'),state_id:props.st.id,license_id:props.lic.id,list_key:L.key,name:nm,spec:spec,sort:items.length,active:true});
+      setF(blank);setEditId('');
+    });
+  }
+  function copyDefaults(){run(async function(){for(let i=0;i<L.def.length;i++)await db.insert('hx_log_lists',{id:newId('li'),state_id:props.st.id,license_id:props.lic.id,list_key:L.key,name:L.def[i],spec:{},sort:i,active:true});});}
+  function specTxt(s){return (L.spec||[]).filter(function(x){return s&&s[x.k]!==undefined&&s[x.k]!=='';}).map(function(x){return x.l+': '+s[x.k];}).join('  \u00b7  ');}
+  return el('div',{className:'card',style:{padding:14}},
+    el('div',{className:'row',style:{justifyContent:'space-between'}},el('h3',{style:{margin:0}},L.title),el('span',{className:'muted',style:{fontSize:12}},items.filter(function(i){return i.active;}).length+' active')),
+    L.key.indexOf('common.')===0&&el('div',{className:'muted',style:{fontSize:12}},'Shared by every log of this license.'),
+    L.hint&&el('div',{className:'muted',style:{fontSize:12}},L.hint),
+    err&&el('div',{className:'msg err'},err),
+    !items.length&&(L.def?el('div',{className:'muted',style:{fontSize:13,margin:'8px 0'}},'Using the built-in choices: '+L.def.join(', ')+'. ',el('a',{href:'#',style:{color:'var(--gold-hi)'},onClick:function(e){e.preventDefault();copyDefaults();}},'Copy them here to edit')):
+      el('div',{className:'muted',style:{fontSize:13,margin:'8px 0'}},'Empty. The form shows a type-in box until you add items.')),
+    items.length>0&&el('table',{style:{margin:'8px 0'}},el('tbody',null,items.map(function(i){
+      return el('tr',{key:i.id},
+        el('td',null,el('div',{style:{fontWeight:600,opacity:i.active?1:.45}},i.name+(i.active?'':' (hidden)')),specTxt(i.spec)&&el('div',{className:'muted',style:{fontSize:12}},specTxt(i.spec))),
+        el('td',{style:{textAlign:'right',whiteSpace:'nowrap'}},
+          el('button',{className:'btn ghost sm',onClick:function(){setEditId(i.id);setF({name:i.name,spec:{...(i.spec||{})}});}},'Edit'),' ',
+          el('button',{className:'btn ghost sm',onClick:function(){run(function(){return db.update('hx_log_lists',i.id,{active:!i.active});});}},i.active?'Hide':'Show'),' ',
+          el('button',{className:'btn danger sm',onClick:function(){if(window.confirm('Delete "'+i.name+'"? Past entries keep its name.'))run(function(){return db.remove('hx_log_lists',i.id);});}},'Delete')));
+    }))),
+    el('div',{className:'row',style:{alignItems:'flex-end',marginTop:6}},
+      el('div',{style:{flex:'1 1 220px'}},el('input',{value:f.name,placeholder:editId?'Name':(L.ph||'Add an item'),onChange:function(e){setF({...f,name:e.target.value});},onKeyDown:function(e){if(e.key==='Enter'&&!L.spec)save();}})),
+      !L.spec&&el('button',{className:'btn sm',disabled:!f.name.trim(),onClick:save},editId?'Save':'+ Add'),
+      !L.spec&&editId&&el('button',{className:'btn ghost sm',onClick:function(){setF(blank);setEditId('');}},'Cancel')),
+    L.spec&&el('div',null,
+      el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(170px,1fr))',gap:8,marginTop:8}},L.spec.map(function(s){
+        return el(Field,{key:s.k,label:s.l},el('input',{type:s.t==='date'?'date':'text',inputMode:s.num?'decimal':undefined,value:f.spec[s.k]==null?'':f.spec[s.k],onChange:function(e){const x=e.target.value;setF(function(p){return {...p,spec:{...p.spec,[s.k]:x}};});}}));})),
+      el('div',{className:'row',style:{justifyContent:'flex-end'}},
+        editId&&el('button',{className:'btn ghost sm',onClick:function(){setF(blank);setEditId('');}},'Cancel'),
+        el('button',{className:'btn sm',disabled:!f.name.trim(),onClick:save},editId?'Save changes':'+ Add'))));
+}
+function ListManager(props){
+  const def=props.def,byKey=groupLists(props.rows,false);
+  return el(Modal,{title:def.name+' lists - '+props.lic.name,wide:true,onClose:props.onClose},
+    el('div',{className:'muted',style:{marginBottom:12}},'These lists belong to '+props.lic.name+' ('+props.st.name+') only. Other licenses keep their own.'),
+    def.lists.filter(function(L){return !(L.hideEmpty&&!(byKey[L.key]||[]).length);}).map(function(L){return el(ListSection,{key:L.key,L:L,items:byKey[L.key]||[],st:props.st,lic:props.lic,onChanged:props.onChanged});}));
+}
+
+function LogPanel(props){
+  const def=props.def,st=props.state,lic=props.license;
+  const isAdmin=can(LOG_MOD[def.id],3),canAdd=can(LOG_MOD[def.id],2),canAudit=can('audit',1);
+  const lists=groupLists(props.listRows,true);
+  const[rows,setRows]=useState(null);
+  const[range,setRange]=useState('30');
+  const[q,setQ]=useState('');
+  const[err,setErr]=useState('');
+  const[modal,setModal]=useState(null);
+  const[copied,setCopied]=useState(false);
+  const[showRules,setShowRules]=useState(false);
+  const qrId='hxqr-'+def.id;
+  const link=window.location.origin+window.location.pathname+'?kiosk=log&type='+def.id+'&state='+encodeURIComponent(st.id)+'&lic='+encodeURIComponent(lic.id);
+  const loadRows=useCallback(function(){
+    let qs='license_id=eq.'+encodeURIComponent(lic.id)+'&state_id=eq.'+encodeURIComponent(st.id)+'&log_type=eq.'+def.id+'&select=id,state_id,license_id,item,item_id,data,result,performed_by,source,created_at,voided,void_reason,voided_at&order=created_at.desc&limit=1000';
+    if(range!=='all')qs+='&created_at=gte.'+encodeURIComponent(new Date(Date.now()-parseInt(range,10)*86400000).toISOString());
+    return db.get('hx_facility_log',qs).then(function(r){setRows((r||[]).filter(function(x){return x.license_id===lic.id&&x.state_id===st.id;}));})
+      .catch(function(e){setErr(String(e.message||e));setRows([]);});
+  },[lic.id,def.id,range]);
+  useEffect(function(){setRows(null);loadRows();},[loadRows]);
+  const list=(rows||[]).filter(function(r){const t=(r.item+' '+r.performed_by+' '+r.result+' '+JSON.stringify(r.data||{})).toLowerCase();return !q||t.indexOf(q.toLowerCase())>=0;});
+  function when(r){const d=r.data||{};return d.date?(d.date+(d.time?' '+d.time:'')):new Date(r.created_at).toLocaleString();}
+  function details(r){
+    const d=r.data||{};
+    if(def.id==='sanitation'){let a=0,b=0;['areas','equip_san','equip_clean','weekly','monthly'].forEach(function(k){const o=d[k]||{};Object.keys(o).forEach(function(n){b++;if(o[n])a++;});});return a+' of '+b+' items done'+(d.sanitizer_used?'  \u00b7  '+d.sanitizer_used:'');}
+    if(def.id==='security_inspection'){let t=0,f=[];SEC_PARTS.forEach(function(p){(d[p.id]||[]).forEach(function(x){if(x.status)t++;if(x.status==='FAIL')f.push(x.name);});});return t+' checked'+(f.length?'  \u00b7  FAIL: '+f.join(', '):'');}
+    if(def.id==='scale_calibration'){const c=scaleCheck(d);return c.pts.filter(function(p){return p.ok!==null;}).length+'/5 points  \u00b7  cert '+(c.cert.status==='unknown'?'-':c.cert.status);}
+    const skip=['date','time',def.person,def.itemKey];
+    return def.fields.filter(function(f){return f.k&&skip.indexOf(f.k)<0&&['text','select','textarea','pick'].indexOf(f.t)>=0&&d[f.k];}).slice(0,4)
+      .map(function(f){const v=String(d[f.k]);return f.l.replace(/ \(.*\)$/,'')+': '+(v.length>60?v.slice(0,60)+'...':v);}).join('  \u00b7  ');
+  }
+  function csv(){
+    const e=function(v){return '"'+String(v==null?'':v).replace(/"/g,'""')+'"';};
+    const cols=def.fields.filter(function(f){return f.k&&f.t!=='section'&&f.t!=='scalecheck';});
+    const head=['State','License','License #','Log','Entry ID','Saved at'];
+    cols.forEach(function(f){if(f.t==='inspection')SEC_PARTS.forEach(function(p){head.push(p.title);});else head.push(f.l||f.k);});
+    head.push('Result','Submitted by','Source');
+    const lines=[head.map(e).join(',')];
+    list.forEach(function(r){const d=r.data||{};const row=[st.name,lic.name,lic.license_number,def.name,r.id,r.created_at];
+      cols.forEach(function(f){
+        if(f.t==='inspection'){SEC_PARTS.forEach(function(p){row.push((d[p.id]||[]).map(function(x){return x.name+': '+(x.status||'-')+(x.detail?' ('+x.detail+')':'');}).join('; '));});return;}
+        if(f.t==='checklist'){const o=d[f.k]||{};row.push(Object.keys(o).filter(function(n){return o[n];}).join('; '));return;}
+        row.push(f.t==='checkbox'?(d[f.k]?'Yes':'No'):d[f.k]);});
+      row.push(r.result,r.performed_by,r.source);lines.push(row.map(e).join(','));});
+    const b=new Blob([lines.join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);
+    a.download=def.id+'_log_'+(lic.license_number||lic.id)+'.csv';document.body.appendChild(a);a.click();a.remove();
+  }
+  async function sigsFor(ids){
+    const m={};if(!ids.length)return m;
+    for(let i=0;i<ids.length;i+=40){
+      const part=ids.slice(i,i+40);
+      const x=await db.get('hx_facility_log','id=in.('+part.map(function(id){return encodeURIComponent(id);}).join(',')+')&select=id,signature');
+      (x||[]).forEach(function(r){m[r.id]=r.signature;});
+    }
+    return m;
+  }
+  async function view(r){
+    setErr('');
+    try{
+      const s=await sigsFor([r.id]);
+      let h=null;
+      if(canAudit){try{h=await db.get('hx_audit_log','table_name=eq.hx_facility_log&row_id=eq.'+encodeURIComponent(r.id)+'&select=*&order=at.asc');}catch(x){h=null;}}
+      setModal({view:r,sig:s[r.id]||'',hist:h});
+    }catch(e){setErr(String(e.message||e));}
+  }
+  async function printAll(){
+    setErr('');
+    try{const sl=list.slice(0,300);const s=await sigsFor(sl.map(function(r){return r.id;}));printRecords(def.name+' - '+lic.name,sl.map(function(r){return entryHtml(def,st,lic,r,s[r.id]);}));}
+    catch(e){setErr(String(e.message||e));}
+  }
+  async function voidEntry(r,why){
+    await db.update('hx_facility_log',r.id,{voided:true,void_reason:why});
+    setModal(null);loadRows();
+  }
+  async function addEntry(p){
+    await db.insert('hx_facility_log',{id:newId('fl'),state_id:st.id,license_id:lic.id,log_type:def.id,item_id:p.item_id||null,item:p.item,data:p.data,result:p.result,performed_by:p.performed_by,signature:p.signature||null,source:'app'});
+    setModal(null);loadRows();
+  }
+  async function saveEdit(r,p){
+    await db.update('hx_facility_log',r.id,{item_id:p.item_id||null,item:p.item,data:p.data,result:p.result,performed_by:p.performed_by,edit_reason:p.edit_reason});
+    setModal(null);loadRows();
+  }
+  const fails=(rows||[]).filter(function(r){return !r.voided&&FLAG_RES.indexOf(r.result)>=0;}).length;
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start',marginBottom:10}},
+      el('div',null,el('h2',{style:{margin:0,fontSize:20}},def.name),el('div',{className:'muted'},'Frequency: '+def.freq)),
+      el('div',{className:'row'},
+        isAdmin&&el('button',{className:'btn ghost',onClick:function(){setModal({lists:true});}},'Manage lists'),
+        el('button',{className:'btn ghost',disabled:!list.length,onClick:csv},'CSV'),
+        el('button',{className:'btn ghost',disabled:!list.length,onClick:printAll},'Print / PDF'),
+        canAdd&&el('button',{className:'btn',onClick:function(){setModal({add:true});}},'+ New entry'))),
+    err&&el('div',{className:'msg err'},err),
+    canAdd&&el('div',{className:'card gold'},el('div',{className:'row',style:{alignItems:'flex-start',gap:20}},
+      el('div',{id:qrId},el(QrBox,{text:link,size:120})),
+      el('div',{style:{flex:1,minWidth:220}},
+        el('div',{className:'k'},'Kiosk QR - '+def.name+' - this license only'),
+        el('div',{style:{margin:'4px 0 8px'}},'Staff scan this to fill the ',el('b',null,def.name),' for ',el('b',null,lic.name),' ('+st.name+') without signing in. The code carries the state and license; the database refuses anything else.'),
+        el('input',{readOnly:true,value:link,onFocus:function(e){e.target.select();}}),
+        el('div',{className:'row',style:{marginTop:8}},
+          el('button',{className:'btn sm',onClick:function(){try{navigator.clipboard.writeText(link);setCopied(true);setTimeout(function(){setCopied(false);},1500);}catch(e){}}},copied?'Copied':'Copy link'),
+          el('button',{className:'btn ghost sm',onClick:function(){printSignSheet({link:link,lic:lic,stName:st.name,eyebrow:st.name+'  \u00b7  Facility Log',title:def.name,cta:'Scan to record',ctaSub:'Use your phone camera. No login needed.',steps:[['Scan','Point your phone camera at the code'],['Fill in','Complete every field on the form'],['Sign & submit','Sign with your finger and submit']]});}},'Print QR sign'))))),
+    el('div',{className:'card'},
+      el('div',{className:'row',style:{justifyContent:'space-between'}},
+        el('div',null,el('span',{className:'k'},st.name+' rules - '+def.ruleCat),el('span',{className:'muted',style:{marginLeft:8}},props.rules.length+' in the rulebook')),
+        props.rules.length>0&&el('button',{className:'btn ghost sm',onClick:function(){setShowRules(!showRules);}},showRules?'Hide':'Show')),
+      !props.rules.length&&el('div',{className:'muted',style:{marginTop:6,fontSize:13}},'No '+def.ruleCat+' rules in the '+st.name+' rulebook yet. Add them under Rulebook with category "'+def.ruleCat+'" and they show here.'),
+      showRules&&props.rules.map(function(r){return el('div',{key:r.id,style:{padding:'8px 0',borderTop:'1px solid #1d1d1d'}},
+        el('div',{style:{fontWeight:700}},r.title),r.citation&&el('div',{className:'muted',style:{fontSize:12}},r.citation),r.body&&el('div',{style:{whiteSpace:'pre-wrap',marginTop:4}},r.body));})),
+    el('div',{className:'row',style:{margin:'4px 0 12px'}},
+      el('input',{style:{maxWidth:300},placeholder:'Search entries...',value:q,onChange:function(e){setQ(e.target.value);}}),
+      el('select',{value:range,onChange:function(e){setRange(e.target.value);}},el('option',{value:'1'},'Last 24 hours'),el('option',{value:'7'},'Last 7 days'),el('option',{value:'30'},'Last 30 days'),el('option',{value:'365'},'Last year'),el('option',{value:'all'},'All time')),
+      el('span',{className:'muted'},rows?list.length+(list.length===1?' entry':' entries'):'Loading...'),
+      fails>0&&el('span',{className:'badge bad'},fails+' fail / open')),
+    rows&&!list.length&&el('div',{className:'empty'},'No '+def.name+' entries in this period for '+lic.name+'.'),
+    list.length>0&&el('div',{className:'card',style:{overflowX:'auto'}},el('table',null,
+      el('thead',null,el('tr',null,['#','Date / time',def.itemLabel,'Details','Result','By',''].map(function(h,i){return el('th',{key:i},h);}))),
+      el('tbody',null,list.map(function(r,i){
+        return el('tr',{key:r.id,className:r.voided?'voidrow':''},
+          el('td',{className:'muted'},list.length-i),
+          el('td',{style:{whiteSpace:'nowrap'}},when(r)),
+          el('td',null,r.item||'-'),
+          el('td',{style:{fontSize:13,maxWidth:420}},details(r)),
+          el('td',null,r.voided?el('span',{className:'badge bad',title:r.void_reason||''},'Void'):el(ResultBadge,{r:r.result})),
+          el('td',null,r.performed_by,r.source==='kiosk'&&el('span',{className:'badge off',style:{marginLeft:6}},'QR')),
+          el('td',{style:{textAlign:'right',whiteSpace:'nowrap'}},
+            el('button',{className:'btn ghost sm',onClick:function(){view(r);}},'View'),' ',
+            !r.voided&&FLAG_RES.indexOf(r.result)>=0&&el(RaiseDeviation,{state:st,license:lic,prefill:{title:def.name+': '+r.result+(r.item?' \u2014 '+r.item:''),category:LOG_DEV_CAT[def.id]||'Other',dept:def.id==='sanitation'||def.id==='pest'?'Sanitation':/security/.test(def.id)?'Security':'Facility',
+              description:def.name+' entry recorded '+when(r)+' by '+(r.performed_by||'-')+' with result '+r.result+'.',source_type:'facility_log',source_id:r.id,source_label:def.name+' \u00b7 '+when(r)+' \u00b7 '+r.result,occurred_on:String((r.data||{}).date||r.created_at||'').slice(0,10)}}),' ',
+            isAdmin&&!r.voided&&el('button',{className:'btn ghost sm',onClick:function(){setModal({edit:r});}},'Edit'),' ',
+            isAdmin&&!r.voided&&el('button',{className:'btn danger sm',onClick:function(){setModal({voidr:r});}},'Void')));
+      })))),
+    modal&&modal.add&&el(Modal,{title:'New '+def.name+' entry - '+lic.name,wide:true,onClose:function(){setModal(null);}},
+      el(LogForm,{def:def,lists:lists,defaultName:props.profile.name||'',onSubmit:addEntry,onCancel:function(){setModal(null);}})),
+    modal&&modal.edit&&el(Modal,{title:'Edit '+def.name+' entry',wide:true,onClose:function(){setModal(null);}},
+      el(LogForm,{def:def,lists:lists,initial:modal.edit,onSubmit:function(p){return saveEdit(modal.edit,p);},onCancel:function(){setModal(null);}})),
+    modal&&modal.voidr&&el(VoidModal,{what:def.name+' entry #'+(list.length-list.indexOf(modal.voidr)),onClose:function(){setModal(null);},onVoid:function(why){return voidEntry(modal.voidr,why);}}),
+    modal&&modal.lists&&el(ListManager,{def:def,st:st,lic:lic,rows:props.listRows,onChanged:props.reloadLists,onClose:function(){setModal(null);}}),
+    modal&&modal.view&&el(Modal,{title:def.name,wide:true,onClose:function(){setModal(null);}},
+      el('div',{dangerouslySetInnerHTML:{__html:REC_CSS+entryHtml(def,st,lic,modal.view,modal.sig,modal.hist)}}),
+      el('div',{className:'row',style:{justifyContent:'flex-end',marginTop:12}},
+        el('button',{className:'btn ghost',onClick:function(){setModal(null);}},'Close'),
+        el('button',{className:'btn',onClick:function(){printRecords(def.name,[entryHtml(def,st,lic,modal.view,modal.sig,modal.hist)]);}},'Print / PDF'))));
+}
+
+function FacilityLogs(props){
+  const st=props.state,lic=props.license;
+  const[tab,setTab]=useState(lsGet('hx_logtab')||LOG_TYPES[0].id);
+  const[rules,setRules]=useState([]);
+  const[listRows,setListRows]=useState(null);
+  const[err,setErr]=useState('');
+  const sid=st?st.id:'',lid=lic?lic.id:'';
+  useEffect(function(){
+    if(!sid){setRules([]);return;}
+    db.get('hx_rules','state_id=eq.'+encodeURIComponent(sid)+'&select=*&order=created_at')
+      .then(function(r){setRules((r||[]).filter(function(x){return x.state_id===sid;}));}).catch(function(){setRules([]);});
+  },[sid]);
+  const loadLists=useCallback(function(){
+    if(!lid){setListRows([]);return Promise.resolve();}
+    return db.get('hx_log_lists','license_id=eq.'+encodeURIComponent(lid)+'&select=*&order=sort,name')
+      .then(function(r){setListRows((r||[]).filter(function(x){return x.license_id===lid&&x.state_id===sid;}));})
+      .catch(function(e){setErr(String(e.message||e));setListRows([]);});
+  },[lid,sid]);
+  useEffect(function(){loadLists();},[loadLists]);
+  if(!lic||!st)return el('div',null,el('h1',null,'Facility ',el('span',{className:'g'},'Logs')),el('div',{className:'empty'},'Pick a state and a license at the top first. Every log belongs to exactly one license.'));
+  const vis=LOG_TYPES.filter(function(t){return can(LOG_MOD[t.id],1);});
+  if(!vis.length)return el('div',null,el('h1',null,'Facility ',el('span',{className:'g'},'Logs')),el('div',{className:'empty'},'You do not have access to any facility log. Ask a system admin.'));
+  const def=vis.find(function(t){return t.id===tab;})||vis[0];
+  return el('div',null,
+    el('h1',null,'Facility ',el('span',{className:'g'},'Logs')),
+    el('div',{className:'sub'},st.name+'  \u00b7  '+lic.name+(lic.license_number?'  \u00b7  '+lic.license_number:'')),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'tabs'},vis.map(function(t){return el('button',{key:t.id,className:t.id===def.id?'on':'',onClick:function(){setTab(t.id);lsSet('hx_logtab',t.id);}},t.name.replace(/ Log$/,''));})),
+    listRows===null?el('div',{className:'muted'},'Loading...'):
+    el(LogPanel,{key:def.id+'|'+lic.id,def:def,state:st,license:lic,profile:props.profile,listRows:listRows,reloadLists:loadLists,
+      rules:rules.filter(function(r){return (r.category||'').toLowerCase()===def.ruleCat.toLowerCase();})}));
+}
+
+/* QR kiosk for a log (no login). Needs type + state + license in the link; the database re-checks all three. */
+function KioskLog(){
+  const q=new URLSearchParams(window.location.search);
+  const type=q.get('type')||'',stId=q.get('state')||'',licId=q.get('lic')||'';
+  const def=LOG_TYPES.find(function(t){return t.id===type;});
+  const[setup,setSetup]=useState(null);
+  const[bad,setBad]=useState('');
+  const[done,setDone]=useState('');
+  useEffect(function(){
+    if(!cfg().ok){setBad('This kiosk is not connected to a database.');return;}
+    if(!def){setBad('This QR code is not a valid log code. Please ask a manager for the current code.');return;}
+    if(!stId||!licId){setBad('This QR code is missing its state or license. Please ask a manager for the current code.');return;}
+    rpc('hx_kiosk_log_setup',{p_state:stId,p_lic:licId,p_type:type}).then(function(r){
+      if(r&&r.license&&r.license.id===licId&&r.license.state_id===stId)setSetup(r);
+      else setBad('This QR code is not linked to an active license in this state. Please ask a manager for the current code.');
+    }).catch(function(e){setBad(String(e.message||e));});
+  },[]);
+  if(bad)return el('div',{className:'auth'},el('div',{className:'box'},el(Brand),el('div',{className:'msg err',style:{marginTop:18}},bad)));
+  if(!setup)return el('div',{className:'auth'},el(Brand));
+  const lic=setup.license;
+  const head=el('div',{style:{textAlign:'center',marginBottom:16}},
+    el(Brand),
+    el('div',{className:'k',style:{marginTop:16}},lic.state),
+    el('div',{style:{fontSize:20,fontWeight:700}},lic.name),
+    el('div',{className:'muted'},'License '+(lic.license_number||'-')),
+    el('div',{style:{marginTop:10,fontSize:17,color:'var(--gold-hi)',fontWeight:700}},def.name));
+  if(done)return el('div',{className:'auth'},el('div',{className:'box'},head,el('div',{className:'msg ok',style:{fontSize:15}},done),
+    el('button',{className:'btn',style:{width:'100%'},onClick:function(){setDone('');}},'Fill another')));
+  return el('div',{className:'auth',style:{alignItems:'flex-start'}},el('div',{className:'box',style:{width:'min(640px,100%)'}},head,
+    el(LogForm,{def:def,lists:groupLists(setup.items,false),kiosk:true,onSubmit:async function(p){
+      await rpc('hx_kiosk_log_add',{p_state:stId,p_lic:licId,p_type:def.id,p:p});
+      setDone('Saved. Thank you, '+p.performed_by+'.'+(FLAG_RES.indexOf(p.result)>=0?' This entry is marked '+p.result+' - please tell your supervisor.':''));
+    }})));
+}
+
+/* ---------- Products: SKUs, flavors, formulations (one source of truth per state) ----------
+   Product types are the Black Fox / Michigan batch types. A SKU belongs to one state, carries its own
+   production settings (the numbers Black Fox kept as constants in code), has flavors, and cannot be
+   switched on until it has a formulation (enforced by the database). Recipes use the Black Fox
+   Formulation Bank layout: Raw Materials / Hardware & Packaging / Labor, with an ingredient price library. */
+const PRODUCT_TYPES=[
+  {id:'ethanol_extraction',name:'Ethanol Extraction'},{id:'butane_extraction',name:'BHO Extraction'},
+  {id:'pre_rolls',name:'Pre-Rolls'},{id:'cartridges',name:'Cartridges'},{id:'gummies',name:'Gummies'},
+  {id:'infused_flower',name:'Infused Flower'},{id:'moon_rocks',name:'Moon Rocks'},{id:'snow_caps',name:'Snow Caps'}];
+function ptName(id){const t=PRODUCT_TYPES.find(function(x){return x.id===id;});return t?t.name:id;}
+const PRE_ROLL_INGREDIENTS=['THCA','Terpene','Live Resin','HTE','Decarbed Cured Resin','Distillate','Trim','THCA (internal)'];
+const SKU_SPECS={
+  pre_rolls:[{k:'grams_filled',l:'Grams per joint, filled / infused',ph:'e.g. 0.55',num:1},{k:'grams_kiefed',l:'Grams per joint after coating (blank = no coating step)',ph:'e.g. 0.60',num:1},
+    {k:'coating',l:'Coating step',t:'select',o:['Kief','Diamond']},{k:'flower_type',l:'Flower used',t:'select',o:['Infused','Ground']},
+    {k:'package_name',l:'Package name',ph:'e.g. Jar or Mylar'},
+    {k:'units_per_package',l:'Joints per package (blank = no packaging check)',ph:'e.g. 1',num:1},{k:'ingredients',l:'Infusion ingredients used',t:'multi',o:PRE_ROLL_INGREDIENTS}],
+  butane_extraction:[{k:'dual',l:'Makes two products (THCA + HTE)',t:'select',o:['No','Yes']}],
+  cartridges:[{k:'oil_per_unit',l:'Oil per cartridge (g)',ph:'e.g. 1 or 2',num:1}],
+  gummies:[{k:'grams_per_gummy',l:'Grams per gummy',ph:'e.g. 4.6',num:1},{k:'units_per_package',l:'Gummies per package',ph:'e.g. 10',num:1}],
+  infused_flower:[{k:'unit_size',l:'Unit size (g)',ph:'e.g. 3.5',num:1}],
+  moon_rocks:[{k:'unit_size',l:'Unit size (g)',ph:'e.g. 1',num:1}],
+  snow_caps:[{k:'unit_size',l:'Unit size (g)',ph:'e.g. 3.5',num:1}]};
+const COGS_CATS=[
+  {id:'raw_material',key:'raw_materials',label:'Raw Materials',nameLabel:'Material',qtyLabel:'Qty',rateLabel:'Cost / Unit'},
+  {id:'packaging',key:'packaging',label:'Hardware & Packaging',nameLabel:'Item',qtyLabel:'Qty',rateLabel:'Cost / Unit'},
+  {id:'labor',key:'labor',label:'Labor',nameLabel:'Role / Task',qtyLabel:'Hours',rateLabel:'Rate / Hour'}];
+function money(n){return '$'+(Math.round((n||0)*100)/100).toFixed(2);}
+function lineTot(r){return (numOk(r.qty)?num(r.qty):0)*(numOk(r.cost_per_unit)?num(r.cost_per_unit):0);}
+function formTotal(f){return COGS_CATS.reduce(function(s,c){return s+(f[c.key]||[]).reduce(function(a,r){return a+lineTot(r);},0);},0);}
+function niceErr(e){
+  const m=String((e&&e.message)||e);
+  if(/hx_skus_name/.test(m))return 'A SKU with that name already exists for this product type in this state.';
+  if(/hx_flavors_name/.test(m))return 'That flavor is already on this SKU.';
+  if(/hx_batches_number/.test(m))return 'That batch / lot number is already used under this license.';
+  if(/hx_formulations_one/.test(m))return 'That SKU / flavor already has a formulation. Edit that one instead.';
+  if(/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)&&/schema cache|does not exist/.test(m))return 'Database tables are missing - run hendrix_step5.sql in the Hendrix Supabase project.';
+  return m;
+}
+function specInput(sp,v,set){
+  if(sp.t==='select')return el('select',{style:{width:'100%'},value:v||sp.o[0],onChange:function(e){set(e.target.value);}},sp.o.map(function(o){return el('option',{key:o,value:o},o);}));
+  return el('input',{inputMode:sp.num?'decimal':undefined,placeholder:sp.ph,value:v==null?'':v,onChange:function(e){set(e.target.value);}});
+}
+function specSummary(t,spec){
+  spec=spec||{};
+  return (SKU_SPECS[t]||[]).filter(function(s){const v=spec[s.k];return v!==undefined&&v!==''&&!(Array.isArray(v)&&!v.length);})
+    .map(function(s){const v=spec[s.k];return s.l.replace(/ \(.*\)$/,'')+': '+(Array.isArray(v)?v.join(', '):v);}).join('  \u00b7  ');
+}
+function Checks(props){
+  const val=props.value||[];
+  return el('div',{className:'cklist'},props.options.map(function(o){
+    return el('label',{key:o.v,className:'ck'},el('input',{type:'checkbox',checked:val.indexOf(o.v)>=0,onChange:function(e){
+      const on=e.target.checked;props.onChange(on?val.concat([o.v]):val.filter(function(x){return x!==o.v;}));}}),el('span',null,o.l));}));
+}
+
+/* Recipe line items (Black Fox CogsLineItemEditor) */
+function LineItems(props){
+  const cat=props.cat,rows=props.rows||[];
+  const lib=(props.library||[]).filter(function(l){return l.category===cat.id&&(!(l.product_types||[]).length||l.product_types.indexOf(props.productType)>=0);});
+  function upd(i,p){props.setRows(rows.map(function(r,x){return x===i?{...r,...p}:r;}));}
+  const tot=rows.reduce(function(a,r){return a+lineTot(r);},0);
+  return el('div',{style:{marginBottom:16}},
+    el('div',{className:'row',style:{justifyContent:'space-between',marginBottom:6}},el('span',{className:'k'},cat.label),el('b',{style:{color:'var(--gold-hi)'}},money(tot))),
+    rows.map(function(r,i){return el('div',{key:i,className:'li'},
+      el('input',{placeholder:cat.nameLabel,value:r.name||'',onChange:function(e){upd(i,{name:e.target.value});},style:{flex:'2 1 160px'}}),
+      el('input',{placeholder:cat.qtyLabel,inputMode:'decimal',value:r.qty==null?'':r.qty,onChange:function(e){upd(i,{qty:e.target.value});},style:{flex:'0 1 80px'}}),
+      el('input',{placeholder:'Unit',value:r.unit||'',onChange:function(e){upd(i,{unit:e.target.value});},style:{flex:'0 1 70px'}}),
+      el('input',{placeholder:cat.rateLabel,inputMode:'decimal',value:r.cost_per_unit==null?'':r.cost_per_unit,onChange:function(e){upd(i,{cost_per_unit:e.target.value});},style:{flex:'0 1 95px'}}),
+      el('span',{style:{width:72,textAlign:'right',fontWeight:700}},money(lineTot(r))),
+      el('button',{type:'button',className:'btn danger sm',onClick:function(){props.setRows(rows.filter(function(_,x){return x!==i;}));}},'\u2715'));}),
+    el('div',{className:'row'},
+      el('button',{type:'button',className:'btn ghost sm',onClick:function(){props.setRows(rows.concat([{name:'',qty:'',unit:'',cost_per_unit:''}]));}},'+ Add '+cat.nameLabel),
+      lib.length>0&&el('select',{value:'',onChange:function(e){const it=lib.find(function(l){return l.id===e.target.value;});
+        if(it)props.setRows(rows.concat([{name:it.name,qty:'',unit:it.unit||'',cost_per_unit:it.cost_per_unit==null?'':String(it.cost_per_unit)}]));}},
+        el('option',{value:''},'+ Add from price library...'),lib.map(function(l){return el('option',{key:l.id,value:l.id},l.name+' ('+money(l.cost_per_unit)+'/'+(l.unit||'unit')+')');}))));
+}
+function blankFormula(){return {name:'',batch_size:'',raw_materials:[],packaging:[],labor:[],notes:''};}
+function FormulaFields(props){
+  const f=props.f,set=function(p){props.setF(function(x){return {...x,...p};});};
+  const tot=formTotal(f);
+  return el('div',null,
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:10}},
+      el(Field,{label:'Standard batch size (units)'},el('input',{inputMode:'decimal',value:f.batch_size,placeholder:'e.g. 1000',onChange:function(e){set({batch_size:e.target.value});}})),
+      el(Field,{label:'Recipe name (optional)'},el('input',{value:f.name,placeholder:props.autoName||'Auto-fills from SKU + flavor',onChange:function(e){set({name:e.target.value});}}))),
+    el('div',{className:'muted',style:{fontSize:12,margin:'0 0 12px'}},'Enter the quantities for this recipe. Cost / unit is a reference; prices come from the price library by name.'),
+    COGS_CATS.map(function(c){return el(LineItems,{key:c.id,cat:c,rows:f[c.key],library:props.library,productType:props.productType,setRows:function(r){set({[c.key]:r});}});}),
+    el(Field,{label:'Notes'},el('textarea',{value:f.notes,style:{minHeight:60},onChange:function(e){set({notes:e.target.value});}})),
+    el('div',{className:'row',style:{justifyContent:'flex-end',gap:16}},
+      el('span',null,'Batch total ',el('b',{style:{color:'var(--gold-hi)'}},money(tot))),
+      numOk(f.batch_size)&&num(f.batch_size)>0&&el('span',null,'Per unit ',el('b',{style:{color:'var(--gold-hi)'}},money(tot/num(f.batch_size))))));
+}
+function formulaProblem(f){
+  const rm=(f.raw_materials||[]).filter(function(r){return String(r.name||'').trim();});
+  if(!rm.length)return 'Add at least one raw material.';
+  for(let c=0;c<COGS_CATS.length;c++){const rows=f[COGS_CATS[c].key]||[];
+    for(let i=0;i<rows.length;i++){const r=rows[i];
+      if(String(r.name||'').trim()&&!numOk(r.qty))return COGS_CATS[c].label+': enter a quantity for "'+r.name+'".';
+      if(String(r.cost_per_unit==null?'':r.cost_per_unit).trim()&&!numOk(r.cost_per_unit))return COGS_CATS[c].label+': cost for "'+r.name+'" must be a number.';}}
+  return '';
+}
+function cleanFormula(f){
+  const o={name:String(f.name||'').trim(),batch_size:String(f.batch_size||'').trim(),notes:String(f.notes||'').trim()};
+  COGS_CATS.forEach(function(c){o[c.key]=(f[c.key]||[]).filter(function(r){return String(r.name||'').trim();}).map(function(r){
+    const x={...r,name:String(r.name).trim(),qty:String(r.qty==null?'':r.qty).trim(),unit:String(r.unit||'').trim(),cost_per_unit:String(r.cost_per_unit==null?'':r.cost_per_unit).trim()};return x;});});
+  return o;
+}
+
+/* New SKU: details + flavors, then the required formulation */
+function SkuWizard(props){
+  const st=props.state;
+  const[step,setStep]=useState(1);
+  const[s,setS]=useState({product_type:props.productType||PRODUCT_TYPES[0].id,name:'',license_ids:[],spec:{},has_flavors:true,flavors:''});
+  const[f,setF]=useState(blankFormula);
+  const[err,setErr]=useState('');
+  const[busy,setBusy]=useState(false);
+  const done=useRef({sku:'',flavors:false,formula:false});
+  const flavorList=function(){const seen={};return s.flavors.split(/\n/).map(function(x){return x.trim();}).filter(function(x){const k=x.toLowerCase();if(!x||seen[k])return false;seen[k]=1;return true;});};
+  function next(){
+    setErr('');
+    if(!s.name.trim()){setErr('Enter the SKU name.');return;}
+    const dup=props.skus.find(function(k){return k.product_type===s.product_type&&k.name.trim().toLowerCase()===s.name.trim().toLowerCase();});
+    if(dup&&dup.id!==done.current.sku){setErr('A SKU with that name already exists for this product type in '+st.name+'.');return;}
+    for(const sp of (SKU_SPECS[s.product_type]||[])){const v=s.spec[sp.k];if(sp.num&&v!==undefined&&String(v).trim()!==''&&!numOk(v)){setErr(sp.l+' must be a number.');return;}}
+    setStep(2);
+  }
+  async function save(){
+    setErr('');
+    const p=formulaProblem(f);if(p){setErr(p);return;}
+    setBusy(true);
+    try{
+      const spec={};(SKU_SPECS[s.product_type]||[]).forEach(function(sp){const v=s.spec[sp.k];if(sp.t==='multi'){if(v&&v.length)spec[sp.k]=v;}else if(v!==undefined&&String(v).trim()!=='')spec[sp.k]=sp.num?num(v):String(v).trim();});
+      if(!s.has_flavors)spec.no_flavor=true;
+      if(!done.current.sku){
+        const id=newId('sku');
+        await db.insert('hx_skus',{id:id,state_id:st.id,product_type:s.product_type,name:s.name.trim(),spec:spec,license_ids:s.license_ids,active:false,sort:props.skus.length});
+        done.current.sku=id;
+      }
+      const skuId=done.current.sku;
+      if(!done.current.flavors){
+        const fl=s.has_flavors?flavorList():[];
+        if(fl.length)await db.insert('hx_flavors',fl.map(function(n,i){return {id:newId('fl'),state_id:st.id,sku_id:skuId,name:n,active:true,sort:i};}));
+        done.current.flavors=true;
+      }
+      if(!done.current.formula){
+        const c=cleanFormula(f);
+        await db.insert('hx_formulations',{id:newId('rcp'),state_id:st.id,sku_id:skuId,flavor_id:null,name:c.name||(s.name.trim()+' \u2014 base recipe'),batch_size:c.batch_size,raw_materials:c.raw_materials,packaging:c.packaging,labor:c.labor,notes:c.notes});
+        done.current.formula=true;
+      }
+      await db.update('hx_skus',skuId,{active:true});
+      props.onDone();
+    }catch(e){setErr(niceErr(e)+(done.current.sku?' (The SKU was saved but is not switched on yet. Fix this and press Save again.)':''));}
+    setBusy(false);
+  }
+  const specs=SKU_SPECS[s.product_type]||[];
+  return el(Modal,{title:'New SKU - '+st.name+' (step '+step+' of 2)',wide:true,onClose:props.onClose},
+    step===1?el('div',null,
+      el('div',{className:'grid',style:{gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:10}},
+        el(Field,{label:'Product type'},el('select',{style:{width:'100%'},value:s.product_type,disabled:!!done.current.sku,onChange:function(e){setS({...s,product_type:e.target.value,spec:{}});}},
+          PRODUCT_TYPES.map(function(t){return el('option',{key:t.id,value:t.id},t.name);}))),
+        el(Field,{label:'SKU name *'},el('input',{value:s.name,disabled:!!done.current.sku,placeholder:'e.g. Muha Meds 2G AIO',onChange:function(e){setS({...s,name:e.target.value});}}))),
+      el(Field,{label:'Made under',plain:true},
+        el('label',{className:'ck'},el('input',{type:'checkbox',checked:!s.license_ids.length,onChange:function(e){setS({...s,license_ids:e.target.checked?[]:props.licenses.map(function(l){return l.id;}).slice(0,1)});}}),el('span',null,'Every license in '+st.name)),
+        s.license_ids.length>0&&el(Checks,{options:props.licenses.map(function(l){return {v:l.id,l:l.name+(l.license_number?' ('+l.license_number+')':'')};}),value:s.license_ids,onChange:function(v){setS({...s,license_ids:v.length?v:props.licenses.map(function(l){return l.id;}).slice(0,1)});}})),
+      specs.length>0&&el('div',{className:'secth'},'Production settings'),
+      specs.length>0&&el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}},specs.map(function(sp){
+        return sp.t==='multi'?el('div',{key:sp.k,style:{gridColumn:'1/-1'}},el(Field,{label:sp.l,plain:true},el(Checks,{options:sp.o.map(function(o){return {v:o,l:o};}),value:s.spec[sp.k]||[],onChange:function(v){setS({...s,spec:{...s.spec,[sp.k]:v}});}})))
+          :el(Field,{key:sp.k,label:sp.l},specInput(sp,s.spec[sp.k],function(v){setS({...s,spec:{...s.spec,[sp.k]:v}});}));})),
+      el('div',{className:'secth'},'Flavors'),
+      el('label',{className:'ck',style:{marginBottom:8}},el('input',{type:'checkbox',checked:s.has_flavors,onChange:function(e){setS({...s,has_flavors:e.target.checked});}}),el('span',null,'This SKU has flavors')),
+      s.has_flavors&&el(Field,{label:'Flavors - one per line (you can add more later)'},el('textarea',{value:s.flavors,style:{minHeight:120},placeholder:'Honey Melon\nBlue Dream\nStrawberry Lava',onChange:function(e){setS({...s,flavors:e.target.value});}})),
+      s.has_flavors&&flavorList().length>0&&el('div',{className:'muted',style:{fontSize:12,marginTop:-6,marginBottom:10}},flavorList().length+' flavor'+(flavorList().length===1?'':'s')),
+      err&&el('div',{className:'msg err'},err),
+      el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',onClick:next},'Next: formulation')))
+    :el('div',null,
+      el('div',{className:'msg ok'},'Every new SKU needs a formulation before it can be used. This base recipe covers all of its flavors; flavor-specific recipes can be added afterwards.'),
+      el('div',{className:'muted',style:{marginBottom:10}},ptName(s.product_type)+'  \u00b7  ',el('b',null,s.name.trim())),
+      el(FormulaFields,{f:f,setF:setF,library:props.library,productType:s.product_type,autoName:s.name.trim()+' \u2014 base recipe'}),
+      err&&el('div',{className:'msg err'},err),
+      el('div',{className:'row',style:{justifyContent:'flex-end'}},
+        el('button',{className:'btn ghost',disabled:busy,onClick:function(){setErr('');setStep(1);}},'Back'),
+        el('button',{className:'btn',disabled:busy,onClick:save},busy?'Saving...':'Save SKU and formulation'))));
+}
+
+function SkuEditor(props){
+  const k=props.sku;
+  const[s,setS]=useState({name:k.name,license_ids:k.license_ids||[],spec:{...(k.spec||{})}});
+  const[err,setErr]=useState('');
+  const specs=SKU_SPECS[k.product_type]||[];
+  async function save(){
+    setErr('');
+    if(!s.name.trim()){setErr('Enter the SKU name.');return;}
+    const spec={};
+    specs.forEach(function(sp){const v=s.spec[sp.k];if(sp.t==='multi'){if(v&&v.length)spec[sp.k]=v;}else if(v!==undefined&&String(v).trim()!==''){if(sp.num&&!numOk(v))throw 0;spec[sp.k]=sp.num?num(v):String(v).trim();}});
+    if(s.spec.no_flavor)spec.no_flavor=true;
+    try{await db.update('hx_skus',k.id,{name:s.name.trim(),license_ids:s.license_ids,spec:spec});props.onDone();}catch(e){setErr(niceErr(e));}
+  }
+  return el(Modal,{title:'Edit SKU',wide:true,onClose:props.onClose},
+    el('div',{className:'muted',style:{marginBottom:10}},ptName(k.product_type)+' (the product type of a SKU cannot change)'),
+    el(Field,{label:'SKU name'},el('input',{value:s.name,onChange:function(e){setS({...s,name:e.target.value});}})),
+    el(Field,{label:'Made under',plain:true},
+      el('label',{className:'ck'},el('input',{type:'checkbox',checked:!s.license_ids.length,onChange:function(e){setS({...s,license_ids:e.target.checked?[]:props.licenses.map(function(l){return l.id;}).slice(0,1)});}}),el('span',null,'Every license in '+props.state.name)),
+      s.license_ids.length>0&&el(Checks,{options:props.licenses.map(function(l){return {v:l.id,l:l.name+(l.license_number?' ('+l.license_number+')':'')};}),value:s.license_ids,onChange:function(v){setS({...s,license_ids:v.length?v:props.licenses.map(function(l){return l.id;}).slice(0,1)});}})),
+    specs.length>0&&el('div',{className:'secth'},'Production settings'),
+    specs.length>0&&el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}},specs.map(function(sp){
+      return sp.t==='multi'?el('div',{key:sp.k,style:{gridColumn:'1/-1'}},el(Field,{label:sp.l,plain:true},el(Checks,{options:sp.o.map(function(o){return {v:o,l:o};}),value:s.spec[sp.k]||[],onChange:function(v){setS({...s,spec:{...s.spec,[sp.k]:v}});}})))
+        :el(Field,{key:sp.k,label:sp.l},specInput(sp,s.spec[sp.k],function(v){setS({...s,spec:{...s.spec,[sp.k]:v}});}));})),
+    el('label',{className:'ck',style:{margin:'10px 0'}},el('input',{type:'checkbox',checked:!s.spec.no_flavor,onChange:function(e){setS({...s,spec:{...s.spec,no_flavor:!e.target.checked}});}}),el('span',null,'This SKU has flavors')),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),
+      el('button',{className:'btn',onClick:function(){save().catch(function(){setErr('Production settings must be numbers.');});}},'Save')));
+}
+
+/* One formulation: pick product type -> SKU -> flavor (or base), then the recipe */
+function FormulationEditor(props){
+  const init=props.initial||{};
+  const[sel,setSel]=useState({sku_id:init.sku_id||props.skuId||'',flavor_id:init.flavor_id||props.flavorId||''});
+  const sku0=props.skus.find(function(k){return k.id===sel.sku_id;});
+  const[pt,setPt]=useState(sku0?sku0.product_type:(props.productType||PRODUCT_TYPES[0].id));
+  const[f,setF]=useState(function(){const b=blankFormula();COGS_CATS.forEach(function(c){b[c.key]=(init[c.key]||[]).map(function(r){return {...r};});});
+    return {...b,name:init.name||'',batch_size:init.batch_size||'',notes:init.notes||''};});
+  const[err,setErr]=useState('');
+  const[busy,setBusy]=useState(false);
+  const locked=!!props.lockSku;
+  const sku=props.skus.find(function(k){return k.id===sel.sku_id;});
+  const skuOpts=props.skus.filter(function(k){return k.product_type===pt;});
+  const flavOpts=props.flavors.filter(function(x){return x.sku_id===sel.sku_id;});
+  const flav=flavOpts.find(function(x){return x.id===sel.flavor_id;});
+  const autoName=sku?(sku.name+' \u2014 '+(flav?flav.name:'base recipe')):'';
+  const taken=props.formulations.find(function(x){return x.id!==init.id&&x.sku_id===sel.sku_id&&(x.flavor_id||'')===(sel.flavor_id||'');});
+  async function save(){
+    setErr('');
+    if(!sku){setErr('Choose the SKU.');return;}
+    if(taken){setErr('That '+(flav?'flavor':'SKU')+' already has a formulation ("'+taken.name+'"). Edit that one instead.');return;}
+    const p=formulaProblem(f);if(p){setErr(p);return;}
+    const c=cleanFormula(f);
+    const rec={sku_id:sku.id,flavor_id:sel.flavor_id||null,name:c.name||autoName,batch_size:c.batch_size,raw_materials:c.raw_materials,packaging:c.packaging,labor:c.labor,notes:c.notes};
+    setBusy(true);
+    try{
+      if(init.id)await db.update('hx_formulations',init.id,rec);
+      else await db.insert('hx_formulations',{...rec,id:newId('rcp'),state_id:props.state.id});
+      props.onDone();
+    }catch(e){setErr(niceErr(e));}
+    setBusy(false);
+  }
+  return el(Modal,{title:(init.id?'Edit':'New')+' formulation - '+props.state.name,wide:true,onClose:props.onClose},
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:10}},
+      el(Field,{label:'Product type'},el('select',{style:{width:'100%'},value:pt,disabled:locked||!!init.id,onChange:function(e){setPt(e.target.value);setSel({sku_id:'',flavor_id:''});}},
+        PRODUCT_TYPES.map(function(t){return el('option',{key:t.id,value:t.id},t.name);}))),
+      el(Field,{label:'SKU'},el('select',{style:{width:'100%'},value:sel.sku_id,disabled:locked||!!init.id,onChange:function(e){setSel({sku_id:e.target.value,flavor_id:''});}},
+        el('option',{value:''},skuOpts.length?'Select...':'No SKUs of this type yet'),skuOpts.map(function(k){return el('option',{key:k.id,value:k.id},k.name);}))),
+      el(Field,{label:'Flavor'},el('select',{style:{width:'100%'},value:sel.flavor_id,disabled:!!init.id||!!props.lockFlavor,onChange:function(e){setSel({...sel,flavor_id:e.target.value});}},
+        el('option',{value:''},'All flavors (base recipe)'),flavOpts.map(function(x){return el('option',{key:x.id,value:x.id},x.name);})))),
+    taken&&el('div',{className:'msg err'},'That '+(flav?'flavor':'SKU')+' already has a formulation: "'+taken.name+'".'),
+    el(FormulaFields,{f:f,setF:setF,library:props.library,productType:pt,autoName:autoName}),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),
+      el('button',{className:'btn',disabled:busy,onClick:save},busy?'Saving...':'Save formulation')));
+}
+
+/* Flavors of one SKU, with each flavor's recipe status */
+function FlavorManager(props){
+  const k=props.sku,st=props.state;
+  const fl=props.flavors.filter(function(x){return x.sku_id===k.id;}).sort(function(a,b){return (a.sort-b.sort)||a.name.localeCompare(b.name);});
+  const forms=props.formulations.filter(function(x){return x.sku_id===k.id;});
+  const base=forms.find(function(x){return !x.flavor_id;});
+  const[add,setAdd]=useState('');
+  const[edit,setEdit]=useState(null);
+  const[err,setErr]=useState('');
+  async function run(fn){setErr('');try{await fn();await props.reload();}catch(e){setErr(niceErr(e));}}
+  function addAll(){
+    const have={};fl.forEach(function(x){have[x.name.trim().toLowerCase()]=1;});
+    const names=[];add.split(/\n/).forEach(function(x){x=x.trim();const kk=x.toLowerCase();if(x&&!have[kk]){have[kk]=1;names.push(x);}});
+    if(!names.length){setErr('Nothing new to add.');return;}
+    run(async function(){await db.insert('hx_flavors',names.map(function(n,i){return {id:newId('fl'),state_id:st.id,sku_id:k.id,name:n,active:true,sort:fl.length+i};}));setAdd('');});
+  }
+  return el(Modal,{title:'Flavors - '+k.name,wide:true,onClose:props.onClose},
+    k.spec&&k.spec.no_flavor&&el('div',{className:'msg err'},'This SKU is set to "no flavors". Edit the SKU to change that.'),
+    err&&el('div',{className:'msg err'},err),
+    !fl.length?el('div',{className:'empty',style:{marginBottom:12}},'No flavors yet.'):
+    el('table',{style:{marginBottom:12}},el('thead',null,el('tr',null,el('th',null,'Flavor'),props.canF1&&el('th',null,'Formulation'),el('th',null,''))),
+      el('tbody',null,fl.map(function(x){
+        const own=forms.find(function(r){return r.flavor_id===x.id;});
+        return el('tr',{key:x.id},
+          el('td',null,edit&&edit.id===x.id?el('input',{value:edit.name,autoFocus:true,onChange:function(e){setEdit({...edit,name:e.target.value});},onKeyDown:function(e){if(e.key==='Enter'&&edit.name.trim())run(async function(){await db.update('hx_flavors',x.id,{name:edit.name.trim()});setEdit(null);});}})
+            :el('span',{style:{opacity:x.active?1:.45,fontWeight:600}},x.name+(x.active?'':' (hidden)'))),
+          props.canF1&&el('td',{style:{fontSize:13}},own?el('span',{className:'badge ok'},'Own recipe'):base?el('span',{className:'muted'},'Uses base recipe'):el('span',{className:'badge bad'},'No recipe')),
+          el('td',{style:{textAlign:'right',whiteSpace:'nowrap'}},
+            props.canEdit&&(edit&&edit.id===x.id?
+              el('button',{className:'btn sm',disabled:!edit.name.trim(),onClick:function(){run(async function(){await db.update('hx_flavors',x.id,{name:edit.name.trim()});setEdit(null);});}},'Save')
+              :el('button',{className:'btn ghost sm',onClick:function(){setEdit({id:x.id,name:x.name});}},'Rename')),' ',
+            props.canF2&&el('button',{className:'btn ghost sm',onClick:function(){props.openFormula(own||null,k.id,x.id);}},own?'Edit recipe':'Own recipe'),' ',
+            props.canEdit&&el('button',{className:'btn ghost sm',onClick:function(){run(function(){return db.update('hx_flavors',x.id,{active:!x.active});});}},x.active?'Hide':'Show'),' ',
+            props.canDel&&el('button',{className:'btn danger sm',onClick:function(){if(window.confirm('Delete flavor "'+x.name+'"'+(own?' and its own recipe':'')+'?'))run(function(){return db.remove('hx_flavors',x.id);});}},'Delete')));
+      }))),
+    props.canEdit&&el(Field,{label:'Add flavors - one per line'},el('textarea',{value:add,style:{minHeight:90},onChange:function(e){setAdd(e.target.value);}})),
+    props.canEdit&&el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn',disabled:!add.trim(),onClick:addAll},'+ Add flavors')));
+}
+
+function FormulaCard(props){
+  const f=props.f;
+  const n=COGS_CATS.reduce(function(a,c){return a+(f[c.key]||[]).length;},0);
+  return el('div',{className:'card',style:{marginBottom:0}},
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start',flexWrap:'nowrap'}},
+      el('div',null,el('div',{style:{fontWeight:700}},f.name),el('div',{className:'muted',style:{fontSize:12}},(props.skuName||'?')+'  \u00b7  '+(props.flavorName||'All flavors (base)'))),
+      el('div',{className:'row',style:{flexWrap:'nowrap'}},
+        props.onEdit&&el('button',{className:'btn ghost sm',onClick:props.onEdit},'Edit'),
+        props.onDup&&el('button',{className:'btn ghost sm',onClick:props.onDup},'Duplicate'),
+        props.onDelete&&el('button',{className:'btn danger sm',onClick:props.onDelete},'\u2715'))),
+    el('div',{className:'row',style:{margin:'8px 0 6px'}},el('span',{className:'badge'},n+' lines'),f.batch_size&&el('span',{className:'badge off'},'Batch: '+f.batch_size),el('span',{className:'badge off'},money(formTotal(f)))),
+    (f.raw_materials||[]).slice(0,4).map(function(r,i){return el('div',{key:i,className:'row',style:{justifyContent:'space-between',fontSize:12}},el('span',null,r.name),el('span',{className:'muted'},(r.qty||'')+(r.unit?' '+r.unit:'')));}),
+    (f.raw_materials||[]).length>4&&el('div',{className:'muted',style:{fontSize:12}},'+'+(f.raw_materials.length-4)+' more'),
+    f.notes&&el('div',{className:'muted',style:{fontSize:12,marginTop:6,borderTop:'1px solid #1d1d1d',paddingTop:6}},f.notes));
+}
+
+function PriceLibrary(props){
+  const st=props.state;
+  const blank={category:'raw_material',name:'',unit:'',cost_per_unit:'',product_types:[]};
+  const[f,setF]=useState(blank);
+  const[editId,setEditId]=useState('');
+  const[err,setErr]=useState('');
+  async function run(fn){setErr('');try{await fn();await props.reload();}catch(e){setErr(niceErr(e));}}
+  function save(){
+    if(!f.name.trim()){setErr('Enter a name.');return;}
+    if(String(f.cost_per_unit).trim()&&!numOk(f.cost_per_unit)){setErr('Cost must be a number.');return;}
+    const rec={category:f.category,name:f.name.trim(),unit:f.unit.trim(),cost_per_unit:numOk(f.cost_per_unit)?num(f.cost_per_unit):null,product_types:f.product_types};
+    run(async function(){if(editId)await db.update('hx_cost_library',editId,rec);else await db.insert('hx_cost_library',{...rec,id:newId('cost'),state_id:st.id});setF(blank);setEditId('');});
+  }
+  return el('div',null,
+    el('div',{className:'muted',style:{marginBottom:12}},'Prices for '+st.name+'. Recipes pick from this list, and the Planner and COGS will use it.'),
+    err&&el('div',{className:'msg err'},err),
+    props.canEdit&&el('div',{className:'card gold'},
+      el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(170px,1fr))',gap:10}},
+        el(Field,{label:'Category'},el('select',{style:{width:'100%'},value:f.category,onChange:function(e){setF({...f,category:e.target.value});}},COGS_CATS.map(function(c){return el('option',{key:c.id,value:c.id},c.label);}))),
+        el(Field,{label:'Name'},el('input',{value:f.name,placeholder:'e.g. Distillate',onChange:function(e){setF({...f,name:e.target.value});}})),
+        el(Field,{label:'Unit'},el('input',{value:f.unit,placeholder:'e.g. g',onChange:function(e){setF({...f,unit:e.target.value});}})),
+        el(Field,{label:f.category==='labor'?'Rate / hour ($)':'Cost / unit ($)'},el('input',{inputMode:'decimal',value:f.cost_per_unit,onChange:function(e){setF({...f,cost_per_unit:e.target.value});}}))),
+      el(Field,{label:'Used for (none ticked = every product type)',plain:true},el(Checks,{options:PRODUCT_TYPES.map(function(t){return {v:t.id,l:t.name};}),value:f.product_types,onChange:function(v){setF({...f,product_types:v});}})),
+      el('div',{className:'row',style:{justifyContent:'flex-end'}},editId&&el('button',{className:'btn ghost sm',onClick:function(){setF(blank);setEditId('');}},'Cancel'),el('button',{className:'btn sm',onClick:save},editId?'Save changes':'+ Add price'))),
+    !props.library.length?el('div',{className:'empty'},'No prices yet.'):
+    COGS_CATS.map(function(c){const rows=props.library.filter(function(l){return l.category===c.id;});if(!rows.length)return null;
+      return el('div',{key:c.id,className:'card'},el('div',{className:'k',style:{marginBottom:6}},c.label),el('table',null,el('tbody',null,rows.map(function(l){
+        return el('tr',{key:l.id},el('td',{style:{fontWeight:600}},l.name),el('td',null,money(l.cost_per_unit)+' / '+(l.unit||'unit')),
+          el('td',{className:'muted',style:{fontSize:12}},(l.product_types||[]).length?l.product_types.map(ptName).join(', '):'All product types'),
+          el('td',{style:{textAlign:'right',whiteSpace:'nowrap'}},props.canEdit&&el('button',{className:'btn ghost sm',onClick:function(){setEditId(l.id);setF({category:l.category,name:l.name,unit:l.unit||'',cost_per_unit:l.cost_per_unit==null?'':String(l.cost_per_unit),product_types:l.product_types||[]});}},'Edit'),' ',
+            props.canDel&&el('button',{className:'btn danger sm',onClick:function(){if(window.confirm('Delete "'+l.name+'"?'))run(function(){return db.remove('hx_cost_library',l.id);});}},'Delete')));}))));}));
+}
+
+function Products(props){
+  const st=props.state,P2=can('products',2),P3=can('products',3),F1=can('formbank',1),F2=can('formbank',2),F3=can('formbank',3),C1=can('cogs',1),C2=can('cogs',2),C3=can('cogs',3);
+  const sid=st?st.id:'';
+  const[tab,setTab]=useState('skus');
+  const[pt,setPt]=useState(lsGet('hx_ptype')||PRODUCT_TYPES[0].id);
+  const[data,setData]=useState(null);
+  const[err,setErr]=useState('');
+  const[q,setQ]=useState('');
+  const[modal,setModal]=useState(null);
+  const load=useCallback(async function(){
+    if(!sid){setData({skus:[],flavors:[],forms:[],lib:[]});return;}
+    try{
+      const f='state_id=eq.'+encodeURIComponent(sid);
+      const r=await Promise.all([db.get('hx_skus',f+'&select=*&order=sort,name'),db.get('hx_flavors',f+'&select=*&order=sort,name'),
+        F1?db.get('hx_formulations',f+'&select=*&order=name'):Promise.resolve([]),C1?db.get('hx_cost_library',f+'&select=*&order=category,name'):Promise.resolve([])]);
+      const only=function(a){return (a||[]).filter(function(x){return x.state_id===sid;});};
+      setData({skus:only(r[0]),flavors:only(r[1]),forms:only(r[2]),lib:only(r[3])});
+    }catch(e){setErr(niceErr(e));setData({skus:[],flavors:[],forms:[],lib:[]});}
+  },[sid,F1,C1]);
+  useEffect(function(){setData(null);setErr('');load();},[load]);
+  if(!st)return el('div',null,el('h1',null,'Products'),el('div',{className:'empty'},'Create a state first. Every SKU belongs to one state.'));
+  if(!data)return el('div',{className:'muted'},'Loading...');
+  const lics=props.licenses.filter(function(l){return l.state_id===st.id;});
+  const licName=function(id){const l=lics.find(function(x){return x.id===id;});return l?l.name:'?';};
+  const skuName=function(id){const k=data.skus.find(function(x){return x.id===id;});return k?k.name:'?';};
+  const flavName=function(id){const x=data.flavors.find(function(y){return y.id===id;});return x?x.name:'';};
+  function closeReload(){setModal(null);load();}
+  async function del(fn,msg){if(!window.confirm(msg))return;setErr('');try{await fn();await load();}catch(e){setErr(niceErr(e));}}
+  async function toggle(k){setErr('');try{await db.update('hx_skus',k.id,{active:!k.active});await load();}catch(e){setErr(niceErr(e));}}
+  function openFormula(f,skuId,flavorId){setModal({formula:f||null,skuId:skuId,flavorId:flavorId});}
+  const typeSkus=data.skus.filter(function(k){return k.product_type===pt;}).filter(function(k){
+    if(!q)return true;const t=(k.name+' '+data.flavors.filter(function(x){return x.sku_id===k.id;}).map(function(x){return x.name;}).join(' ')).toLowerCase();return t.indexOf(q.toLowerCase())>=0;});
+  const needs=data.skus.filter(function(k){return !k.active&&!data.forms.some(function(f){return f.sku_id===k.id;});}).length;
+  const tabs=[['skus','SKUs and Flavors']].concat(F1?[['formulas','Formulation Bank ('+data.forms.length+')']]:[]).concat(C1?[['prices','Ingredient Prices ('+data.lib.length+')']]:[]);
+  let body;
+  if(tab==='prices'&&C1)body=el(PriceLibrary,{state:st,library:data.lib,reload:load,canEdit:C2,canDel:C3});
+  else if(tab==='formulas'&&F1){
+    const fl=data.forms.filter(function(f){const t=(f.name+' '+skuName(f.sku_id)+' '+flavName(f.flavor_id)).toLowerCase();return !q||t.indexOf(q.toLowerCase())>=0;});
+    body=el('div',null,
+      el('div',{className:'row',style:{marginBottom:14}},el('input',{style:{maxWidth:300},placeholder:'Search formulations...',value:q,onChange:function(e){setQ(e.target.value);}}),
+        el('span',{className:'muted'},fl.length+' formulation'+(fl.length===1?'':'s')),el('span',{style:{flex:1}}),
+        F2&&el('button',{className:'btn',disabled:!data.skus.length,onClick:function(){openFormula(null,'','');}},'+ New formulation')),
+      !fl.length?el('div',{className:'empty'},data.skus.length?'No formulations match.':'Create a SKU first; its formulation is entered as part of creating it.'):
+      PRODUCT_TYPES.map(function(t){
+        const items=fl.filter(function(f){const k=data.skus.find(function(x){return x.id===f.sku_id;});return k&&k.product_type===t.id;});
+        if(!items.length)return null;
+        return el('div',{key:t.id,style:{marginBottom:18}},el('div',{className:'secth'},t.name+'  \u00b7  '+items.length),
+          el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))'}},items.map(function(f){
+            return el(FormulaCard,{key:f.id,f:f,skuName:skuName(f.sku_id),flavorName:flavName(f.flavor_id),onEdit:F2?function(){openFormula(f,f.sku_id,f.flavor_id||'');}:null,
+              onDup:F2?function(){setModal({formula:{...f,id:undefined,name:'',flavor_id:''},skuId:f.sku_id,flavorId:'',dup:true});}:null,
+              onDelete:F3&&function(){del(function(){return db.remove('hx_formulations',f.id);},'Delete "'+f.name+'"?'+(data.forms.filter(function(x){return x.sku_id===f.sku_id;}).length===1?' It is this SKU\'s only formulation, so the SKU will be switched off.':''));}});})));
+      }));
+  }else{
+    body=el('div',null,
+      el('div',{className:'tabs'},PRODUCT_TYPES.map(function(t){const n=data.skus.filter(function(k){return k.product_type===t.id;}).length;
+        return el('button',{key:t.id,className:t.id===pt?'on':'',onClick:function(){setPt(t.id);lsSet('hx_ptype',t.id);setErr('');}},t.name+(n?' ('+n+')':''));})),
+      el('div',{className:'row',style:{marginBottom:14}},el('input',{style:{maxWidth:300},placeholder:'Search SKUs and flavors...',value:q,onChange:function(e){setQ(e.target.value);}}),
+        el('span',{style:{flex:1}}),P2&&F2&&el('button',{className:'btn',onClick:function(){setModal({wizard:true});}},'+ New SKU')),
+      !typeSkus.length?el('div',{className:'empty'},'No '+ptName(pt)+' SKUs in '+st.name+' yet.'+(P2&&F2?' Click "+ New SKU". It starts blank, and the formulation is entered as part of creating it.':'')):
+      el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(330px,1fr))'}},typeSkus.map(function(k){
+        const fl=data.flavors.filter(function(x){return x.sku_id===k.id&&x.active;});
+        const forms=data.forms.filter(function(f){return f.sku_id===k.id;});
+        const hasBase=forms.some(function(f){return !f.flavor_id;});
+        const status=k.active?['Active','ok']:(F1&&!forms.length)?['Needs formulation','bad']:['Off','off'];
+        return el('div',{key:k.id,className:'card gold',style:{marginBottom:0,opacity:k.active?1:.8}},
+          el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start',flexWrap:'nowrap'}},
+            el('div',{style:{fontWeight:700,fontSize:15}},k.name),el('span',{className:'badge '+status[1]},status[0])),
+          el('div',{className:'muted',style:{fontSize:12,margin:'2px 0 8px'}},(k.license_ids||[]).length?'Licenses: '+k.license_ids.map(licName).join(', '):'Every license in '+st.name),
+          specSummary(k.product_type,k.spec)&&el('div',{style:{fontSize:12,marginBottom:8}},specSummary(k.product_type,k.spec)),
+          k.spec&&k.spec.no_flavor?el('div',{className:'muted',style:{fontSize:12}},'No flavors (plain SKU)'):
+          el('div',null,el('div',{className:'k'},fl.length+' flavor'+(fl.length===1?'':'s')),
+            el('div',{className:'row',style:{gap:4,marginTop:4}},fl.slice(0,12).map(function(x){return el('span',{key:x.id,className:'badge off',style:{textTransform:'none',letterSpacing:0}},x.name);}),fl.length>12&&el('span',{className:'muted',style:{fontSize:12}},'+'+(fl.length-12)+' more'))),
+          F1&&el('div',{className:'muted',style:{fontSize:12,marginTop:8}},forms.length?((hasBase?'Base recipe':'No base recipe')+(forms.filter(function(f){return f.flavor_id;}).length?'  \u00b7  '+forms.filter(function(f){return f.flavor_id;}).length+' flavor recipe(s)':'')):'No formulation yet'),
+          el('div',{className:'row',style:{marginTop:12,gap:6}},
+            el('button',{className:'btn ghost sm',onClick:function(){setModal({flavors:k});}},'Flavors'),
+            F2&&el('button',{className:'btn ghost sm',onClick:function(){openFormula(forms.find(function(f){return !f.flavor_id;})||null,k.id,'');}},hasBase?'Base recipe':'Add recipe'),
+            P2&&el('button',{className:'btn ghost sm',onClick:function(){setModal({edit:k});}},'Edit'),
+            P2&&el('button',{className:'btn ghost sm',onClick:function(){toggle(k);}},k.active?'Switch off':'Switch on'),
+            P3&&el('button',{className:'btn danger sm',onClick:function(){del(function(){return db.remove('hx_skus',k.id);},'Delete SKU "'+k.name+'" with its flavors and formulations?');}},'Delete')));
+      })));
+  }
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,el('span',{className:'g'},st.name),' Products'),
+        el('div',{className:'sub'},'SKUs, flavors and formulations for '+st.name+'. Created once here, used by every module. Other states keep their own.'))),
+    err&&el('div',{className:'msg err'},err),
+    needs>0&&F1&&el('div',{className:'msg err'},needs+' SKU'+(needs===1?' needs':'s need')+' a formulation before '+(needs===1?'it':'they')+' can be used.'),
+    tabs.length>1&&el('div',{className:'tabs'},tabs.map(function(t){return el('button',{key:t[0],className:tab===t[0]?'on':'',onClick:function(){setTab(t[0]);setQ('');setErr('');}},t[1]);})),
+    body,
+    modal&&modal.wizard&&el(SkuWizard,{state:st,licenses:lics,skus:data.skus,library:data.lib,productType:pt,onClose:function(){setModal(null);load();},onDone:closeReload}),
+    modal&&modal.edit&&el(SkuEditor,{sku:modal.edit,state:st,licenses:lics,onClose:function(){setModal(null);},onDone:closeReload}),
+    modal&&modal.flavors&&el(FlavorManager,{sku:modal.flavors,state:st,flavors:data.flavors,formulations:data.forms,canEdit:P2,canDel:P3,canF1:F1,canF2:F2,reload:load,onClose:function(){setModal(null);},
+      openFormula:function(f,skuId,flavorId){setModal({formula:f,skuId:skuId,flavorId:flavorId,back:modal.flavors});}}),
+    modal&&modal.hasOwnProperty('formula')&&el(FormulationEditor,{state:st,skus:data.skus,flavors:data.flavors,formulations:data.forms,library:data.lib,productType:pt,
+      initial:modal.formula,skuId:modal.skuId,flavorId:modal.flavorId,lockSku:!!modal.skuId&&!modal.dup,lockFlavor:!!modal.back,
+      onClose:function(){setModal(modal.back?{flavors:modal.back}:null);},onDone:function(){const b=modal.back;load();setModal(b?{flavors:b}:null);}}));
+}
+
+/* ---------- Audit trail: history, void, admin page ----------
+   The database writes every change to hx_audit_log (append-only). Records are never deleted:
+   they are voided with a reason. Every change to a record needs a reason for change. */
+const AUDIT_AREAS={hx_complaints:'Complaint',hx_audits:'Internal audit',hx_audit_findings:'Audit finding',hx_recalls:'Recall / mock recall',hx_recall_contacts:'Recall contact',hx_lots:'Received lot',hx_lot_uses:'Lot use',hx_holds:'Hold',hx_shipments:'Shipment',hx_suppliers:'Supplier',hx_supplier_reviews:'Supplier review',hx_training_courses:'Training course',hx_training_records:'Training record',hx_deviations:'Deviation',hx_capas:'CAPA',hx_sops:'SOP',hx_sop_acks:'SOP signature',hx_label_prints:'Sticker print',hx_standards:'Standards',hx_standard_clauses:'Standard clauses',hx_license_standards:'Standard adoption',hx_conformance:'Standard conformance',hx_label_templates:'Label templates',hx_tests:'Testing record',hx_roles:'Roles',hx_batches:'Batch record',hx_facility_log:'Facility log entry',hx_visitor_log:'Visitor log',hx_log_lists:'Facility log lists',hx_rules:'Rulebook',hx_rule_sources:'Rulebook source PDF',
+  hx_states:'States',hx_licenses:'Licenses',hx_profiles:'Team and access',hx_skus:'SKUs',hx_flavors:'Flavors',hx_formulations:'Formulations',hx_cost_library:'Ingredient prices'};
+const AUDIT_SKIP=['voided_by','voided_at','updated_at','edit_reason'];
+function auditVal(v){
+  if(v===null||v===undefined||v==='')return '(blank)';
+  let t=typeof v==='object'?JSON.stringify(v):String(v);
+  return t.length>90?t.slice(0,90)+'...':t;
+}
+function auditDefOf(a){
+  const r=a.new_data||a.old_data||{};
+  if(a.table_name==='hx_batches')return BATCH_TYPES.find(function(t){return t.id===r.batch_type;})||null;
+  if(a.table_name!=='hx_facility_log')return null;
+  return LOG_TYPES.find(function(t){return t.id===r.log_type;})||null;
+}
+function auditLines(a){
+  if(a.action==='INSERT')return ['Created'];
+  if(a.action==='DELETE')return ['Removed'];
+  if(a.action==='VOID')return ['Voided'];
+  const o=a.old_data||{},n=a.new_data||{},def=auditDefOf(a),out=[];
+  (a.changed||[]).forEach(function(k){
+    if(AUDIT_SKIP.indexOf(k)>=0)return;
+    const ov=o[k],nv=n[k];
+    if(k==='data'&&ov&&nv&&typeof ov==='object'&&typeof nv==='object'){
+      const keys={};Object.keys(ov).concat(Object.keys(nv)).forEach(function(x){keys[x]=1;});
+      Object.keys(keys).forEach(function(x){
+        if(JSON.stringify(ov[x])===JSON.stringify(nv[x]))return;
+        const f=def&&def.fields.find(function(y){return y.k===x;});
+        out.push((f&&f.l?f.l:x.replace(/_/g,' '))+': '+auditVal(ov[x])+' \u2192 '+auditVal(nv[x]));
+      });
+      return;
+    }
+    out.push(k.replace(/_/g,' ')+': '+auditVal(ov)+' \u2192 '+auditVal(nv));
+  });
+  return out.length?out:['Changed'];
+}
+function auditRecord(a){
+  const r=a.new_data||a.old_data||{};
+  if(a.table_name==='hx_facility_log'){const d=auditDefOf(a);return (d?d.name:'Log')+(r.item?': '+r.item:'');}
+  if(a.table_name==='hx_visitor_log')return r.visitor_name||a.row_id;
+  if(a.table_name==='hx_tests')return 'Test '+(r.batch_number||'')+(r.tag?' \u00b7 '+r.tag:'');
+  if(a.table_name==='hx_batches'){const d=auditDefOf(a);return (d?d.name:'Batch')+' '+(r.batch_number||'');}
+  if(a.table_name==='hx_profiles')return r.name||r.email||a.row_id;
+  if(a.table_name==='hx_licenses')return (r.name||'')+(r.license_number?' ('+r.license_number+')':'');
+  return r.name||r.title||a.row_id;
+}
+function historyHtml(hist,def){
+  const e=esc3;
+  return '<table class="hist"><tr class="sec"><td colspan="4">CHANGE HISTORY (AUDIT TRAIL)</td></tr><tr><th style="width:auto">When</th><th style="width:auto">Who</th><th style="width:auto">What</th><th style="width:auto">Reason</th></tr>'+
+    (hist.length?hist.map(function(a){return '<tr><td>'+e(new Date(a.at).toLocaleString())+'</td><td>'+e(a.user_name||'-')+'</td><td>'+(a.action==='UPDATE'?'':'<b>'+({INSERT:'Created',VOID:'Voided',DELETE:'Removed'}[a.action]||e(a.action))+'</b><br>')+auditLines(a).filter(function(x){return a.action==='UPDATE';}).map(e).join('<br>')+'</td><td>'+e(a.reason||'-')+'</td></tr>';}).join('')
+      :'<tr><td colspan="4">No history recorded.</td></tr>')+'</table>';
+}
+function VoidModal(props){
+  const[why,setWhy]=useState('');
+  const[err,setErr]=useState('');
+  const[busy,setBusy]=useState(false);
+  async function go(){
+    setErr('');
+    if(!why.trim()){setErr('Enter the reason. It is saved permanently.');return;}
+    setBusy(true);
+    try{await props.onVoid(why.trim());}catch(e){setErr(String(e.message||e));setBusy(false);}
+  }
+  return el(Modal,{title:'Void '+props.what,onClose:props.onClose},
+    el('div',{className:'muted',style:{marginBottom:12}},'Records are never deleted. A voided entry stays on file, crossed out, with your name, the time and this reason. A void cannot be undone.'),
+    el(Field,{label:'Reason for voiding *'},el('textarea',{value:why,style:{minHeight:70},placeholder:'e.g. Duplicate of entry #12',onChange:function(e){setWhy(e.target.value);}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),
+      el('button',{className:'btn danger',disabled:busy,onClick:go},busy?'Saving...':'Void entry')));
+}
+function AuditTrail(props){
+  const st=props.state,sid=st?st.id:'';
+  const[rows,setRows]=useState(null);
+  const[area,setArea]=useState('');
+  const[range,setRange]=useState('30');
+  const[only,setOnly]=useState(true);
+  const[q,setQ]=useState('');
+  const[err,setErr]=useState('');
+  const load=useCallback(function(){
+    let qs='select=*&order=at.desc&limit=1000';
+    if(area)qs+='&table_name=eq.'+area;
+    if(range!=='all')qs+='&at=gte.'+encodeURIComponent(new Date(Date.now()-parseInt(range,10)*86400000).toISOString());
+    if(only&&sid)qs+='&or=(state_id.eq.'+encodeURIComponent(sid)+',state_id.is.null)';
+    return db.get('hx_audit_log',qs).then(function(r){setRows(r||[]);}).catch(function(e){setErr(String(e.message||e));setRows([]);});
+  },[area,range,only,sid]);
+  useEffect(function(){setRows(null);setErr('');load();},[load]);
+  const list=(rows||[]).filter(function(a){if(!q)return true;return (a.user_name+' '+auditRecord(a)+' '+(a.reason||'')+' '+auditLines(a).join(' ')).toLowerCase().indexOf(q.toLowerCase())>=0;});
+  function csv(){
+    const e=function(v){return '"'+String(v==null?'':v).replace(/"/g,'""')+'"';};
+    const lines=[['When','Who','Area','Record','Record ID','Action','Changes','Reason','State ID','License ID'].map(e).join(',')];
+    list.forEach(function(a){lines.push([a.at,a.user_name,AUDIT_AREAS[a.table_name]||a.table_name,auditRecord(a),a.row_id,a.action,auditLines(a).join(' | '),a.reason,a.state_id,a.license_id].map(e).join(','));});
+    const b=new Blob([lines.join('\n')],{type:'text/csv'});const x=document.createElement('a');x.href=URL.createObjectURL(b);x.download='audit_trail.csv';document.body.appendChild(x);x.click();x.remove();
+  }
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,'Audit ',el('span',{className:'g'},'Trail')),
+        el('div',{className:'sub'},'Every change in Hendrix: who, when, old value, new value and the reason. Written by the database; nobody can edit or delete it.')),
+      el('button',{className:'btn ghost',disabled:!list.length,onClick:csv},'Export CSV')),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{marginBottom:12}},
+      el('input',{style:{maxWidth:260},placeholder:'Search who, record, reason...',value:q,onChange:function(e){setQ(e.target.value);}}),
+      el('select',{value:area,onChange:function(e){setArea(e.target.value);}},el('option',{value:''},'All areas'),Object.keys(AUDIT_AREAS).map(function(k){return el('option',{key:k,value:k},AUDIT_AREAS[k]);})),
+      el('select',{value:range,onChange:function(e){setRange(e.target.value);}},el('option',{value:'1'},'Last 24 hours'),el('option',{value:'7'},'Last 7 days'),el('option',{value:'30'},'Last 30 days'),el('option',{value:'365'},'Last year'),el('option',{value:'all'},'All time')),
+      st&&el('label',{className:'ck'},el('input',{type:'checkbox',checked:only,onChange:function(e){setOnly(e.target.checked);}}),el('span',null,st.name+' only')),
+      el('span',{className:'muted'},rows?list.length+' change'+(list.length===1?'':'s'):'Loading...')),
+    rows&&!list.length&&el('div',{className:'empty'},'No changes in this period.'),
+    list.length>0&&el('div',{className:'card',style:{overflowX:'auto'}},el('table',null,
+      el('thead',null,el('tr',null,['When','Who','Area','Record','Action','Changes','Reason'].map(function(h){return el('th',{key:h},h);}))),
+      el('tbody',null,list.map(function(a){
+        return el('tr',{key:a.id},
+          el('td',{style:{whiteSpace:'nowrap',fontSize:13}},new Date(a.at).toLocaleString([],{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'})),
+          el('td',null,a.user_name||'-'),
+          el('td',{style:{fontSize:13}},AUDIT_AREAS[a.table_name]||a.table_name),
+          el('td',{style:{fontSize:13}},auditRecord(a)),
+          el('td',null,el('span',{className:'badge'+(a.action==='VOID'||a.action==='DELETE'?' bad':a.action==='INSERT'?' ok':'')},a.action==='INSERT'?'Created':a.action==='UPDATE'?'Changed':a.action==='VOID'?'Void':'Removed')),
+          el('td',{style:{fontSize:12,maxWidth:420}},a.action==='UPDATE'?auditLines(a).map(function(x,i){return el('div',{key:i},x);}):null),
+          el('td',{style:{fontSize:13,maxWidth:260}},a.reason||el('span',{className:'muted'},'-')));
+      })))));
+}
+
+/* ---------- Batch Tracker: Black Fox batch records, driven by Products ----------
+   Same 8 batch types, fields, sections and system checks as Black Fox. The numbers Black Fox kept
+   in code per SKU (joint weights, oil per cart, grams per gummy, bag size, ingredients, kief or
+   diamond coating, dual THCA/HTE) come from the SKU's production settings in Products.
+   Team members continue a batch by filling blanks; admins change filled values with a reason. */
+const BT_STATUS=['In Progress','QC Hold','Passed','Failed','Completed'];
+const BT_TESTS=['Not Submitted','Submitted','Passed','Failed'];
+const BT_TOL=0.10;
+function bS(l){return {t:'section',l:l};}
+function bT(k,l,ph,x){return Object.assign({k:k,l:l,t:'text',ph:ph||''},x||{});}
+function bC(k,x){return Object.assign({k:k,l:'Recorded on METRC?',t:'checkbox',metrc:1},x||{});}
+function bD(k,l,x){return Object.assign({k:k,l:l,t:'display'},x||{});}
+function bA(k,l,x){return Object.assign({k:k,l:l,t:'auto'},x||{});}
+function bR(k,l,x){return Object.assign({k:k,l:l,t:'rd'},x||{});}
+function bSel(k,l,o,x){return Object.assign({k:k,l:l,t:'select',o:o},x||{});}
+function bHead(ph,sku,flavor){
+  const a=[{k:'batch_number',l:'Batch / Lot Number',t:'batchno',ph:ph},{k:'date',l:'Date',t:'date'},bT('operator','Operator / Personnel','Who ran this batch')];
+  if(sku)a.push({k:'sku',l:'SKU',t:'sku'});
+  if(flavor)a.push({k:'flavor',l:'Flavor',t:'flavor'});
+  return a;
+}
+function bTail(st){return [bSel('status','Status',st||BT_STATUS),{k:'notes',l:'Notes',t:'textarea',ph:'Any observations or issues'}];}
+const PR_ING={'THCA':['thca_metrc','thca_qty'],'Terpene':['terp_qty'],'Live Resin':['live_resin_metrc','live_resin_qty'],'HTE':['hte_metrc','hte_qty'],
+  'Decarbed Cured Resin':['decarbed_resin_metrc','decarbed_resin_qty'],'Distillate':['distillate_metrc','distillate_qty'],'Trim':['trim_metrc','trim_qty'],'THCA (internal)':['thca_internal_metrc','thca_internal_qty']};
+function prIng(k){for(const n in PR_ING){if(PR_ING[n].indexOf(k)>=0)return n;}return '';}
+const BATCH_TYPES=[
+  {id:'ethanol_extraction',name:'Ethanol Extraction',fields:bHead('e.g. ETH-2026-014',false,false).concat([
+    bS('Extraction'),{k:'biomass_tags',l:'Biomass Tags',t:'tags'},bA('total_biomass_used','Total Biomass Used'),
+    bT('ethanol_crude_metrc','Ethanol Crude METRC #','METRC tag for the crude oil'),bT('ethanol_crude_weight','Ethanol Crude Weight','Actual measured weight',{sug:['ethanol_crude_suggested','77%']}),bC('extraction_metrc_confirmed'),
+    bS('Recovery and Decarbing'),bT('decarbed_crude_tag','Decarbed Crude Tag','METRC tag for the decarbed crude'),bT('decarbed_crude_weight','Decarbed Crude Weight Produced','Actual measured weight',{sug:['decarbed_crude_suggested','20%']}),bC('recovery_metrc_confirmed'),
+    bS('Distillation'),bT('total_decarbed_crude_used','Total Decarbed Crude Used'),bT('total_decarbed_crude_waste','Total Decarbed Crude Waste'),bC('decarbed_waste_metrc_confirmed'),
+    bT('total_distillate_produced','Total Distillate Produced','Actual measured weight',{sug:['distillate_suggested','16%']}),bT('distillate_metrc_tag','Distillate METRC Tag','METRC tag for the finished distillate'),bC('distillation_metrc_confirmed'),
+    bS('Batch Yield Quality Check'),bD('yield_quality_result','Yield Quality')]).concat(bTail(['In Progress','Winterization','Filtration','QC Hold','Passed','Failed','Completed']))},
+  {id:'butane_extraction',name:'BHO Extraction',fields:bHead('e.g. BHO-2026-014',true,false).concat([
+    bS('Biomass Used'),{k:'biomass_tags',l:'Biomass Tags',t:'tags'},bA('total_biomass_used','Total Biomass Used'),
+    bS('BHO Crude'),bT('bho_crude_metrc','BHO Crude METRC #','METRC tag for the BHO crude'),bT('bho_crude_produced','BHO Crude Produced','Actual measured weight'),bC('bho_crude_metrc_confirmed'),
+    bS('In Progress'),
+    bT('product_inprogress_metrc','(In Progress) METRC #','',{single:1}),bT('product_inprogress_qty','(In Progress) Qty Produced','',{single:1}),bC('product_inprogress_metrc_confirmed',{single:1}),
+    bT('product_inprogress_waste','(In Progress) Waste','',{single:1}),bC('product_inprogress_waste_metrc_confirmed',{single:1}),
+    bT('hte_inprogress_metrc','HTE (In Progress) METRC #','',{dual:1}),bT('hte_inprogress_qty','HTE (In Progress) Qty Produced','',{dual:1}),bC('hte_inprogress_metrc_confirmed',{dual:1}),
+    bT('hte_inprogress_waste','HTE (In Progress) Waste','',{dual:1}),bC('hte_inprogress_waste_metrc_confirmed',{dual:1}),
+    bT('thca_inprogress_metrc','THCA (In Progress) METRC #','',{dual:1}),bT('thca_inprogress_qty','THCA (In Progress) Qty Produced','',{dual:1}),bC('thca_inprogress_metrc_confirmed',{dual:1}),
+    bT('thca_inprogress_waste','THCA (In Progress) Waste','',{dual:1}),bC('thca_inprogress_waste_metrc_confirmed',{dual:1}),
+    bS('Final'),
+    bT('product_final_metrc','Final Batch METRC #','',{single:1}),bT('product_final_qty','Final Qty','',{single:1}),bC('product_final_metrc_confirmed',{single:1}),
+    bT('product_final_waste','Final Waste','',{single:1}),bC('product_final_waste_metrc_confirmed',{single:1}),
+    bT('hte_final_metrc','HTE Final Batch METRC #','',{dual:1}),bT('hte_final_qty','HTE Final Qty','',{dual:1}),bC('hte_final_metrc_confirmed',{dual:1}),
+    bT('hte_final_waste','HTE Final Waste','',{dual:1}),bC('hte_final_waste_metrc_confirmed',{dual:1}),
+    bT('thca_final_metrc','THCA Final Batch METRC #','',{dual:1}),bT('thca_final_qty','THCA Final Qty','',{dual:1}),bC('thca_final_metrc_confirmed',{dual:1}),
+    bT('thca_final_waste','THCA Final Waste','',{dual:1}),bC('thca_final_waste_metrc_confirmed',{dual:1}),
+    bS('Yield'),bD('bho_yield_display','Yield')]).concat(bTail(['In Progress','Purging','QC Hold','Passed','Failed','Completed']))},
+  {id:'pre_rolls',name:'Pre-Rolls',fields:bHead('e.g. PR-2026-014',true,true).concat([
+    bS('Infused Flower'),bT('flower_metrc','Flower METRC #','METRC tag for the source flower'),bT('flower_qty','Flower Used','e.g. 1,000g'),
+    bT('thca_metrc','THCA #','METRC tag for the THCA used',{ing:1}),bT('thca_qty','THCA Used','e.g. 200g',{ing:1}),bT('terp_qty','Terpene Used','e.g. 40g',{ing:1}),
+    bT('live_resin_metrc','Live Resin METRC #','METRC tag for the live resin used',{ing:1}),bT('live_resin_qty','Live Resin Used','e.g. 150g',{ing:1}),
+    bT('hte_metrc','HTE METRC #','METRC tag for the HTE used',{ing:1}),bT('hte_qty','HTE Used','e.g. 120g',{ing:1}),
+    bT('decarbed_resin_metrc','Decarbed Cured Resin METRC #','METRC tag for the decarbed cured resin',{ing:1}),bT('decarbed_resin_qty','Decarbed Cured Resin Used','e.g. 100g',{ing:1}),
+    bT('distillate_metrc','Distillate METRC #','METRC tag for the distillate used',{ing:1}),bT('distillate_qty','Distillate Used','e.g. 80g',{ing:1}),
+    bT('trim_metrc','Trim METRC #','METRC tag for the trim used',{ing:1}),bT('trim_qty','Trim Used','e.g. 500g',{ing:1}),
+    bT('thca_internal_metrc','THCA METRC #','METRC tag for the THCA used',{ing:1}),bT('thca_internal_qty','THCA Used','e.g. 200g',{ing:1}),
+    bT('infused_flower_number','Infused Flower #','Infused flower batch/lot #'),bT('infused_flower_total_wt','Infused Flower Total WT','e.g. 1,240g'),bC('flower_metrc_confirmed'),
+    bS('System Check'),bD('flower_check_result','System Check'),
+    bS('Infused Joints'),bT('infused_flower_used','Infused Flower Used','Amount used for this run'),bT('infused_flower_waste','Infused Flower Waste','Amount wasted'),bC('infused_flower_waste_metrc_confirmed'),
+    bT('total_joint_filled','Total Joint Filled','e.g. 1,500 joints'),bT('infused_preroll_metrc','Infused Pre Roll METRC Tag','METRC tag for the infused joints'),bC('joints_metrc_confirmed'),
+    bS('System Check'),bD('joints_check_result','System Check'),
+    bS('Infused Kiefed Preroll',{kief:1}),bT('total_infused_preroll_used','Total Infused Pre Roll Used','Joints used for kiefing',{kief:1}),bT('total_infused_preroll_waste','Total Infused Pre Roll Waste','Joints wasted',{kief:1}),bC('preroll_waste_metrc_confirmed',{kief:1}),
+    bT('kief_metrc','Kief METRC #','METRC tag for the kief used',{kief:1}),bT('kief_qty_used','Kief QTY Used','e.g. 60g',{kief:1}),bT('total_kiefed_infused_joints','Total Kiefed Infused Joints','e.g. 1,480 joints',{kief:1}),
+    bT('kiefed_infused_preroll_metrc','Kiefed Infused Preroll METRC #','METRC tag for the kiefed joints',{kief:1}),bC('kiefed_metrc_confirmed',{kief:1}),
+    bS('System Check',{kief:1}),bD('kiefed_check_result','System Check',{kief:1}),
+    bS('Final Packaging'),bT('kiefed_infused_joints_used','Kiefed Infused Joints Used','Joints used for packaging',{kief:1}),bT('kief_infused_joints_waste','Kief Infused Joints Waste','Joints wasted during packaging',{kief:1}),bC('kief_waste_metrc_confirmed',{kief:1}),
+    bT('total_jar_packaged','Total Jar Packaged','Final packaged jar count'),bT('final_packaged_tag','Final Packaged Tag #','METRC tag for packaged units'),bD('packaging_check_result','System Check'),
+    bR('rd1_result','R&D 1'),bR('rd2_result','R&D 2'),bSel('mandatory_testing','Mandatory Testing',BT_TESTS,{afterRd:1}),bC('packaging_metrc_confirmed')]).concat(bTail())},
+  {id:'cartridges',name:'Cartridges',fields:bHead('e.g. CART-2026-014',true,true).concat([
+    bS('Source Oil / Distillate'),bT('oil_source_batch','Oil / Distillate Source Batch #','Which extraction batch this oil came from'),bT('input_weight','Input Oil Weight','e.g. 800g distillate'),
+    bT('terpene_added','Amount Terpene Added','e.g. 40g or 5%'),bC('source_metrc_confirmed'),
+    bS('Primed Oil'),bT('primed_oil_total_weight','Primed Oil Total Weight','e.g. 840g'),bT('primed_oil_metrc','Primed Oil METRC #','METRC tag for the primed oil'),
+    bT('primed_oil_used','Primed Oil Used','How much primed oil was used in this fill run'),bR('primed_rd1','R&D Test'),bR('primed_rd2','R&D Test 2'),bC('primed_metrc_confirmed'),
+    bS('System Check'),bD('primed_check_result','System Check'),
+    bS('Packaged'),bT('cart_packaged','Total Cart Packaged','Final packaged unit count'),bT('cart_packaged_metrc','Total Cart Packaged METRC#','METRC tag for packaged units'),
+    bSel('mandatory_test','Mandatory Test',BT_TESTS),bC('packaged_metrc_confirmed')]).concat(bTail())},
+  {id:'gummies',name:'Gummies',fields:bHead('e.g. GUM-2026-014',true,true).concat([
+    bS('Gummy Mixture Batch'),bT('distillate_metrc','Distillate METRC #','METRC tag for the distillate used'),bT('distillate_qty','Distillate Used','e.g. 500g'),
+    bT('gummy_mixture_batch_weight','Gummy Mixture Batch Weight','e.g. 4,500g'),bT('oil_source_batch','Gummy Mixture METRC #','METRC tag for the gummy mixture'),bC('mixture_metrc_confirmed'),
+    bS('Gummies Production Batch (Eaches)'),bA('gummy_mixture_used','Gummy Mixture Used'),bT('gummy_mixture_waste','Gummy Mixture Waste','Amount wasted'),bC('gummy_mixture_waste_metrc_confirmed'),
+    bT('units_produced','Total Gummies Produced','e.g. 5,000 gummies'),bT('gummies_batch_metrc','Gummies Production Batch METRC#','METRC tag for this production batch'),bC('production_metrc_confirmed'),
+    bS('Sugared Gummies'),bT('total_gummies_used','Total Gummies Used','Gummies used for sugaring'),bT('total_gummies_waste_presugar','Total Gummies Waste (Before Sugaring)','Gummies wasted before sugaring'),bC('gummies_waste_presugar_metrc_confirmed'),
+    bA('total_sugar_coated_gummies','Total Sugar Coated Gummies'),bT('sugar_coated_gummies_metrc','Sugar Coated Gummies METRC#','METRC tag for the sugar coated gummies'),
+    bR('gummy_rd1','R&D Test'),bR('gummy_rd2','R&D Test 2'),bC('sugared_metrc_confirmed'),
+    bS('Final Packaging'),bT('sugar_coated_used','Total Sugar Coated Gummies Used','Amount used for packaging'),bT('sugar_coated_waste','Total Sugar Coated Gummies Waste','Amount wasted during packaging'),bC('sugar_coated_waste_metrc_confirmed'),
+    bA('total_packaged_gummies','Total Packaged Gummies'),bT('final_packaged_gummies_metrc','Final Packaged Gummies METRC#','METRC tag for packaged units'),
+    bSel('gummy_mandatory_test','Mandatory Testing',BT_TESTS),bC('packaging_metrc_confirmed_gummy'),
+    bS('System Check'),bD('system_check_result','System Check')]).concat(bTail())},
+  {id:'infused_flower',name:'Infused Flower',fields:bHead('e.g. IF-2026-014',true,true).concat([
+    bS('Infused Flower'),bT('flower_metrc','Flower METRC #','METRC tag for the source flower'),bT('flower_qty','Flower Used','e.g. 1,000g'),
+    bT('thca_metrc','THCA #','METRC tag for the THCA used'),bT('thca_qty','THCA Used','e.g. 200g'),
+    bT('live_resin_metrc','Live Resin METRC #','METRC tag for the live resin used'),bT('live_resin_qty','Live Resin Used','e.g. 150g'),
+    bT('hte_metrc','HTE METRC #','METRC tag for the HTE used'),bT('hte_qty','HTE Used','e.g. 120g'),
+    bT('decarbed_resin_metrc','Decarbed Cured Resin METRC #','METRC tag for the decarbed cured resin'),bT('decarbed_resin_qty','Decarbed Cured Resin Used','e.g. 100g'),
+    bT('distillate_metrc','Distillate METRC #','METRC tag for the distillate used'),bT('distillate_qty','Distillate Used','e.g. 80g'),bT('terp_qty','Terpene Used','e.g. 40g'),
+    bT('infused_flower_number','Infused Flower METRC Tag','METRC tag for the infused flower produced'),bT('infused_flower_total_wt','Infused Flower Total WT','e.g. 1,240g'),bC('flower_metrc_confirmed'),
+    bS('System Check'),bD('flower_check_result','System Check'),bR('rd1_result','R&D Test'),bR('rd2_result','R&D Test 2'),
+    bS('Filling & Packaging',{ifPkg:1}),bT('infused_flower_used','Infused Flower Used','Amount used for this run',{ifPkg:1}),bT('units_produced','Total Bags Filled','e.g. 300 bags',{ifPkg:1}),
+    bT('cart_waste','Infused Flower Waste','Amount wasted',{ifPkg:1}),bT('metrc_tag','Final Packaging METRC Tag','METRC tag for the packaged product',{ifPkg:1}),
+    bD('packaging_check_result','Validation',{ifPkg:1}),bC('packaging_metrc_confirmed',{ifPkg:1}),bSel('mandatory_testing','Mandatory Testing',BT_TESTS,{afterRd:1})]).concat(bTail())},
+  {id:'moon_rocks',name:'Moon Rocks',fields:bHead('e.g. MR-2026-014',true,true).concat([
+    bT('oil_source_batch','Base Flower METRC#','METRC tag for the base flower'),bT('input_weight','Base Flower Weight','e.g. 500g'),
+    bT('distillate_metrc','Hash Oil METRC#','METRC tag for the hash oil used'),bT('distillate_qty','Hash Oil Used','e.g. 150g'),
+    bT('kief_metrc','Kief METRC#','METRC tag for the kief used'),bT('kief_qty_used','Kief Used','e.g. 100g'),
+    bT('units_produced','Total Moon Rocks Produced','e.g. 750g'),bT('metrc_tag','Final METRC Tag#','METRC tag for the finished product')]).concat(bTail())},
+  {id:'snow_caps',name:'Snow Caps',fields:bHead('e.g. SC-2026-014',true,true).concat([
+    bT('oil_source_batch','Base Flower METRC#','METRC tag for the base flower'),bT('input_weight','Base Flower Weight','e.g. 500g'),
+    bT('kief_metrc','Kief METRC#','METRC tag for the kief used'),bT('kief_qty_used','Kief Used','e.g. 120g'),
+    bT('units_produced','Total Snow Caps Produced','e.g. 620g'),bT('metrc_tag','Final METRC Tag#','METRC tag for the finished product')]).concat(bTail())}
+];
+const BT_FREE=['status','mandatory_testing','mandatory_test','gummy_mandatory_test','rd1_result','rd2_result','primed_rd1','primed_rd2','gummy_rd1','gummy_rd2',
+  'total_biomass_used','yield_quality_pct','yield_quality_band','gummy_mixture_used','total_sugar_coated_gummies','total_packaged_gummies'];
+const BT_SHORT={flower_check_result:'Infused Flower',joints_check_result:'Joints',kiefed_check_result:'Kiefed',packaging_check_result:'Packaging',primed_check_result:'Primed Oil',system_check_result:'Gummy Weight',yield_quality_result:'Yield'};
+function btFree(k){return BT_FREE.indexOf(k)>=0||/(_expected|_status|_suggested)$/.test(k);}
+function n0(v){const n=parseFloat(String(v==null?'':v).replace(/,/g,''));return isNaN(n)?0:n;}
+function r2(n){return String(Math.round(n*100)/100);}
+function btDirect(exp,act){if(!exp&&!act)return 'none';if(act<exp*(1-BT_TOL))return 'under';if(act>exp*(1+BT_TOL))return 'over';return 'pass';}
+function btCount(exp,act){if(!exp&&!act)return 'none';if(act>exp*(1+BT_TOL))return 'under';if(act<exp*(1-BT_TOL))return 'over';return 'pass';}
+function btSpec(sku){return (sku&&sku.spec)||{};}
+function prKief(spec){return numOk(spec.grams_kiefed)?num(spec.grams_kiefed):0;}
+function btRecalc(type,f,sku){
+  const spec=btSpec(sku),name=sku?sku.name:'';
+  if(type==='ethanol_extraction'||type==='butane_extraction'){
+    const tags=Array.isArray(f.biomass_tags)?f.biomass_tags:[];
+    const tb=tags.reduce(function(s,r){return s+n0(r&&r.weight);},0);
+    const o={...f,total_biomass_used:r2(tb)};
+    if(type==='butane_extraction')return o;
+    const dist=n0(f.total_distillate_produced),pct=tb>0?dist/tb*100:0;
+    let band='none';
+    if(tb>0&&dist>0){band=pct>=16&&pct<=19?'very_good':pct>=13&&pct<16?'good':pct>=10&&pct<13?'bad':pct>=7&&pct<10?'very_bad':'out_of_range';}
+    return {...o,ethanol_crude_suggested:r2(tb*0.77),decarbed_crude_suggested:r2(tb*0.20),distillate_suggested:r2(tb*0.16),yield_quality_pct:r2(pct),yield_quality_band:band};
+  }
+  if(type==='cartridges'){
+    const sum=n0(f.input_weight)+n0(f.terpene_added);
+    return {...f,primed_check_expected:r2(sum),primed_check_status:btDirect(sum,n0(f.primed_oil_total_weight))};
+  }
+  if(type==='gummies'){
+    const gpg=numOk(spec.grams_per_gummy)?num(spec.grams_per_gummy):4.6,per=numOk(spec.units_per_package)?num(spec.units_per_package):10;
+    const used=n0(f.gummy_mixture_batch_weight)-n0(f.gummy_mixture_waste);
+    const coated=n0(f.units_produced)-n0(f.total_gummies_waste_presugar);
+    const packaged=(coated-n0(f.sugar_coated_waste))/per;
+    const exp=(used/gpg)/per;
+    return {...f,gummy_mixture_used:r2(used),total_sugar_coated_gummies:r2(coated),total_packaged_gummies:r2(packaged),system_check_expected:r2(exp),system_check_status:btCount(exp,packaged)};
+  }
+  if(type==='infused_flower'){
+    const sum=['flower_qty','thca_qty','live_resin_qty','hte_qty','decarbed_resin_qty','distillate_qty','terp_qty'].reduce(function(s,k){return s+n0(f[k]);},0);
+    const size=numOk(spec.unit_size)?num(spec.unit_size):(String(name).indexOf('7g')>=0?7:3.5);
+    const exp=n0(f.infused_flower_used)/size;
+    return {...f,flower_check_expected:r2(sum),flower_check_status:btDirect(sum,n0(f.infused_flower_total_wt)),packaging_check_expected:r2(exp),packaging_check_status:btCount(exp,n0(f.units_produced))};
+  }
+  if(type==='pre_rolls'){
+    const used=n0(f.infused_flower_used),filled=numOk(spec.grams_filled)?num(spec.grams_filled):0.55,kief=prKief(spec);
+    const e1=filled?used/filled:0;
+    const e2=kief?(spec.coating==='Diamond'?(used+n0(f.kief_qty_used))/kief:used/kief):0;
+    const sum=['flower_qty','thca_qty','terp_qty','live_resin_qty','hte_qty','decarbed_resin_qty','distillate_qty','trim_qty','thca_internal_qty'].reduce(function(s,k){return s+n0(f[k]);},0);
+    const o={...f,joints_check_expected:r2(e1),joints_check_status:btCount(e1,n0(f.total_joint_filled)),kiefed_check_expected:r2(e2),kiefed_check_status:btCount(e2,n0(f.total_kiefed_infused_joints)),
+      flower_check_expected:r2(sum),flower_check_status:btDirect(sum,n0(f.infused_flower_total_wt))};
+    if(numOk(spec.units_per_package)&&num(spec.units_per_package)>0){
+      const src=kief?n0(f.kiefed_infused_joints_used):n0(f.total_joint_filled),ep=src/num(spec.units_per_package);
+      o.packaging_check_expected=r2(ep);o.packaging_check_status=btCount(ep,n0(f.total_jar_packaged));
+    }
+    return o;
+  }
+  return f;
+}
+function bhoYieldOf(f,sku){
+  let bio=n0(f.total_biomass_used);
+  if(!bio&&Array.isArray(f.biomass_tags))bio=f.biomass_tags.reduce(function(s,r){return s+n0(r&&r.weight);},0);
+  const pct=function(q){return bio>0&&q>0?Math.round(q/bio*10000)/100:null;};
+  if(btSpec(sku).dual==='Yes'){const t=n0(f.thca_final_qty),h=n0(f.hte_final_qty);
+    return {bio:bio,rows:[{l:'THCA Final',q:t,p:pct(t)},{l:'HTE Final',q:h,p:pct(h)},{l:'Total Yield (THCA + HTE)',q:t+h,p:pct(t+h),tot:1}]};}
+  const q=n0(f.product_final_qty);return {bio:bio,rows:[{l:((sku&&sku.name)||'Product')+' Final',q:q,p:pct(q),tot:1}]};
+}
+const BT_YIELD={very_good:['ok','VERY GOOD','16-19% distillate-to-biomass yield'],good:['ok','GOOD','13-16% distillate-to-biomass yield'],bad:['warn','BAD','10-13% distillate-to-biomass yield'],
+  very_bad:['bad','VERY BAD','7-10% distillate-to-biomass yield'],out_of_range:['none','OUT OF RANGE','Outside the 7-19% expected range'],none:['none','AWAITING DATA','Enter biomass and distillate weights to see yield quality']};
+// one place that turns a display field into [tone, headline, detail]
+function btCheck(type,key,f,sku){
+  const spec=btSpec(sku);
+  function cnt(status,noun,exp,act){
+    const m={pass:['ok','PASS',(noun.pass)],under:['bad','UNDER WEIGHT',noun.under],over:['warn','OVER WEIGHT',noun.over],none:['none','AWAITING DATA','Enter the numbers to run this check']}[status||'none'];
+    return [m[0],m[1],m[2]+(status&&status!=='none'?' \u2014 Expected \u2248 '+(exp||'0')+' \u00b110%, Actual: '+(act||'0'):'')];
+  }
+  if(key==='yield_quality_result'){const y=BT_YIELD[f.yield_quality_band||'none'];return [y[0],y[1],y[2]+(f.yield_quality_band&&f.yield_quality_band!=='none'?' \u2014 Actual yield: '+(f.yield_quality_pct||'0')+'%':'')];}
+  if(key==='primed_check_result')return cnt(f.primed_check_status,{pass:'Primed oil weight matches ingredients',under:'Primed oil weighs less than the ingredients that went in',over:'Primed oil weighs more than the ingredients that went in'},f.primed_check_expected,f.primed_oil_total_weight);
+  if(key==='flower_check_result'){const w=spec.flower_type==='Ground'?'Ground':'Infused';
+    return cnt(f.flower_check_status,{pass:w+' flower weight matches ingredients',under:w+' flower weighs less than the ingredients that went in',over:w+' flower weighs more than the ingredients that went in'},f.flower_check_expected,f.infused_flower_total_wt);}
+  if(key==='joints_check_result'||key==='kiefed_check_result'){
+    const j=key==='joints_check_result',noun=j?'joint':(spec.coating==='Diamond'?'diamond coated joint':'kiefed joint');
+    return cnt(j?f.joints_check_status:f.kiefed_check_status,{pass:'Weight per '+noun+' is on target',under:'More '+noun+'s than expected \u2014 weight per '+noun+' is under target',over:'Fewer '+noun+'s than expected \u2014 weight per '+noun+' is over target'},
+      j?f.joints_check_expected:f.kiefed_check_expected,j?f.total_joint_filled:f.total_kiefed_infused_joints);}
+  if(key==='packaging_check_result'&&type==='pre_rolls'){
+    if(!(numOk(spec.units_per_package)&&num(spec.units_per_package)>0))return null;
+    const p=(spec.package_name||'package').toLowerCase();
+    return cnt(f.packaging_check_status,{pass:'Joints per '+p+' is on target',under:'More '+p+'s than expected \u2014 fewer joints made it into each '+p,over:'Fewer '+p+'s than expected \u2014 more joints went into each '+p},f.packaging_check_expected,f.total_jar_packaged);}
+  if(key==='packaging_check_result'&&type==='infused_flower')
+    return cnt(f.packaging_check_status,{pass:'Weight per package is on target',under:'More packages than expected \u2014 weight per package is under target',over:'Fewer packages than expected \u2014 weight per package is over target'},f.packaging_check_expected,f.units_produced);
+  if(key==='system_check_result')return cnt(f.system_check_status,{pass:'Weight per gummy is on target',under:'More gummies packaged than expected \u2014 weight per gummy is under target',over:'Fewer gummies packaged than expected \u2014 weight per gummy is over target'},f.system_check_expected,f.total_packaged_gummies);
+  if(key==='bho_yield_display'){const y=bhoYieldOf(f,sku);return ['info','YIELD','Biomass used: '+(y.bio?y.bio+' g':'\u2014')+'  \u00b7  '+y.rows.map(function(r){return r.l+(r.q?' ('+r.q+' g)':'')+': '+(r.p==null?'\u2014':r.p+'%');}).join('  \u00b7  ')];}
+  return null;
+}
+// label wording per state / SKU (tracking system name, kief vs diamond, ground flower, package name, BHO SKU name)
+function btLabel(type,f,ts,sku){
+  const spec=btSpec(sku);let l=f.l;
+  if(type==='pre_rolls'&&spec.coating==='Diamond')l=l.replace(/Kiefed/g,'Diamond Coated').replace(/KIEFED/g,'DIAMOND COATED').replace(/Kief/g,'Diamond Coating').replace(/KIEF/g,'DIAMOND COATING');
+  if(type==='pre_rolls'&&spec.flower_type==='Ground')l=l.replace(/Infused Flower/g,'Ground Flower').replace(/Infused flower/g,'Ground flower');
+  if(type==='pre_rolls'&&spec.package_name)l=l.replace(/Jar/g,spec.package_name);
+  if(type==='butane_extraction'&&f.single&&f.t!=='checkbox')l=(sku&&sku.name&&spec.dual!=='Yes'?sku.name:'Product')+' '+l;
+  return l.replace(/METRC/g,ts||'METRC');
+}
+function btRdPassed(f){return f.rd1_result==='Passed'||f.rd2_result==='Passed';}
+function btVisible(type,fd,f,sku,initial){
+  const spec=btSpec(sku);
+  if(fd.ing&&type==='pre_rolls'&&(spec.ingredients||[]).indexOf(prIng(fd.k))<0)return false;
+  if(fd.kief&&!prKief(spec))return false;
+  if(type==='butane_extraction'&&fd.single&&spec.dual==='Yes')return false;
+  if(type==='butane_extraction'&&fd.dual&&spec.dual!=='Yes')return false;
+  if(fd.t==='rd'&&/rd2|_rd2$/.test(fd.k)){const first=fd.k.replace('rd2','rd1');if(f[first]!=='Failed')return false;}
+  if(fd.afterRd&&!btRdPassed(f))return false;
+  if(fd.ifPkg&&!btRdPassed(f)){const x=(initial&&initial.data)||{};if(!['infused_flower_used','units_produced','cart_waste','metrc_tag'].some(function(k){return String(x[k]||'').trim();}))return false;}
+  if(fd.k==='flavor'&&spec.no_flavor)return false;
+  return true;
+}
+function btMetrc(def,f,sku,ts){
+  const cks=def.fields.filter(function(x){return x.metrc&&btVisible(def.id,x,f,sku,null);});
+  return {done:cks.filter(function(x){return f[x.k];}).length,total:cks.length};
+}
+function CheckPanel(props){
+  const c=props.c;if(!c)return null;
+  return el('div',{className:'chkp '+c[0]},el('div',{className:'h'},c[0]==='ok'?'\u2713 '+c[1]:c[0]==='none'||c[0]==='info'?c[1]:'\u26a0 '+c[1]),el('div',{className:'s'},c[2]));
+}
+function compressFile(file){
+  return new Promise(function(res,rej){
+    if(file.size>5*1024*1024){rej(new Error(file.name+' is over 5 MB.'));return;}
+    if(/^image\//.test(file.type)){
+      const img=new Image(),url=URL.createObjectURL(file);
+      img.onload=function(){const MAX=1200;let w=img.width,h=img.height;if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
+        const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);const data=c.toDataURL('image/jpeg',0.75);URL.revokeObjectURL(url);
+        res({id:newId('att'),name:file.name,type:'image/jpeg',size:Math.round(data.length*0.75),data:data});};
+      img.onerror=function(){rej(new Error('Could not read '+file.name));};img.src=url;
+    }else{const r=new FileReader();r.onload=function(e){res({id:newId('att'),name:file.name,type:file.type||'application/octet-stream',size:file.size,data:e.target.result});};r.onerror=function(){rej(new Error('Could not read '+file.name));};r.readAsDataURL(file);}
+  });
+}
+function openAttachment(a){const x=document.createElement('a');x.href=a.data;x.download=a.name;x.target='_blank';document.body.appendChild(x);x.click();x.remove();}
+
+/* The batch form: new batch, admin edit (reason required), or "continue" (fill blanks only) */
+function BatchForm(props){
+  const def=props.def,init=props.initial,mode=props.mode||'new',ts=props.ts;
+  const[top,setTop]=useState(function(){return init?{batch_number:init.batch_number||'',sku_id:init.sku_id||'',flavor_id:init.flavor_id||'',flavor:init.flavor||''}:{batch_number:'',sku_id:'',flavor_id:'',flavor:''};});
+  const findSku=function(id){return props.allSkus.find(function(k){return k.id===id;})||null;};
+  const[d,setD]=useState(function(){
+    if(init)return {...(init.data||{})};
+    const o={};def.fields.forEach(function(f){
+      if(f.t==='date')o[f.k]=todayStr();else if(f.t==='checkbox')o[f.k]=false;else if(f.t==='tags')o[f.k]=[];
+      else if(f.t==='select')o[f.k]=f.o[0];else if(f.t==='text'||f.t==='textarea')o[f.k]='';});
+    o.operator=props.defaultName||'';return o;});
+  const[att,setAtt]=useState(function(){return init&&Array.isArray(init.attachments)?init.attachments.slice():[];});
+  const[sig,setSig]=useState('');
+  const[reason,setReason]=useState('');
+  const[err,setErr]=useState('');
+  const[busy,setBusy]=useState(false);
+  const orig=useRef(init?{...(init.data||{}),_bn:init.batch_number,_sku:init.sku_id,_fl:init.flavor_id||init.flavor}:null);
+  const sku=findSku(top.sku_id);
+  const spec=btSpec(sku);
+  const fd=useMemo(function(){return btRecalc(def.id,d,sku);},[d,sku,def.id]);
+  const flavors=props.flavors.filter(function(x){return x.sku_id===top.sku_id&&(x.active||x.id===top.flavor_id);});
+  const formula=props.formulas&&sku?(props.formulas.find(function(r){return r.sku_id===sku.id&&r.flavor_id&&r.flavor_id===top.flavor_id;})||props.formulas.find(function(r){return r.sku_id===sku.id&&!r.flavor_id;})):null;
+  function locked(k){
+    if(mode!=='fill'||!orig.current)return false;
+    if(k==='batch_number')return !!String(orig.current._bn||'').trim();
+    if(k==='sku')return !!orig.current._sku;
+    if(k==='flavor')return !!String(orig.current._fl||'').trim();
+    if(btFree(k))return false;
+    const v=orig.current[k];return typeof v==='string'&&!!v.trim();
+  }
+  function setF(k,v){setD(function(p){return {...p,[k]:v};});}
+  async function addFiles(files){
+    setErr('');
+    for(const f of Array.from(files)){try{const a=await compressFile(f);setAtt(function(p){return p.concat([a]);});}catch(e){setErr(String(e.message||e));}}
+  }
+  async function submit(){
+    setErr('');
+    if(!top.batch_number.trim()){setErr('Batch / Lot Number is required.');return;}
+    if(!fd.date){setErr('Date is required.');return;}
+    if(def.id!=='ethanol_extraction'&&!top.sku_id){setErr('Choose the SKU.');return;}
+    if(mode==='edit'&&!reason.trim()){setErr('Enter the reason for change. It is saved permanently in the audit trail.');return;}
+    const data={...fd};
+    setBusy(true);
+    try{
+      await props.onSubmit({batch_number:top.batch_number.trim(),sku_id:top.sku_id||null,flavor_id:top.flavor_id||null,flavor:top.flavor_id?undefined:String(top.flavor||'').trim(),
+        status:String(data.status||''),data:data,attachments:att,performed_by:String(data.operator||'').trim(),signature:sig||null,edit_reason:reason.trim()});
+    }catch(e){setErr(niceErr(e));}
+    setBusy(false);
+  }
+  const lockNote=el('div',{className:'muted',style:{fontSize:11,marginTop:3}},'Already entered \u2014 locked (an admin can change it with a reason)');
+  function field(f,i){
+    if(!btVisible(def.id,f,fd,sku,init))return null;
+    const key=f.k||('s'+i),lab=btLabel(def.id,f,ts,sku),lk=f.k&&locked(f.k);
+    if(f.t==='section')return el('div',{key:key,className:'secth'},lab);
+    if(f.t==='batchno')return el(Field,{key:key,label:lab+' *'},el('input',{value:top.batch_number,placeholder:f.ph,disabled:lk,onChange:function(e){setTop({...top,batch_number:e.target.value});}}),lk&&lockNote);
+    if(f.t==='sku'){
+      const opts=props.skus;
+      return el(Field,{key:key,label:'SKU *'},
+        el('select',{style:{width:'100%'},value:top.sku_id,disabled:lk,onChange:function(e){setTop({...top,sku_id:e.target.value,flavor_id:'',flavor:''});}},
+          el('option',{value:''},opts.length?'Select...':'No SKUs switched on for this license'),
+          top.sku_id&&!opts.some(function(k){return k.id===top.sku_id;})&&sku&&el('option',{value:sku.id},sku.name+' (off)'),
+          opts.map(function(k){return el('option',{key:k.id,value:k.id},k.name);})),lk&&lockNote);
+    }
+    if(f.t==='flavor'){
+      if(!top.sku_id)return el(Field,{key:key,label:'Flavor'},el('input',{disabled:true,placeholder:'Choose the SKU first'}));
+      const node=flavors.length?
+        el('select',{style:{width:'100%'},value:top.flavor_id,disabled:lk,onChange:function(e){setTop({...top,flavor_id:e.target.value,flavor:''});}},el('option',{value:''},'Select...'),flavors.map(function(x){return el('option',{key:x.id,value:x.id},x.name);}))
+        :el('input',{value:top.flavor,disabled:lk,placeholder:'No flavor list yet for this SKU \u2014 type it in',onChange:function(e){setTop({...top,flavor:e.target.value});}});
+      return el(React.Fragment,{key:key},el(Field,{label:lab},node,lk&&lockNote),
+        formula&&el('div',{className:'card',style:{borderColor:'var(--gold-lo)',padding:12}},
+          el('div',{className:'k',style:{marginBottom:6}},'Formulation \u2014 '+(formula.name||'')),
+          (formula.raw_materials||[]).map(function(m,j){return el('div',{key:j,className:'row',style:{justifyContent:'space-between',fontSize:13}},el('span',null,m.name),el('b',null,(m.qty||'')+(m.unit?' '+m.unit:'')));}),
+          formula.batch_size&&el('div',{className:'muted',style:{fontSize:12,marginTop:4}},'Standard batch: '+formula.batch_size+' units'),
+          el('div',{className:'muted',style:{fontSize:11,marginTop:4}},'From the Formulation Bank (admins only).')));
+    }
+    if(f.t==='checkbox')return el('label',{key:key,className:'ck metrcck'},el('input',{type:'checkbox',checked:!!fd[f.k],onChange:function(e){setF(f.k,e.target.checked);}}),el('span',null,lab));
+    if(f.t==='display')return el('div',{key:key,style:{marginBottom:12}},el(CheckPanel,{c:btCheck(def.id,f.k,fd,sku)}));
+    if(f.t==='auto')return el(Field,{key:key,label:lab+' (auto-calculated)'},el('div',{className:'autov'},fd[f.k]||'0'));
+    if(f.t==='rd')return el(Field,{key:key,label:lab,plain:true},el('div',{className:'row'},['Passed','Failed'].map(function(o){const on=fd[f.k]===o;
+      return el('button',{key:o,type:'button',className:'btn sm'+(on?(o==='Failed'?' selbad':''):' ghost'),onClick:function(){setF(f.k,on?'':o);}},(on?'\u2713 ':'')+o);})));
+    if(f.t==='tags'){
+      const tags=Array.isArray(fd[f.k])?fd[f.k]:[],keep=lk||(mode==='fill'&&orig.current?((orig.current[f.k]||[]).length):0);
+      return el(Field,{key:key,label:lab+' \u2014 add as many as you need',plain:true},
+        tags.map(function(r,j){const ro=mode==='fill'&&j<keep;return el('div',{key:j,className:'li'},
+          el('input',{value:(r&&r.tag)||'',disabled:ro,placeholder:'Biomass '+(ts||'METRC')+' Tag #',style:{flex:'2 1 180px'},onChange:function(e){const n=tags.map(function(x,q){return q===j?{...x,tag:e.target.value}:x;});setF(f.k,n);}}),
+          el('input',{value:(r&&r.weight)||'',disabled:ro,inputMode:'decimal',placeholder:'Weight',style:{flex:'1 1 90px'},onChange:function(e){const n=tags.map(function(x,q){return q===j?{...x,weight:e.target.value}:x;});setF(f.k,n);}}),
+          !ro&&el('button',{type:'button',className:'btn danger sm',onClick:function(){setF(f.k,tags.filter(function(_,q){return q!==j;}));}},'\u2715'));}),
+        el('button',{type:'button',className:'btn ghost sm',onClick:function(){setF(f.k,tags.concat([{tag:'',weight:''}]));}},'+ Add Biomass Tag'));
+    }
+    let input;
+    if(f.t==='date')input=el('input',{type:'date',value:fd[f.k]||'',disabled:lk,onChange:function(e){setF(f.k,e.target.value);}});
+    else if(f.t==='select')input=el('select',{style:{width:'100%'},value:fd[f.k]||f.o[0],onChange:function(e){setF(f.k,e.target.value);}},(fd[f.k]&&f.o.indexOf(fd[f.k])<0?[fd[f.k]].concat(f.o):f.o).map(function(o){return el('option',{key:o,value:o},o);}));
+    else if(f.t==='textarea')input=el('textarea',{value:fd[f.k]||'',disabled:lk,placeholder:f.ph,style:{minHeight:60},onChange:function(e){setF(f.k,e.target.value);}});
+    else input=el('input',{value:fd[f.k]||'',disabled:lk,placeholder:(f.ph||'').replace(/METRC/g,ts||'METRC'),onChange:function(e){setF(f.k,e.target.value);}});
+    return el(React.Fragment,{key:key},el(Field,{label:lab},input,lk&&lockNote,
+        f.sug&&el('div',{style:{fontSize:12,color:'var(--gold-hi)',marginTop:4}},'Average weight for a good to very good yield is usually: '+(fd[f.sug[0]]||'0')+' ('+f.sug[1]+' of Total Biomass Used)')),
+      f.k==='rd2_result'&&def.id==='infused_flower'&&!btRdPassed(fd)&&el('div',{className:'msg err',style:{marginTop:-4}},'Filling & Packaging unlocks once the R&D Test is marked Passed.'));
+  }
+  const origAtt=mode==='fill'&&init?(init.attachments||[]).length:0;
+  return el('div',null,
+    mode==='fill'&&el('div',{className:'msg ok'},'Continue this batch: fill in the blank fields. Fields that already have a value are locked.'),
+    el('div',{className:'muted',style:{fontSize:12,marginBottom:10}},'Fields marked * are required. This record is timestamped, signed and kept in the audit trail.'),
+    def.fields.map(field),
+    el('div',{className:'secth'},'Attachments'),
+    att.map(function(a,j){return el('div',{key:a.id||j,className:'li'},
+      /^image\//.test(a.type)&&el('img',{src:a.data,style:{width:40,height:40,objectFit:'cover',borderRadius:4}}),
+      el('a',{href:'#',style:{color:'var(--gold-hi)',flex:1},onClick:function(e){e.preventDefault();openAttachment(a);}},a.name),
+      el('span',{className:'muted',style:{fontSize:12}},a.size>1048576?(a.size/1048576).toFixed(1)+' MB':Math.round(a.size/1024)+' KB'),
+      !(mode==='fill'&&j<origAtt)&&el('button',{type:'button',className:'btn danger sm',onClick:function(){setAtt(att.filter(function(_,q){return q!==j;}));}},'\u2715'));}),
+    el('label',{className:'btn ghost sm',style:{display:'inline-block',margin:'4px 0 12px'}},'+ Upload file / photo',
+      el('input',{type:'file',multiple:true,accept:'.pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xlsx,.csv',style:{display:'none'},onChange:function(e){addFiles(e.target.files);e.target.value='';}})),
+    el('div',{className:'muted',style:{fontSize:11,marginTop:-8,marginBottom:12}},'Max 5 MB per file \u00b7 PDF, PNG, JPG, DOCX, XLSX'),
+    mode==='new'&&el(Field,{label:'Signature',plain:true},el(SignaturePad,{onChange:function(v){setSig(v);}})),
+    mode==='edit'&&el('div',{className:'card',style:{borderColor:'var(--gold-lo)',padding:12}},
+      el(Field,{label:'Reason for change *'},el('textarea',{value:reason,style:{minHeight:60},placeholder:'Explain why this value is being changed. Saved permanently in the audit trail.',onChange:function(e){setReason(e.target.value);}}))),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onCancel},'Cancel'),
+      el('button',{className:'btn',disabled:busy,onClick:submit},busy?'Saving...':mode==='new'?'Submit & Sign':mode==='fill'?'Save':'Save changes')));
+}
+
+function batchHtml(def,st,lic,b,sig,hist,sku){
+  const e=esc3,f=b.data||{},ts=st.tracking_system||'METRC',rows=[];
+  def.fields.forEach(function(fd){
+    if(!btVisible(def.id,fd,f,sku,b))return;
+    const l=btLabel(def.id,fd,ts,sku);
+    if(fd.t==='section'){rows.push('<tr class="sec"><td colspan="2">'+e(l.toUpperCase())+'</td></tr>');return;}
+    let v;
+    if(fd.t==='batchno')v=b.batch_number;else if(fd.t==='sku')v=b.sku;else if(fd.t==='flavor')v=b.flavor;
+    else if(fd.t==='checkbox')v=f[fd.k]?'Yes':'No';
+    else if(fd.t==='display'){const c=btCheck(def.id,fd.k,f,sku);if(!c)return;rows.push('<tr><th>'+e(l)+'</th><td class="'+(c[0]==='ok'?'ok':c[0]==='bad'||c[0]==='warn'?'bad':'')+'">'+e(c[1])+'<br><span style="color:#555">'+e(c[2])+'</span></td></tr>');return;}
+    else if(fd.t==='tags'){const t=f[fd.k]||[];v=t.length?t.map(function(r){return (r.tag||'-')+' ('+(r.weight||'-')+')';}).join('; '):'-';}
+    else v=f[fd.k];
+    rows.push('<tr><th>'+e(l)+'</th><td>'+e(v==null||v===''?'-':v)+'</td></tr>');
+  });
+  const atts=(b.attachments||[]);
+  return '<div class="hxrec"><div class="m">'+e((st.name||'').toUpperCase())+' &middot; '+e(lic.name)+' &middot; License '+e(lic.license_number||'-')+'</div>'+
+    '<h2>'+e(def.name)+' Batch Record &middot; '+e(b.batch_number)+'</h2><div class="m">Record '+e(b.id)+' &middot; created '+e(new Date(b.created_at).toLocaleString())+(b.updated_at&&b.updated_at!==b.created_at?' &middot; last change '+e(new Date(b.updated_at).toLocaleString()):'')+'</div>'+
+    '<table>'+rows.join('')+'<tr class="sec"><td colspan="2">ATTACHMENTS AND SIGN-OFF</td></tr><tr><th>Attachments</th><td>'+(atts.length?atts.map(function(a){return e(a.name);}).join('<br>'):'None')+'</td></tr>'+
+    '<tr><th>Submitted by</th><td>'+e(b.performed_by||'-')+'</td></tr><tr><th>Signature</th><td>'+(sig?'<img src="'+e(sig)+'">':'Not signed')+'</td></tr></table>'+
+    (b.voided?'<div class="void">VOID'+(b.voided_at?' &middot; '+e(new Date(b.voided_at).toLocaleString()):'')+'<br>Reason: '+e(b.void_reason||'-')+'</div>':'')+
+    (hist?historyHtml(hist,def):'')+'</div>';
+}
+
+function BatchTracker(props){
+  const st=props.state,lic=props.license,isAdmin=can('batch',3),canAdd=can('batch',2),canF=can('formbank',1),canAudit=can('audit',1);
+  const ts=(st&&st.tracking_system)||'METRC';
+  const sid=st?st.id:'',lid=lic?lic.id:'';
+  const[type,setType]=useState(lsGet('hx_btype')||BATCH_TYPES[0].id);
+  const[cat,setCat]=useState(null);
+  const[rows,setRows]=useState(null);
+  const[q,setQ]=useState('');
+  const[from,setFrom]=useState('');
+  const[to,setTo]=useState('');
+  const[err,setErr]=useState('');
+  const[modal,setModal]=useState(null);
+  const def=BATCH_TYPES.find(function(t){return t.id===type;})||BATCH_TYPES[0];
+  const loadCat=useCallback(async function(){
+    if(!sid){setCat({skus:[],flavors:[],forms:[]});return;}
+    try{
+      const f='state_id=eq.'+encodeURIComponent(sid);
+      const r=await Promise.all([db.get('hx_skus',f+'&select=*&order=sort,name'),db.get('hx_flavors',f+'&select=*&order=sort,name'),canF?db.get('hx_formulations',f+'&select=*').catch(function(){return [];}):Promise.resolve([])]);
+      setCat({skus:(r[0]||[]).filter(function(x){return x.state_id===sid;}),flavors:(r[1]||[]).filter(function(x){return x.state_id===sid;}),forms:r[2]||[]});
+    }catch(e){setErr(niceErr(e));setCat({skus:[],flavors:[],forms:[]});}
+  },[sid,canF]);
+  const loadRows=useCallback(function(){
+    if(!lid||!sid){setRows([]);return Promise.resolve();}
+    let qs='license_id=eq.'+encodeURIComponent(lid)+'&state_id=eq.'+encodeURIComponent(sid)+'&batch_type=eq.'+type+'&select=id,state_id,license_id,batch_type,batch_number,sku_id,sku,flavor_id,flavor,status,data,attachments,performed_by,created_at,updated_at,voided,void_reason,voided_at&order=created_at.desc&limit=1000';
+    if(from)qs+='&created_at=gte.'+encodeURIComponent(from);
+    if(to)qs+='&created_at=lte.'+encodeURIComponent(to+'T23:59:59');
+    return db.get('hx_batches',qs).then(function(r){setRows((r||[]).filter(function(x){return x.license_id===lid&&x.state_id===sid;}));})
+      .catch(function(e){setErr(/hx_batches/.test(String(e.message))?'Database tables are missing - run hendrix_step7.sql in the Hendrix Supabase project.':String(e.message||e));setRows([]);});
+  },[lid,sid,type,from,to]);
+  useEffect(function(){loadCat();},[loadCat]);
+  useEffect(function(){setRows(null);setErr('');loadRows();},[loadRows]);
+  const[tests,setTests]=useState({});
+  const loadTests=useCallback(function(){
+    if(!rows||!rows.length||!can('testing',1)){setTests({});return;}
+    const ids=rows.map(function(r){return r.id;}),parts=[];for(let i=0;i<ids.length;i+=40)parts.push(ids.slice(i,i+40));
+    Promise.all(parts.map(function(p){return db.get('hx_tests','batch_id=in.('+p.map(encodeURIComponent).join(',')+')&voided=eq.false&select=id,batch_id,status,tag').catch(function(){return [];});}))
+      .then(function(rs){const m={};rs.reduce(function(a,b){return a.concat(b||[]);},[]).forEach(function(t){(m[t.batch_id]=m[t.batch_id]||[]).push(t);});setTests(m);});
+  },[rows]);
+  useEffect(loadTests,[loadTests]);
+  if(!st||!lic)return el('div',null,el('h1',null,'Batch ',el('span',{className:'g'},'Tracker')),el('div',{className:'empty'},'Pick a state and a license at the top first. Every batch belongs to exactly one license.'));
+  const allSkus=(cat&&cat.skus)||[];
+  const usable=allSkus.filter(function(k){return k.product_type===type&&k.active&&(!(k.license_ids||[]).length||k.license_ids.indexOf(lid)>=0);});
+  const skuOf=function(b){return allSkus.find(function(k){return k.id===b.sku_id;})||null;};
+  const list=(rows||[]).filter(function(b){return !q||(b.batch_number+' '+b.sku+' '+b.flavor+' '+b.status+' '+b.performed_by+' '+JSON.stringify(b.data||{})).toLowerCase().indexOf(q.toLowerCase())>=0;});
+  async function getFull(b){
+    const x=await db.get('hx_batches','id=eq.'+encodeURIComponent(b.id)+'&select=signature');
+    let h=null;if(canAudit){try{h=await db.get('hx_audit_log','table_name=eq.hx_batches&row_id=eq.'+encodeURIComponent(b.id)+'&select=*&order=at.asc');}catch(e){h=null;}}
+    return {sig:(x&&x[0]&&x[0].signature)||'',hist:h};
+  }
+  async function view(b){setErr('');try{const r=await getFull(b);setModal({view:b,sig:r.sig,hist:r.hist});}catch(e){setErr(String(e.message||e));}}
+  async function printAll(){
+    setErr('');
+    try{const sl=list.slice(0,200),out=[];for(const b of sl){const r=await getFull(b);out.push(batchHtml(def,st,lic,b,r.sig,r.hist,skuOf(b)));}printRecords(def.name+' batches - '+lic.name,out);}
+    catch(e){setErr(String(e.message||e));}
+  }
+  function csv(){
+    const e=function(v){return '"'+String(v==null?'':v).replace(/"/g,'""')+'"';};
+    const cols=def.fields.filter(function(f){return f.k&&['batchno','sku','flavor','display'].indexOf(f.t)<0;});
+    const lines=[['State','License','License #','Batch type','Batch / Lot Number','SKU','Flavor','Status','Void'].concat(cols.map(function(f){return f.l.replace(/METRC/g,ts);})).concat(['Created','Submitted by']).map(e).join(',')];
+    list.forEach(function(b){const d=b.data||{};
+      lines.push([st.name,lic.name,lic.license_number,def.name,b.batch_number,b.sku,b.flavor,b.status,b.voided?'VOID: '+(b.void_reason||''):''].concat(cols.map(function(f){
+        const v=d[f.k];if(f.t==='checkbox')return v?'Yes':'No';if(f.t==='tags')return (v||[]).map(function(r){return r.tag+' ('+r.weight+')';}).join('; ');return v;})).concat([b.created_at,b.performed_by]).map(e).join(','));});
+    const blob=new Blob([lines.join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=type+'_batches_'+(lic.license_number||lic.id)+'.csv';document.body.appendChild(a);a.click();a.remove();
+  }
+  async function create(p){
+    await db.insert('hx_batches',{id:newId('bat'),state_id:sid,license_id:lid,batch_type:type,batch_number:p.batch_number,sku_id:p.sku_id,flavor_id:p.flavor_id,flavor:p.flavor,status:p.status,
+      data:p.data,attachments:p.attachments,performed_by:p.performed_by,signature:p.signature,source:'app'});
+    setModal(null);loadRows();
+  }
+  async function update(b,p){
+    await db.update('hx_batches',b.id,{batch_number:p.batch_number,sku_id:p.sku_id,flavor_id:p.flavor_id,flavor:p.flavor,status:p.status,data:p.data,attachments:p.attachments,edit_reason:p.edit_reason||null});
+    setModal(null);loadRows();
+  }
+  async function submitTest(b){
+    const tags=testFinalTags(b);
+    if(!tags.length){setErr('Enter the final package '+ts+' tag on this batch first. That is the tag submitted for mandatory testing.');return;}
+    if(!window.confirm('Submit for testing?\n\n'+tags.map(function(t){return t.label+': '+t.tag;}).join('\n')))return;
+    setErr('');
+    try{
+      for(const t of tags)await db.insert('hx_tests',{id:newId('test'),state_id:sid,license_id:lid,batch_id:b.id,tag:t.tag,tag_label:t.label,status:'Submitted',performed_by:(props.profile.name||'')});
+      loadTests();
+    }catch(e){setErr(/hx_tests_batch_tag/.test(String(e.message))?'This batch was already submitted for testing.':/hx_tests/.test(String(e.message))?'Testing is not set up yet - run hendrix_step9.sql.':String(e.message||e));}
+  }
+  async function voidBatch(b,why){await db.update('hx_batches',b.id,{voided:true,void_reason:why});setModal(null);loadRows();}
+  async function openFull(b,mode){
+    setErr('');
+    try{const x=await db.get('hx_batches','id=eq.'+encodeURIComponent(b.id)+'&select=*');if(x&&x[0])setModal({form:mode,b:x[0]});}catch(e){setErr(String(e.message||e));}
+  }
+  const tone={ok:'ok',bad:'bad',warn:'bad'};
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,'Batch ',el('span',{className:'g'},'Tracker')),el('div',{className:'sub'},st.name+'  \u00b7  '+lic.name+(lic.license_number?'  \u00b7  '+lic.license_number:'')+'  \u00b7  Batch production records'))),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'tabs'},BATCH_TYPES.map(function(t){return el('button',{key:t.id,className:t.id===type?'on':'',onClick:function(){setType(t.id);lsSet('hx_btype',t.id);setQ('');}},t.name);})),
+    el('div',{className:'row',style:{marginBottom:12}},
+      el('input',{style:{maxWidth:260},placeholder:'Search batches...',value:q,onChange:function(e){setQ(e.target.value);}}),
+      el('span',{className:'muted'},'From'),el('input',{type:'date',style:{width:'auto'},value:from,onChange:function(e){setFrom(e.target.value);}}),
+      el('span',{className:'muted'},'To'),el('input',{type:'date',style:{width:'auto'},value:to,onChange:function(e){setTo(e.target.value);}}),
+      (from||to)&&el('button',{className:'btn ghost sm',onClick:function(){setFrom('');setTo('');}},'Clear'),
+      el('span',{style:{flex:1}}),
+      el('button',{className:'btn ghost',disabled:!list.length,onClick:csv},'CSV'),
+      el('button',{className:'btn ghost',disabled:!list.length,onClick:printAll},'Print / PDF'),
+      canAdd&&el('button',{className:'btn',disabled:!cat,onClick:function(){setModal({form:'new'});}},'+ New Batch')),
+    cat&&def.id!=='ethanol_extraction'&&!usable.length&&el('div',{className:'msg err'},'No '+def.name+' SKUs are switched on for '+lic.name+'. '+(can('products',2)?'Add them under Products (each needs a formulation).':'Ask an admin to add them under Products.')),
+    el('div',{className:'card',style:{padding:'10px 16px'}},el('span',null,el('b',{style:{color:'var(--gold-hi)'}},list.length),' batches'),
+      el('span',{className:'muted',style:{marginLeft:18}},'Last: '+(rows&&rows[0]?new Date(rows[0].created_at).toLocaleDateString():'None'))),
+    rows===null?el('div',{className:'muted'},'Loading...'):
+    !list.length?el('div',{className:'empty'},'No '+def.name+' batches '+(q||from||to?'match.':'yet for '+lic.name+'.')):
+    list.map(function(b,i){
+      const d=b.data||{},sk=skuOf(b),m=btMetrc(def,d,sk,ts),full=m.total&&m.done===m.total;
+      return el('div',{key:b.id,className:'card'+(b.voided?' voidcard':''),style:{padding:'14px 16px'}},
+        el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+          el('div',{style:{flex:1,minWidth:240}},
+            el('div',{className:'row',style:{gap:8,marginBottom:6}},
+              el('b',{style:{color:'var(--gold-hi)'}},b.batch_number||'#'+(list.length-i)),
+              b.voided?el('span',{className:'badge bad',title:b.void_reason||''},'Void'):b.status&&el('span',{className:'badge'+(/Passed|Completed/.test(b.status)?' ok':/Failed/.test(b.status)?' bad':'')},b.status),
+              el('span',{className:'muted',style:{fontSize:12}},(d.date||'')+'  \u00b7  '+(b.performed_by||'')),
+              m.total>0&&el('span',{className:'badge'+(full?' ok':m.done?'':' bad')},ts+' '+m.done+'/'+m.total)),
+            el('div',{style:{fontSize:13}},[b.sku,b.flavor].filter(Boolean).join('  \u00b7  ')||(def.id==='ethanol_extraction'?(d.biomass_tags||[]).length+' biomass tag(s), '+(d.total_biomass_used||0)+' g':'')),
+            def.fields.filter(function(f){return f.t==='display'&&btVisible(def.id,f,d,sk,b);}).map(function(f){const c=btCheck(def.id,f.k,d,sk);
+              return c&&c[0]!=='none'&&c[0]!=='info'?el('span',{key:f.k,className:'badge '+(tone[c[0]]||''),style:{marginRight:6,marginTop:6}},btLabel(def.id,{l:BT_SHORT[f.k]||f.l},ts,sk)+': '+c[1]):null;}),
+            (tests[b.id]||[]).map(function(t){return el(TestBadge,{key:t.id,s:t.status,prefix:'Test: ',style:{marginRight:6,marginTop:6}});})),
+          el('div',{className:'row',style:{gap:6}},
+            el('button',{className:'btn ghost sm',onClick:function(){view(b);}},'View'),
+            !b.voided&&el(RaiseDeviation,{state:st,license:lic,prefill:{title:def.name+' batch '+b.batch_number+': ',dept:'Production',category:'Process / procedure',product_affected:[b.sku,b.flavor].filter(Boolean).join(' \u00b7 '),lot_number:b.batch_number,
+              source_type:'batch',source_id:b.id,source_label:def.name+' batch '+b.batch_number,occurred_on:String((b.data||{}).date||b.created_at||'').slice(0,10)}}),
+            can('testing',2)&&!b.voided&&!(tests[b.id]||[]).length&&testFinalTags(b).length>0&&el('button',{className:'btn sm',onClick:function(){submitTest(b);}},'Submit for testing'),
+            !b.voided&&canAdd&&!isAdmin&&el('button',{className:'btn ghost sm',onClick:function(){openFull(b,'fill');}},'Continue'),
+            !b.voided&&isAdmin&&el('button',{className:'btn ghost sm',onClick:function(){openFull(b,'edit');}},'Edit'),
+            !b.voided&&isAdmin&&el('button',{className:'btn danger sm',onClick:function(){setModal({voidb:b});}},'Void'))));
+    }),
+    modal&&modal.form&&el(Modal,{title:(modal.form==='new'?'New ':modal.form==='fill'?'Continue ':'Edit ')+def.name+' batch'+(modal.b?' \u00b7 '+modal.b.batch_number:''),wide:true,onClose:function(){setModal(null);}},
+      el(BatchForm,{def:def,ts:ts,mode:modal.form,initial:modal.b||null,skus:usable,allSkus:allSkus,flavors:(cat&&cat.flavors)||[],formulas:canF?(cat&&cat.forms):null,defaultName:props.profile.name||'',
+        onCancel:function(){setModal(null);},onSubmit:function(p){return modal.form==='new'?create(p):update(modal.b,p);}})),
+    modal&&modal.voidb&&el(VoidModal,{what:'batch '+modal.voidb.batch_number,onClose:function(){setModal(null);},onVoid:function(why){return voidBatch(modal.voidb,why);}}),
+    modal&&modal.view&&el(Modal,{title:def.name+' batch '+modal.view.batch_number,wide:true,onClose:function(){setModal(null);}},
+      el('div',{dangerouslySetInnerHTML:{__html:REC_CSS+batchHtml(def,st,lic,modal.view,modal.sig,modal.hist,skuOf(modal.view))}}),
+      (modal.view.attachments||[]).length>0&&el('div',{className:'row',style:{marginTop:10}},(modal.view.attachments||[]).map(function(a){return el('button',{key:a.id,className:'btn ghost sm',onClick:function(){openAttachment(a);}},'Open '+a.name);})),
+      el('div',{className:'row',style:{justifyContent:'flex-end',marginTop:12}},el('button',{className:'btn ghost',onClick:function(){setModal(null);}},'Close'),
+        el('button',{className:'btn',onClick:function(){printRecords(def.name+' batch '+modal.view.batch_number,[batchHtml(def,st,lic,modal.view,modal.sig,modal.hist,skuOf(modal.view))]);}},'Print / PDF'))));
+}
+
+/* ---------- Roles and access ----------
+   Mirrors the database (hx_perm): system admin = Full everywhere; otherwise the person's custom setting,
+   else the best of their roles. Inside a role or custom setting, a single facility log with no setting of
+   its own follows "Facility Logs (all)". Levels: none / read (View) / editor (Edit) / admin (Full). */
+const ACC={profile:null,roles:[]};
+const ACCESS_MODULES=[
+  {id:'rulebook',label:'Rulebook',grp:'General',help:'View rules / add and edit / delete'},
+  {id:'audit',label:'Audit Trail',grp:'General',max:1,help:'View only'},
+  {id:'training',label:'Training',grp:'General',help:'View = see your own training / Edit = record training and see the matrix / Full = manage courses, void records'},
+  {id:'qms',label:'QMS (Deviations, CAPA)',grp:'General',help:'View = see and report deviations / Edit = update deviations, create and work CAPAs / Full = root cause decision, close, verify effectiveness, cancel'},
+  {id:'complaints',label:'Complaints',grp:'General',help:'View = see and log complaints and feedback / Edit = investigate, respond, close / Full = reopen, cancel'},
+  {id:'intaudits',label:'Internal Audits',grp:'General',help:'View audits / plan and run audits, record and close findings / close audits, reopen, cancel'},
+  {id:'sops',label:'SOPs',grp:'General',help:'View = read and sign SOPs / Edit = write drafts (manual or AI) / Full = approve and publish, revise, archive, delete drafts'},
+  {id:'standards',label:'Standards (CSQ)',grp:'General',help:'View the standard and conformance / update conformance, evidence and files / add the standard, adopt it for a license, set the target level'},
+  {id:'suppliers',label:'Suppliers',grp:'Production',help:'View the approved supplier list / add and edit suppliers and credentials / approve, review, suspend, disqualify, delete never-approved'},
+  {id:'receiving',label:'Receiving and Inventory',grp:'Production',help:'View lots and stock / receive lots, record use in batches / accept or reject lots, void use records'},
+  {id:'holds',label:'Hold and Release',grp:'Production',help:'View holds / put a lot, batch, package or return on hold / decide holds (release, destroy, return, rework)'},
+  {id:'shipping',label:'Shipping',grp:'Production',help:'View shipments / record shipments and deliveries / cancel shipments'},
+  {id:'recall',label:'Traceability and Recall',grp:'Production',help:'View traces, recalls and contacts / run mock recalls, keep the contact list / start and close real recalls and withdrawals, cancel'},
+  {id:'batch',label:'Batch Tracker',grp:'Production',help:'View / create and continue (fill blanks) / change filled values with a reason and void'},
+  {id:'products',label:'Products (SKUs and flavors)',grp:'Production',help:'View / add and edit / delete'},
+  {id:'formbank',label:'Formulation Bank (recipes)',grp:'Production',help:'View / add and edit / delete'},
+  {id:'cogs',label:'Ingredient Prices',grp:'Production',help:'View / add and edit / delete'},
+  {id:'stickers',label:'Compliance Stickers',grp:'Production',help:'View = print stickers / Edit = add and change label templates / Full = delete templates'},
+  {id:'testing',label:'Testing (lab results, COAs)',grp:'Production',help:'View / submit, upload COAs and record results / change final results with a reason and void'},
+  {id:'logs',label:'Facility Logs (all)',grp:'Facility Logs',help:'Default for every log below that has no setting of its own'},
+  {id:'logs_sanitation',label:'Sanitation Log',grp:'Facility Logs',child:1},
+  {id:'logs_waste',label:'Waste Destruction Log',grp:'Facility Logs',child:1},
+  {id:'logs_scale',label:'Scale Calibration Log',grp:'Facility Logs',child:1},
+  {id:'logs_security',label:'Security Logs (malfunction and inspection)',grp:'Facility Logs',child:1},
+  {id:'logs_pest',label:'Pest Control Log',grp:'Facility Logs',child:1},
+  {id:'logs_equipment',label:'Equipment Maintenance Log',grp:'Facility Logs',child:1},
+  {id:'logs_temp',label:'Temp / Humidity Log',grp:'Facility Logs',child:1},
+  {id:'logs_env',label:'Environmental Monitoring Log',grp:'Facility Logs',child:1},
+  {id:'logs_visitor',label:'Visitor Log',grp:'Facility Logs',child:1}];
+const ACCESS_GROUPS=['General','Production','Facility Logs'];
+const LV_NAME={'':'No access',none:'No access',read:'View',editor:'Edit',admin:'Full'};
+const LV_RANK={admin:3,editor:2,read:1};
+const RANK_LV=['none','read','editor','admin'];
+const LOG_MOD={sanitation:'logs_sanitation',waste:'logs_waste',scale_calibration:'logs_scale',security:'logs_security',security_inspection:'logs_security',
+  pest:'logs_pest',equipment:'logs_equipment',temperature:'logs_temp',environmental:'logs_env',visitor:'logs_visitor'};
+function lvRank(v){return LV_RANK[v]||0;}
+function has(o,k){return !!o&&Object.prototype.hasOwnProperty.call(o,k);}
+function roleLevel(r,mod){const p=(r&&r.perms)||{};if(has(p,mod))return lvRank(p[mod]);if(/^logs_/.test(mod)&&has(p,'logs'))return lvRank(p.logs);return 0;}
+function rolesLevel(ids,roles,mod){let b=0;(ids||[]).forEach(function(id){const r=roles.find(function(x){return x.id===id;});if(r)b=Math.max(b,roleLevel(r,mod));});return b;}
+function permOf(p,roles,mod){
+  if(!p||!p.approved)return 0;
+  if(p.role==='admin')return 3;
+  const ov=p.perms||{};
+  if(has(ov,mod))return lvRank(ov[mod]);
+  if(/^logs_/.test(mod)&&has(ov,'logs'))return lvRank(ov.logs);
+  return rolesLevel(p.role_ids,roles,mod);
+}
+function can(mod,lvl){return permOf(ACC.profile,ACC.roles,mod)>=(lvl||1);}
+function isSysAdmin(){return !!ACC.profile&&ACC.profile.role==='admin';}
+function licOk(id){const p=ACC.profile;return !!p&&(p.role==='admin'||!(p.license_ids||[]).length||(p.license_ids||[]).indexOf(id)>=0);}
+function accessErr(e){
+  const m=String((e&&e.message)||e);
+  if(/role_ids|license_ids|hx_roles|hx_perm/.test(m)&&/schema cache|does not exist|Could not find/.test(m))return 'Roles are not set up yet - run hendrix_step8.sql in the Hendrix Supabase project.';
+  if(/hx_roles_name/.test(m))return 'A role with that name already exists.';
+  return m;
+}
+
+/* One row of the access grid */
+function LevelSelect(props){
+  const m=props.m,opts=[];
+  if(props.inherit)opts.push(['',props.inherit]);
+  if(m.child&&!props.inherit)opts.push(['','Same as Facility Logs (all)']);
+  opts.push(['none','No access'],['read','View']);
+  if(!m.max||m.max>=2)opts.push(['editor','Edit']);
+  if(!m.max||m.max>=3)opts.push(['admin','Full']);
+  return el('select',{value:props.value||'',disabled:props.disabled,onChange:function(e){props.onChange(e.target.value);},style:{minWidth:170}},
+    opts.map(function(o){return el('option',{key:o[0],value:o[0]},o[1]);}));
+}
+function AccessGrid(props){
+  // props.value: {module: level}; props.inheritFor(m) -> label for "inherit" option (custom access) or undefined (role editor)
+  return el('div',null,ACCESS_GROUPS.map(function(g){
+    const ms=ACCESS_MODULES.filter(function(m){return m.grp===g;});
+    return el('div',{key:g,style:{marginBottom:12}},
+      el('div',{className:'secth',style:{display:'flex',justifyContent:'space-between',alignItems:'center'}},el('span',null,g),
+        !props.disabled&&!props.inheritFor&&el('span',{className:'row',style:{gap:4}},['none','read','editor','admin'].map(function(lv){
+          return el('button',{key:lv,type:'button',className:'btn ghost sm',style:{padding:'2px 8px',fontSize:11},onClick:function(){
+            const n={...props.value};ms.forEach(function(m){if(m.child)delete n[m.id];else n[m.id]=(m.max&&lvRank(lv)>m.max)?RANK_LV[m.max]:lv;});props.onChange(n);}},'All '+LV_NAME[lv]);}))),
+      el('table',null,el('tbody',null,ms.map(function(m){
+        const v=has(props.value,m.id)?props.value[m.id]:'';
+        return el('tr',{key:m.id},
+          el('td',{style:{paddingLeft:m.child?26:10}},el('div',{style:{fontWeight:m.child?500:700}},m.label),m.help&&el('div',{className:'muted',style:{fontSize:11}},m.help)),
+          props.extraCol&&el('td',{style:{fontSize:12,whiteSpace:'nowrap'}},props.extraCol(m)),
+          el('td',{style:{textAlign:'right'}},el(LevelSelect,{m:m,value:v,disabled:props.disabled,inherit:props.inheritFor?props.inheritFor(m):undefined,
+            onChange:function(x){const n={...props.value};if(x==='')delete n[m.id];else n[m.id]=x;props.onChange(n);}})));
+      }))));
+  }));
+}
+
+/* System admin: one person's approval, roles, licenses and custom access */
+function AccessEditor(props){
+  const u=props.user,roles=props.roles;
+  const[f,setF]=useState({approved:props.approve?true:!!u.approved,admin:u.role==='admin',role_ids:(u.role_ids||[]).slice(),license_ids:(u.license_ids||[]).slice(),perms:{...(u.perms||{})}});
+  const[err,setErr]=useState('');
+  const[busy,setBusy]=useState(false);
+  const allLic=!f.license_ids.length;
+  const nCustom=Object.keys(f.perms).length;
+  function fromRoles(m){const lv=rolesLevel(f.role_ids,roles,m.id);return lv?LV_NAME[RANK_LV[lv]]:'No access';}
+  async function save(){
+    setErr('');setBusy(true);
+    try{
+      await db.update('hx_profiles',u.id,{approved:f.approved,role:f.admin?'admin':'member',role_ids:f.role_ids,license_ids:f.license_ids,perms:f.perms});
+      props.onDone();
+    }catch(e){setErr(accessErr(e));}
+    setBusy(false);
+  }
+  return el(Modal,{title:(props.approve?'Approve ':'Access for ')+(u.name||u.email),wide:true,onClose:props.onClose},
+    el('div',{className:'muted',style:{marginBottom:10}},u.email),
+    el('div',{className:'card',style:{padding:12}},
+      el('label',{className:'ck'},el('input',{type:'checkbox',checked:f.approved,disabled:props.isSelf,onChange:function(e){setF({...f,approved:e.target.checked});}}),el('span',null,el('b',null,'Approved'),' \u2014 can sign in to Hendrix')),
+      el('label',{className:'ck'},el('input',{type:'checkbox',checked:f.admin,disabled:props.isSelf,onChange:function(e){setF({...f,admin:e.target.checked});}}),el('span',null,el('b',null,'System admin'),' \u2014 Full access to everything, plus States and Licenses, Team and Roles')),
+      props.isSelf&&el('div',{className:'muted',style:{fontSize:12}},'You cannot remove your own approval or admin rights.')),
+    el('div',{className:'secth'},'Roles'),
+    !roles.length?el('div',{className:'muted',style:{marginBottom:12}},'No roles yet. Create them on the Roles page.'):
+    el('div',{className:'cklist',style:{marginBottom:12}},roles.map(function(r){
+      return el('label',{key:r.id,className:'ck',title:r.description||''},el('input',{type:'checkbox',checked:f.role_ids.indexOf(r.id)>=0,onChange:function(e){
+        setF({...f,role_ids:e.target.checked?f.role_ids.concat([r.id]):f.role_ids.filter(function(x){return x!==r.id;})});}}),el('span',null,r.name));})),
+    el('div',{className:'secth'},'Licenses this person can work in'),
+    el('label',{className:'ck'},el('input',{type:'checkbox',checked:allLic,onChange:function(e){setF({...f,license_ids:e.target.checked?[]:props.licenses.slice(0,1).map(function(l){return l.id;})});}}),el('span',null,'All licenses, in every state')),
+    !allLic&&props.states.map(function(s){
+      const ls=props.licenses.filter(function(l){return l.state_id===s.id;});if(!ls.length)return null;
+      return el('div',{key:s.id,style:{margin:'6px 0 6px 26px'}},el('div',{className:'k'},s.name),el('div',{className:'cklist'},ls.map(function(l){
+        return el('label',{key:l.id,className:'ck'},el('input',{type:'checkbox',checked:f.license_ids.indexOf(l.id)>=0,onChange:function(e){
+          const n=e.target.checked?f.license_ids.concat([l.id]):f.license_ids.filter(function(x){return x!==l.id;});setF({...f,license_ids:n.length?n:f.license_ids});}}),
+          el('span',null,l.name+(l.license_number?' ('+l.license_number+')':'')));})));}),
+    el('div',{className:'secth',style:{display:'flex',justifyContent:'space-between',alignItems:'center'}},el('span',null,'Custom access'+(nCustom?' ('+nCustom+' set)':'')),
+      nCustom>0&&!f.admin&&el('button',{type:'button',className:'btn ghost sm',onClick:function(){setF({...f,perms:{}});}},'Clear custom access')),
+    f.admin?el('div',{className:'muted',style:{marginBottom:12}},'System admins have Full access everywhere.'):
+    el('div',null,el('div',{className:'muted',style:{fontSize:12,marginBottom:6}},'Leave a module on "Use role access" to follow this person\u2019s roles. Pick a level to override the roles for this person only.'),
+      el(AccessGrid,{value:f.perms,onChange:function(v){setF({...f,perms:v});},
+        extraCol:function(m){return el('span',{className:'muted'},'Roles: '+fromRoles(m));},
+        inheritFor:function(m){return 'Use role access ('+fromRoles(m)+')';}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),
+      el('button',{className:'btn',disabled:busy,onClick:save},busy?'Saving...':props.approve?'Approve':'Save')));
+}
+
+function Team(props){
+  const[rows,setRows]=useState(null);
+  const[roles,setRoles]=useState([]);
+  const[err,setErr]=useState('');
+  const[edit,setEdit]=useState(null);
+  const load=useCallback(function(){
+    Promise.all([db.get('hx_profiles','select=*&order=created_at'),db.get('hx_roles','select=*&order=sort,name').catch(function(e){setErr(accessErr(e));return [];})])
+      .then(function(r){setRows(r[0]||[]);setRoles(r[1]||[]);}).catch(function(e){setErr(String(e.message||e));});
+  },[]);
+  useEffect(load,[load]);
+  const licName=function(id){const l=props.licenses.find(function(x){return x.id===id;});return l?l.name:'?';};
+  const waiting=(rows||[]).filter(function(u){return !u.approved;});
+  function line(u){
+    const me=u.id===props.profile.id,rs=(u.role_ids||[]).map(function(id){const r=roles.find(function(x){return x.id===id;});return r?r.name:null;}).filter(Boolean);
+    const nC=Object.keys(u.perms||{}).length;
+    return el('tr',{key:u.id},
+      el('td',null,el('div',{style:{fontWeight:700}},u.name||'-',me&&el('span',{className:'badge',style:{marginLeft:8}},'You')),el('div',{className:'muted',style:{fontSize:12}},u.email)),
+      el('td',null,u.role==='admin'?el('span',{className:'badge'},'System admin'):rs.length?rs.map(function(n){return el('span',{key:n,className:'badge off',style:{marginRight:4,textTransform:'none',letterSpacing:0}},n);}):el('span',{className:'muted'},'No role')),
+      el('td',{style:{fontSize:13}},u.role==='admin'||!(u.license_ids||[]).length?'All licenses':(u.license_ids||[]).map(licName).join(', ')),
+      el('td',null,nC&&u.role!=='admin'?el('span',{className:'badge'},'Custom ('+nC+')'):el('span',{className:'muted',style:{fontSize:12}},u.role==='admin'?'Full':'From roles')),
+      el('td',null,el('span',{className:'badge'+(u.approved?' ok':' off')},u.approved?'Approved':'Waiting')),
+      el('td',{style:{textAlign:'right'}},el('button',{className:'btn sm'+(u.approved?' ghost':''),onClick:function(){setEdit({u:u,approve:!u.approved});}},u.approved?'Manage':'Approve')));
+  }
+  const head=el('thead',null,el('tr',null,['Person','Roles','Licenses','Access','Status',''].map(function(h,i){return el('th',{key:i},h);})));
+  return el('div',null,
+    el('h1',null,'Team and ',el('span',{className:'g'},'Access')),
+    el('div',{className:'sub'},'Approve people, give them roles, choose their licenses and set custom access. The database enforces every setting.'),
+    err&&el('div',{className:'msg err'},err),
+    !rows?el('div',{className:'muted'},'Loading...'):el('div',null,
+      waiting.length>0&&el('div',{className:'card gold'},el('h3',null,waiting.length+' waiting for approval'),el('table',null,head,el('tbody',null,waiting.map(line)))),
+      el('div',{className:'card',style:{overflowX:'auto'}},el('table',null,head,el('tbody',null,rows.filter(function(u){return u.approved;}).map(line))))),
+    edit&&el(AccessEditor,{user:edit.u,approve:edit.approve,isSelf:edit.u.id===props.profile.id,roles:roles,states:props.states,licenses:props.licenses,
+      onClose:function(){setEdit(null);},onDone:function(){setEdit(null);load();if(edit.u.id===props.profile.id&&props.onSelfChange)props.onSelfChange();}}));
+}
+
+const LOGS_PROD=['logs_sanitation','logs_waste','logs_scale','logs_equipment','logs_temp','logs_env'];
+function pm(o,list,lv){const x={...o};(list||[]).forEach(function(k){x[k]=lv;});return x;}
+const STARTER_ROLES=[
+  ['General Manager','Leadership. Edit everywhere; Full on batches and every log; sees recipes, prices and the audit trail.',{training:'admin',qms:'admin',complaints:'admin',intaudits:'admin',sops:'admin',suppliers:'admin',receiving:'admin',holds:'admin',shipping:'admin',recall:'admin',rulebook:'editor',standards:'editor',audit:'read',batch:'admin',testing:'admin',stickers:'admin',products:'editor',formbank:'read',cogs:'read',logs:'admin'}],
+  ['Assistant of General Manager','Leadership support. Edit on batches, products and every log; sees recipes and the audit trail.',{training:'editor',qms:'editor',complaints:'editor',intaudits:'editor',sops:'editor',suppliers:'editor',receiving:'editor',holds:'editor',shipping:'editor',recall:'editor',rulebook:'editor',standards:'read',audit:'read',batch:'editor',testing:'editor',products:'editor',formbank:'read',logs:'editor'}],
+  ['Compliance Officer','Full on every log, the rulebook and standards (CSQ); sees batches, products and the audit trail.',{training:'admin',qms:'admin',complaints:'admin',intaudits:'admin',sops:'admin',suppliers:'admin',receiving:'admin',holds:'admin',shipping:'read',recall:'admin',rulebook:'admin',standards:'admin',audit:'read',logs:'admin',batch:'read',testing:'admin',stickers:'admin',products:'read'}],
+  ['Security Manager','Full on the security and visitor logs.',{training:'editor',qms:'editor',complaints:'editor',sops:'read',rulebook:'read',logs_security:'admin',logs_visitor:'admin'}],
+  ['Security Officer','Fills the security and visitor logs.',{training:'read',qms:'read',complaints:'read',sops:'read',rulebook:'read',logs_security:'editor',logs_visitor:'editor'}],
+  ['Sanitation','Fills the sanitation, waste and pest control logs.',{training:'read',qms:'read',complaints:'read',sops:'read',logs_sanitation:'editor',logs_waste:'editor',logs_pest:'editor'}],
+  ['Team Member','Continues batches; fills the sanitation and temp / humidity logs.',{training:'read',qms:'read',complaints:'read',sops:'read',holds:'editor',receiving:'read',batch:'editor',products:'read',logs_temp:'editor',logs_sanitation:'editor'}],
+  ['Inventory Manager','Sees products and batches; fills the waste log.',{training:'editor',qms:'editor',complaints:'editor',sops:'read',suppliers:'editor',receiving:'admin',holds:'editor',shipping:'admin',recall:'editor',products:'read',batch:'read',logs_waste:'editor'}],
+  ['Extraction Manager','Full on batches; fills the scale, equipment and temp / humidity logs.',{training:'editor',qms:'editor',complaints:'editor',sops:'editor',suppliers:'read',receiving:'editor',holds:'editor',batch:'admin',testing:'editor',products:'read',formbank:'read',logs_scale:'editor',logs_equipment:'editor',logs_temp:'editor'}],
+  ['Production Manager','Full on batches; edits products; fills the production logs.',pm({batch:'admin',testing:'editor',stickers:'editor',products:'editor',formbank:'read',rulebook:'read',standards:'editor',sops:'editor',qms:'editor',complaints:'editor',intaudits:'read',training:'editor',suppliers:'editor',receiving:'editor',holds:'editor',shipping:'read',recall:'editor'},LOGS_PROD,'editor')],
+  ['Sales Manager','Sees products; records shipments.',{training:'read',qms:'read',complaints:'read',sops:'read',products:'read',shipping:'editor',holds:'read',recall:'read'}],
+  ['Production Lead','Creates and continues batches; fills the production logs.',pm({batch:'editor',testing:'read',stickers:'read',products:'read',sops:'read',qms:'editor',complaints:'read',training:'read',receiving:'read',holds:'editor'},['logs_sanitation','logs_scale','logs_equipment','logs_temp'],'editor')]];
+function accessSummary(perms){
+  const p=perms||{},out=[];
+  ACCESS_MODULES.forEach(function(m){if(has(p,m.id)&&lvRank(p[m.id]))out.push(m.label.replace(/ \(.*\)$/,'')+': '+LV_NAME[p[m.id]]);});
+  return out;
+}
+function RoleEditor(props){
+  const r=props.role||{};
+  const[f,setF]=useState({name:r.name||'',description:r.description||'',requirements:r.requirements||'',perms:{...(r.perms||{})}});
+  const[err,setErr]=useState('');
+  const[busy,setBusy]=useState(false);
+  async function save(){
+    setErr('');if(!f.name.trim()){setErr('Enter the role name.');return;}
+    setBusy(true);
+    try{
+      const rec={name:f.name.trim(),description:f.description.trim(),requirements:f.requirements.trim(),perms:f.perms};
+      if(r.id)await dbSave('hx_roles',r.id,rec);else await dbSave('hx_roles',null,{...rec,id:newId('role'),sort:props.count||0});
+      props.onDone();
+    }catch(e){setErr(accessErr(e));}
+    setBusy(false);
+  }
+  return el(Modal,{title:r.id?'Edit role':'New role',wide:true,onClose:props.onClose},
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:10}},
+      el(Field,{label:'Role name *'},el('input',{value:f.name,placeholder:'e.g. Production Lead',onChange:function(e){setF({...f,name:e.target.value});}})),
+      el(Field,{label:'Duties and responsibilities'},el('input',{value:f.description,placeholder:'What this role does',onChange:function(e){setF({...f,description:e.target.value});}}))),
+    el(Field,{label:'Requirements (CSQ 2A.13.1)'},el('textarea',{rows:2,value:f.requirements,placeholder:'Certifications, education, experience and training needed for this role',onChange:function(e){setF({...f,requirements:e.target.value});}})),
+    el('div',{className:'muted',style:{fontSize:12,marginBottom:8}},'View = see records. Edit = create records, continue batches, add and edit. Full = change filled-in records with a reason, void, manage lists, delete.'),
+    el(AccessGrid,{value:f.perms,onChange:function(v){setF({...f,perms:v});}}),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:save},busy?'Saving...':'Save role')));
+}
+function Roles(){
+  const[roles,setRoles]=useState(null);
+  const[people,setPeople]=useState([]);
+  const[err,setErr]=useState('');
+  const[edit,setEdit]=useState(null);
+  const[busy,setBusy]=useState(false);
+  const load=useCallback(function(){
+    Promise.all([db.get('hx_roles','select=*&order=sort,name'),db.get('hx_profiles','select=id,role_ids,approved')])
+      .then(function(r){setRoles(r[0]||[]);setPeople(r[1]||[]);}).catch(function(e){setErr(accessErr(e));setRoles([]);});
+  },[]);
+  useEffect(load,[load]);
+  async function starter(){
+    setErr('');setBusy(true);
+    try{
+      const have={};(roles||[]).forEach(function(r){have[r.name.trim().toLowerCase()]=1;});
+      const add=STARTER_ROLES.filter(function(s){return !have[s[0].toLowerCase()];}).map(function(s,i){return {id:newId('role'),name:s[0],description:s[1],perms:s[2],sort:(roles||[]).length+i};});
+      if(add.length)await db.insert('hx_roles',add);
+      load();
+    }catch(e){setErr(accessErr(e));}
+    setBusy(false);
+  }
+  async function del(r,n){
+    if(!window.confirm('Delete role "'+r.name+'"?'+(n?' '+n+' '+(n===1?'person loses':'people lose')+' the access it gives.':'')))return;
+    setErr('');try{await db.remove('hx_roles',r.id);load();}catch(e){setErr(accessErr(e));}
+  }
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,'Roles and ',el('span',{className:'g'},'Access')),el('div',{className:'sub'},'Create as many roles as you need. Each role carries its own access. People can hold several roles; the highest access wins. Custom access per person is set on Team and Access.')),
+      el('div',{className:'row'},el('button',{className:'btn ghost',disabled:busy||!roles,onClick:starter},'Add Black Fox roles'),el('button',{className:'btn',disabled:!roles,onClick:function(){setEdit({});}},'+ New role'))),
+    err&&el('div',{className:'msg err'},err),
+    !roles?el('div',{className:'muted'},'Loading...'):!roles.length?el('div',{className:'empty'},'No roles yet. Click "+ New role", or "Add Black Fox roles" to start from the 12 Black Fox job titles with suggested access you can change.'):
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(320px,1fr))'}},roles.map(function(r){
+      const n=people.filter(function(p){return (p.role_ids||[]).indexOf(r.id)>=0;}).length,sum=accessSummary(r.perms);
+      return el('div',{key:r.id,className:'card gold',style:{marginBottom:0}},
+        el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start',flexWrap:'nowrap'}},el('div',{style:{fontWeight:700,fontSize:15}},r.name),el('span',{className:'badge off'},n+' '+(n===1?'person':'people'))),
+        r.description&&el('div',{className:'muted',style:{fontSize:12,margin:'4px 0 4px'}},r.description),
+        r.requirements?el('div',{style:{fontSize:12,margin:'0 0 8px'}},el('b',null,'Requirements: '),r.requirements):el('div',{className:'badge warn',style:{margin:'2px 0 8px'}},'Requirements not set'),
+        sum.length?el('div',{style:{fontSize:12,lineHeight:1.6}},sum.map(function(x){return el('div',{key:x},x);})):el('div',{className:'muted',style:{fontSize:12}},'No access yet'),
+        el('div',{className:'row',style:{marginTop:12}},el('button',{className:'btn ghost sm',onClick:function(){setEdit(r);}},'Edit'),
+          el('button',{className:'btn ghost sm',onClick:function(){setEdit({name:r.name+' (copy)',description:r.description,perms:{...(r.perms||{})}});}},'Duplicate'),
+          el('button',{className:'btn danger sm',onClick:function(){del(r,n);}},'Delete')));
+    })),
+    edit&&el(RoleEditor,{role:edit,count:(roles||[]).length,onClose:function(){setEdit(null);},onDone:function(){setEdit(null);load();}}));
+}
+
+/* ---------- Suppliers (Black Fox / Michigan Suppliers tab + CSQ 2A.11 supplier approval) ---------- */
+const SUP_CATS=['Cones/Pre-roll Supplies','Packaging','Distillate/Extract','Terpenes','Ingredients','Testing Lab','Equipment','Labels',
+  'Co-manufacturer','Pest Control','Waste Disposal','Chemicals / Sanitation','Gases / Solvents','Transport / Distribution','Service Provider',
+  'Biomass / Flower (cannabis)','Nutrients / Fertilizers','Grow Media / Soil','Clones / Seeds','Crop Protection Products','Other'];
+const SUP_STATUS={pending:'Pending approval',approved:'Approved',conditional:'Approved with conditions',emergency:'Emergency (temporary)',suspended:'Suspended',disqualified:'Disqualified'};
+const SUP_TONE={pending:'warn',approved:'ok',conditional:'warn',emergency:'warn',suspended:'bad',disqualified:'bad'};
+const SUP_CRED_KINDS=['ISO/IEC 17025 accreditation','State license','Pest control applicator license','Food-grade / GMP certificate','Inhalation-grade statement','Organic / other certification','Insurance','Spec sheet / COA','Audit report','Other'];
+function supErr(e){const m=String((e&&e.message)||e);return /hx_supplier/.test(m)&&/missing|does not exist|schema cache/i.test(m)?'Suppliers are not set up yet - run hendrix_step16.sql in the Hendrix Supabase project.':/hx_suppliers_name/.test(m)?'A supplier with that name is already on file for this license.':m;}
+function supActive(s){return s.status==='approved'||s.status==='conditional';}
+function supReviewLate(s){return (supActive(s)||s.status==='emergency')&&s.next_review&&s.next_review<todayStr();}
+function supCredState(c){if(!c.expires)return 'none';const t=todayStr();if(c.expires<t)return 'expired';if(c.expires<=trAddMonths(t,2))return 'soon';return 'ok';}
+function supCredIssues(s){return (s.credentials||[]).filter(function(c){const x=supCredState(c);return x==='expired'||x==='soon';});}
+function SupplierForm(props){
+  const x=props.sup||{},st=props.state,lic=props.license,canF=can('suppliers',3);
+  const[f,setF]=useState({name:x.name||'',category:x.category||'Other',status:x.status||'pending',risk:x.risk||'medium',products_supplied:x.products_supplied||'',specs:x.specs||'',contact_name:x.contact_name||'',contact_email:x.contact_email||'',
+    contact_phone:x.contact_phone||'',address:x.address||'',coa_expiry:x.coa_expiry||'',last_audit:x.last_audit||'',emergency_verification:x.emergency_verification||'',ethical_sourcing:!!x.ethical_sourcing,notes:x.notes||'',
+    credentials:(x.credentials||[]).map(function(c){return {...c};}),license_ids:(x.license_ids&&x.license_ids.length?x.license_ids:[lic.id]).slice()});
+  const[err,setErr]=useState('');const[busy,setBusy]=useState('');
+  const stLics=(props.licenses||[]).filter(function(l){return l.state_id===st.id&&l.active;});
+  function set(k,v){setF(function(p){return {...p,[k]:v};});}
+  function setCred(i,k,v){setF(function(p){return {...p,credentials:p.credentials.map(function(c,j){return j===i?{...c,[k]:v}:c;})};});}
+  async function upCred(i,file){if(!file)return;setBusy('Uploading...');try{const ext=(file.name.split('.').pop()||'pdf').toLowerCase().replace(/[^a-z0-9]/g,'');
+    const path=await storagePut(file,'suppliers/'+lic.id+'/'+Date.now()+'-'+Math.random().toString(36).slice(2,6)+'.'+ext);setCred(i,'file',{path:path,name:file.name});}catch(e){setErr(String(e.message||e));}setBusy('');}
+  async function save(){
+    setErr('');if(!f.name.trim()){setErr('Enter the supplier name.');return;}
+    if(f.status==='emergency'&&!f.emergency_verification.trim()){setErr('Say how materials from this emergency supplier are checked before use.');return;}
+    if(f.credentials.some(function(c){return !c.kind;})){setErr('Choose the type of each credential.');return;}
+    const rec={name:f.name.trim(),category:f.category,risk:f.risk,products_supplied:f.products_supplied.trim(),specs:f.specs.trim(),contact_name:f.contact_name.trim(),contact_email:f.contact_email.trim(),contact_phone:f.contact_phone.trim(),
+      address:f.address.trim(),coa_expiry:f.coa_expiry||null,last_audit:f.last_audit||null,emergency_verification:f.emergency_verification.trim(),ethical_sourcing:f.ethical_sourcing,notes:f.notes.trim(),
+      credentials:f.credentials.map(function(c){return {kind:c.kind,number:(c.number||'').trim(),expires:c.expires||'',file:c.file||null};}),license_ids:f.license_ids};
+    if(!x.id)rec.status=f.status;
+    setBusy('Saving...');
+    try{const out=x.id?await db.update('hx_suppliers',x.id,rec):await db.insert('hx_suppliers',{...rec,id:newId('sup'),state_id:st.id,license_id:lic.id});props.onDone(out&&out[0]);}
+    catch(e){setErr(supErr(e));}
+    setBusy('');
+  }
+  const inp=function(k,l,ph,type){return el(Field,{label:l},el('input',{type:type||'text',value:f[k]||'',placeholder:ph||'',onChange:function(e){set(k,e.target.value);}}));};
+  return el(Modal,{title:(x.id?'Edit supplier':'Add supplier')+' \u00b7 '+lic.name,wide:true,onClose:props.onClose},
+    el('div',{className:'grid',style:{gridTemplateColumns:'2fr 1fr 1fr',gap:10}},
+      inp('name','Supplier name *','e.g. Futurola USA'),
+      el(Field,{label:'Category / type'},el('select',{value:f.category,onChange:function(e){set('category',e.target.value);}},SUP_CATS.map(function(c){return el('option',{key:c,value:c},c);}))),
+      el(Field,{label:'Risk'},el('select',{value:f.risk,onChange:function(e){set('risk',e.target.value);}},['low','medium','high'].map(function(r){return el('option',{key:r,value:r},r.charAt(0).toUpperCase()+r.slice(1)+(r==='high'?' (review every 6 months)':''));})))),
+    !x.id&&el(Field,{label:'Status'},el('select',{value:f.status,onChange:function(e){set('status',e.target.value);}},el('option',{value:'pending'},'Pending approval'),el('option',{value:'emergency'},'Emergency (temporary, not yet approved)'))),
+    f.status==='emergency'&&el(Field,{label:'How materials are checked before use * (CSQ 2A.11 g)'},el('textarea',{rows:2,value:f.emergency_verification,placeholder:'e.g. COA reviewed and in-house test before release',onChange:function(e){set('emergency_verification',e.target.value);}})),
+    inp('products_supplied','Products / services supplied','e.g. 98mm cones, 109mm cones'),
+    el(Field,{label:'Specifications the supplier must meet'},el('textarea',{rows:2,value:f.specs,placeholder:'e.g. Food-grade, COA with every lot, inhalation-grade terpenes, ISO 17025 lab',onChange:function(e){set('specs',e.target.value);}})),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:10}},inp('contact_name','Contact name','Sales rep name'),inp('contact_email','Contact email','contact@supplier.com'),inp('contact_phone','Phone','')),
+    el('div',{className:'grid',style:{gridTemplateColumns:'2fr 1fr 1fr',gap:10}},inp('address','Address',''),inp('coa_expiry','COA expiry date','','date'),inp('last_audit','Last audit date','','date')),
+    el(Field,{label:'Applies to license(s)',plain:true},el('div',{className:'row',style:{gap:6}},stLics.map(function(l){const on=f.license_ids.indexOf(l.id)>=0,fixed=l.id===(x.license_id||lic.id);
+      return el('label',{key:l.id,className:'ck'},el('input',{type:'checkbox',checked:on,disabled:fixed,onChange:function(){setF(function(p){const a=p.license_ids.slice(),i=a.indexOf(l.id);if(i>=0)a.splice(i,1);else a.push(l.id);return {...p,license_ids:a};});}}),el('span',null,l.name));}))),
+    el('div',{className:'k',style:{margin:'8px 0 6px'}},'Credentials (licenses, accreditations, certificates)'),
+    f.credentials.map(function(c,i){const sx=supCredState(c);return el('div',{key:i,className:'grid',style:{gridTemplateColumns:'2fr 1.2fr 1fr auto auto',gap:6,alignItems:'end',marginBottom:6}},
+      el('select',{value:c.kind||'',onChange:function(e){setCred(i,'kind',e.target.value);}},el('option',{value:''},'(type)'),SUP_CRED_KINDS.map(function(k){return el('option',{key:k,value:k},k);})),
+      el('input',{value:c.number||'',placeholder:'Number',onChange:function(e){setCred(i,'number',e.target.value);}}),
+      el('input',{type:'date',value:c.expires||'',title:'Expires',style:{borderColor:sx==='expired'?'var(--red)':sx==='soon'?'var(--gold)':''},onChange:function(e){setCred(i,'expires',e.target.value);}}),
+      c.file?el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:12},onClick:function(e){e.preventDefault();openStored(c.file.path,c.file.name).catch(function(){});}},'\ud83d\udcce'):
+        el('label',{className:'btn ghost sm'},'File',el('input',{type:'file',style:{display:'none'},onChange:function(e){upCred(i,e.target.files[0]);e.target.value='';}})),
+      el('button',{className:'btn ghost sm',onClick:function(){setF(function(p){return {...p,credentials:p.credentials.filter(function(_,j){return j!==i;})};});}},'\u00d7'));}),
+    el('button',{className:'btn ghost sm',onClick:function(){setF(function(p){return {...p,credentials:p.credentials.concat([{kind:f.category==='Testing Lab'?'ISO/IEC 17025 accreditation':f.category==='Pest Control'?'Pest control applicator license':'',number:'',expires:''}])};});}},'+ Add credential'),
+    el('label',{className:'ck',style:{marginTop:10}},el('input',{type:'checkbox',checked:f.ethical_sourcing,onChange:function(e){set('ethical_sourcing',e.target.checked);}}),el('span',null,'Ethical sourcing confirmed (CSQ 2A.11 h)')),
+    el(Field,{label:'Notes / certifications'},el('textarea',{rows:2,value:f.notes,onChange:function(e){set('notes',e.target.value);}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:!!busy,onClick:save},busy==='Saving...'?'Saving...':x.id?'Save changes':'Add supplier')));
+}
+function SupApprove(props){
+  const s=props.sup;const[basis,setBasis]=useState('');const[cond,setCond]=useState(false);const[next,setNext]=useState(trAddMonths(todayStr(),s.risk==='high'?6:12));const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  async function go(){setErr('');if(!basis.trim()){setErr('Write what the approval is based on.');return;}setBusy(true);
+    try{await db.update('hx_suppliers',s.id,{status:cond?'conditional':'approved',approval_basis:basis.trim(),next_review:next||null});props.onDone();}catch(e){setErr(supErr(e));}setBusy(false);}
+  return el(Modal,{title:'Approve '+s.name,onClose:props.onClose},
+    s.category==='Testing Lab'&&!(s.credentials||[]).some(function(c){return c.kind==='ISO/IEC 17025 accreditation';})&&el('div',{className:'msg err'},'Add the lab\'s ISO/IEC 17025 accreditation (Edit) before approving.'),
+    s.category==='Co-manufacturer'&&!s.last_audit&&el('div',{className:'msg err'},'Record the second- or third-party audit date (Edit) before approving a contract manufacturer.'),
+    el(Field,{label:'Approval based on *'},el('textarea',{rows:3,value:basis,placeholder:'e.g. Supplier questionnaire, food-grade certificate and COA reviewed; trial lot passed incoming inspection',onChange:function(e){setBasis(e.target.value);}})),
+    el('label',{className:'ck'},el('input',{type:'checkbox',checked:cond,onChange:function(e){setCond(e.target.checked);}}),el('span',null,'Approve with conditions')),
+    el(Field,{label:'Next review'},el('input',{type:'date',value:next,onChange:function(e){setNext(e.target.value);}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:go},'Approve supplier')));
+}
+function SupReview(props){
+  const s=props.sup,lic=props.license;const[f,setF]=useState({review_date:todayStr(),rating:'Satisfactory',result:'Keep approved',notes:''});const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  async function go(){setErr('');if((f.result==='Suspend'||f.result==='Disqualify')&&!f.notes.trim()){setErr('Write the reason.');return;}setBusy(true);
+    try{await db.insert('hx_supplier_reviews',{id:newId('srv'),state_id:s.state_id,license_id:s.license_id,supplier_id:s.id,...f,notes:f.notes.trim()});props.onDone();}catch(e){setErr(supErr(e));}setBusy(false);}
+  return el(Modal,{title:'Supplier review \u00b7 '+s.name,onClose:props.onClose},
+    el('div',{className:'muted',style:{fontSize:12,marginBottom:8}},'CSQ 2A.11 j: review every approved supplier at least once a year. Consider quality, delivery, COAs, deviations and complaints since the last review.'),
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr 1fr',gap:10}},
+      el(Field,{label:'Review date'},el('input',{type:'date',value:f.review_date,max:todayStr(),onChange:function(e){setF({...f,review_date:e.target.value});}})),
+      el(Field,{label:'Rating'},el('select',{value:f.rating,onChange:function(e){setF({...f,rating:e.target.value});}},['Satisfactory','Needs improvement','Unsatisfactory'].map(function(r){return el('option',{key:r,value:r},r);}))),
+      el(Field,{label:'Result'},el('select',{value:f.result,onChange:function(e){setF({...f,result:e.target.value});}},['Keep approved','Approve with conditions','Suspend','Disqualify'].map(function(r){return el('option',{key:r,value:r},r);})))),
+    el(Field,{label:'Notes'+(f.result==='Suspend'||f.result==='Disqualify'?' *':'')},el('textarea',{rows:3,value:f.notes,placeholder:'What was reviewed and found',onChange:function(e){setF({...f,notes:e.target.value});}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:go},'Save review')));
+}
+function SupStatus(props){
+  const[why,setWhy]=useState('');const[err,setErr]=useState('');const lbl=props.to==='suspended'?'Suspend':'Disqualify';
+  return el(Modal,{title:lbl+' '+props.sup.name,onClose:props.onClose},el(Field,{label:'Reason *'},el('textarea',{rows:3,value:why,onChange:function(e){setWhy(e.target.value);}})),err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Back'),el('button',{className:'btn danger',disabled:!why.trim(),onClick:function(){db.update('hx_suppliers',props.sup.id,{status:props.to,status_reason:why.trim()}).then(props.onDone).catch(function(e){setErr(supErr(e));});}},lbl)));
+}
+function supLabCheck(sups,labs){
+  const ok=sups.filter(function(s){return s.category==='Testing Lab'&&supActive(s)&&(s.credentials||[]).some(function(c){return c.kind==='ISO/IEC 17025 accreditation'&&supCredState(c)!=='expired';});});
+  const norm=function(t){return String(t||'').toLowerCase().replace(/[^a-z0-9]/g,'');};
+  return labs.filter(function(l){return l&&!ok.some(function(s){const a=norm(s.name),b=norm(l);return a&&b&&(a.indexOf(b)>=0||b.indexOf(a)>=0);});});
+}
+function SuppliersPage(props){
+  const st=props.state,lic=props.license,lid=lic?lic.id:'';
+  const[sups,setSups]=useState(null);const[labs,setLabs]=useState([]);const[revs,setRevs]=useState([]);const[msg,setMsg]=useState('');
+  const[q,setQ]=useState('');const[cf,setCf]=useState('ALL');const[sf,setSf]=useState('ALL');const[selId,setSelId]=useState(null);const[modal,setModal]=useState(null);
+  const load=useCallback(function(){
+    if(!lid){setSups([]);return;}const enc=encodeURIComponent;
+    db.get('hx_suppliers','license_ids=cs.%7B'+enc(lid)+'%7D&select=*&order=name').then(function(r){setSups((r||[]).filter(function(s){return (s.license_ids||[s.license_id]).indexOf(lid)>=0;}));}).catch(function(e){setMsg(supErr(e));setSups([]);});
+    if(can('testing',1))db.get('hx_tests','license_id=eq.'+enc(lid)+'&select=lab_name,voided,license_id&limit=20000').then(function(r){const m={};(r||[]).forEach(function(t){if(t.license_id===lid&&!t.voided&&t.lab_name)m[t.lab_name.trim()]=1;});setLabs(Object.keys(m));}).catch(function(){setLabs([]);});
+  },[lid]);
+  useEffect(load,[load]);
+  useEffect(function(){if(!selId){setRevs([]);return;}db.get('hx_supplier_reviews','supplier_id=eq.'+encodeURIComponent(selId)+'&select=*&order=review_date.desc').then(function(r){setRevs((r||[]).filter(function(x){return x.supplier_id===selId;}));}).catch(function(){setRevs([]);});},[selId,sups]);
+  if(!st||!lic)return el('div',null,el('h1',null,el('span',{className:'g'},'Suppliers')),el('div',{className:'empty'},'Pick a state and a license at the top first.'));
+  const canE=can('suppliers',2),canF=can('suppliers',3),A=sups||[];
+  const approved=A.filter(supActive),late=A.filter(supReviewLate),credIss=A.filter(function(s){return s.status!=='disqualified'&&supCredIssues(s).length;}),labGap=supLabCheck(A,labs);
+  const shown=A.filter(function(s){if(cf!=='ALL'&&s.category!==cf)return false;if(sf==='ACTIVE'&&!supActive(s))return false;if(sf!=='ALL'&&sf!=='ACTIVE'&&s.status!==sf)return false;
+    if(q&&(s.name+' '+s.products_supplied+' '+s.contact_name+' '+s.category).toLowerCase().indexOf(q.toLowerCase())<0)return false;return true;});
+  const sel=A.find(function(s){return s.id===selId;})||null;
+  function done(t){setModal(null);if(t)setMsg(t);load();}
+  const stat=function(l,v,tone,sub){return el('div',{key:l,className:'card gold',style:{marginBottom:0}},el('div',{className:'k'},l),el('div',{className:'v',style:{fontSize:26,color:tone||'var(--text)'}},v),sub&&el('div',{className:'muted',style:{fontSize:11,marginTop:2}},sub));};
+  function printList(){
+    const e=esc3;let h='<div class="hxrec"><h2>Approved supplier list</h2><div class="m">'+e(lic.name)+(lic.license_number?' ('+e(lic.license_number)+')':'')+' \u00b7 '+e(st.name)+' \u00b7 CSQ 2A.11 \u00b7 printed '+e(new Date().toLocaleString())+'</div>';
+    h+='<table><tr><th>Supplier</th><th>Type</th><th>Status</th><th>Products / services</th><th>Credentials</th><th>Approved</th><th>Last / next review</th></tr>';
+    A.filter(function(s){return s.status!=='pending';}).forEach(function(s){h+='<tr><td>'+e(s.name)+'</td><td>'+e(s.category)+'</td><td class="'+(supActive(s)?'ok':s.status==='emergency'?'':'bad')+'">'+e(SUP_STATUS[s.status])+(s.status_reason?'<br>'+e(s.status_reason):'')+'</td><td>'+e(s.products_supplied)+'</td><td>'+
+      (s.credentials||[]).map(function(c){return e(c.kind)+(c.number?' #'+e(c.number):'')+(c.expires?' (exp '+e(c.expires)+')':'');}).join('<br>')+'</td><td>'+e(s.approved_by||'-')+(s.approved_at?'<br>'+e(String(s.approved_at).slice(0,10)):'')+'<br>'+e(s.approval_basis)+'</td><td>'+e(s.last_review||'-')+' / <span class="'+(supReviewLate(s)?'bad':'')+'">'+e(s.next_review||'-')+'</span></td></tr>';});
+    printRecords('Approved supplier list - '+lic.name,[h+'</table></div>']);
+  }
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,el('span',{className:'g'},'Suppliers')),el('div',{className:'sub'},'Approved suppliers and vendors \u00b7 '+lic.name+' \u00b7 approval, credentials and yearly review (CSQ 2A.11)')),
+      el('div',{className:'row'},el('button',{className:'btn ghost',onClick:printList},'Approved supplier list'),canE&&el('button',{className:'btn',onClick:function(){setModal({t:'form'});}},'+ Add supplier'))),
+    msg&&el('div',{className:/^(Saved|Added|Approved|Review|Suspended|Disqualified|Deleted)/.test(msg)?'msg':'msg err'},msg),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',marginBottom:14}},
+      stat('Approved',approved.length,'var(--green)'),stat('Pending',A.filter(function(s){return s.status==='pending';}).length,'var(--gold-hi)'),
+      stat('Emergency',A.filter(function(s){return s.status==='emergency';}).length,A.some(function(s){return s.status==='emergency';})?'var(--gold-hi)':'var(--text)','temporary, verified before use'),
+      stat('Reviews overdue',late.length,late.length?'var(--red)':'var(--green)'),stat('Credentials expiring',credIss.length,credIss.length?'var(--red)':'var(--green)','expired or within 60 days')),
+    labGap.length>0&&el('div',{className:'msg err',style:{marginBottom:12}},el('b',null,'Labs used in Testing that are not approved with a current ISO/IEC 17025 accreditation: '),labGap.join(', '),' (CSQ 2A.12.9 g)'),
+    el('div',{className:'row',style:{marginBottom:12}},el('input',{value:q,placeholder:'Search suppliers',style:{width:220},onChange:function(e){setQ(e.target.value);}}),
+      el('select',{value:cf,onChange:function(e){setCf(e.target.value);}},el('option',{value:'ALL'},'All types'),SUP_CATS.map(function(c){return el('option',{key:c,value:c},c);})),
+      el('select',{value:sf,onChange:function(e){setSf(e.target.value);}},el('option',{value:'ALL'},'Every status'),el('option',{value:'ACTIVE'},'Approved (all)'),Object.keys(SUP_STATUS).map(function(k){return el('option',{key:k,value:k},SUP_STATUS[k]);}))),
+    sups===null?el('div',{className:'muted'},'Loading...'):!shown.length?el('div',{className:'empty'},A.length?'No suppliers match.':'No suppliers yet for '+lic.name+'.'):
+    shown.map(function(s){const ci=supCredIssues(s);return el('div',{key:s.id,className:'card',style:{cursor:'pointer',padding:'12px 16px',borderLeft:'3px solid '+(supActive(s)?'var(--green)':s.status==='pending'||s.status==='emergency'?'var(--gold)':'var(--red)')},onClick:function(){setSelId(s.id);}},
+      el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start',flexWrap:'nowrap'}},
+        el('div',{style:{minWidth:0}},el('div',{className:'row',style:{gap:6,marginBottom:5}},el('span',{className:'badge '+SUP_TONE[s.status]},SUP_STATUS[s.status]),el('span',{className:'badge off'},s.category),s.risk==='high'&&el('span',{className:'badge bad'},'High risk'),
+            (s.credentials||[]).length>0&&el('span',{className:'badge off'},(s.credentials||[]).length+' credential'+((s.credentials||[]).length===1?'':'s')),ci.length>0&&el('span',{className:'badge bad'},ci.length+' expiring'),supReviewLate(s)&&el('span',{className:'badge bad'},'Review overdue')),
+          el('div',{style:{fontWeight:700}},s.name),s.products_supplied&&el('div',{className:'muted',style:{fontSize:12}},s.products_supplied)),
+        el('div',{className:'muted',style:{fontSize:11,textAlign:'right',flex:'0 0 auto'}},s.next_review&&el('div',{style:{color:supReviewLate(s)?'var(--red)':''}},'Review '+s.next_review),s.coa_expiry&&el('div',null,'COA '+s.coa_expiry))));}),
+    sel&&!modal&&el(Modal,{title:sel.name,wide:true,onClose:function(){setSelId(null);}},
+      el('div',{className:'row',style:{gap:6,marginBottom:10}},el('span',{className:'badge '+SUP_TONE[sel.status]},SUP_STATUS[sel.status]),el('span',{className:'badge off'},sel.category),el('span',{className:'badge off'},'Risk: '+sel.risk),sel.ethical_sourcing&&el('span',{className:'badge ok'},'Ethical sourcing confirmed')),
+      sel.status_reason&&(sel.status==='suspended'||sel.status==='disqualified')&&el('div',{className:'msg err'},SUP_STATUS[sel.status]+': '+sel.status_reason),
+      sel.status==='emergency'&&el('div',{className:'msg'},'Emergency supplier \u00b7 materials checked before use: '+sel.emergency_verification),
+      el('div',{className:'card gold',style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:10,padding:'10px 14px'}},
+        [['Products / services',sel.products_supplied],['Contact',[sel.contact_name,sel.contact_email,sel.contact_phone].filter(Boolean).join(' \u00b7 ')],['COA expiry',sel.coa_expiry],['Last audit',sel.last_audit],
+         ['Approved',sel.approved_by?sel.approved_by+' \u00b7 '+String(sel.approved_at).slice(0,10):'-'],['Last review',sel.last_review],['Next review',sel.next_review]].map(function(p){return el('div',{key:p[0]},el('div',{className:'k'},p[0]),el('div',{style:{fontSize:13,color:p[0]==='Next review'&&supReviewLate(sel)?'var(--red)':''}},p[1]||'-'));})),
+      sel.approval_basis&&el('div',{style:{fontSize:13,marginBottom:8}},el('b',null,'Approval basis: '),sel.approval_basis),
+      sel.specs&&el('div',{style:{fontSize:13,marginBottom:8}},el('b',null,'Specifications: '),sel.specs),
+      sel.notes&&el('div',{className:'muted',style:{fontSize:13,marginBottom:8}},sel.notes),
+      el('div',{className:'k',style:{margin:'6px 0'}},'Credentials'),
+      (sel.credentials||[]).length?(sel.credentials||[]).map(function(c,i){const sx=supCredState(c);return el('div',{key:i,className:'row',style:{gap:8,fontSize:13,padding:'4px 0',borderTop:'1px solid var(--line)'}},
+        el('b',null,c.kind),c.number&&el('span',null,'#'+c.number),c.expires&&el('span',{className:'badge '+(sx==='expired'?'bad':sx==='soon'?'warn':'ok')},(sx==='expired'?'Expired ':'Expires ')+c.expires),
+        c.file&&el('a',{href:'#',style:{color:'var(--gold-hi)'},onClick:function(e){e.preventDefault();openStored(c.file.path,c.file.name).catch(function(){});}},'\ud83d\udcce '+c.file.name));}):el('div',{className:'muted',style:{fontSize:12}},'None recorded'),
+      el('div',{className:'k',style:{margin:'12px 0 6px'}},'Reviews'),
+      revs.length?revs.map(function(r){return el('div',{key:r.id,style:{fontSize:13,padding:'4px 0',borderTop:'1px solid var(--line)'}},el('b',null,r.review_date),' \u00b7 '+r.rating+' \u00b7 '+r.result+' \u00b7 '+r.reviewer,r.notes&&el('div',{className:'muted',style:{fontSize:12}},r.notes));}):el('div',{className:'muted',style:{fontSize:12}},'No reviews yet'),
+      el('div',{className:'row',style:{justifyContent:'space-between',marginTop:14}},
+        el('div',{className:'row',style:{gap:6}},
+          canE&&sel.status!=='disqualified'&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'form',sup:sel});}},'Edit'),
+          canF&&['pending','emergency','suspended'].indexOf(sel.status)>=0&&el('button',{className:'btn sm',onClick:function(){setModal({t:'approve'});}},'Approve'),
+          canF&&sel.status!=='pending'&&sel.status!=='disqualified'&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'review'});}},'Record review'),
+          canF&&(supActive(sel)||sel.status==='emergency')&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'status',to:'suspended'});}},'Suspend'),
+          canF&&sel.status!=='disqualified'&&el('button',{className:'btn danger sm',onClick:function(){setModal({t:'status',to:'disqualified'});}},'Disqualify'),
+          canF&&!sel.ever_approved&&el('button',{className:'btn danger sm',onClick:function(){if(window.confirm('Delete '+sel.name+'? (Only suppliers never approved can be deleted.)'))db.remove('hx_suppliers',sel.id).then(function(){setSelId(null);done('Deleted '+sel.name);}).catch(function(e){setMsg(supErr(e));});}},'Delete')),
+        el('button',{className:'btn ghost sm',onClick:function(){setSelId(null);}},'Close'))),
+    modal&&modal.t==='form'&&el(SupplierForm,{sup:modal.sup,state:st,license:lic,licenses:props.licenses,onClose:function(){setModal(null);},onDone:function(r){if(r&&!modal.sup)setSelId(r.id);done(modal.sup?'Saved.':'Added '+(r?r.name:'supplier'));}}),
+    modal&&modal.t==='approve'&&sel&&el(SupApprove,{sup:sel,onClose:function(){setModal(null);},onDone:function(){done('Approved '+sel.name);}}),
+    modal&&modal.t==='review'&&sel&&el(SupReview,{sup:sel,license:lic,onClose:function(){setModal(null);},onDone:function(){done('Review saved for '+sel.name);}}),
+    modal&&modal.t==='status'&&sel&&el(SupStatus,{sup:sel,to:modal.to,onClose:function(){setModal(null);},onDone:function(){done((modal.to==='suspended'?'Suspended ':'Disqualified ')+sel.name);}}));
+}
+function SupplierDashCard(props){
+  const lid=props.license?props.license.id:'';const[d,setD]=useState(null);
+  useEffect(function(){if(!lid||!can('suppliers',1)){setD(null);return;}let dead=false;
+    db.get('hx_suppliers','license_ids=cs.%7B'+encodeURIComponent(lid)+'%7D&select=id,status,next_review,credentials,license_id,license_ids').then(function(r){const A=(r||[]).filter(function(s){return (s.license_ids||[s.license_id]).indexOf(lid)>=0;});
+      if(!dead)setD({n:A.length,ok:A.filter(supActive).length,pend:A.filter(function(s){return s.status==='pending';}).length,late:A.filter(supReviewLate).length,cred:A.filter(function(s){return s.status!=='disqualified'&&supCredIssues(s).length;}).length});}).catch(function(){if(!dead)setD(null);});
+    return function(){dead=true;};},[lid]);
+  if(!d)return null;
+  const link=el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go('suppliers');}},'Open suppliers');
+  const bad=d.late+d.cred;
+  return el('div',{className:'card gold'},el('div',{className:'k'},'Suppliers'),el('div',{className:'v',style:{color:!d.n?'var(--text)':bad?'var(--red)':'var(--green)'}},d.n?d.ok+' approved':'None yet'),
+    el('div',{className:'muted',style:{margin:'4px 0 8px'}},d.n?d.pend+' pending \u00b7 '+d.late+' review'+(d.late===1?'':'s')+' overdue \u00b7 '+d.cred+' with expiring credentials':'Build the approved supplier list.'),link);
+}
+
+/* ---------- Receiving, Inventory, Hold and Release, Shipping (CSQ 2A.9.4, 2A.10) ---------- */
+const LOT_CATS=['Packaging','Labels','Hardware (cartridges, batteries)','Cones / pre-roll supplies','Ingredients','Terpenes','Distillate / extract','Cannabis (flower, trim, biomass)','Chemicals / sanitation','Gases','Solvents','Nutrients / fertilizers','Grow media / soil','Clones / seeds','Crop protection products','Other'];
+const LOT_UNITS=['each','g','kg','mL','L','lb','oz','case','roll','box'];
+const LOT_CHECKS=[['docs','Matches the order, invoice or manifest'],['intact','Packaging intact: no damage, leaks or wet cartons'],['clean','Clean: no pests, dirt, odors or foreign matter'],['sealed','Seals / tamper evidence intact'],['labeled','Labeled with item, lot and expiry'],['condition','Temperature and condition OK on arrival'],['vehicle','Delivery vehicle clean and secure']];
+const SHIP_CHECKS=[['vehicle_clean','Vehicle clean, dry and free of pests'],['secure','Vehicle secure and locked; product out of sight'],['temp','Temperature suitable for the product'],['sealed','Packages sealed and tamper evident'],['match','Products and quantities match the manifest'],['labels','Labels and package tags correct'],['released','Every batch is released: tests passed, nothing on hold'],['separate','No damage while loading; kept apart from chemicals and non-cannabis goods']];
+const HOLD_SOURCES=['Receiving inspection','Failed test','Deviation','Customer return','Complaint','Recall','Storage / expiry','Other'];
+const HOLD_KINDS={lot:'Received lot',batch:'Batch',product:'Package tag',return:'Customer return',other:'Other'};
+const HOLD_DEC={released:'Release (approved for use)',destroyed:'Destroy',returned:'Return to supplier',reworked:'Rework'};
+const LOT_STATUS={quarantine:'Quarantine',accepted:'Accepted',rejected:'Rejected',on_hold:'On hold',returned:'Returned',destroyed:'Destroyed'};
+const LOT_TONE={quarantine:'warn',accepted:'ok',rejected:'bad',on_hold:'bad',returned:'off',destroyed:'off'};
+function matErr(e){const m=String((e&&e.message)||e);return /hx_lots|hx_holds|hx_shipments|hx_lot_uses/.test(m)&&/missing|does not exist|schema cache/i.test(m)?'Receiving is not set up yet - run hendrix_step17.sql in the Hendrix Supabase project.':m;}
+function lotLeft(l){return Math.round((Number(l.quantity)-Number(l.qty_used||0))*1000)/1000;}
+function lotExp(l){if(!l.expiry_date)return 'none';const t=todayStr();if(l.expiry_date<t)return 'expired';if(l.expiry_date<=trAddMonths(t,1))return 'soon';return 'ok';}
+function checksPass(items,c){return items.every(function(i){return c&&c[i[0]]===true;});}
+function normTag(t){return String(t||'').toUpperCase().replace(/[^A-Z0-9]/g,'');}
+// test state of a batch: failed = a failed test with no passing retest after it
+function batchTest(bid,tests){const t=tests.filter(function(x){return x.batch_id===bid&&!x.voided;});if(!t.length)return 'none';
+  const lf=t.filter(function(x){return x.status==='Failed';}).map(function(x){return x.created_at;}).sort().pop();
+  if(lf&&!t.some(function(x){return x.status==='Passed'&&x.created_at>lf;}))return 'failed';return t.some(function(x){return x.status==='Passed';})?'passed':'pending';}
+function batchHeld(bid,tag,holds){return holds.find(function(h){return h.status==='open'&&((bid&&h.batch_id===bid)||(tag&&h.tag&&normTag(h.tag)===normTag(tag)));});}
+function batchName(b){return b?b.batch_number+(b.sku?' \u00b7 '+b.sku:'')+(b.flavor?' \u00b7 '+b.flavor:''):'';}
+function CheckBoxes(props){
+  return el('div',{style:{margin:'4px 0 10px'}},props.items.map(function(i){const on=!!(props.value||{})[i[0]];
+    return el('label',{key:i[0],className:'ck',style:{display:'flex',marginBottom:4}},el('input',{type:'checkbox',checked:on,disabled:props.disabled,onChange:function(e){props.onChange({...(props.value||{}),[i[0]]:e.target.checked});}}),
+      el('span',{style:{color:on?'':'var(--muted)'}},i[1]));}));
+}
+function FileList(props){
+  const[busy,setBusy]=useState(false);const files=props.files||[];
+  async function up(file){if(!file)return;setBusy(true);try{const ext=(file.name.split('.').pop()||'pdf').toLowerCase().replace(/[^a-z0-9]/g,'');
+    const path=await storagePut(file,props.folder+'/'+Date.now()+'-'+Math.random().toString(36).slice(2,6)+'.'+ext);props.onChange(files.concat([{path:path,name:file.name}]));}catch(e){if(props.onErr)props.onErr(String(e.message||e));}setBusy(false);}
+  return el('div',{className:'row',style:{gap:6,margin:'4px 0 10px'}},files.map(function(f,i){return el('span',{key:i,className:'badge off',style:{textTransform:'none',letterSpacing:0}},
+      el('a',{href:'#',style:{color:'var(--gold-hi)'},onClick:function(e){e.preventDefault();openStored(f.path,f.name).catch(function(){});}},'\ud83d\udcce '+f.name),
+      props.onChange&&!props.fixed&&el('button',{className:'btn ghost sm',style:{padding:'0 6px',marginLeft:4},onClick:function(){props.onChange(files.filter(function(_,j){return j!==i;}));}},'\u00d7'));}),
+    props.onChange&&el('label',{className:'btn ghost sm'},busy?'Uploading...':(props.label||'+ File'),el('input',{type:'file',style:{display:'none'},onChange:function(e){up(e.target.files[0]);e.target.value='';}})));
+}
+function LotForm(props){
+  const x=props.lot||{},lic=props.license,st=props.state,locked=x.id&&x.status!=='quarantine';
+  const sups=(props.suppliers||[]).filter(function(s){return ['approved','conditional','emergency'].indexOf(s.status)>=0;});
+  const[f,setF]=useState({supplier_id:x.supplier_id||'',item:x.item||'',category:x.category||'Packaging',supplier_lot:x.supplier_lot||'',metrc_tag:x.metrc_tag||'',quantity:x.quantity!=null?String(x.quantity):'',unit:x.unit||'each',
+    expiry_date:x.expiry_date||'',po_number:x.po_number||'',location:x.location||'',received_on:x.received_on||todayStr(),coa_ok:!!x.coa_ok,checks:x.checks||{},inspection_notes:x.inspection_notes||'',files:(x.files||[]).slice()});
+  const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  function set(k,v){setF(function(p){return {...p,[k]:v};});}
+  const sup=sups.find(function(s){return s.id===f.supplier_id;})||(props.suppliers||[]).find(function(s){return s.id===f.supplier_id;});
+  async function save(){
+    setErr('');
+    if(!locked){if(!f.supplier_id){setErr('Pick the supplier.');return;}if(!f.item.trim()){setErr('Enter what was received.');return;}if(!(Number(f.quantity)>0)){setErr('Enter the quantity received.');return;}}
+    const rec=locked?{location:f.location.trim(),files:f.files,inspection_notes:f.inspection_notes.trim()}:
+      {item:f.item.trim(),category:f.category,supplier_lot:f.supplier_lot.trim(),metrc_tag:f.metrc_tag.trim(),quantity:Number(f.quantity),unit:f.unit,expiry_date:f.expiry_date||null,po_number:f.po_number.trim(),
+       location:f.location.trim(),received_on:f.received_on,coa_ok:f.coa_ok,checks:LOT_CHECKS.reduce(function(m,i){m[i[0]]=!!f.checks[i[0]];return m;},{}),inspection_notes:f.inspection_notes.trim(),files:f.files};
+    setBusy(true);
+    try{const out=x.id?await db.update('hx_lots',x.id,rec):await db.insert('hx_lots',{...rec,id:newId('lot'),state_id:st.id,license_id:lic.id,supplier_id:f.supplier_id,status:'quarantine'});props.onDone(out&&out[0]);}
+    catch(e){setErr(matErr(e));}
+    setBusy(false);
+  }
+  const inp=function(k,l,ph,type,dis){return el(Field,{label:l},el('input',{type:type||'text',value:f[k]||'',placeholder:ph||'',disabled:dis||locked,max:type==='date'&&k==='received_on'?todayStr():undefined,onChange:function(e){set(k,e.target.value);}}));};
+  return el(Modal,{title:x.id?(locked?'Lot '+x.number+' (storage, files, notes)':'Edit lot '+x.number):'Receive a lot \u00b7 '+lic.name,wide:true,onClose:props.onClose},
+    !x.id&&!sups.length&&el('div',{className:'msg err'},'No approved suppliers for '+lic.name+'. Approve the supplier under Suppliers first (CSQ 2A.11).'),
+    el('div',{className:'grid',style:{gridTemplateColumns:'2fr 1fr',gap:10}},
+      el(Field,{label:'Supplier * (approved only)'},el('select',{value:f.supplier_id,disabled:!!x.id,onChange:function(e){set('supplier_id',e.target.value);}},el('option',{value:''},'(pick)'),
+        (x.id&&sup&&sups.indexOf(sup)<0?[sup]:[]).concat(sups).map(function(s){return el('option',{key:s.id,value:s.id},s.name+' \u00b7 '+s.category+(s.status!=='approved'?' ('+SUP_STATUS[s.status]+')':''));}))),
+      inp('received_on','Received on','','date',!!x.id)),
+    sup&&sup.status==='emergency'&&el('div',{className:'msg'},'Emergency supplier: '+sup.emergency_verification),
+    sup&&sup.specs&&el('div',{className:'muted',style:{fontSize:12,marginBottom:8}},'Specs this supplier must meet: '+sup.specs),
+    el('div',{className:'grid',style:{gridTemplateColumns:'2fr 1fr',gap:10}},inp('item','Item received *','e.g. 98mm pre-roll cones'),
+      el(Field,{label:'Category'},el('select',{value:f.category,disabled:locked,onChange:function(e){set('category',e.target.value);}},LOT_CATS.map(function(c){return el('option',{key:c,value:c},c);})))),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:10}},
+      inp('quantity','Quantity *','','number'),el(Field,{label:'Unit'},el('select',{value:f.unit,disabled:locked,onChange:function(e){set('unit',e.target.value);}},LOT_UNITS.map(function(u){return el('option',{key:u,value:u},u);}))),
+      inp('supplier_lot','Supplier lot #',''),inp('expiry_date','Expiry / best before','','date')),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:10}},inp('metrc_tag','METRC tag (cannabis)',''),inp('po_number','PO / invoice #',''),
+      el(Field,{label:'Storage location'},el('input',{value:f.location,placeholder:'e.g. Quarantine shelf Q1',onChange:function(e){set('location',e.target.value);}}))),
+    el('div',{className:'k',style:{margin:'8px 0 4px'}},'Receiving inspection (tick each check that passed)'),
+    el(CheckBoxes,{items:LOT_CHECKS,value:f.checks,disabled:locked,onChange:function(v){set('checks',v);}}),
+    el('label',{className:'ck',style:{margin:'4px 0 8px'}},el('input',{type:'checkbox',checked:f.coa_ok,disabled:locked,onChange:function(e){set('coa_ok',e.target.checked);}}),el('span',null,'COA or certificate of conformance received and reviewed against the specs')),
+    el('div',{className:'k'},'Documents (COA, invoice, manifest, photos)'),
+    el(FileList,{files:f.files,folder:'receiving/'+lic.id,label:'+ Upload document',onErr:setErr,onChange:function(v){set('files',v);}}),
+    el(Field,{label:'Inspection notes'},el('textarea',{rows:2,value:f.inspection_notes,onChange:function(e){set('inspection_notes',e.target.value);}})),
+    !locked&&!x.id&&el('div',{className:'muted',style:{fontSize:12}},'The lot goes to QUARANTINE. It cannot be used until someone with Full access accepts it.'),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy||(!x.id&&!sups.length),onClick:save},busy?'Saving...':x.id?'Save':'Receive into quarantine')));
+}
+function LotDecide(props){
+  const l=props.lot,acc=props.to==='accepted';const[notes,setNotes]=useState('');const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  const ok=checksPass(LOT_CHECKS,l.checks),needNote=!acc||!ok||l.supplier_status==='emergency';
+  async function go(){setErr('');if(needNote&&!notes.trim()){setErr(acc?'Write why the lot is accepted (failed check or emergency supplier).':'Write why the lot is rejected.');return;}setBusy(true);
+    try{await db.update('hx_lots',l.id,{status:props.to,decision_notes:notes.trim()});props.onDone();}catch(e){setErr(matErr(e));}setBusy(false);}
+  return el(Modal,{title:(acc?'Accept ':'Reject ')+l.number+' \u00b7 '+l.item,onClose:props.onClose},
+    acc&&!l.coa_ok&&el('div',{className:'msg err'},'No COA or certificate of conformance recorded. Edit the lot and add it before accepting.'),
+    acc&&!ok&&el('div',{className:'msg err'},'Not every receiving check passed: '+LOT_CHECKS.filter(function(i){return !(l.checks||{})[i[0]];}).map(function(i){return i[1];}).join('; ')),
+    acc&&l.supplier_status==='emergency'&&el('div',{className:'msg'},'Emergency supplier: write how this lot was verified before use.'),
+    !acc&&el('div',{className:'muted',style:{fontSize:12,marginBottom:8}},'A rejected lot is put on hold automatically and kept apart until it is returned to the supplier or destroyed.'),
+    el(Field,{label:(acc?'Decision notes':'Reason for rejection')+(needNote?' *':'')},el('textarea',{rows:3,value:notes,onChange:function(e){setNotes(e.target.value);}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:acc?'btn':'btn danger',disabled:busy||(acc&&!l.coa_ok),onClick:go},acc?'Accept lot':'Reject lot')));
+}
+function UseForm(props){
+  const lic=props.license;const avail=(props.lots||[]).filter(function(l){return l.status==='accepted'&&lotLeft(l)>0&&lotExp(l)!=='expired';}).sort(function(a,b){return a.received_on<b.received_on?-1:a.received_on>b.received_on?1:a.number<b.number?-1:1;});
+  const[f,setF]=useState({lot_id:props.lotId||'',batch_id:'',quantity:'',used_on:todayStr(),notes:''});const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  const l=avail.find(function(x){return x.id===f.lot_id;});const first=l&&avail.find(function(x){return x.item.trim().toLowerCase()===l.item.trim().toLowerCase();});
+  async function go(){setErr('');if(!l){setErr('Pick the lot.');return;}if(!(Number(f.quantity)>0)){setErr('Enter the quantity used.');return;}if(Number(f.quantity)>lotLeft(l)){setErr('Only '+lotLeft(l)+' '+l.unit+' left in '+l.number+'.');return;}
+    setBusy(true);try{await db.insert('hx_lot_uses',{id:newId('use'),state_id:l.state_id,license_id:l.license_id,lot_id:l.id,batch_id:f.batch_id||null,quantity:Number(f.quantity),used_on:f.used_on,notes:f.notes.trim()});props.onDone();}catch(e){setErr(matErr(e));}setBusy(false);}
+  return el(Modal,{title:'Record use from a lot \u00b7 '+lic.name,onClose:props.onClose},
+    el(Field,{label:'Lot * (oldest first)'},el('select',{value:f.lot_id,onChange:function(e){setF({...f,lot_id:e.target.value});}},el('option',{value:''},'(pick)'),
+      avail.map(function(x){return el('option',{key:x.id,value:x.id},x.number+' \u00b7 '+x.item+' \u00b7 '+lotLeft(x)+' '+x.unit+' left \u00b7 rec. '+x.received_on+(x.expiry_date?' \u00b7 exp '+x.expiry_date:''));}))),
+    l&&first&&first.id!==l.id&&el('div',{className:'msg'},'FIFO: '+first.number+' (received '+first.received_on+') is older and should be used first.'),
+    el(Field,{label:'Used in batch'},el('select',{value:f.batch_id,onChange:function(e){setF({...f,batch_id:e.target.value});}},el('option',{value:''},'(not for a batch)'),(props.batches||[]).filter(function(b){return !b.voided;}).map(function(b){return el('option',{key:b.id,value:b.id},batchName(b));}))),
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr',gap:10}},
+      el(Field,{label:'Quantity'+(l?' ('+l.unit+')':'')+' *'},el('input',{type:'number',value:f.quantity,onChange:function(e){setF({...f,quantity:e.target.value});}})),
+      el(Field,{label:'Date'},el('input',{type:'date',value:f.used_on,max:todayStr(),onChange:function(e){setF({...f,used_on:e.target.value});}}))),
+    el(Field,{label:'Notes'},el('input',{value:f.notes,onChange:function(e){setF({...f,notes:e.target.value});}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:go},'Record use')));
+}
+function HoldForm(props){
+  const lic=props.license,st=props.state,pre=props.prefill||{};
+  const[f,setF]=useState({kind:pre.kind||'lot',lot_id:pre.lot_id||'',batch_id:pre.batch_id||'',tag:pre.tag||'',item:pre.item||'',quantity:pre.quantity||'',source:pre.source||(pre.kind==='return'?'Customer return':'Deviation'),reason:pre.reason||'',location:'Quarantine area'});
+  const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  const lots=(props.lots||[]).filter(function(l){return ['quarantine','accepted'].indexOf(l.status)>=0;});
+  async function go(){setErr('');
+    if(f.kind==='lot'&&!f.lot_id){setErr('Pick the lot.');return;}if(f.kind==='batch'&&!f.batch_id){setErr('Pick the batch.');return;}if(f.kind==='product'&&!f.tag.trim()){setErr('Enter the package tag.');return;}
+    if((f.kind==='other'||f.kind==='return')&&!f.item.trim()&&!f.batch_id){setErr('Describe what is held.');return;}if(!f.reason.trim()){setErr('Write why it is held.');return;}
+    setBusy(true);try{const out=await db.insert('hx_holds',{id:newId('hold'),state_id:st.id,license_id:lic.id,kind:f.kind,lot_id:f.kind==='lot'?f.lot_id:null,batch_id:f.kind==='lot'?null:(f.batch_id||null),tag:f.tag.trim(),item:f.item.trim(),
+      quantity:f.quantity.trim(),source:f.source,reason:f.reason.trim(),location:f.location.trim(),shipment_id:pre.shipment_id||null});props.onDone(out&&out[0]);}catch(e){setErr(matErr(e));}setBusy(false);}
+  return el(Modal,{title:'Put on hold \u00b7 '+lic.name,onClose:props.onClose},
+    el('div',{className:'muted',style:{fontSize:12,marginBottom:8}},'Mark the product with a HOLD tag and move it to the quarantine area. It cannot be used or shipped until someone with Full access decides (CSQ 2A.10.4).'),
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr',gap:10}},
+      el(Field,{label:'What is held'},el('select',{value:f.kind,onChange:function(e){setF({...f,kind:e.target.value});}},Object.keys(HOLD_KINDS).map(function(k){return el('option',{key:k,value:k},HOLD_KINDS[k]);}))),
+      el(Field,{label:'Source'},el('select',{value:f.source,onChange:function(e){setF({...f,source:e.target.value});}},HOLD_SOURCES.map(function(s){return el('option',{key:s,value:s},s);})))),
+    f.kind==='lot'&&el(Field,{label:'Lot *'},el('select',{value:f.lot_id,onChange:function(e){setF({...f,lot_id:e.target.value});}},el('option',{value:''},'(pick)'),lots.map(function(l){return el('option',{key:l.id,value:l.id},l.number+' \u00b7 '+l.item+' \u00b7 '+l.supplier_name);}))),
+    f.kind!=='lot'&&el(Field,{label:'Batch'+(f.kind==='batch'?' *':'')},el('select',{value:f.batch_id,onChange:function(e){setF({...f,batch_id:e.target.value});}},el('option',{value:''},'(none)'),(props.batches||[]).filter(function(b){return !b.voided;}).map(function(b){return el('option',{key:b.id,value:b.id},batchName(b));}))),
+    (f.kind==='product'||f.kind==='return'||f.kind==='batch')&&el(Field,{label:'Package tag'+(f.kind==='product'?' *':'')},el('input',{value:f.tag,placeholder:'1A4...',onChange:function(e){setF({...f,tag:e.target.value});}})),
+    (f.kind==='other'||f.kind==='return'||f.kind==='product')&&el(Field,{label:'Description'},el('input',{value:f.item,placeholder:'e.g. 12 cartridges returned by Dispensary A',onChange:function(e){setF({...f,item:e.target.value});}})),
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr',gap:10}},
+      el(Field,{label:'Quantity held'},el('input',{value:f.quantity,placeholder:'e.g. 40 units',onChange:function(e){setF({...f,quantity:e.target.value});}})),
+      el(Field,{label:'Held at (location)'},el('input',{value:f.location,onChange:function(e){setF({...f,location:e.target.value});}}))),
+    el(Field,{label:'Reason *'},el('textarea',{rows:3,value:f.reason,onChange:function(e){setF({...f,reason:e.target.value});}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn danger',disabled:busy,onClick:go},'Put on hold')));
+}
+function HoldDecide(props){
+  const h=props.hold;const opts=Object.keys(HOLD_DEC).filter(function(k){return !(k==='released'&&h.kind==='lot'&&h.prev_status==='rejected')&&!(k==='returned'&&h.kind!=='lot'&&h.kind!=='return');});
+  const[to,setTo]=useState(opts[0]);const[notes,setNotes]=useState('');const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  async function go(){setErr('');if(!notes.trim()){setErr('Write the reason for the decision.');return;}setBusy(true);try{await db.update('hx_holds',h.id,{status:to,decision_notes:notes.trim()});props.onDone(to);}catch(e){setErr(matErr(e));}setBusy(false);}
+  return el(Modal,{title:'Decide '+h.number+' \u00b7 '+h.item,onClose:props.onClose},
+    el('div',{className:'muted',style:{fontSize:12,marginBottom:8}},'Held because: '+h.reason),
+    el(Field,{label:'Decision'},el('select',{value:to,onChange:function(e){setTo(e.target.value);}},opts.map(function(k){return el('option',{key:k,value:k},HOLD_DEC[k]);}))),
+    to==='destroyed'&&el('div',{className:'msg'},'Record the destruction in the Waste Destruction Log (and in METRC for cannabis).'),
+    to==='released'&&h.batch_id&&el('div',{className:'muted',style:{fontSize:12}},'A batch with a failed test and no passing retest cannot be released.'),
+    el(Field,{label:'Reason / evidence for the decision *'},el('textarea',{rows:3,value:notes,onChange:function(e){setNotes(e.target.value);}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:go},'Save decision')));
+}
+function ShipForm(props){
+  const lic=props.license,st=props.state,batches=(props.batches||[]).filter(function(b){return !b.voided;});
+  const trans=(props.suppliers||[]).filter(function(s){return s.category==='Transport / Distribution'&&supActive(s);});
+  const[f,setF]=useState({ship_date:todayStr(),customer:'',customer_license:'',destination:'',manifest_number:'',transporter:'',driver:'',vehicle:'',notes:'',checks:{},files:[],items:[{batch_id:'',tag:'',qty:'',unit:'units'}]});
+  const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  function set(k,v){setF(function(p){return {...p,[k]:v};});}
+  function setIt(i,k,v){setF(function(p){return {...p,items:p.items.map(function(x,j){return j===i?{...x,[k]:v}:x;})};});}
+  const probs=f.items.map(function(it){if(!it.batch_id)return null;const h=batchHeld(it.batch_id,it.tag,props.holds||[]),t=batchTest(it.batch_id,props.tests||[]);
+    return h?{bad:1,t:'On hold ('+h.number+'): cannot ship'}:t==='failed'?{bad:1,t:'Failed test, no passing retest: cannot ship'}:t==='passed'?{t:'Test passed'}:{warn:1,t:t==='pending'?'Test not final yet':'No lab test on file'};});
+  const blocked=probs.some(function(p){return p&&p.bad;}),allOk=checksPass(SHIP_CHECKS,f.checks);
+  async function save(){setErr('');if(!f.customer.trim()){setErr('Enter the customer.');return;}const its=f.items.filter(function(i){return i.batch_id;});if(!its.length){setErr('Add at least one batch.');return;}
+    if(blocked){setErr('Remove the batches that cannot be shipped.');return;}if(!allOk){setErr('Every pre-load check must pass before loading.');return;}
+    setBusy(true);
+    try{const out=await db.insert('hx_shipments',{id:newId('shp'),state_id:st.id,license_id:lic.id,ship_date:f.ship_date,customer:f.customer.trim(),customer_license:f.customer_license.trim(),destination:f.destination.trim(),manifest_number:f.manifest_number.trim(),
+      transporter:f.transporter.trim(),driver:f.driver.trim(),vehicle:f.vehicle.trim(),notes:f.notes.trim(),files:f.files,checks:SHIP_CHECKS.reduce(function(m,i){m[i[0]]=!!f.checks[i[0]];return m;},{}),
+      items:its.map(function(i){const b=batches.find(function(x){return x.id===i.batch_id;});return {batch_id:i.batch_id,batch_number:b?b.batch_number:'',product:b?[b.sku,b.flavor].filter(Boolean).join(' \u00b7 ')||b.batch_type:'',tag:i.tag.trim(),qty:i.qty,unit:i.unit};})});props.onDone(out&&out[0]);}
+    catch(e){setErr(matErr(e));}setBusy(false);}
+  const inp=function(k,l,ph,type){return el(Field,{label:l},el('input',{type:type||'text',value:f[k],placeholder:ph||'',max:type==='date'?todayStr():undefined,onChange:function(e){set(k,e.target.value);}}));};
+  return el(Modal,{title:'New shipment \u00b7 '+lic.name,wide:true,onClose:props.onClose},
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 2fr 1fr',gap:10}},inp('ship_date','Ship date','','date'),inp('customer','Customer *','Dispensary name'),inp('customer_license','Customer license #','')),
+    el('div',{className:'grid',style:{gridTemplateColumns:'2fr 1fr',gap:10}},inp('destination','Destination address',''),inp('manifest_number','State manifest #','METRC manifest')),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:10}},
+      el(Field,{label:'Transporter'},el('input',{list:'hx-trans',value:f.transporter,placeholder:'Own vehicle or approved transporter',onChange:function(e){set('transporter',e.target.value);}}),el('datalist',{id:'hx-trans'},trans.map(function(s){return el('option',{key:s.id,value:s.name});}))),
+      inp('driver','Driver',''),inp('vehicle','Vehicle','Plate / unit')),
+    el('div',{className:'k',style:{margin:'8px 0 6px'}},'Batches and packages'),
+    f.items.map(function(it,i){const p=probs[i];return el('div',{key:i,style:{marginBottom:6}},el('div',{className:'grid',style:{gridTemplateColumns:'2.2fr 1.4fr 0.8fr 0.8fr auto',gap:6,alignItems:'end'}},
+      el('select',{value:it.batch_id,onChange:function(e){setIt(i,'batch_id',e.target.value);}},el('option',{value:''},'(batch)'),batches.map(function(b){return el('option',{key:b.id,value:b.id},batchName(b));})),
+      el('input',{value:it.tag,placeholder:'Package tag',onChange:function(e){setIt(i,'tag',e.target.value);}}),
+      el('input',{value:it.qty,placeholder:'Qty',onChange:function(e){setIt(i,'qty',e.target.value);}}),
+      el('input',{value:it.unit,placeholder:'Unit',onChange:function(e){setIt(i,'unit',e.target.value);}}),
+      el('button',{className:'btn ghost sm',onClick:function(){setF(function(q){return {...q,items:q.items.length>1?q.items.filter(function(_,j){return j!==i;}):q.items};});}},'\u00d7')),
+      p&&el('div',{style:{fontSize:12,marginTop:2,color:p.bad?'var(--red)':p.warn?'var(--gold-hi)':'var(--green)'}},p.t));}),
+    el('button',{className:'btn ghost sm',onClick:function(){setF(function(q){return {...q,items:q.items.concat([{batch_id:'',tag:'',qty:'',unit:'units'}])};});}},'+ Add batch / package'),
+    el('div',{className:'k',style:{margin:'12px 0 4px'}},'Pre-load inspection (all must pass, CSQ 2A.9.4)'),
+    el(CheckBoxes,{items:SHIP_CHECKS,value:f.checks,onChange:function(v){set('checks',v);}}),
+    el('div',{className:'k'},'Documents (manifest, invoice)'),el(FileList,{files:f.files,folder:'shipping/'+lic.id,label:'+ Upload document',onErr:setErr,onChange:function(v){set('files',v);}}),
+    el(Field,{label:'Notes'},el('textarea',{rows:2,value:f.notes,onChange:function(e){set('notes',e.target.value);}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy||blocked||!allOk,onClick:save},'Record shipment')));
+}
+function SimpleReason(props){
+  const[why,setWhy]=useState('');const[err,setErr]=useState('');
+  return el(Modal,{title:props.title,onClose:props.onClose},el(Field,{label:(props.label||'Reason')+' *'},el('textarea',{rows:3,value:why,onChange:function(e){setWhy(e.target.value);}})),err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Back'),el('button',{className:'btn danger',disabled:!why.trim(),onClick:function(){props.onGo(why.trim()).catch(function(e){setErr(matErr(e));});}},props.btn||'Save')));
+}
+function shipHtml(s,lic){const e=esc3;
+  return '<div class="hxrec"><h2>Shipment '+e(s.number)+'</h2><div class="m">'+e(lic.name)+(lic.license_number?' ('+e(lic.license_number)+')':'')+' \u00b7 printed '+e(new Date().toLocaleString())+'</div><table>'+
+    [['Ship date',s.ship_date],['Customer',s.customer+(s.customer_license?' ('+s.customer_license+')':'')],['Destination',s.destination],['State manifest',s.manifest_number],['Transporter / driver / vehicle',[s.transporter,s.driver,s.vehicle].filter(Boolean).join(' / ')],
+     ['Status',s.status+(s.delivered_on?' '+s.delivered_on:'')+(s.cancel_reason?' - '+s.cancel_reason:'')],['Shipped by',s.shipped_by+' \u00b7 '+String(s.created_at).slice(0,16).replace('T',' ')]].map(function(r){return '<tr><th>'+e(r[0])+'</th><td>'+e(r[1]||'-')+'</td></tr>';}).join('')+
+    '</table><table><tr><th>Batch</th><th>Product</th><th>Package tag</th><th>Qty</th></tr>'+(s.items||[]).map(function(i){return '<tr><td>'+e(i.batch_number)+'</td><td>'+e(i.product)+'</td><td>'+e(i.tag)+'</td><td>'+e(i.qty+' '+(i.unit||''))+'</td></tr>';}).join('')+'</table>'+
+    '<table><tr class="sec"><td colspan="2">Pre-load inspection</td></tr>'+SHIP_CHECKS.map(function(c){const ok=(s.checks||{})[c[0]];return '<tr><th>'+e(c[1])+'</th><td class="'+(ok?'ok':'bad')+'">'+(ok?'Pass':'FAIL')+'</td></tr>';}).join('')+'</table>'+(s.notes?'<div>'+e(s.notes)+'</div>':'')+'</div>';}
+function MatPage(props){
+  const st=props.state,lic=props.license,lid=lic?lic.id:'';
+  const tabs=[can('receiving',1)&&['receiving','Receiving'],can('receiving',1)&&['inventory','Inventory'],can('holds',1)&&['holds','Hold and Release'],can('shipping',1)&&['shipping','Shipping']].filter(Boolean);
+  const[tab,setTab]=useState(tabs.some(function(t){return t[0]===props.tab;})?props.tab:(tabs[0]||[''])[0]);
+  useEffect(function(){if(props.tab&&tabs.some(function(t){return t[0]===props.tab;}))setTab(props.tab);},[props.tab]);
+  const[D,setD]=useState(null);const[msg,setMsg]=useState('');const[modal,setModal]=useState(null);const[sel,setSel]=useState(null);const[q,setQ]=useState('');const[sf,setSf]=useState('ALL');
+  const load=useCallback(function(){
+    if(!lid){setD({lots:[],uses:[],holds:[],ships:[],sups:[],batches:[],tests:[]});return;}const enc=encodeURIComponent,L='license_id=eq.'+enc(lid);
+    const g=function(t,qs,ok){return ok?db.get(t,qs).then(function(r){return (r||[]).filter(function(x){return x.license_id===undefined||x.license_id===lid||(x.license_ids||[]).indexOf(lid)>=0;});}):Promise.resolve([]);};
+    const R=can('receiving',1),H=can('holds',1),S=can('shipping',1);
+    Promise.all([g('hx_lots',L+'&select=*&order=received_on.desc,number.desc&limit=5000',R||H),g('hx_lot_uses',L+'&select=*&order=used_on.desc&limit=20000',R),g('hx_holds',L+'&select=*&order=created_at.desc&limit=5000',R||H||S),
+      g('hx_shipments',L+'&select=*&order=ship_date.desc,number.desc&limit=5000',S),
+      can('suppliers',1)||R||S?db.get('hx_suppliers','license_ids=cs.%7B'+enc(lid)+'%7D&select=id,name,category,status,specs,emergency_verification,license_id,license_ids&order=name').then(function(r){return (r||[]).filter(function(s){return (s.license_ids||[s.license_id]).indexOf(lid)>=0;});}).catch(function(){return [];}):Promise.resolve([]),
+      db.get('hx_batches',L+'&select=id,batch_number,batch_type,sku,flavor,voided,license_id,created_at&order=created_at.desc&limit=2000').catch(function(){return [];}),
+      db.get('hx_tests',L+'&select=id,batch_id,status,voided,created_at,license_id&limit=20000').catch(function(){return [];})])
+    .then(function(r){setD({lots:r[0],uses:r[1],holds:r[2],ships:r[3],sups:r[4],batches:(r[5]||[]).filter(function(b){return b.license_id===lid;}),tests:(r[6]||[]).filter(function(t){return t.license_id===lid;})});})
+    .catch(function(e){setMsg(matErr(e));setD({lots:[],uses:[],holds:[],ships:[],sups:[],batches:[],tests:[]});});
+  },[lid]);
+  useEffect(load,[load]);
+  if(!st||!lic)return el('div',null,el('h1',null,el('span',{className:'g'},'Receiving and Shipping')),el('div',{className:'empty'},'Pick a state and a license at the top first.'));
+  if(!D)return el('div',{className:'muted'},'Loading...');
+  function done(t){setModal(null);if(t)setMsg(t);load();}
+  const canRE=can('receiving',2),canRF=can('receiving',3),canHE=can('holds',2),canHF=can('holds',3),canSE=can('shipping',2),canSF=can('shipping',3);
+  const t=todayStr(),d30=new Date(Date.now()-30*864e5).toISOString().slice(0,10),y1=new Date(Date.now()-365*864e5).toISOString().slice(0,10);
+  const stat=function(l,v,tone,sub){return el('div',{key:l,className:'card gold',style:{marginBottom:0}},el('div',{className:'k'},l),el('div',{className:'v',style:{fontSize:26,color:tone||'var(--text)'}},v),sub&&el('div',{className:'muted',style:{fontSize:11,marginTop:2}},sub));};
+  const statRow=function(a){return el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',marginBottom:14}},a);};
+  const openHolds=D.holds.filter(function(h){return h.status==='open';});
+  const lotOf=function(id){return D.lots.find(function(l){return l.id===id;});},batchOf=function(id){return D.batches.find(function(b){return b.id===id;});};
+  const head=el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+    el('div',null,el('h1',null,el('span',{className:'g'},tab==='holds'?'Hold and Release':tab==='shipping'?'Shipping':tab==='inventory'?'Inventory':'Receiving')),
+      el('div',{className:'sub'},lic.name+' \u00b7 '+(tab==='holds'?'quarantine of nonconforming and returned goods (CSQ 2A.10.4)':tab==='shipping'?'pre-load inspection, manifest and one step forward traceability (CSQ 2A.9.4, 2A.10.1)':tab==='inventory'?'stock by lot, oldest first, expiry and use in batches (CSQ 2A.10.1, 2A.10.3)':'incoming inspection, COA review, quarantine and acceptance (CSQ 2A.10.2)'))),
+    el('div',{className:'row'},
+      tab==='receiving'&&el('button',{className:'btn ghost',onClick:function(){printLots();}},'Receiving log'),tab==='receiving'&&canRE&&el('button',{className:'btn',onClick:function(){setModal({t:'lot'});}},'+ Receive lot'),
+      tab==='inventory'&&(canRE||can('batch',2))&&el('button',{className:'btn',onClick:function(){setModal({t:'use'});}},'+ Record use'),
+      tab==='holds'&&canHE&&el('button',{className:'btn danger',onClick:function(){setModal({t:'hold'});}},'+ Put on hold'),
+      tab==='shipping'&&el('button',{className:'btn ghost',onClick:function(){printShips();}},'Shipping log'),tab==='shipping'&&canSE&&el('button',{className:'btn',onClick:function(){setModal({t:'ship'});}},'+ New shipment')));
+  function printLots(){const e=esc3;let h='<div class="hxrec"><h2>Receiving log</h2><div class="m">'+e(lic.name)+' \u00b7 CSQ 2A.10.2 \u00b7 printed '+e(new Date().toLocaleString())+'</div><table><tr><th>Lot</th><th>Received</th><th>Supplier</th><th>Item</th><th>Supplier lot / tag</th><th>Qty</th><th>COA</th><th>Inspection</th><th>Status / decision</th></tr>';
+    D.lots.forEach(function(l){const ok=checksPass(LOT_CHECKS,l.checks);h+='<tr><td>'+e(l.number)+'</td><td>'+e(l.received_on)+'<br>'+e(l.received_by)+'</td><td>'+e(l.supplier_name)+'</td><td>'+e(l.item)+'</td><td>'+e(l.supplier_lot)+(l.metrc_tag?'<br>'+e(l.metrc_tag):'')+'</td><td>'+e(l.quantity+' '+l.unit)+'</td><td class="'+(l.coa_ok?'ok':'bad')+'">'+(l.coa_ok?'Yes':'No')+'</td><td class="'+(ok?'ok':'bad')+'">'+(ok?'Pass':'Failed: '+e(LOT_CHECKS.filter(function(i){return !(l.checks||{})[i[0]];}).map(function(i){return i[1];}).join('; ')))+'</td><td>'+e(LOT_STATUS[l.status])+(l.decided_by?'<br>'+e(l.decided_by+' '+String(l.decided_at).slice(0,10)):'')+(l.decision_notes?'<br>'+e(l.decision_notes):'')+'</td></tr>';});
+    printRecords('Receiving log - '+lic.name,[h+'</table></div>']);}
+  function printShips(){printRecords('Shipping log - '+lic.name,D.ships.map(function(s){return shipHtml(s,lic);}));}
+  let body=null;
+  if(tab==='receiving'){
+    const L=D.lots.filter(function(l){if(sf!=='ALL'&&l.status!==sf)return false;if(q&&(l.number+' '+l.item+' '+l.supplier_name+' '+l.supplier_lot+' '+l.metrc_tag).toLowerCase().indexOf(q.toLowerCase())<0)return false;return true;});
+    const qn=D.lots.filter(function(l){return l.status==='quarantine';});
+    body=el('div',null,statRow([stat('In quarantine',qn.length,qn.length?'var(--gold-hi)':'var(--green)','awaiting accept / reject'),stat('Missing COA',qn.filter(function(l){return !l.coa_ok;}).length,qn.some(function(l){return !l.coa_ok;})?'var(--red)':'var(--green)','in quarantine'),
+        stat('Received (30 days)',D.lots.filter(function(l){return l.received_on>=d30;}).length),stat('Rejected (12 months)',D.lots.filter(function(l){return l.received_on>=y1&&['rejected','returned','destroyed'].indexOf(l.status)>=0&&l.decided_at;}).length),
+        stat('Failed inspection (12 months)',D.lots.filter(function(l){return l.received_on>=y1&&!checksPass(LOT_CHECKS,l.checks);}).length)]),
+      el('div',{className:'row',style:{marginBottom:12}},el('input',{value:q,placeholder:'Search lot, item, supplier, tag',style:{width:260},onChange:function(e){setQ(e.target.value);}}),
+        el('select',{value:sf,onChange:function(e){setSf(e.target.value);}},el('option',{value:'ALL'},'Every status'),Object.keys(LOT_STATUS).map(function(k){return el('option',{key:k,value:k},LOT_STATUS[k]);}))),
+      !L.length?el('div',{className:'empty'},D.lots.length?'No lots match.':'Nothing received yet for '+lic.name+'.'):
+      el('div',{className:'card',style:{padding:0,overflowX:'auto'}},el('table',null,el('thead',null,el('tr',null,['Lot','Received','Item','Supplier','Qty','COA','Inspection','Status'].map(function(h){return el('th',{key:h},h);}))),
+        el('tbody',null,L.map(function(l){const ok=checksPass(LOT_CHECKS,l.checks);return el('tr',{key:l.id,style:{cursor:'pointer'},onClick:function(){setSel({t:'lot',id:l.id});}},
+          el('td',null,el('b',null,l.number)),el('td',null,l.received_on),el('td',null,l.item,el('div',{className:'muted',style:{fontSize:11}},l.category)),el('td',null,l.supplier_name),el('td',null,l.quantity+' '+l.unit),
+          el('td',null,el('span',{className:'badge '+(l.coa_ok?'ok':'bad')},l.coa_ok?'Yes':'No')),el('td',null,el('span',{className:'badge '+(ok?'ok':'bad')},ok?'Pass':'Failed')),el('td',null,el('span',{className:'badge '+LOT_TONE[l.status]},LOT_STATUS[l.status])));})))));
+  }
+  else if(tab==='inventory'){
+    const stock=D.lots.filter(function(l){return (l.status==='accepted'||l.status==='on_hold'||l.status==='quarantine')&&lotLeft(l)>0;}).sort(function(a,b){const x=a.item.toLowerCase(),y=b.item.toLowerCase();return x<y?-1:x>y?1:a.received_on<b.received_on?-1:1;});
+    const firstOf={};stock.forEach(function(l){const k=l.item.trim().toLowerCase();if(l.status==='accepted'&&lotExp(l)!=='expired'&&!firstOf[k])firstOf[k]=l.id;});
+    const S=stock.filter(function(l){return !q||(l.number+' '+l.item+' '+l.supplier_name).toLowerCase().indexOf(q.toLowerCase())>=0;});
+    body=el('div',null,statRow([stat('Lots in stock',stock.filter(function(l){return l.status==='accepted';}).length,'var(--green)','accepted, quantity left'),stat('Expired in stock',stock.filter(function(l){return lotExp(l)==='expired';}).length,stock.some(function(l){return lotExp(l)==='expired';})?'var(--red)':'var(--green)','cannot be used'),
+        stat('Expiring in 30 days',stock.filter(function(l){return lotExp(l)==='soon';}).length,stock.some(function(l){return lotExp(l)==='soon';})?'var(--gold-hi)':'var(--text)'),stat('Uses recorded (30 days)',D.uses.filter(function(u){return !u.voided&&u.used_on>=d30;}).length)]),
+      el('div',{className:'row',style:{marginBottom:12}},el('input',{value:q,placeholder:'Search item, lot, supplier',style:{width:260},onChange:function(e){setQ(e.target.value);}})),
+      !S.length?el('div',{className:'empty'},'No stock on hand.'):
+      el('div',{className:'card',style:{padding:0,overflowX:'auto'}},el('table',null,el('thead',null,el('tr',null,['Item','Lot','Supplier','Received','Expiry','Left','Status',''].map(function(h,i){return el('th',{key:i},h);}))),
+        el('tbody',null,S.map(function(l){const ex=lotExp(l);return el('tr',{key:l.id},el('td',null,el('b',null,l.item)),el('td',null,l.number,firstOf[l.item.trim().toLowerCase()]===l.id&&el('span',{className:'badge ok',style:{marginLeft:6}},'Use first')),el('td',null,l.supplier_name),el('td',null,l.received_on),
+          el('td',null,l.expiry_date?el('span',{className:'badge '+(ex==='expired'?'bad':ex==='soon'?'warn':'off')},(ex==='expired'?'Expired ':'')+l.expiry_date):'-'),el('td',null,lotLeft(l)+' / '+l.quantity+' '+l.unit),
+          el('td',null,el('span',{className:'badge '+LOT_TONE[l.status]},LOT_STATUS[l.status])),el('td',null,el('button',{className:'btn ghost sm',onClick:function(){setSel({t:'lot',id:l.id});}},'Open')));})))),
+      el('h3',{style:{marginTop:18}},'Use records'),
+      !D.uses.length?el('div',{className:'muted'},'No use recorded yet.'):
+      el('div',{className:'card',style:{padding:0,overflowX:'auto'}},el('table',null,el('thead',null,el('tr',null,['Date','Lot','Item','Batch','Qty','By',''].map(function(h,i){return el('th',{key:i},h);}))),
+        el('tbody',null,D.uses.slice(0,300).map(function(u){const l=lotOf(u.lot_id)||{};return el('tr',{key:u.id,style:{opacity:u.voided?.5:1,textDecoration:u.voided?'line-through':''}},el('td',null,u.used_on),el('td',null,l.number||''),el('td',null,l.item||''),el('td',null,u.batch_number||'-'),el('td',null,u.quantity+' '+(l.unit||'')),el('td',null,u.used_by),
+          el('td',null,u.voided?el('span',{className:'badge bad',title:u.void_reason},'Void'):canRF&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'voiduse',use:u});}},'Void')));})))));
+  }
+  else if(tab==='holds'){
+    const H=D.holds.filter(function(h){if(sf==='OPEN'&&h.status!=='open')return false;if(sf!=='ALL'&&sf!=='OPEN'&&h.status!==sf)return false;if(q&&(h.number+' '+h.item+' '+h.tag+' '+h.reason).toLowerCase().indexOf(q.toLowerCase())<0)return false;return true;});
+    const old=openHolds.map(function(h){return daysAgo(h.created_at);}).sort(function(a,b){return b-a;})[0];
+    body=el('div',null,statRow([stat('Open holds',openHolds.length,openHolds.length?'var(--red)':'var(--green)','cannot be used or shipped'),stat('Oldest open',old==null?'-':old+' days',old>30?'var(--red)':'var(--text)'),
+        stat('Customer returns (12 months)',D.holds.filter(function(h){return h.kind==='return'&&h.created_at>=y1;}).length),stat('Decided (12 months)',D.holds.filter(function(h){return h.status!=='open'&&h.decided_at>=y1;}).length)]),
+      el('div',{className:'row',style:{marginBottom:12}},el('input',{value:q,placeholder:'Search holds',style:{width:220},onChange:function(e){setQ(e.target.value);}}),
+        el('select',{value:sf,onChange:function(e){setSf(e.target.value);}},el('option',{value:'ALL'},'All holds'),el('option',{value:'OPEN'},'Open'),Object.keys(HOLD_DEC).map(function(k){return el('option',{key:k,value:k},k.charAt(0).toUpperCase()+k.slice(1));}))),
+      !H.length?el('div',{className:'empty'},D.holds.length?'No holds match.':'Nothing is on hold.'):
+      H.map(function(h){const op=h.status==='open';return el('div',{key:h.id,className:'card',style:{cursor:'pointer',padding:'12px 16px',borderLeft:'3px solid '+(op?'var(--red)':'var(--line)')},onClick:function(){setSel({t:'hold',id:h.id});}},
+        el('div',{className:'row',style:{justifyContent:'space-between',flexWrap:'nowrap'}},
+          el('div',{style:{minWidth:0}},el('div',{className:'row',style:{gap:6,marginBottom:4}},el('span',{className:'badge '+(op?'bad':'off')},op?'ON HOLD':h.status),el('span',{className:'badge off'},HOLD_KINDS[h.kind]),h.source!==HOLD_KINDS[h.kind]&&el('span',{className:'badge off'},h.source),el('b',null,h.number)),
+            el('div',{style:{fontWeight:700}},h.item+(h.tag&&h.item.indexOf(h.tag)<0?' \u00b7 '+h.tag:'')),el('div',{className:'muted',style:{fontSize:12}},h.reason)),
+          el('div',{className:'muted',style:{fontSize:11,textAlign:'right',flex:'0 0 auto'}},fmtDay(h.created_at)+' \u00b7 '+h.placed_by,op&&el('div',{style:{color:'var(--red)'}},daysAgo(h.created_at)+' days'),h.location&&el('div',null,h.location))));}));
+  }
+  else if(tab==='shipping'){
+    const S=D.ships.filter(function(s){if(sf!=='ALL'&&s.status!==sf)return false;if(q&&(s.number+' '+s.customer+' '+s.manifest_number+' '+(s.items||[]).map(function(i){return i.batch_number+' '+i.tag;}).join(' ')).toLowerCase().indexOf(q.toLowerCase())<0)return false;return true;});
+    body=el('div',null,statRow([stat('Shipments (30 days)',D.ships.filter(function(s){return s.ship_date>=d30&&s.status!=='cancelled';}).length),stat('In transit',D.ships.filter(function(s){return s.status==='shipped';}).length,'var(--gold-hi)'),
+        stat('Customers (12 months)',Object.keys(D.ships.filter(function(s){return s.ship_date>=y1&&s.status!=='cancelled';}).reduce(function(m,s){m[s.customer.trim().toLowerCase()]=1;return m;},{})).length),stat('Missing manifest #',D.ships.filter(function(s){return s.status!=='cancelled'&&!s.manifest_number;}).length,D.ships.some(function(s){return s.status!=='cancelled'&&!s.manifest_number;})?'var(--red)':'var(--green)')]),
+      el('div',{className:'row',style:{marginBottom:12}},el('input',{value:q,placeholder:'Search customer, batch, tag, manifest',style:{width:280},onChange:function(e){setQ(e.target.value);}}),
+        el('select',{value:sf,onChange:function(e){setSf(e.target.value);}},el('option',{value:'ALL'},'Every status'),['shipped','delivered','cancelled'].map(function(k){return el('option',{key:k,value:k},k.charAt(0).toUpperCase()+k.slice(1));}))),
+      !S.length?el('div',{className:'empty'},D.ships.length?'No shipments match.':'No shipments yet for '+lic.name+'.'):
+      el('div',{className:'card',style:{padding:0,overflowX:'auto'}},el('table',null,el('thead',null,el('tr',null,['Shipment','Date','Customer','Batches','Manifest','Status'].map(function(h){return el('th',{key:h},h);}))),
+        el('tbody',null,S.map(function(s){return el('tr',{key:s.id,style:{cursor:'pointer',opacity:s.status==='cancelled'?.5:1},onClick:function(){setSel({t:'ship',id:s.id});}},el('td',null,el('b',null,s.number)),el('td',null,s.ship_date),el('td',null,s.customer),
+          el('td',null,(s.items||[]).map(function(i){return i.batch_number;}).filter(Boolean).join(', ')),el('td',null,s.manifest_number||el('span',{className:'badge bad'},'Missing')),el('td',null,el('span',{className:'badge '+(s.status==='delivered'?'ok':s.status==='cancelled'?'off':'warn')},s.status)));})))));
+  }
+  // ----- detail modals -----
+  let detail=null;
+  if(sel&&!modal&&sel.t==='lot'){const l=lotOf(sel.id);if(l){const uses=D.uses.filter(function(u){return u.lot_id===l.id;}),hs=D.holds.filter(function(h){return h.lot_id===l.id;}),ok=checksPass(LOT_CHECKS,l.checks);
+    detail=el(Modal,{title:l.number+' \u00b7 '+l.item,wide:true,onClose:function(){setSel(null);}},
+      el('div',{className:'row',style:{gap:6,marginBottom:10}},el('span',{className:'badge '+LOT_TONE[l.status]},LOT_STATUS[l.status]),el('span',{className:'badge off'},l.category),el('span',{className:'badge '+(l.coa_ok?'ok':'bad')},l.coa_ok?'COA on file':'No COA'),el('span',{className:'badge '+(ok?'ok':'bad')},ok?'Inspection passed':'Inspection failed'),l.supplier_status==='emergency'&&el('span',{className:'badge warn'},'Emergency supplier')),
+      el('div',{className:'card gold',style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:10,padding:'10px 14px'}},
+        [['Supplier',l.supplier_name],['Received',l.received_on+' \u00b7 '+l.received_by],['Quantity',l.quantity+' '+l.unit+' \u00b7 '+lotLeft(l)+' left'],['Supplier lot',l.supplier_lot],['METRC tag',l.metrc_tag],['Expiry',l.expiry_date],['PO / invoice',l.po_number],['Location',l.location],
+         ['Decision',l.decided_by?LOT_STATUS[l.status]+' by '+l.decided_by+' \u00b7 '+String(l.decided_at).slice(0,10):'-']].map(function(p){return el('div',{key:p[0]},el('div',{className:'k'},p[0]),el('div',{style:{fontSize:13}},p[1]||'-'));})),
+      l.decision_notes&&el('div',{style:{fontSize:13,marginBottom:8}},el('b',null,'Decision notes: '),l.decision_notes),
+      el('div',{className:'k',style:{margin:'6px 0'}},'Receiving inspection'),
+      LOT_CHECKS.map(function(c){const v=(l.checks||{})[c[0]];return el('div',{key:c[0],style:{fontSize:13,color:v?'':'var(--red)'}},(v?'\u2713 ':'\u2717 ')+c[1]);}),
+      l.inspection_notes&&el('div',{className:'muted',style:{fontSize:13,margin:'6px 0'}},l.inspection_notes),
+      el('div',{className:'k',style:{margin:'10px 0 4px'}},'Documents'),(l.files||[]).length?el(FileList,{files:l.files}):el('div',{className:'muted',style:{fontSize:12}},'None'),
+      el('div',{className:'k',style:{margin:'10px 0 4px'}},'Used in (one step forward to batches)'),uses.length?uses.map(function(u){return el('div',{key:u.id,style:{fontSize:13,textDecoration:u.voided?'line-through':''}},u.used_on+' \u00b7 '+u.quantity+' '+l.unit+(u.batch_number?' \u00b7 batch '+u.batch_number:'')+' \u00b7 '+u.used_by);}):el('div',{className:'muted',style:{fontSize:12}},'Not used yet'),
+      hs.length>0&&el('div',null,el('div',{className:'k',style:{margin:'10px 0 4px'}},'Holds'),hs.map(function(h){return el('div',{key:h.id,style:{fontSize:13}},h.number+' \u00b7 '+h.status+' \u00b7 '+h.reason+(h.decision_notes?' \u2192 '+h.decision_notes:''));})),
+      el('div',{className:'row',style:{justifyContent:'space-between',marginTop:14}},el('div',{className:'row',style:{gap:6}},
+          canRE&&['quarantine','accepted','on_hold'].indexOf(l.status)>=0&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'lot',lot:l});}},l.status==='quarantine'?'Edit':'Location / files'),
+          canRF&&l.status==='quarantine'&&el('button',{className:'btn sm',onClick:function(){setModal({t:'decide',lot:l,to:'accepted'});}},'Accept'),
+          canRF&&l.status==='quarantine'&&el('button',{className:'btn danger sm',onClick:function(){setModal({t:'decide',lot:l,to:'rejected'});}},'Reject'),
+          (canRE||can('batch',2))&&l.status==='accepted'&&lotLeft(l)>0&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'use',lotId:l.id});}},'Record use'),
+          canHE&&['quarantine','accepted'].indexOf(l.status)>=0&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'hold',prefill:{kind:'lot',lot_id:l.id,source:'Deviation'}});}},'Put on hold'),
+          el(RaiseDeviation,{state:st,license:lic,prefill:{title:'Received lot '+l.number+': '+l.item,dept:'Warehouse',category:'Supplier / material',product_affected:l.item+' ('+l.supplier_name+')',lot_number:l.supplier_lot||l.number}})),
+        el('button',{className:'btn ghost sm',onClick:function(){setSel(null);}},'Close')));}}
+  if(sel&&!modal&&sel.t==='hold'){const h=D.holds.find(function(x){return x.id===sel.id;});if(h){const l=h.lot_id&&lotOf(h.lot_id),b=h.batch_id&&batchOf(h.batch_id);
+    detail=el(Modal,{title:h.number+' \u00b7 '+h.item,onClose:function(){setSel(null);}},
+      el('div',{className:'row',style:{gap:6,marginBottom:10}},el('span',{className:'badge '+(h.status==='open'?'bad':'off')},h.status==='open'?'ON HOLD':h.status),el('span',{className:'badge off'},HOLD_KINDS[h.kind]),h.source!==HOLD_KINDS[h.kind]&&el('span',{className:'badge off'},h.source)),
+      el('div',{className:'card gold',style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:10,padding:'10px 14px'}},
+        [['Held item',h.item],['Lot',l?l.number+' \u00b7 '+l.supplier_name:''],['Batch',b?batchName(b):''],['Package tag',h.tag],['Quantity',h.quantity],['Location',h.location],['Placed',fmtDay(h.created_at)+' \u00b7 '+h.placed_by],
+         ['Decision',h.decided_by?h.status+' by '+h.decided_by+' \u00b7 '+String(h.decided_at).slice(0,10):'Waiting']].filter(function(p){return p[1];}).map(function(p){return el('div',{key:p[0]},el('div',{className:'k'},p[0]),el('div',{style:{fontSize:13}},p[1]));})),
+      el('div',{style:{fontSize:13,marginBottom:8}},el('b',null,'Reason: '),h.reason),h.decision_notes&&el('div',{style:{fontSize:13,marginBottom:8}},el('b',null,'Decision: '),h.decision_notes),
+      el('div',{className:'row',style:{justifyContent:'space-between',marginTop:14}},el('div',{className:'row',style:{gap:6}},
+          canHF&&h.status==='open'&&el('button',{className:'btn sm',onClick:function(){setModal({t:'hdecide',hold:h});}},'Decide'),
+          h.status==='open'&&el(RaiseDeviation,{state:st,license:lic,prefill:{title:'On hold '+h.number+': '+h.item,dept:'Warehouse',category:h.kind==='lot'?'Supplier / material':'Product quality',description:h.reason,product_affected:h.item,lot_number:b?b.batch_number:l?l.number:h.tag}})),
+        el('button',{className:'btn ghost sm',onClick:function(){setSel(null);}},'Close')));}}
+  if(sel&&!modal&&sel.t==='ship'){const s=D.ships.find(function(x){return x.id===sel.id;});if(s){
+    detail=el(Modal,{title:s.number+' \u00b7 '+s.customer,wide:true,onClose:function(){setSel(null);}},
+      el('div',{dangerouslySetInnerHTML:{__html:REC_CSS+shipHtml(s,lic)}}),(s.files||[]).length>0&&el(FileList,{files:s.files}),
+      el('div',{className:'row',style:{justifyContent:'space-between',marginTop:14}},el('div',{className:'row',style:{gap:6}},
+          canSE&&s.status==='shipped'&&el('button',{className:'btn sm',onClick:function(){db.update('hx_shipments',s.id,{status:'delivered',delivered_on:todayStr()}).then(function(){done('Delivered '+s.number);}).catch(function(e){setMsg(matErr(e));});}},'Mark delivered'),
+          canSE&&s.status!=='cancelled'&&!s.manifest_number&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'manifest',ship:s});}},'Add manifest #'),
+          canHE&&s.status!=='cancelled'&&el('button',{className:'btn ghost sm',onClick:function(){const i=(s.items||[])[0]||{};setModal({t:'hold',prefill:{kind:'return',batch_id:i.batch_id||'',tag:i.tag||'',item:'Returned by '+s.customer+' ('+s.number+')',source:'Customer return',shipment_id:s.id}});}},'Record return'),
+          canSF&&s.status!=='cancelled'&&el('button',{className:'btn danger sm',onClick:function(){setModal({t:'cancel',ship:s});}},'Cancel'),
+          el('button',{className:'btn ghost sm',onClick:function(){printRecords('Shipment '+s.number,[shipHtml(s,lic)]);}},'Print')),
+        el('button',{className:'btn ghost sm',onClick:function(){setSel(null);}},'Close')));}}
+  return el('div',null,head,
+    el('div',{className:'tabs',style:{marginBottom:12}},tabs.map(function(x){return el('button',{key:x[0],className:tab===x[0]?'on':'',onClick:function(){setTab(x[0]);setSf('ALL');setQ('');setSel(null);if(props.go)props.go(x[0]);}},x[1]+(x[0]==='holds'&&openHolds.length?' ('+openHolds.length+')':''));})),
+    msg&&el('div',{className:/^(Received|Saved|Accepted|Rejected|Recorded|Put on hold|Decided|Shipment|Delivered|Cancelled|Manifest|Use)/.test(msg)?'msg':'msg err'},msg),
+    openHolds.length>0&&tab!=='holds'&&el('div',{className:'msg err',style:{marginBottom:12}},openHolds.length+' item'+(openHolds.length===1?' is':'s are')+' on hold: ',openHolds.slice(0,4).map(function(h){return h.number+' '+h.item;}).join(', '),openHolds.length>4?'...':''),
+    body,detail,
+    modal&&modal.t==='lot'&&el(LotForm,{lot:modal.lot,state:st,license:lic,suppliers:D.sups,onClose:function(){setModal(null);},onDone:function(r){if(r&&!modal.lot)setSel({t:'lot',id:r.id});done(modal.lot?'Saved.':'Received '+(r?r.number:'lot')+' into quarantine');}}),
+    modal&&modal.t==='decide'&&el(LotDecide,{lot:modal.lot,to:modal.to,onClose:function(){setModal(null);},onDone:function(){done((modal.to==='accepted'?'Accepted ':'Rejected ')+modal.lot.number+(modal.to==='rejected'?' - put on hold until returned or destroyed':''));}}),
+    modal&&modal.t==='use'&&el(UseForm,{license:lic,lots:D.lots,batches:D.batches,lotId:modal.lotId,onClose:function(){setModal(null);},onDone:function(){done('Use recorded.');}}),
+    modal&&modal.t==='voiduse'&&el(VoidModal,{what:'use record',onClose:function(){setModal(null);},onVoid:function(why){return db.update('hx_lot_uses',modal.use.id,{voided:true,void_reason:why}).then(function(){done('Use record voided.');});}}),
+    modal&&modal.t==='hold'&&el(HoldForm,{state:st,license:lic,lots:D.lots,batches:D.batches,prefill:modal.prefill,onClose:function(){setModal(null);},onDone:function(r){setSel(r?{t:'hold',id:r.id}:null);setTab('holds');if(props.go)props.go('holds');done('Put on hold: '+(r?r.number:''));}}),
+    modal&&modal.t==='hdecide'&&el(HoldDecide,{hold:modal.hold,onClose:function(){setModal(null);},onDone:function(to){done('Decided '+modal.hold.number+': '+to);}}),
+    modal&&modal.t==='ship'&&el(ShipForm,{state:st,license:lic,batches:D.batches,tests:D.tests,holds:D.holds,suppliers:D.sups,onClose:function(){setModal(null);},onDone:function(r){if(r)setSel({t:'ship',id:r.id});done('Shipment '+(r?r.number:'')+' recorded');}}),
+    modal&&modal.t==='cancel'&&el(SimpleReason,{title:'Cancel '+modal.ship.number,btn:'Cancel shipment',onClose:function(){setModal(null);},onGo:function(why){return db.update('hx_shipments',modal.ship.id,{status:'cancelled',cancel_reason:why}).then(function(){done('Cancelled '+modal.ship.number);});}}),
+    modal&&modal.t==='manifest'&&el(SimpleReason,{title:'Manifest # for '+modal.ship.number,label:'State manifest number',btn:'Save',onClose:function(){setModal(null);},onGo:function(v){return db.update('hx_shipments',modal.ship.id,{manifest_number:v}).then(function(){done('Manifest saved.');});}}));
+}
+function MatDashCard(props){
+  const lid=props.license?props.license.id:'';const[d,setD]=useState(null);
+  useEffect(function(){if(!lid||!(can('receiving',1)||can('holds',1)||can('shipping',1))){setD(null);return;}let dead=false;const L='license_id=eq.'+encodeURIComponent(lid);
+    Promise.all([can('receiving',1)||can('holds',1)?db.get('hx_lots',L+'&status=eq.quarantine&select=id,license_id'):Promise.resolve([]),db.get('hx_holds',L+'&status=eq.open&select=id,license_id'),
+      can('shipping',1)?db.get('hx_shipments',L+'&status=eq.shipped&select=id,license_id'):Promise.resolve([])])
+    .then(function(r){if(!dead)setD({q:(r[0]||[]).filter(function(x){return x.license_id===lid;}).length,h:(r[1]||[]).filter(function(x){return x.license_id===lid;}).length,s:(r[2]||[]).filter(function(x){return x.license_id===lid;}).length});}).catch(function(){if(!dead)setD(null);});
+    return function(){dead=true;};},[lid]);
+  if(!d)return null;
+  return el('div',{className:'card gold'},el('div',{className:'k'},'Receiving and holds'),el('div',{className:'v',style:{color:d.h?'var(--red)':'var(--green)'}},d.h+' on hold'),
+    el('div',{className:'muted',style:{margin:'4px 0 8px'}},d.q+' lot'+(d.q===1?'':'s')+' in quarantine \u00b7 '+d.s+' shipment'+(d.s===1?'':'s')+' in transit'),
+    el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go(d.h&&can('holds',1)?'holds':can('receiving',1)?'receiving':'shipping');}},'Open'));
+}
+
+/* ---------- Traceability and Recall (CSQ 1.8, 1.11, 2A.10.1) ---------- */
+const RC_KINDS={team:'Recall team',emergency:'Emergency services',regulator:'Regulators',certification:'Certification body',customer:'Customers',supplier:'Suppliers',lab:'Testing lab',other:'Other'};
+const RC_REQUIRED=['team','emergency','regulator','certification'];
+const RC_TEAM_ROLES=['Recall coordinator','Quality / compliance','Production','Inventory and distribution','Communications','Management','Legal'];
+const MOCK_STEPS=[['team','Recall team assembled and roles assigned'],['identify','Affected product identified (lot, batch, package tags)'],['back','Traced one step back: every input lot and its supplier'],['forward','Traced one step forward: every customer that received it'],
+  ['quantities','Quantities reconciled: made, shipped, on hand'],['locate','Product still on site located (could be put on hold)'],['contacts','Customer, regulator and certification body contacts confirmed current'],['report','Results reviewed by the recall coordinator']];
+const REAL_STEPS=[['team','Recall team assembled and roles assigned'],['identify','Affected product identified (lot, batch, package tags)'],['hold','All affected product on site put on hold'],['back','Traced one step back: inputs and suppliers'],['forward','Traced one step forward: every customer'],
+  ['regulator','Regulator notified'],['cb','Certification body notified'],['customers','Every customer notified'],['recover','Product recovered from customers'],['quantities','Quantities reconciled: made, shipped, recovered, on hand'],['dispose','Recovered product destroyed or reworked (Waste log / METRC)'],['report','Recall report and root cause (deviation / CAPA)']];
+function rcErr(e){const m=String((e&&e.message)||e);return /hx_recall|hx_trace_data/.test(m)&&/missing|does not exist|schema cache|Could not find the function/i.test(m)?'Recall is not set up yet - run hendrix_step18.sql in the Hendrix Supabase project.':m;}
+function rcSteps(kind){return kind==='mock'?MOCK_STEPS:REAL_STEPS;}
+function numQty(v){const n=parseFloat(String(v||'').replace(/,/g,''));return isNaN(n)?0:n;}
+function fmtMin(ms){const s=Math.max(0,Math.floor(ms/1000)),h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return (h?h+':':'')+String(m).padStart(h?2:1,'0')+':'+String(x).padStart(2,'0');}
+// candidates that match a search: lots, batches, tags
+function traceSearch(T,q){
+  const s=normTag(q),lo=String(q||'').trim().toLowerCase();if(!lo)return [];const out=[];
+  T.lots.forEach(function(l){if([l.number,l.supplier_lot,l.metrc_tag,l.item].some(function(v){return v&&(String(v).toLowerCase().indexOf(lo)>=0||(s.length>3&&normTag(v)===s));}))out.push({type:'lot',id:l.id,label:l.number,sub:l.item+' \u00b7 '+l.supplier_name+(l.supplier_lot?' \u00b7 lot '+l.supplier_lot:'')});});
+  T.batches.forEach(function(b){if([b.batch_number,b.sku].some(function(v){return v&&String(v).toLowerCase().indexOf(lo)>=0;}))out.push({type:'batch',id:b.id,label:b.batch_number,sub:[b.sku,b.flavor,b.batch_type].filter(Boolean).join(' \u00b7 ')});});
+  const tags={};T.tests.forEach(function(t){[t.tag,t.sample_tag].forEach(function(g){if(g)tags[normTag(g)]=tags[normTag(g)]||{tag:g,batch:t.batch_id};});});
+  T.ships.forEach(function(sh){(sh.items||[]).forEach(function(i){if(i.tag)tags[normTag(i.tag)]=tags[normTag(i.tag)]||{tag:i.tag,batch:i.batch_id};});});
+  Object.keys(tags).forEach(function(k){if(s.length>=3&&k.indexOf(s)>=0){const b=T.batches.find(function(x){return x.id===tags[k].batch;});out.push({type:'tag',id:tags[k].tag,label:tags[k].tag,sub:b?'batch '+b.batch_number:''});}});
+  return out.slice(0,30);
+}
+function traceRun(T,type,id){
+  const R={type:type,id:id,lots:[],batches:[],ships:[],customers:[],holds:[],tag:''};const bset={},lset={};
+  if(type==='lot'){lset[id]=1;T.uses.filter(function(u){return u.lot_id===id&&u.batch_id;}).forEach(function(u){bset[u.batch_id]=1;});}
+  else if(type==='batch'){bset[id]=1;T.uses.filter(function(u){return u.batch_id===id;}).forEach(function(u){lset[u.lot_id]=1;});}
+  else if(type==='tag'){R.tag=id;const k=normTag(id);const lot=T.lots.find(function(l){return l.metrc_tag&&normTag(l.metrc_tag)===k;});
+    if(lot)return traceRun(T,'lot',lot.id);
+    T.tests.forEach(function(t){if(t.batch_id&&(normTag(t.tag)===k||normTag(t.sample_tag)===k))bset[t.batch_id]=1;});
+    T.ships.forEach(function(sh){(sh.items||[]).forEach(function(i){if(i.tag&&normTag(i.tag)===k&&i.batch_id)bset[i.batch_id]=1;});});
+    Object.keys(bset).forEach(function(b){T.uses.filter(function(u){return u.batch_id===b;}).forEach(function(u){lset[u.lot_id]=1;});});}
+  R.lots=T.lots.filter(function(l){return lset[l.id];}).map(function(l){return {...l,uses:T.uses.filter(function(u){return u.lot_id===l.id;}),supplier:T.suppliers.find(function(s){return s.id===l.supplier_id;})||null};});
+  R.batches=T.batches.filter(function(b){return bset[b.id];}).map(function(b){return {...b,inputs:T.uses.filter(function(u){return u.batch_id===b.id;}),tests:T.tests.filter(function(t){return t.batch_id===b.id;})};});
+  T.ships.forEach(function(sh){const its=(sh.items||[]).filter(function(i){return bset[i.batch_id]&&(!R.tag||!i.tag||normTag(i.tag)===normTag(R.tag));});if(its.length)R.ships.push({...sh,hit:its});});
+  const cm={};R.ships.forEach(function(sh){const k=sh.customer.trim().toLowerCase();cm[k]=cm[k]||{customer:sh.customer,license:sh.customer_license,ships:[],qty:{}};cm[k].ships.push(sh);
+    sh.hit.forEach(function(i){const u=i.unit||'units';cm[k].qty[u]=(cm[k].qty[u]||0)+numQty(i.qty);});});
+  R.customers=Object.keys(cm).map(function(k){return cm[k];});
+  R.holds=T.holds.filter(function(h){return h.status==='open'&&((h.lot_id&&lset[h.lot_id])||(h.batch_id&&bset[h.batch_id])||(R.tag&&h.tag&&normTag(h.tag)===normTag(R.tag)));});
+  R.shippedQty={};R.ships.forEach(function(sh){sh.hit.forEach(function(i){const u=i.unit||'units';R.shippedQty[u]=(R.shippedQty[u]||0)+numQty(i.qty);});});
+  return R;
+}
+function qtyStr(o){const k=Object.keys(o||{});return k.length?k.map(function(u){return (Math.round(o[u]*1000)/1000)+' '+u;}).join(', '):'0';}
+function TraceView(props){
+  const R=props.R;if(!R)return null;
+  const col=function(title,sub,kids){return el('div',{style:{flex:'1 1 260px',minWidth:0}},el('div',{className:'k',style:{marginBottom:2}},title),el('div',{className:'muted',style:{fontSize:11,marginBottom:8}},sub),kids);};
+  const box=function(key,head,lines,tone){return el('div',{key:key,className:'card',style:{padding:'10px 12px',marginBottom:8,borderLeft:'3px solid '+(tone==='bad'?'var(--red)':tone==='warn'?'var(--gold)':'var(--green)')}},
+    el('div',{style:{fontWeight:700,fontSize:13}},head),lines.filter(Boolean).map(function(t,i){return el('div',{key:i,className:'muted',style:{fontSize:12}},t);}));};
+  const arrow=el('div',{style:{alignSelf:'center',color:'var(--gold)',fontSize:26,padding:'0 4px'}},'\u2192');
+  const heldB=function(id){return R.holds.some(function(h){return h.batch_id===id;});},heldL=function(id){return R.holds.some(function(h){return h.lot_id===id;});};
+  return el('div',null,
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',marginBottom:12}},
+      [['Input lots',R.lots.length],['Suppliers',Object.keys(R.lots.reduce(function(m,l){m[l.supplier_name]=1;return m;},{})).length],['Batches',R.batches.length],['Shipments',R.ships.length],['Customers',R.customers.length],['Shipped',qtyStr(R.shippedQty)],['Open holds',R.holds.length]].map(function(p){
+        return el('div',{key:p[0],className:'card gold',style:{marginBottom:0,padding:'10px 14px'}},el('div',{className:'k'},p[0]),el('div',{className:'v',style:{fontSize:20}},p[1]));})),
+    el('div',{className:'row',style:{alignItems:'stretch',flexWrap:'wrap',gap:6}},
+      col('One step back','Suppliers and the lots received from them',R.lots.length?R.lots.map(function(l){return box(l.id,l.supplier_name+' \u2192 '+l.number,[l.item+(l.supplier_lot?' \u00b7 supplier lot '+l.supplier_lot:''),'Received '+l.received_on+' \u00b7 '+l.quantity+' '+l.unit+' \u00b7 '+lotLeft(l)+' left on site'+(l.location?' ('+l.location+')':''),
+        (l.coa_ok?'COA on file':'NO COA'),l.supplier?[l.supplier.contact_name,l.supplier.contact_phone,l.supplier.contact_email].filter(Boolean).join(' \u00b7 '):'',heldL(l.id)||l.status==='on_hold'?'ON HOLD':''],l.status==='on_hold'||!l.coa_ok?'bad':'ok');}):el('div',{className:'muted',style:{fontSize:12}},R.type==='lot'?'':'No received lots recorded against this batch. Record use under Inventory.')),
+      arrow,
+      col('Batches','Made here with those inputs',R.batches.length?R.batches.map(function(b){const ts=b.tests.map(function(t){return t.status;});return box(b.id,'Batch '+b.batch_number,[[b.sku,b.flavor,b.batch_type].filter(Boolean).join(' \u00b7 '),'Made '+String(b.created_at).slice(0,10),
+        b.inputs.length?b.inputs.length+' input lot'+(b.inputs.length===1?'':'s'):'',ts.length?'Tests: '+ts.join(', '):'No lab test',heldB(b.id)?'ON HOLD':''],heldB(b.id)||ts.indexOf('Failed')>=0?'bad':ts.indexOf('Passed')>=0?'ok':'warn');}):el('div',{className:'muted',style:{fontSize:12}},'Not used in any batch yet.')),
+      arrow,
+      col('One step forward','Customers that received it',R.customers.length?R.customers.map(function(c,i){return box('c'+i,c.customer+(c.license?' ('+c.license+')':''),[qtyStr(c.qty)+' in '+c.ships.length+' shipment'+(c.ships.length===1?'':'s'),
+        c.ships.map(function(s){return s.number+' \u00b7 '+s.ship_date+(s.manifest_number?' \u00b7 manifest '+s.manifest_number:'')+(s.hit.some(function(i){return i.tag;})?' \u00b7 tags '+s.hit.map(function(i){return i.tag;}).filter(Boolean).join(', '):'');}).join(' | ')],'warn');}):el('div',{className:'muted',style:{fontSize:12}},'Not shipped to any customer.'))));
+}
+function traceHtml(R,lic,title){const e=esc3;
+  let h='<div class="hxrec"><h2>'+e(title)+'</h2><div class="m">'+e(lic.name)+(lic.license_number?' ('+e(lic.license_number)+')':'')+' \u00b7 CSQ 1.8 / 2A.10.1 \u00b7 printed '+e(new Date().toLocaleString())+'</div>';
+  h+='<table><tr class="sec"><td colspan="6">One step back: suppliers and input lots</td></tr><tr><th>Supplier</th><th>Lot</th><th>Item / supplier lot</th><th>Received</th><th>Qty / left</th><th>COA</th></tr>'+
+    (R.lots.length?R.lots.map(function(l){return '<tr><td>'+e(l.supplier_name)+'</td><td>'+e(l.number)+'</td><td>'+e(l.item)+(l.supplier_lot?'<br>'+e(l.supplier_lot):'')+'</td><td>'+e(l.received_on)+'</td><td>'+e(l.quantity+' '+l.unit+' / '+lotLeft(l))+'</td><td class="'+(l.coa_ok?'ok':'bad')+'">'+(l.coa_ok?'Yes':'No')+'</td></tr>';}).join(''):'<tr><td colspan="6">None recorded</td></tr>')+'</table>';
+  h+='<table><tr class="sec"><td colspan="4">Batches</td></tr><tr><th>Batch</th><th>Product</th><th>Made</th><th>Tests</th></tr>'+(R.batches.length?R.batches.map(function(b){return '<tr><td>'+e(b.batch_number)+'</td><td>'+e([b.sku,b.flavor].filter(Boolean).join(' \u00b7 ')||b.batch_type)+'</td><td>'+e(String(b.created_at).slice(0,10))+'</td><td>'+e(b.tests.map(function(t){return t.status+(t.tag?' '+t.tag:'');}).join(', ')||'-')+'</td></tr>';}).join(''):'<tr><td colspan="4">None</td></tr>')+'</table>';
+  h+='<table><tr class="sec"><td colspan="5">One step forward: customers</td></tr><tr><th>Customer</th><th>Shipment</th><th>Date / manifest</th><th>Batch / tag</th><th>Qty</th></tr>'+(R.ships.length?R.ships.map(function(s){return s.hit.map(function(i){return '<tr><td>'+e(s.customer)+(s.customer_license?'<br>'+e(s.customer_license):'')+'</td><td>'+e(s.number)+'</td><td>'+e(s.ship_date)+(s.manifest_number?'<br>'+e(s.manifest_number):'')+'</td><td>'+e(i.batch_number)+(i.tag?'<br>'+e(i.tag):'')+'</td><td>'+e(i.qty+' '+(i.unit||''))+'</td></tr>';}).join('');}).join(''):'<tr><td colspan="5">Not shipped</td></tr>')+'</table>';
+  return h+'</div>';
+}
+function rcTrace(lid){return sb('rpc/hx_trace_data',{method:'POST',body:{p_lic:lid}}).then(function(r){const x=r||{};['lots','uses','batches','tests','ships','holds','suppliers'].forEach(function(k){x[k]=x[k]||[];});return x;});}
+function ContactForm(props){
+  const x=props.contact||{},lic=props.license,st=props.state;
+  const[f,setF]=useState({kind:x.kind||props.kind||'team',name:x.name||'',role:x.role||'',organization:x.organization||'',phone:x.phone||'',after_hours:x.after_hours||'',email:x.email||'',notes:x.notes||'',is_backup:!!x.is_backup,verified_on:x.verified_on||todayStr(),active:x.active!==false});
+  const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  function set(k,v){setF(function(p){return {...p,[k]:v};});}
+  async function save(){setErr('');if(!f.name.trim()){setErr('Enter the name.');return;}setBusy(true);
+    const rec={kind:f.kind,name:f.name.trim(),role:f.role.trim(),organization:f.organization.trim(),phone:f.phone.trim(),after_hours:f.after_hours.trim(),email:f.email.trim(),notes:f.notes.trim(),is_backup:f.is_backup,verified_on:f.verified_on||null,active:f.active};
+    try{x.id?await db.update('hx_recall_contacts',x.id,rec):await db.insert('hx_recall_contacts',{...rec,id:newId('rcc'),state_id:st.id,license_id:lic.id});props.onDone();}catch(e){setErr(rcErr(e));}setBusy(false);}
+  const inp=function(k,l,ph,type){return el(Field,{label:l},el('input',{type:type||'text',value:f[k],placeholder:ph||'',max:type==='date'?todayStr():undefined,onChange:function(e){set(k,e.target.value);}}));};
+  return el(Modal,{title:x.id?'Edit contact':'Add recall contact',onClose:props.onClose},
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr',gap:10}},el(Field,{label:'Type'},el('select',{value:f.kind,onChange:function(e){set('kind',e.target.value);}},Object.keys(RC_KINDS).map(function(k){return el('option',{key:k,value:k},RC_KINDS[k]);}))),inp('name','Name *','Person or office')),
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr',gap:10}},
+      f.kind==='team'?el(Field,{label:'Recall role'},el('input',{list:'hx-rc-roles',value:f.role,onChange:function(e){set('role',e.target.value);}}),el('datalist',{id:'hx-rc-roles'},RC_TEAM_ROLES.map(function(r){return el('option',{key:r,value:r});}))):inp('role','Role / title',''),
+      inp('organization','Organization','e.g. DCR, CSQ certification body, Dispensary A')),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:10}},inp('phone','Phone',''),inp('after_hours','After-hours phone',''),inp('email','Email','')),
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr',gap:10}},inp('verified_on','Verified on','','date'),el('div',{style:{paddingTop:22}},el('label',{className:'ck'},el('input',{type:'checkbox',checked:f.is_backup,onChange:function(e){set('is_backup',e.target.checked);}}),el('span',null,'Backup / alternate')),
+      x.id&&el('label',{className:'ck',style:{marginLeft:12}},el('input',{type:'checkbox',checked:f.active,onChange:function(e){set('active',e.target.checked);}}),el('span',null,'Active')))),
+    el(Field,{label:'Notes'},el('input',{value:f.notes,onChange:function(e){set('notes',e.target.value);}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:save},'Save contact')));
+}
+function StartRecall(props){
+  const T=props.T,canF=can('recall',3);const pre=props.target||null;
+  const[kind,setKind]=useState(props.kind||'mock');const[q,setQ]=useState('');const[tg,setTg]=useState(pre);const[reason,setReason]=useState('');const[cls,setCls]=useState('');const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  const found=tg?[]:traceSearch(T,q);
+  async function go(){setErr('');if(!tg){setErr('Pick what to trace.');return;}if(kind!=='mock'&&!reason.trim()){setErr('Write the reason.');return;}setBusy(true);
+    const R=traceRun(T,tg.type,tg.id);
+    try{const out=await db.insert('hx_recalls',{id:newId('rcl'),state_id:props.state.id,license_id:props.license.id,kind:kind,recall_class:cls,target_type:tg.type,target_id:tg.id,target_label:tg.label+(tg.sub?' \u00b7 '+tg.sub:''),reason:reason.trim(),
+      steps:rcSteps(kind).reduce(function(m,s){m[s[0]]=false;return m;},{}),qty_shipped:qtyStr(R.shippedQty)});props.onDone(out&&out[0]);}catch(e){setErr(rcErr(e));}setBusy(false);}
+  return el(Modal,{title:'Start '+(kind==='mock'?'a mock recall':kind),onClose:props.onClose},
+    el(Field,{label:'Type'},el('select',{value:kind,onChange:function(e){setKind(e.target.value);}},el('option',{value:'mock'},'Mock recall (yearly test, timed)'),canF&&el('option',{value:'recall'},'Recall (product leaves the market)'),canF&&el('option',{value:'withdrawal'},'Market withdrawal'))),
+    kind==='mock'&&el('div',{className:'muted',style:{fontSize:12,marginBottom:8}},'The clock starts on the server when you press Start. CSQ requires the trace back and forward to be completed in under 2 hours. Pick a real lot, batch or package tag.'),
+    kind!=='mock'&&el(Field,{label:'Class'},el('select',{value:cls,onChange:function(e){setCls(e.target.value);}},['','Class I (serious health risk)','Class II (temporary or reversible health risk)','Class III (unlikely to cause harm)'].map(function(c){return el('option',{key:c,value:c},c||'(choose)');}))),
+    tg?el('div',{className:'card gold',style:{padding:'10px 14px'}},el('div',{className:'k'},'Trace '+tg.type),el('b',null,tg.label),tg.sub&&el('div',{className:'muted',style:{fontSize:12}},tg.sub),!pre&&el('button',{className:'btn ghost sm',style:{marginTop:6},onClick:function(){setTg(null);}},'Change')):
+      el('div',null,el(Field,{label:'Lot, batch or package tag'},el('input',{value:q,autoFocus:true,placeholder:'RCV-2026-001, batch number, 1A4...',onChange:function(e){setQ(e.target.value);}})),
+        found.map(function(c,i){return el('div',{key:i,className:'row',style:{gap:8,padding:'5px 0',borderBottom:'1px dashed var(--line)',cursor:'pointer'},onClick:function(){setTg(c);}},el('span',{className:'badge off'},c.type),el('b',null,c.label),el('span',{className:'muted',style:{fontSize:12}},c.sub));})),
+    el(Field,{label:'Reason'+(kind!=='mock'?' *':'')},el('textarea',{rows:2,value:reason,placeholder:kind==='mock'?'e.g. Yearly mock recall 2026':'What is wrong with the product',onChange:function(e){setReason(e.target.value);}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:kind==='mock'?'btn':'btn danger',disabled:busy||!tg,onClick:go},kind==='mock'?'Start the clock':'Start '+kind)));
+}
+function RecallRun(props){
+  const r=props.rec,T=props.T,lic=props.license,st=props.state,open=r.status==='open',steps=rcSteps(r.kind);
+  const[f,setF]=useState({steps:{...r.steps},notified:(r.notified||[]).slice(),qty_made:r.qty_made||'',qty_shipped:r.qty_shipped||'',qty_on_hand:r.qty_on_hand||'',qty_recovered:r.qty_recovered||'',findings:r.findings||'',actions:r.actions||'',files:(r.files||[]).slice()});
+  const[now,setNow]=useState(Date.now());const[err,setErr]=useState('');const[busy,setBusy]=useState('');const[ask,setAsk]=useState(false);
+  useEffect(function(){if(!open)return;const t=setInterval(function(){setNow(Date.now());},1000);return function(){clearInterval(t);};},[open]);
+  const R=useMemo(function(){return traceRun(T,r.target_type,r.target_id);},[T,r.target_type,r.target_id]);
+  const el_ms=open?now-new Date(r.started_at).getTime():(r.duration_minutes||0)*60000,over=el_ms>120*60000;
+  const contacts=(props.contacts||[]).filter(function(c){return c.active;});
+  const custNames=R.customers.map(function(c){return c.customer.trim().toLowerCase();});
+  function set(k,v){setF(function(p){return {...p,[k]:v};});}
+  function patch(extra){return {steps:f.steps,notified:f.notified,qty_made:f.qty_made,qty_shipped:f.qty_shipped,qty_on_hand:f.qty_on_hand,qty_recovered:f.qty_recovered,findings:f.findings.trim(),actions:f.actions.trim(),files:f.files,trace:{at:new Date().toISOString(),lots:R.lots.map(function(l){return l.number;}),batches:R.batches.map(function(b){return b.batch_number;}),customers:R.customers.map(function(c){return c.customer;}),ships:R.ships.map(function(s){return s.number;})},...(extra||{})};}
+  async function save(extra,msg){setErr('');setBusy('Saving...');try{await db.update('hx_recalls',r.id,patch(extra));props.onDone(msg||'Saved.');}catch(e){setErr(rcErr(e));}setBusy('');}
+  async function holdAll(){setErr('');setBusy('Holding...');let n=0;
+    try{for(const b of R.batches){if(R.holds.some(function(h){return h.batch_id===b.id;}))continue;await db.insert('hx_holds',{id:newId('hold'),state_id:st.id,license_id:lic.id,kind:'batch',batch_id:b.id,source:'Recall',reason:r.number+': '+(r.reason||'recall'),location:''});n++;}
+      for(const l of R.lots){if(l.status!=='accepted'&&l.status!=='quarantine')continue;await db.insert('hx_holds',{id:newId('hold'),state_id:st.id,license_id:lic.id,kind:'lot',lot_id:l.id,source:'Recall',reason:r.number+': '+(r.reason||'recall'),location:''});n++;}
+      const st2={...f.steps,hold:true};setF(function(p){return {...p,steps:st2};});await db.update('hx_recalls',r.id,patch({steps:st2}));props.onHold(n);}catch(e){setErr(matErr(e));}setBusy('');}
+  function notify(c,on){setF(function(p){const a=p.notified.filter(function(x){return x.id!==c.id;});if(on)a.push({id:c.id,name:c.name,kind:c.kind,at:new Date().toISOString()});return {...p,notified:a};});}
+  const done=steps.filter(function(s){return f.steps[s[0]];}).length;
+  return el(Modal,{title:r.number+' \u00b7 '+(r.kind==='mock'?'Mock recall':r.kind==='recall'?'Recall':'Market withdrawal')+(r.recall_class?' \u00b7 '+r.recall_class:''),wide:true,onClose:props.onClose},
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'center',marginBottom:10}},
+      el('div',null,el('div',{className:'k'},'Traced'),el('b',null,r.target_label),r.reason&&el('div',{className:'muted',style:{fontSize:12}},r.reason),el('div',{className:'muted',style:{fontSize:11}},'Started '+new Date(r.started_at).toLocaleString()+' by '+r.started_by)),
+      el('div',{style:{textAlign:'right'}},el('div',{className:'k'},open?'Elapsed (limit 2:00:00)':'Duration'),el('div',{style:{fontSize:34,fontWeight:700,fontVariantNumeric:'tabular-nums',color:over?'var(--red)':el_ms>90*60000?'var(--gold-hi)':'var(--green)'}},open?fmtMin(el_ms):r.duration_minutes+' min'),
+        !open&&r.result&&el('span',{className:'badge '+(r.result==='Fail'?'bad':'ok')},r.result),r.status==='cancelled'&&el('span',{className:'badge off'},'Cancelled'))),
+    el(TraceView,{R:R}),
+    el('div',{className:'k',style:{margin:'14px 0 6px'}},'Steps ('+done+' of '+steps.length+')'),
+    steps.map(function(s){const on=!!f.steps[s[0]],at=(r.step_times||{})[s[0]];return el('label',{key:s[0],className:'ck',style:{display:'flex',marginBottom:4}},el('input',{type:'checkbox',checked:on,disabled:!open,onChange:function(e){setF(function(p){return {...p,steps:{...p.steps,[s[0]]:e.target.checked}};});}}),
+      el('span',{style:{color:on?'':'var(--muted)'}},s[1]),at&&el('span',{className:'muted',style:{fontSize:11,marginLeft:8}},'+'+fmtMin(new Date(at)-new Date(r.started_at))));}),
+    r.kind!=='mock'&&open&&can('holds',2)&&el('button',{className:'btn danger sm',style:{margin:'4px 0 10px'},disabled:!!busy,onClick:holdAll},'Put every affected batch and lot on hold'),
+    el('div',{className:'k',style:{margin:'12px 0 6px'}},r.kind==='mock'?'Contacts confirmed (not called in a mock)':'Notified'),
+    !contacts.length?el('div',{className:'muted',style:{fontSize:12}},'No recall contacts yet. Add them on the Recall team and contacts tab.'):
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(250px,1fr))',gap:4}},contacts.filter(function(c){return c.kind!=='customer'||custNames.indexOf(c.name.trim().toLowerCase())>=0||custNames.indexOf(c.organization.trim().toLowerCase())>=0;}).map(function(c){
+      const n=f.notified.find(function(x){return x.id===c.id;});return el('label',{key:c.id,className:'ck',style:{display:'flex',fontSize:12}},el('input',{type:'checkbox',checked:!!n,disabled:!open,onChange:function(e){notify(c,e.target.checked);}}),
+        el('span',null,el('b',null,c.name),' \u00b7 '+RC_KINDS[c.kind]+(c.role?' \u00b7 '+c.role:'')+(c.phone?' \u00b7 '+c.phone:'')+(n?' \u00b7 '+new Date(n.at).toLocaleTimeString():'')));})),
+    R.customers.some(function(c){return !contacts.some(function(x){return x.kind==='customer'&&(x.name.trim().toLowerCase()===c.customer.trim().toLowerCase()||x.organization.trim().toLowerCase()===c.customer.trim().toLowerCase());});})&&
+      el('div',{className:'msg',style:{marginTop:6}},'Customers with no contact on file: '+R.customers.filter(function(c){return !contacts.some(function(x){return x.kind==='customer'&&(x.name.trim().toLowerCase()===c.customer.trim().toLowerCase()||x.organization.trim().toLowerCase()===c.customer.trim().toLowerCase());});}).map(function(c){return c.customer;}).join(', ')),
+    el('div',{className:'k',style:{margin:'12px 0 6px'}},'Quantity reconciliation'),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:10}},
+      [['qty_made','Made / received'],['qty_shipped','Shipped'],['qty_on_hand','On hand'],['qty_recovered',r.kind==='mock'?'Could be recovered':'Recovered']].map(function(p){return el(Field,{key:p[0],label:p[1]},el('input',{value:f[p[0]],disabled:!open,onChange:function(e){set(p[0],e.target.value);}}));})),
+    (function(){const m=numQty(f.qty_made),a=numQty(f.qty_shipped)+numQty(f.qty_on_hand);return m?el('div',{className:'muted',style:{fontSize:12,color:Math.abs(a-m)/m>0.01?'var(--red)':'var(--green)'}},'Accounted for: '+Math.round(a*1000/m)/10+'% of what was made'):null;})(),
+    el(Field,{label:'Findings'+(open?' * (to close)':'')},el('textarea',{rows:3,value:f.findings,disabled:!open,placeholder:'What worked, what was slow or missing',onChange:function(e){set('findings',e.target.value);}})),
+    el(Field,{label:'Corrective actions'},el('textarea',{rows:2,value:f.actions,disabled:!open,onChange:function(e){set('actions',e.target.value);}})),
+    el(FileList,{files:f.files,folder:'recall/'+lic.id,label:'+ Attach (call log, notices)',onErr:setErr,onChange:open?function(v){set('files',v);}:null}),
+    r.cancel_reason&&el('div',{className:'msg err'},'Cancelled: '+r.cancel_reason),
+    err&&el('div',{className:'msg err'},err),
+    ask&&el(SimpleReason,{title:'Cancel '+r.number,btn:'Cancel exercise',onClose:function(){setAsk(false);},onGo:function(why){return db.update('hx_recalls',r.id,{status:'cancelled',cancel_reason:why}).then(function(){props.onDone('Cancelled '+r.number);});}}),
+    el('div',{className:'row',style:{justifyContent:'space-between',marginTop:14}},
+      el('div',{className:'row',style:{gap:6}},
+        open&&can('recall',2)&&el('button',{className:'btn ghost sm',disabled:!!busy,onClick:function(){save(null,'Progress saved.');}},'Save progress'),
+        open&&(r.kind==='mock'?can('recall',2):can('recall',3))&&el('button',{className:'btn sm',disabled:!!busy,onClick:function(){if(!f.findings.trim()){setErr('Write the findings before closing.');return;}save({status:'closed'},'Closed '+r.number);}},'Stop the clock and close'),
+        open&&can('recall',3)&&el('button',{className:'btn danger sm',onClick:function(){setAsk(true);}},'Cancel'),
+        !open&&r.result==='Fail'&&el(RaiseDeviation,{state:st,license:lic,prefill:{title:'Mock recall '+r.number+' failed',dept:'Compliance',category:'Documentation',priority:'major',description:(r.findings||'')+(r.duration_minutes?' Duration '+r.duration_minutes+' min.':''),lot_number:r.target_label}}),
+        el('button',{className:'btn ghost sm',onClick:function(){printRecords(r.number,[rcReportHtml(r,R,lic,contacts)]);}},'Print report')),
+      el('button',{className:'btn ghost sm',onClick:props.onClose},'Close')));
+}
+function rcReportHtml(r,R,lic,contacts){const e=esc3,steps=rcSteps(r.kind);
+  let h='<div class="hxrec"><h2>'+e(r.number)+' \u00b7 '+(r.kind==='mock'?'Mock recall':e(r.kind))+(r.result?' \u00b7 '+e(r.result):'')+'</h2><div class="m">'+e(lic.name)+' \u00b7 CSQ 1.8 \u00b7 printed '+e(new Date().toLocaleString())+'</div><table>'+
+    [['Traced',r.target_label],['Reason',r.reason],['Class',r.recall_class],['Started',new Date(r.started_at).toLocaleString()+' by '+r.started_by],['Ended',r.ended_at?new Date(r.ended_at).toLocaleString()+' by '+r.closed_by:'Open'],['Duration',r.duration_minutes!=null?r.duration_minutes+' minutes (limit 120)':''],
+     ['Made / shipped / on hand / recovered',[r.qty_made,r.qty_shipped,r.qty_on_hand,r.qty_recovered].map(function(x){return x||'-';}).join(' / ')],['Findings',r.findings],['Corrective actions',r.actions]].filter(function(x){return x[1];}).map(function(x){return '<tr><th>'+e(x[0])+'</th><td>'+e(x[1])+'</td></tr>';}).join('')+'</table>';
+  h+='<table><tr class="sec"><td colspan="2">Steps</td></tr>'+steps.map(function(s){const ok=(r.steps||{})[s[0]],at=(r.step_times||{})[s[0]];return '<tr><th>'+e(s[1])+'</th><td class="'+(ok?'ok':'bad')+'">'+(ok?'Done'+(at?' at +'+fmtMin(new Date(at)-new Date(r.started_at)):''):'NOT DONE')+'</td></tr>';}).join('')+'</table>';
+  h+='<table><tr class="sec"><td colspan="2">Contacts</td></tr>'+((r.notified||[]).length?(r.notified||[]).map(function(n){return '<tr><th>'+e(n.name)+' ('+e(RC_KINDS[n.kind]||n.kind)+')</th><td>'+e(new Date(n.at).toLocaleString())+'</td></tr>';}).join(''):'<tr><td colspan="2">None recorded</td></tr>')+'</table></div>';
+  return h+traceHtml(R,lic,'Trace');
+}
+function RecallPage(props){
+  const st=props.state,lic=props.license,lid=lic?lic.id:'';
+  const[tab,setTab]=useState('trace');const[T,setT]=useState(null);const[recs,setRecs]=useState([]);const[cons,setCons]=useState([]);const[msg,setMsg]=useState('');const[q,setQ]=useState('');const[pick,setPick]=useState(null);const[modal,setModal]=useState(null);const[selId,setSelId]=useState(null);
+  const load=useCallback(function(){if(!lid)return;const enc=encodeURIComponent;
+    rcTrace(lid).then(setT).catch(function(e){setMsg(rcErr(e));setT({lots:[],uses:[],batches:[],tests:[],ships:[],holds:[],suppliers:[]});});
+    db.get('hx_recalls','license_id=eq.'+enc(lid)+'&select=*&order=started_at.desc').then(function(r){setRecs((r||[]).filter(function(x){return x.license_id===lid;}));}).catch(function(e){setMsg(rcErr(e));});
+    db.get('hx_recall_contacts','license_id=eq.'+enc(lid)+'&select=*&order=kind,sort,name').then(function(r){setCons((r||[]).filter(function(x){return x.license_id===lid;}));}).catch(function(){});},[lid]);
+  useEffect(load,[load]);
+  const R=useMemo(function(){return T&&pick?traceRun(T,pick.type,pick.id):null;},[T,pick]);
+  if(!st||!lic)return el('div',null,el('h1',null,el('span',{className:'g'},'Traceability and Recall')),el('div',{className:'empty'},'Pick a state and a license at the top first.'));
+  if(!T)return el('div',{className:'muted'},'Loading...');
+  const canE=can('recall',2),canF=can('recall',3);
+  function done(t){setModal(null);if(t)setMsg(t);load();}
+  const mocks=recs.filter(function(r){return r.kind==='mock'&&r.status==='closed';}),last=mocks[0],due=last?trAddMonths(String(last.ended_at).slice(0,10),12):null;
+  const openReal=recs.filter(function(r){return r.kind!=='mock'&&r.status==='open';}),openAny=recs.filter(function(r){return r.status==='open';});
+  const act=cons.filter(function(c){return c.active;}),missing=RC_REQUIRED.filter(function(k){return !act.some(function(c){return c.kind===k;});});
+  const stale=act.filter(function(c){return !c.verified_on||c.verified_on<trAddMonths(todayStr(),-12);});
+  const sel=recs.find(function(r){return r.id===selId;});
+  const stat=function(l,v,tone,sub){return el('div',{key:l,className:'card gold',style:{marginBottom:0}},el('div',{className:'k'},l),el('div',{className:'v',style:{fontSize:24,color:tone||'var(--text)'}},v),sub&&el('div',{className:'muted',style:{fontSize:11,marginTop:2}},sub));};
+  const found=pick?[]:traceSearch(T,q);
+  let body;
+  if(tab==='trace')body=el('div',null,
+    el('div',{className:'row',style:{marginBottom:12}},el('input',{value:q,placeholder:'Search a lot, batch or package tag to trace',style:{width:360},onChange:function(e){setQ(e.target.value);setPick(null);}}),
+      pick&&el('button',{className:'btn ghost sm',onClick:function(){printRecords('Trace '+pick.label,[traceHtml(R,lic,'Trace: '+pick.label+(pick.sub?' \u00b7 '+pick.sub:''))]);}},'Print trace'),
+      pick&&canE&&el('button',{className:'btn sm',onClick:function(){setModal({t:'start',target:pick});}},'Start mock recall from this')),
+    !pick&&!q&&el('div',{className:'empty'},'Type a received lot number, supplier lot, batch number or package tag. Hendrix shows one step back (suppliers and input lots) and one step forward (customers).'),
+    found.map(function(c,i){return el('div',{key:i,className:'card',style:{cursor:'pointer',padding:'8px 14px',marginBottom:6},onClick:function(){setPick(c);}},el('div',{className:'row',style:{gap:8}},el('span',{className:'badge off'},c.type),el('b',null,c.label),el('span',{className:'muted',style:{fontSize:12}},c.sub)));}),
+    q&&!pick&&!found.length&&el('div',{className:'muted'},'Nothing matches.'),
+    pick&&el('div',null,el('h3',null,'Trace: '+pick.label,pick.sub&&el('span',{className:'muted',style:{fontSize:13,fontWeight:400,marginLeft:8}},pick.sub)),el(TraceView,{R:R})));
+  else if(tab==='exercises')body=el('div',null,
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',marginBottom:14}},
+      stat('Last mock recall',last?String(last.ended_at).slice(0,10):'Never',last?(last.result==='Pass'?'var(--green)':'var(--red)'):'var(--red)',last?last.duration_minutes+' min \u00b7 '+last.result:'required yearly'),
+      stat('Next due',due||'Now',!due||due<todayStr()?'var(--red)':'var(--text)','yearly, under 2 hours'),
+      stat('Open',openAny.length,openAny.length?'var(--gold-hi)':'var(--text)','exercises in progress'),stat('Real recalls / withdrawals',recs.filter(function(r){return r.kind!=='mock';}).length,openReal.length?'var(--red)':'var(--text)',openReal.length?openReal.length+' open':'')),
+    !recs.length?el('div',{className:'empty'},'No mock recalls yet. Start one: pick a real batch and trace it back and forward against the clock.'):
+    el('div',{className:'card',style:{padding:0,overflowX:'auto'}},el('table',null,el('thead',null,el('tr',null,['Number','Type','Traced','Started','Duration','Result','By'].map(function(h){return el('th',{key:h},h);}))),
+      el('tbody',null,recs.map(function(r){return el('tr',{key:r.id,style:{cursor:'pointer'},onClick:function(){setSelId(r.id);}},el('td',null,el('b',null,r.number)),el('td',null,r.kind==='mock'?'Mock recall':r.kind),el('td',null,r.target_label),el('td',null,new Date(r.started_at).toLocaleString()),
+        el('td',null,r.status==='open'?el('span',{className:'badge warn'},'Running'):r.duration_minutes!=null?r.duration_minutes+' min':'-'),el('td',null,r.result?el('span',{className:'badge '+(r.result==='Fail'?'bad':'ok')},r.result):r.status==='cancelled'?el('span',{className:'badge off'},'Cancelled'):'-'),el('td',null,r.started_by));})))));
+  else{
+    const groups=Object.keys(RC_KINDS).map(function(k){return {k:k,list:cons.filter(function(c){return c.kind===k;})};});
+    const custs=T.ships.reduce(function(m,s){const k=s.customer.trim();if(k&&!cons.some(function(c){return c.kind==='customer'&&(c.name.trim().toLowerCase()===k.toLowerCase()||c.organization.trim().toLowerCase()===k.toLowerCase());})&&m.indexOf(k)<0)m.push(k);return m;},[]);
+    async function addCustomers(){try{for(const c of custs){const sh=T.ships.find(function(s){return s.customer.trim()===c;});await db.insert('hx_recall_contacts',{id:newId('rcc'),state_id:st.id,license_id:lic.id,kind:'customer',name:c,organization:c,role:sh&&sh.customer_license?'License '+sh.customer_license:'',notes:sh&&sh.destination||'',verified_on:null,active:true,is_backup:false});}done('Added '+custs.length+' customer'+(custs.length===1?'':'s'));}catch(e){setMsg(rcErr(e));}}
+    async function verifyAll(){try{for(const c of act){await db.update('hx_recall_contacts',c.id,{verified_on:todayStr()});}done('Verified '+act.length+' contacts today');}catch(e){setMsg(rcErr(e));}}
+    body=el('div',null,
+      missing.length>0&&el('div',{className:'msg err'},'Missing from the contact list (CSQ 1.8): '+missing.map(function(k){return RC_KINDS[k];}).join(', ')),
+      stale.length>0&&el('div',{className:'msg err'},stale.length+' contact'+(stale.length===1?' has':'s have')+' not been verified in the last 12 months.'),
+      el('div',{className:'row',style:{marginBottom:12}},canE&&el('button',{className:'btn',onClick:function(){setModal({t:'contact'});}},'+ Add contact'),canE&&custs.length>0&&el('button',{className:'btn ghost',onClick:addCustomers},'Add '+custs.length+' customer'+(custs.length===1?'':'s')+' from shipments'),
+        canE&&act.length>0&&el('button',{className:'btn ghost',onClick:verifyAll},'Mark all verified today'),el('button',{className:'btn ghost',onClick:function(){const e=esc3;printRecords('Recall contact list - '+lic.name,['<div class="hxrec"><h2>Recall team and contact list</h2><div class="m">'+e(lic.name)+' \u00b7 CSQ 1.8 \u00b7 printed '+e(new Date().toLocaleString())+'</div><table><tr><th>Type</th><th>Name / role</th><th>Organization</th><th>Phone / after hours</th><th>Email</th><th>Verified</th></tr>'+
+          act.map(function(c){return '<tr><td>'+e(RC_KINDS[c.kind])+'</td><td>'+e(c.name)+(c.role?'<br>'+e(c.role):'')+(c.is_backup?' (backup)':'')+'</td><td>'+e(c.organization)+'</td><td>'+e(c.phone)+(c.after_hours?'<br>'+e(c.after_hours):'')+'</td><td>'+e(c.email)+'</td><td>'+e(c.verified_on||'-')+'</td></tr>';}).join('')+'</table></div>']);}},'Print contact list')),
+      groups.map(function(g){return el('div',{key:g.k,style:{marginBottom:12}},el('div',{className:'secth'},RC_KINDS[g.k]+' ('+g.list.filter(function(c){return c.active;}).length+')',RC_REQUIRED.indexOf(g.k)>=0&&!g.list.some(function(c){return c.active;})&&el('span',{className:'badge bad',style:{marginLeft:8}},'Required')),
+        g.list.map(function(c){const old=!c.verified_on||c.verified_on<trAddMonths(todayStr(),-12);return el('div',{key:c.id,className:'row',style:{gap:10,fontSize:13,padding:'6px 4px',borderBottom:'1px dashed var(--line)',opacity:c.active?1:.45,flexWrap:'nowrap'}},
+          el('div',{style:{flex:1,minWidth:0}},el('b',null,c.name),c.role&&' \u00b7 '+c.role,c.is_backup&&el('span',{className:'badge off',style:{marginLeft:6}},'Backup'),c.organization&&el('div',{className:'muted',style:{fontSize:12}},c.organization)),
+          el('div',{style:{fontSize:12,minWidth:200}},[c.phone,c.after_hours&&'after hours '+c.after_hours,c.email].filter(Boolean).join(' \u00b7 ')),
+          el('span',{className:'badge '+(old?'bad':'ok')},c.verified_on?'Verified '+c.verified_on:'Not verified'),
+          canE&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'contact',contact:c});}},'Edit'));}));}));
+  }
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,el('span',{className:'g'},'Traceability and Recall')),el('div',{className:'sub'},lic.name+' \u00b7 one step back, one step forward, timed mock recalls, recall team (CSQ 1.8, 2A.10.1)')),
+      el('div',{className:'row'},canE&&el('button',{className:'btn',onClick:function(){setModal({t:'start'});}},'Start mock recall'),canF&&el('button',{className:'btn danger',onClick:function(){setModal({t:'start',kind:'recall'});}},'Start recall'))),
+    openAny.length>0&&el('div',{className:'msg err',style:{marginBottom:12,cursor:'pointer'},onClick:function(){setSelId(openAny[0].id);}},openAny.map(function(r){return r.number+' running since '+new Date(r.started_at).toLocaleTimeString();}).join(' \u00b7 ')+' \u2014 open'),
+    el('div',{className:'tabs',style:{marginBottom:12}},[['trace','Trace'],['exercises','Mock recalls and recalls'],['contacts','Recall team and contacts']].map(function(x){return el('button',{key:x[0],className:tab===x[0]?'on':'',onClick:function(){setTab(x[0]);}},x[1]);})),
+    msg&&el('div',{className:/^(Saved|Added|Verified|Started|Closed|Progress|Cancelled|Put )/.test(msg)?'msg':'msg err'},msg),
+    body,
+    sel&&!modal&&el(RecallRun,{key:sel.id+sel.status,rec:sel,T:T,state:st,license:lic,contacts:cons,onClose:function(){setSelId(null);},onDone:function(t){done(t);},onHold:function(n){setMsg('Put '+n+' item'+(n===1?'':'s')+' on hold.');load();}}),
+    modal&&modal.t==='start'&&el(StartRecall,{T:T,state:st,license:lic,target:modal.target,kind:modal.kind,onClose:function(){setModal(null);},onDone:function(r){setTab('exercises');if(r)setSelId(r.id);done('Started '+(r?r.number:''));}}),
+    modal&&modal.t==='contact'&&el(ContactForm,{contact:modal.contact,state:st,license:lic,onClose:function(){setModal(null);},onDone:function(){done('Saved.');}}));
+}
+function RecallDashCard(props){
+  const lid=props.license?props.license.id:'';const[d,setD]=useState(null);
+  useEffect(function(){if(!lid||!can('recall',1)){setD(null);return;}let dead=false;
+    db.get('hx_recalls','license_id=eq.'+encodeURIComponent(lid)+'&select=kind,status,ended_at,duration_minutes,result,license_id&order=started_at.desc').then(function(r){const a=(r||[]).filter(function(x){return x.license_id===lid;});
+      const m=a.filter(function(x){return x.kind==='mock'&&x.status==='closed';})[0];if(!dead)setD({m:m,open:a.filter(function(x){return x.status==='open';}).length});}).catch(function(){if(!dead)setD(null);});return function(){dead=true;};},[lid]);
+  if(!d)return null;const due=d.m?trAddMonths(String(d.m.ended_at).slice(0,10),12):null,late=!due||due<todayStr();
+  return el('div',{className:'card gold'},el('div',{className:'k'},'Mock recall'),el('div',{className:'v',style:{color:late||(d.m&&d.m.result==='Fail')?'var(--red)':'var(--green)'}},d.m?d.m.duration_minutes+' min \u00b7 '+d.m.result:'Never run'),
+    el('div',{className:'muted',style:{margin:'4px 0 8px'}},(d.m?'Last '+String(d.m.ended_at).slice(0,10)+' \u00b7 next due '+due:'Required every year, under 2 hours')+(d.open?' \u00b7 '+d.open+' running':'')),
+    el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go('recall');}},'Open recall'));
+}
+
+/* ---------- Complaints (Black Fox / Michigan fields + CSQ 1.7, 5.3) ---------- */
+const CMP_TYPES={consumer:'Consumer complaint',dispensary:'Dispensary complaint',return:'Product return',adverse_event:'Adverse event',feedback:'Customer feedback'};
+const CMP_CHANNELS=['Phone','Email','In person','Dispensary','Website / social media','State regulator','Other'];
+const CMP_CATS=['Taste / smell','Potency / effect','Foreign matter','Mold / contamination','Hardware / packaging failure','Labeling','Leaking / damage','Adverse health effect','Delivery / service','Other'];
+const CMP_STATUS={open:'Open',investigating:'Investigating',closed:'Closed',cancelled:'Cancelled'};
+function cmpErr(e){const m=String((e&&e.message)||e);return /hx_complaints|hx_audits|hx_audit_findings/.test(m)&&/missing|does not exist|schema cache/i.test(m)?'Complaints and internal audits are not set up yet - run hendrix_step19.sql in the Hendrix Supabase project.':m;}
+function cmpOpen(c){return c.status==='open'||c.status==='investigating';}
+function cmpLate(c){return cmpOpen(c)&&c.due_date&&c.due_date<todayStr();}
+// raise a deviation from a record and link it back
+function LinkDeviation(props){
+  const[open,setOpen]=useState(false);
+  if(!can('qms',1))return null;
+  return el('span',null,el('button',{className:'btn ghost sm',onClick:function(e){e.stopPropagation();setOpen(true);}},props.label||'Raise deviation'),
+    open&&el(DeviationForm,{state:props.state,license:props.license,prefill:props.prefill,onClose:function(){setOpen(false);},onDone:function(r){setOpen(false);if(r)props.onLinked(r);}}));
+}
+function ComplaintForm(props){
+  const x=props.rec||{},lic=props.license,st=props.state;
+  const[f,setF]=useState({title:x.title||'',type:x.type||props.type||'consumer',priority:x.priority||'minor',received_on:x.received_on||todayStr(),channel:x.channel||'Phone',complainant:x.complainant||'',complainant_contact:x.complainant_contact||'',
+    customer:x.customer||'',category:x.category||'',product:x.product||'',lot_number:x.lot_number||'',batch_id:x.batch_id||'',tag:x.tag||'',description:x.description||'',rating:x.rating||'',attachments:(x.attachments||[]).slice()});
+  const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  function set(k,v){setF(function(p){return {...p,[k]:v};});}
+  const fb=f.type==='feedback';
+  async function save(){setErr('');if(!f.title.trim()){setErr('Enter a short title.');return;}if(fb&&!f.rating){setErr('Pick the satisfaction rating.');return;}setBusy(true);
+    const b=(props.batches||[]).find(function(z){return z.id===f.batch_id;});
+    const rec={title:f.title.trim(),type:f.type,priority:f.priority,received_on:f.received_on,channel:f.channel,complainant:f.complainant.trim(),complainant_contact:f.complainant_contact.trim(),customer:f.customer.trim(),category:fb?'':f.category,
+      product:f.product.trim()||(b?[b.sku,b.flavor].filter(Boolean).join(' \u00b7 '):''),lot_number:f.lot_number.trim()||(b?b.batch_number:''),batch_id:f.batch_id||null,tag:f.tag.trim(),description:f.description.trim(),rating:fb?Number(f.rating):null,attachments:f.attachments};
+    try{const out=x.id?await db.update('hx_complaints',x.id,rec):await db.insert('hx_complaints',{...rec,id:newId('cmp'),state_id:st.id,license_id:lic.id,status:'open'});props.onDone(out&&out[0]);}catch(e){setErr(cmpErr(e));}setBusy(false);}
+  const inp=function(k,l,ph,type){return el(Field,{label:l},el('input',{type:type||'text',value:f[k],placeholder:ph||'',max:type==='date'?todayStr():undefined,onChange:function(e){set(k,e.target.value);}}));};
+  return el(Modal,{title:(x.id?'Edit ':'Log ')+(fb?'customer feedback':'complaint')+' \u00b7 '+lic.name,wide:true,onClose:props.onClose},
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr 1fr',gap:10}},
+      el(Field,{label:'Type'},el('select',{value:f.type,onChange:function(e){set('type',e.target.value);}},Object.keys(CMP_TYPES).map(function(k){return el('option',{key:k,value:k},CMP_TYPES[k]);}))),
+      !fb?el(Field,{label:'Priority'},el('select',{value:f.priority,onChange:function(e){set('priority',e.target.value);}},Object.keys(QMS_PRIORITIES).map(function(k){return el('option',{key:k,value:k},QMS_PRIORITIES[k]);}))):
+        el(Field,{label:'Satisfaction *'},el('select',{value:f.rating,onChange:function(e){set('rating',e.target.value);}},el('option',{value:''},'(pick)'),[5,4,3,2,1].map(function(n){return el('option',{key:n,value:n},n+' - '+['','Very unhappy','Unhappy','OK','Happy','Very happy'][n]);}))),
+      inp('received_on','Received on','','date')),
+    f.type==='adverse_event'&&el('div',{className:'msg err'},'Adverse event: report it to the state regulator. It cannot be closed until the report date is recorded.'),
+    inp('title','Title *',fb?'e.g. Dispensary A: customers love the new OG pre-rolls':'e.g. Customer reported harsh taste on Live Resin Cart'),
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr 1fr',gap:10}},
+      el(Field,{label:'Received by'},el('select',{value:f.channel,onChange:function(e){set('channel',e.target.value);}},CMP_CHANNELS.map(function(c){return el('option',{key:c,value:c},c);}))),
+      inp('complainant','Complainant','Name (or anonymous)'),inp('complainant_contact','Contact','Phone or email')),
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr',gap:10}},inp('customer','Customer (dispensary)',''),
+      !fb?el(Field,{label:'Category'},el('select',{value:f.category,onChange:function(e){set('category',e.target.value);}},el('option',{value:''},'(choose)'),CMP_CATS.map(function(c){return el('option',{key:c,value:c},c);}))):el('div')),
+    el('div',{className:'grid',style:{gridTemplateColumns:'1.4fr 1fr 1fr 1fr',gap:10}},
+      el(Field,{label:'Batch'},el('select',{value:f.batch_id,onChange:function(e){set('batch_id',e.target.value);}},el('option',{value:''},'(unknown / not listed)'),(props.batches||[]).map(function(b){return el('option',{key:b.id,value:b.id},batchName(b));}))),
+      inp('product','Product','Product name / SKU'),inp('lot_number','Lot number','LOT-XXXX'),inp('tag','Package tag','1A4...')),
+    el(Field,{label:'Description'},el('textarea',{rows:3,value:f.description,placeholder:fb?'What the customer said':'Describe the complaint in detail...',onChange:function(e){set('description',e.target.value);}})),
+    el(FileList,{files:f.attachments,folder:'complaints/'+lic.id,label:'+ Attach photo or file',onErr:setErr,onChange:function(v){set('attachments',v);}}),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:save},x.id?'Save':fb?'Log feedback':'Log complaint')));
+}
+function cmpHtml(c,lic){const e=esc3;
+  return '<div class="hxrec"><h2>'+e(c.number)+' \u00b7 '+e(c.title)+'</h2><div class="m">'+e(lic.name)+' \u00b7 CSQ 1.7 \u00b7 printed '+e(new Date().toLocaleString())+'</div><table>'+
+    [['Type',CMP_TYPES[c.type]],['Priority',QMS_PRIORITIES[c.priority]],['Status',CMP_STATUS[c.status]+(c.closed_by?' by '+c.closed_by+' '+String(c.closed_at||'').slice(0,10):'')],['Received',c.received_on+' \u00b7 '+c.channel+' \u00b7 logged by '+c.created_by],
+     ['Complainant',[c.complainant,c.complainant_contact].filter(Boolean).join(' \u00b7 ')],['Customer',c.customer],['Category',c.category],['Rating',c.rating?c.rating+' / 5':''],['Product / batch / tag',[c.product,c.lot_number,c.tag].filter(Boolean).join(' \u00b7 ')],
+     ['Description',c.description],['Investigator',c.investigator+(c.due_date?' \u00b7 due '+c.due_date:'')],['Investigation',c.investigation],['Root cause',c.root_cause],['Resolution',c.resolution],['Corrective action',c.corrective_action],
+     ['Deviation / CAPA',c.deviation_number],['Response to complainant',(c.responded_on?c.responded_on+': ':'')+c.response],['Reported to regulator',c.regulator_reported_on],['Cancelled',c.cancel_reason]]
+    .filter(function(r){return r[1];}).map(function(r){return '<tr><th>'+e(r[0])+'</th><td>'+e(r[1])+'</td></tr>';}).join('')+'</table></div>';}
+function ComplaintDetail(props){
+  const c=props.rec,lic=props.license,st=props.state,open=cmpOpen(c),canE=can('complaints',2),canF=can('complaints',3),fb=c.type==='feedback';
+  const[f,setF]=useState({investigator:c.investigator||'',due_date:c.due_date||trAddMonths(todayStr(),1),investigation:c.investigation||'',root_cause:c.root_cause||'',resolution:c.resolution||'',corrective_action:c.corrective_action||'',
+    response:c.response||'',responded_on:c.responded_on||'',regulator_reported_on:c.regulator_reported_on||''});
+  const[err,setErr]=useState('');const[busy,setBusy]=useState(false);const[ask,setAsk]=useState(null);
+  function set(k,v){setF(function(p){return {...p,[k]:v};});}
+  async function save(extra,msg){setErr('');setBusy(true);try{await db.update('hx_complaints',c.id,{...f,due_date:f.due_date||null,responded_on:f.responded_on||null,regulator_reported_on:f.regulator_reported_on||null,...(extra||{})});props.onDone(msg||'Saved.');}catch(e){setErr(cmpErr(e));}setBusy(false);}
+  const ta=function(k,l,ph){return el(Field,{label:l},el('textarea',{rows:2,value:f[k],disabled:!open||!canE,placeholder:ph||'',onChange:function(e){set(k,e.target.value);}}));};
+  const inp=function(k,l,type){return el(Field,{label:l},el('input',{type:type||'text',value:f[k],disabled:!open||!canE,max:type==='date'&&k!=='due_date'?todayStr():undefined,onChange:function(e){set(k,e.target.value);}}));};
+  return el(Modal,{title:c.number+' \u00b7 '+c.title,wide:true,onClose:props.onClose},
+    el('div',{className:'row',style:{gap:6,marginBottom:10}},el('span',{className:'badge '+(open?'warn':c.status==='closed'?'ok':'off')},CMP_STATUS[c.status]),el('span',{className:'badge '+(c.type==='adverse_event'?'bad':'off')},CMP_TYPES[c.type]),!fb&&el('span',{className:'badge '+(c.priority==='critical'?'bad':'off')},QMS_PRIORITIES[c.priority]),
+      cmpLate(c)&&el('span',{className:'badge bad'},'Overdue'),c.rating&&el('span',{className:'badge ok'},c.rating+' / 5')),
+    el('div',{className:'card gold',style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:10,padding:'10px 14px'}},
+      [['Received',c.received_on+' \u00b7 '+c.channel],['Complainant',[c.complainant,c.complainant_contact].filter(Boolean).join(' \u00b7 ')],['Customer',c.customer],['Category',c.category],['Product',c.product],['Lot / batch',c.lot_number],['Package tag',c.tag],['Logged by',c.created_by],
+       ['Deviation',c.deviation_number],['Closed',c.closed_by?c.closed_by+' \u00b7 '+String(c.closed_at).slice(0,10):'']].filter(function(p){return p[1];}).map(function(p){return el('div',{key:p[0]},el('div',{className:'k'},p[0]),el('div',{style:{fontSize:13}},p[1]));})),
+    c.description&&el('div',{style:{fontSize:13,marginBottom:10,whiteSpace:'pre-wrap'}},c.description),
+    (c.attachments||[]).length>0&&el(FileList,{files:c.attachments}),
+    !fb&&el('div',null,
+      el('div',{className:'k',style:{margin:'10px 0 6px'}},'Investigation (CSQ 1.7)'),
+      el('div',{className:'grid',style:{gridTemplateColumns:'2fr 1fr',gap:10}},inp('investigator','Investigator (responsible) *'),inp('due_date','Due date','date')),
+      ta('investigation','Investigation *','What was checked: retained sample, batch record, COA, other complaints on the same batch'),ta('root_cause','Root cause'),
+      ta('resolution','Resolution *','What was done for the complainant'),ta('corrective_action','Corrective action to stop it happening again'),
+      el('div',{className:'grid',style:{gridTemplateColumns:'2fr 1fr',gap:10}},ta('response','Response to the complainant'),inp('responded_on','Answered on','date')),
+      c.type==='adverse_event'&&inp('regulator_reported_on','Reported to the state regulator on *','date')),
+    c.cancel_reason&&el('div',{className:'msg err'},'Cancelled: '+c.cancel_reason),
+    err&&el('div',{className:'msg err'},err),
+    ask&&el(SimpleReason,{title:'Cancel '+c.number,btn:'Cancel complaint',onClose:function(){setAsk(null);},onGo:function(why){return db.update('hx_complaints',c.id,{status:'cancelled',cancel_reason:why}).then(function(){props.onDone('Cancelled '+c.number);});}}),
+    el('div',{className:'row',style:{justifyContent:'space-between',marginTop:14}},
+      el('div',{className:'row',style:{gap:6}},
+        open&&canE&&el('button',{className:'btn ghost sm',onClick:function(){props.onEdit();}},'Edit details'),
+        open&&canE&&!fb&&el('button',{className:'btn ghost sm',disabled:busy,onClick:function(){save(c.status==='open'?{status:'investigating'}:null,'Saved.');}},c.status==='open'?'Save and start investigating':'Save'),
+        open&&canE&&el('button',{className:'btn sm',disabled:busy,onClick:function(){save({status:'closed'},'Closed '+c.number);}},'Close'),
+        open&&canE&&!fb&&!c.deviation_id&&el(LinkDeviation,{state:st,license:lic,prefill:{title:'Complaint '+c.number+': '+c.title,dept:'Compliance',category:c.type==='adverse_event'?'Product quality':'Product quality',priority:c.priority,description:c.description,product_affected:c.product,lot_number:c.lot_number},
+          onLinked:function(r){db.update('hx_complaints',c.id,{deviation_id:r.id}).then(function(){props.onDone('Saved. Linked '+r.number);}).catch(function(e){setErr(cmpErr(e));});}}),
+        open&&!fb&&c.batch_id&&can('holds',2)&&el('button',{className:'btn danger sm',onClick:function(){props.onHold();}},'Put batch on hold'),
+        !open&&canF&&el('button',{className:'btn ghost sm',onClick:function(){db.update('hx_complaints',c.id,{status:'investigating'}).then(function(){props.onDone('Reopened '+c.number);}).catch(function(e){setErr(cmpErr(e));});}},'Reopen'),
+        open&&canF&&el('button',{className:'btn danger sm',onClick:function(){setAsk(true);}},'Cancel'),
+        el('button',{className:'btn ghost sm',onClick:function(){printRecords(c.number,[cmpHtml(c,lic)]);}},'Print')),
+      el('button',{className:'btn ghost sm',onClick:props.onClose},'Close window')));
+}
+function ComplaintsPage(props){
+  const st=props.state,lic=props.license,lid=lic?lic.id:'';
+  const[rows,setRows]=useState(null);const[batches,setBatches]=useState([]);const[msg,setMsg]=useState('');const[tab,setTab]=useState('list');
+  const[q,setQ]=useState('');const[sf,setSf]=useState('OPEN');const[tf,setTf]=useState('ALL');const[selId,setSelId]=useState(null);const[modal,setModal]=useState(null);
+  const load=useCallback(function(){if(!lid){setRows([]);return;}const enc=encodeURIComponent;
+    db.get('hx_complaints','license_id=eq.'+enc(lid)+'&select=*&order=received_on.desc,number.desc&limit=5000').then(function(r){setRows((r||[]).filter(function(x){return x.license_id===lid;}));}).catch(function(e){setMsg(cmpErr(e));setRows([]);});
+    db.get('hx_batches','license_id=eq.'+enc(lid)+'&voided=eq.false&select=id,batch_number,batch_type,sku,flavor,license_id,voided&order=created_at.desc&limit=1000').then(function(r){setBatches((r||[]).filter(function(b){return b.license_id===lid&&!b.voided;}));}).catch(function(){setBatches([]);});},[lid]);
+  useEffect(load,[load]);
+  if(!st||!lic)return el('div',null,el('h1',null,el('span',{className:'g'},'Complaints')),el('div',{className:'empty'},'Pick a state and a license at the top first.'));
+  if(!rows)return el('div',{className:'muted'},'Loading...');
+  function done(t){setModal(null);if(t)setMsg(t);load();}
+  const y1=new Date(Date.now()-365*864e5).toISOString().slice(0,10),C=rows.filter(function(c){return c.type!=='feedback'&&c.status!=='cancelled';}),C12=C.filter(function(c){return c.received_on>=y1;});
+  const FB=rows.filter(function(c){return c.type==='feedback'&&c.received_on>=y1&&c.rating;}),avgR=FB.length?Math.round(FB.reduce(function(n,c){return n+c.rating;},0)*10/FB.length)/10:null;
+  const closed=C12.filter(function(c){return c.status==='closed'&&c.closed_at;}),avgDays=closed.length?Math.round(closed.reduce(function(n,c){return n+Math.max(0,(new Date(c.closed_at)-new Date(c.received_on+'T00:00:00'))/864e5);},0)/closed.length):null;
+  const sel=rows.find(function(c){return c.id===selId;});
+  const stat=function(l,v,tone,sub){return el('div',{key:l,className:'card gold',style:{marginBottom:0}},el('div',{className:'k'},l),el('div',{className:'v',style:{fontSize:26,color:tone||'var(--text)'}},v),sub&&el('div',{className:'muted',style:{fontSize:11,marginTop:2}},sub));};
+  const shown=rows.filter(function(c){if(sf==='OPEN'&&!cmpOpen(c))return false;if(sf!=='ALL'&&sf!=='OPEN'&&c.status!==sf)return false;if(tf!=='ALL'&&c.type!==tf)return false;
+    if(q&&(c.number+' '+c.title+' '+c.product+' '+c.lot_number+' '+c.customer+' '+c.complainant+' '+c.tag).toLowerCase().indexOf(q.toLowerCase())<0)return false;return true;});
+  const months=[];for(let i=11;i>=0;i--){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);const k=d.toISOString().slice(0,7);months.push({k:k,label:d.toLocaleDateString(undefined,{month:'short'}),a:C.filter(function(c){return c.received_on.slice(0,7)===k;}).length,b:C.filter(function(c){return c.closed_at&&String(c.closed_at).slice(0,7)===k;}).length});}
+  const cnt=function(key){const m={};C12.forEach(function(c){const v=c[key]||'(not set)';m[v]=(m[v]||0)+1;});return Object.keys(m).map(function(k){return [k,m[k]];}).sort(function(a,b){return b[1]-a[1];}).slice(0,8);};
+  const byBatch=cnt('lot_number').filter(function(r){return r[0]!=='(not set)';}),repeat=byBatch.filter(function(r){return r[1]>1;});
+  function printLog(){const e=esc3;printRecords('Complaint log - '+lic.name,['<div class="hxrec"><h2>Complaint log</h2><div class="m">'+e(lic.name)+' \u00b7 CSQ 1.7 \u00b7 printed '+e(new Date().toLocaleString())+'</div><table><tr><th>Number</th><th>Received</th><th>Type</th><th>Title</th><th>Product / lot</th><th>Investigator</th><th>Resolution / corrective action</th><th>Status</th></tr>'+
+    rows.map(function(c){return '<tr><td>'+e(c.number)+'</td><td>'+e(c.received_on)+'</td><td>'+e(CMP_TYPES[c.type])+'</td><td>'+e(c.title)+(c.rating?' ('+c.rating+'/5)':'')+'</td><td>'+e([c.product,c.lot_number].filter(Boolean).join(' \u00b7 '))+'</td><td>'+e(c.investigator)+'</td><td>'+e(c.resolution)+(c.corrective_action?'<br>'+e(c.corrective_action):'')+(c.deviation_number?'<br>'+e(c.deviation_number):'')+'</td><td>'+e(CMP_STATUS[c.status])+'</td></tr>';}).join('')+'</table></div>']);}
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,el('span',{className:'g'},'Complaints')),el('div',{className:'sub'},lic.name+' \u00b7 complaints, returns, adverse events and customer feedback (CSQ 1.7, 5.3)')),
+      el('div',{className:'row'},el('button',{className:'btn ghost',onClick:printLog},'Complaint log'),el('button',{className:'btn ghost',onClick:function(){setModal({t:'form',type:'feedback'});}},'+ Feedback'),el('button',{className:'btn',onClick:function(){setModal({t:'form'});}},'+ Log complaint'))),
+    msg&&el('div',{className:/^(Logged|Saved|Closed|Reopened|Cancelled|Put on hold)/.test(msg)?'msg':'msg err'},msg),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',marginBottom:14}},
+      stat('Open',C.filter(cmpOpen).length,C.some(cmpOpen)?'var(--gold-hi)':'var(--green)'),stat('Overdue',C.filter(cmpLate).length,C.some(cmpLate)?'var(--red)':'var(--green)'),
+      stat('Complaints (12 months)',C12.length,null,C12.filter(function(c){return c.type==='adverse_event';}).length+' adverse events'),stat('Average days to close',avgDays==null?'-':avgDays),
+      stat('Customer satisfaction',avgR==null?'-':avgR+' / 5',avgR==null?null:avgR>=4?'var(--green)':avgR>=3?'var(--gold-hi)':'var(--red)',FB.length+' feedback (12 months)')),
+    repeat.length>0&&el('div',{className:'msg err',style:{marginBottom:12}},'Repeat complaints on the same lot: '+repeat.map(function(r){return r[0]+' ('+r[1]+')';}).join(', ')),
+    el('div',{className:'tabs',style:{marginBottom:12}},[['list','Complaints'],['trends','Trends']].map(function(x){return el('button',{key:x[0],className:tab===x[0]?'on':'',onClick:function(){setTab(x[0]);}},x[1]);})),
+    tab==='trends'?el('div',null,
+      el('div',{className:'card'},el('h3',null,'By month (last 12 months)'),el(QmsBarChart,{data:months,two:true,la:'Received',lb:'Closed'})),
+      el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(320px,1fr))'}},
+        el('div',{className:'card'},el('h3',null,'By category'),el(QmsHBars,{rows:cnt('category')})),el('div',{className:'card'},el('h3',null,'By type'),el(QmsHBars,{rows:cnt('type').map(function(r){return [CMP_TYPES[r[0]]||r[0],r[1]];})})),
+        el('div',{className:'card'},el('h3',null,'By lot / batch'),el(QmsHBars,{rows:byBatch})),el('div',{className:'card'},el('h3',null,'By customer'),el(QmsHBars,{rows:cnt('customer')})))):
+    el('div',null,
+      el('div',{className:'row',style:{marginBottom:12}},el('input',{value:q,placeholder:'Search number, product, lot, customer',style:{width:260},onChange:function(e){setQ(e.target.value);}}),
+        el('select',{value:sf,onChange:function(e){setSf(e.target.value);}},el('option',{value:'OPEN'},'Open'),el('option',{value:'ALL'},'Every status'),Object.keys(CMP_STATUS).map(function(k){return el('option',{key:k,value:k},CMP_STATUS[k]);})),
+        el('select',{value:tf,onChange:function(e){setTf(e.target.value);}},el('option',{value:'ALL'},'Every type'),Object.keys(CMP_TYPES).map(function(k){return el('option',{key:k,value:k},CMP_TYPES[k]);}))),
+      !shown.length?el('div',{className:'empty'},rows.length?'Nothing matches.':'No complaints on record for '+lic.name+'.'):
+      shown.map(function(c){return el('div',{key:c.id,className:'card',style:{cursor:'pointer',padding:'12px 16px',borderLeft:'3px solid '+(c.type==='adverse_event'?'var(--red)':cmpOpen(c)?'var(--gold)':'var(--green)')},onClick:function(){setSelId(c.id);}},
+        el('div',{className:'row',style:{justifyContent:'space-between',flexWrap:'nowrap'}},
+          el('div',{style:{minWidth:0}},el('div',{className:'row',style:{gap:6,marginBottom:4}},el('b',null,c.number),el('span',{className:'badge '+(cmpOpen(c)?'warn':c.status==='closed'?'ok':'off')},CMP_STATUS[c.status]),
+              el('span',{className:'badge '+(c.type==='adverse_event'?'bad':'off')},CMP_TYPES[c.type]),c.type!=='feedback'&&el('span',{className:'badge '+(c.priority==='critical'?'bad':'off')},QMS_PRIORITIES[c.priority]),cmpLate(c)&&el('span',{className:'badge bad'},'Overdue'),c.rating&&el('span',{className:'badge ok'},c.rating+' / 5')),
+            el('div',{style:{fontWeight:700}},c.title),el('div',{className:'muted',style:{fontSize:12}},[c.product&&'Product: '+c.product,c.lot_number&&'Lot '+c.lot_number,c.customer,c.investigator&&'Investigator: '+c.investigator].filter(Boolean).join(' \u00b7 '))),
+          el('div',{className:'muted',style:{fontSize:11,textAlign:'right',flex:'0 0 auto'}},c.received_on,c.due_date&&cmpOpen(c)&&el('div',{style:{color:cmpLate(c)?'var(--red)':''}},'Due '+c.due_date))));})),
+    sel&&!modal&&el(ComplaintDetail,{key:sel.id+sel.status,rec:sel,state:st,license:lic,onClose:function(){setSelId(null);},onDone:function(t){done(t);},onEdit:function(){setModal({t:'form',rec:sel});},
+      onHold:function(){setModal({t:'hold',prefill:{kind:'batch',batch_id:sel.batch_id,tag:sel.tag,source:'Complaint',reason:'Complaint '+sel.number+': '+sel.title}});}}),
+    modal&&modal.t==='form'&&el(ComplaintForm,{rec:modal.rec,type:modal.type,state:st,license:lic,batches:batches,onClose:function(){setModal(null);},onDone:function(r){if(r&&!modal.rec)setSelId(r.id);done(modal.rec?'Saved.':'Logged '+(r?r.number:''));}}),
+    modal&&modal.t==='hold'&&el(HoldForm,{state:st,license:lic,lots:[],batches:batches,prefill:modal.prefill,onClose:function(){setModal(null);},onDone:function(r){if(r&&sel)db.update('hx_complaints',sel.id,{hold_id:r.id}).catch(function(){});done('Put on hold: '+(r?r.number:''));}}));
+}
+function CmpDashCard(props){
+  const lid=props.license?props.license.id:'';const[d,setD]=useState(null);
+  useEffect(function(){if(!lid||!can('complaints',1)){setD(null);return;}let dead=false;
+    db.get('hx_complaints','license_id=eq.'+encodeURIComponent(lid)+'&select=type,status,due_date,rating,received_on,license_id').then(function(r){const a=(r||[]).filter(function(x){return x.license_id===lid&&x.type!=='feedback';});
+      if(!dead)setD({open:a.filter(cmpOpen).length,late:a.filter(cmpLate).length,ae:a.filter(function(x){return x.type==='adverse_event'&&cmpOpen(x);}).length});}).catch(function(){if(!dead)setD(null);});return function(){dead=true;};},[lid]);
+  if(!d)return null;
+  return el('div',{className:'card gold'},el('div',{className:'k'},'Complaints'),el('div',{className:'v',style:{color:d.late||d.ae?'var(--red)':d.open?'var(--gold-hi)':'var(--green)'}},d.open+' open'),
+    el('div',{className:'muted',style:{margin:'4px 0 8px'}},d.late+' overdue \u00b7 '+d.ae+' open adverse event'+(d.ae===1?'':'s')),
+    el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go('complaints');}},'Open complaints'));
+}
+
+/* ---------- Internal audits (Black Fox / Michigan audit fields + CSQ 1.5) ---------- */
+const IA_TYPES=['CSQ internal audit','METRC Audit','Packaging Audit','Security Audit','Training Audit','Testing Audit','SOP Compliance Audit','Equipment Calibration Audit','Sanitation Audit','Full Facility Audit','Custom'];
+const IA_RESULTS=['Conforming','Nonconforming','Observation','Not applicable'];
+const IA_STATUS={planned:'Planned',in_progress:'In progress',completed:'Completed',closed:'Closed',cancelled:'Cancelled'};
+const IA_SEV={critical:'Critical',major:'Major',minor:'Minor',observation:'Observation'};
+const IA_MOD_NAME={'1':'Module 1 \u00b7 Management','2A':'Module 2A \u00b7 cGMP','3A':'Module 3A \u00b7 Cultivation','3B':'Module 3B \u00b7 Extraction','3C':'Module 3C \u00b7 Manufacturing','4A':'Module 4A \u00b7 HACCP','5':'Module 5 \u00b7 QMS'};
+function iaClauses(level,scopes){return CSQ_MFG_CLAUSES.filter(function(c){return stdLevelOf(c[1])<=(level||1)&&stdModOk(c[1],scopes||['3C','3B']);}).map(function(c){return {clause:c[0],module:c[1],title:c[2]};});}
+// last result per clause from audits done in the last 12 months
+function iaCoverage(audits,level,scopes){const y1=new Date(Date.now()-365*864e5).toISOString().slice(0,10),last={};
+  audits.filter(function(a){return (a.status==='completed'||a.status==='closed')&&a.audit_date&&a.audit_date>=y1;}).forEach(function(a){(a.clauses||[]).forEach(function(x){if(x.result&&(!last[x.clause]||last[x.clause].date<a.audit_date))last[x.clause]={date:a.audit_date,result:x.result,number:a.number,auditor:a.auditor_name};});});
+  const all=iaClauses(level,scopes);return {all:all,last:last,done:all.filter(function(c){return last[c.clause];}).length};}
+function AuditForm(props){
+  const x=props.rec||{},lic=props.license,st=props.state,level=props.level||1;
+  const[f,setF]=useState({title:x.title||'',audit_type:x.audit_type||'CSQ internal audit',dept:x.dept||'Compliance',planned_date:x.planned_date||todayStr(),audit_date:x.audit_date||'',auditor_name:x.auditor_name||'',auditor_qualification:x.auditor_qualification||'',
+    independent:!!x.independent,scope:x.scope||'',clauses:(x.clauses||[]).map(function(c){return {...c};}),recommendations:x.recommendations||'',conclusion:x.conclusion||'',next_audit_date:x.next_audit_date||'',attachments:(x.attachments||[]).slice()});
+  const[err,setErr]=useState('');const[busy,setBusy]=useState(false);const[add,setAdd]=useState('');
+  function set(k,v){setF(function(p){return {...p,[k]:v};});}
+  const all=iaClauses(level,props.scopes),have={};f.clauses.forEach(function(c){have[c.clause]=1;});
+  function addMany(list){setF(function(p){const h={};p.clauses.forEach(function(c){h[c.clause]=1;});return {...p,clauses:p.clauses.concat(list.filter(function(c){return !h[c.clause];}).map(function(c){return {clause:c.clause,title:c.title,result:'',evidence:''};}))};});}
+  function setC(i,k,v){setF(function(p){return {...p,clauses:p.clauses.map(function(c,j){return j===i?{...c,[k]:v}:c;})};});}
+  async function save(){setErr('');if(!f.title.trim()){setErr('Enter the audit title.');return;}setBusy(true);
+    const rec={title:f.title.trim(),audit_type:f.audit_type,dept:f.dept,planned_date:f.planned_date||null,audit_date:f.audit_date||null,auditor_name:f.auditor_name.trim(),auditor_qualification:f.auditor_qualification.trim(),independent:f.independent,scope:f.scope.trim(),
+      clauses:f.clauses,recommendations:f.recommendations.trim(),conclusion:f.conclusion.trim(),next_audit_date:f.next_audit_date||null,attachments:f.attachments};
+    try{const out=x.id?await db.update('hx_audits',x.id,rec):await db.insert('hx_audits',{...rec,id:newId('ia'),state_id:st.id,license_id:lic.id,status:'planned'});props.onDone(out&&out[0]);}catch(e){setErr(cmpErr(e));}setBusy(false);}
+  const inp=function(k,l,ph,type){return el(Field,{label:l},el('input',{type:type||'text',value:f[k],placeholder:ph||'',onChange:function(e){set(k,e.target.value);}}));};
+  const mods=Object.keys(IA_MOD_NAME).filter(function(m){return all.some(function(c){return c.module===m;});});
+  return el(Modal,{title:(x.id?'Edit audit '+x.number:'Plan an internal audit')+' \u00b7 '+lic.name,wide:true,onClose:props.onClose},
+    el('div',{className:'grid',style:{gridTemplateColumns:'2fr 1fr 1fr',gap:10}},inp('title','Audit title *','e.g. CSQ Module 2A audit - Q4 2026'),
+      el(Field,{label:'Audit type'},el('select',{value:f.audit_type,onChange:function(e){set('audit_type',e.target.value);}},IA_TYPES.map(function(t){return el('option',{key:t,value:t},t);}))),
+      el(Field,{label:'Department'},el('select',{value:f.dept,onChange:function(e){set('dept',e.target.value);}},QMS_DEPTS.map(function(d){return el('option',{key:d,value:d},d);})))),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:10}},inp('planned_date','Planned date','','date'),inp('audit_date','Audit date (done)','','date'),inp('auditor_name','Lead auditor',''),inp('auditor_qualification','Auditor qualification','e.g. CSQ internal auditor course 2026')),
+    el('label',{className:'ck',style:{margin:'4px 0 10px'}},el('input',{type:'checkbox',checked:f.independent,onChange:function(e){set('independent',e.target.checked);}}),el('span',null,'The auditor does not audit their own work (CSQ 1.5 c)')),
+    el(Field,{label:'Audit scope'},el('textarea',{rows:2,value:f.scope,placeholder:'What areas/processes were reviewed?',onChange:function(e){set('scope',e.target.value);}})),
+    el('div',{className:'k',style:{margin:'8px 0 6px'}},'CSQ checklist ('+f.clauses.length+' clauses)'),
+    el('div',{className:'row',style:{gap:6,marginBottom:8}},mods.map(function(m){const n=all.filter(function(c){return c.module===m&&!have[c.clause];}).length;return el('button',{key:m,className:'btn ghost sm',disabled:!n,onClick:function(){addMany(all.filter(function(c){return c.module===m;}));}},'+ '+IA_MOD_NAME[m]+' ('+n+')');}),
+      el('select',{value:add,onChange:function(e){const c=all.find(function(z){return z.clause===e.target.value;});if(c)addMany([c]);setAdd('');}},el('option',{value:''},'+ One clause...'),all.filter(function(c){return !have[c.clause];}).map(function(c){return el('option',{key:c.clause,value:c.clause},c.clause+' '+c.title);}))),
+    f.clauses.length>0&&el('div',{style:{maxHeight:320,overflowY:'auto',border:'1px solid var(--line)',borderRadius:8,padding:'4px 8px'}},f.clauses.map(function(c,i){return el('div',{key:c.clause,className:'grid',style:{gridTemplateColumns:'2.2fr 1fr 2fr auto',gap:6,alignItems:'center',padding:'4px 0',borderBottom:'1px dashed var(--line)'}},
+      el('div',{style:{fontSize:12}},el('b',null,c.clause),' '+(c.title||'')),
+      el('select',{value:c.result||'',style:{color:c.result==='Nonconforming'?'var(--red)':c.result==='Conforming'?'var(--green)':''},onChange:function(e){setC(i,'result',e.target.value);}},el('option',{value:''},'(result)'),IA_RESULTS.map(function(r){return el('option',{key:r,value:r},r);})),
+      el('input',{value:c.evidence||'',placeholder:'Evidence seen',onChange:function(e){setC(i,'evidence',e.target.value);}}),
+      el('button',{className:'btn ghost sm',onClick:function(){setF(function(p){return {...p,clauses:p.clauses.filter(function(_,j){return j!==i;})};});}},'\u00d7'));})),
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr',gap:10,marginTop:10}},
+      el(Field,{label:'Recommendations'},el('textarea',{rows:2,value:f.recommendations,onChange:function(e){set('recommendations',e.target.value);}})),el(Field,{label:'Conclusion'},el('textarea',{rows:2,value:f.conclusion,onChange:function(e){set('conclusion',e.target.value);}}))),
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 2fr',gap:10}},inp('next_audit_date','Next audit date','','date'),el('div',null,el('div',{className:'k',style:{marginTop:4}},'Attachments'),el(FileList,{files:f.attachments,folder:'audits/'+lic.id,label:'+ Attach',onErr:setErr,onChange:function(v){set('attachments',v);}}))),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:save},x.id?'Save':'Save audit')));
+}
+function FindingForm(props){
+  const a=props.audit,x=props.rec||{};const nc=(a.clauses||[]).filter(function(c){return c.result==='Nonconforming'||c.result==='Observation';});
+  const[f,setF]=useState({clause:x.clause||props.clause||(nc[0]?nc[0].clause:''),severity:x.severity||'minor',description:x.description||'',corrective_action:x.corrective_action||'',owner_name:x.owner_name||'',due_date:x.due_date||trAddMonths(todayStr(),1)});
+  const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  async function go(){setErr('');if(!f.description.trim()){setErr('Describe the finding.');return;}setBusy(true);const rec={...f,description:f.description.trim(),corrective_action:f.corrective_action.trim(),owner_name:f.owner_name.trim(),due_date:f.due_date||null};
+    try{x.id?await db.update('hx_audit_findings',x.id,rec):await db.insert('hx_audit_findings',{...rec,id:newId('fnd'),state_id:a.state_id,license_id:a.license_id,audit_id:a.id});props.onDone();}catch(e){setErr(cmpErr(e));}setBusy(false);}
+  return el(Modal,{title:(x.id?'Edit finding':'Record a finding')+' \u00b7 '+a.number,onClose:props.onClose},
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr',gap:10}},
+      el(Field,{label:'Clause'},el('select',{value:f.clause,onChange:function(e){setF({...f,clause:e.target.value});}},el('option',{value:''},'(general)'),(a.clauses||[]).map(function(c){return el('option',{key:c.clause,value:c.clause},c.clause+(c.result?' \u00b7 '+c.result:''));}))),
+      el(Field,{label:'Severity'},el('select',{value:f.severity,onChange:function(e){setF({...f,severity:e.target.value});}},Object.keys(IA_SEV).map(function(k){return el('option',{key:k,value:k},IA_SEV[k]);})))),
+    el(Field,{label:'Finding *'},el('textarea',{rows:3,value:f.description,onChange:function(e){setF({...f,description:e.target.value});}})),
+    el(Field,{label:'Corrective action required'},el('textarea',{rows:2,value:f.corrective_action,onChange:function(e){setF({...f,corrective_action:e.target.value});}})),
+    el('div',{className:'grid',style:{gridTemplateColumns:'2fr 1fr',gap:10}},el(Field,{label:'Owner'},el('input',{value:f.owner_name,onChange:function(e){setF({...f,owner_name:e.target.value});}})),el(Field,{label:'Due date'},el('input',{type:'date',value:f.due_date,onChange:function(e){setF({...f,due_date:e.target.value});}}))),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:go},'Save finding')));
+}
+function iaHtml(a,F,lic){const e=esc3;
+  let h='<div class="hxrec"><h2>'+e(a.number)+' \u00b7 '+e(a.title)+'</h2><div class="m">'+e(lic.name)+' \u00b7 CSQ 1.5 internal audit report \u00b7 printed '+e(new Date().toLocaleString())+'</div><table>'+
+    [['Type / department',a.audit_type+' \u00b7 '+a.dept],['Status',IA_STATUS[a.status]+(a.closed_by?' by '+a.closed_by:'')],['Planned / done',(a.planned_date||'-')+' / '+(a.audit_date||'-')],['Lead auditor',a.auditor_name+(a.auditor_qualification?' ('+a.auditor_qualification+')':'')],
+     ['Independent of the area',a.independent?'Yes':'NOT CONFIRMED'],['Scope',a.scope],['Recommendations',a.recommendations],['Conclusion',a.conclusion],['Results shared with',a.shared_with+(a.shared_on?' on '+a.shared_on:'')],['Next audit',a.next_audit_date]]
+    .filter(function(r){return r[1]&&String(r[1]).trim();}).map(function(r){return '<tr><th>'+e(r[0])+'</th><td>'+e(r[1])+'</td></tr>';}).join('')+'</table>';
+  if((a.clauses||[]).length)h+='<table><tr class="sec"><td colspan="3">Checklist</td></tr><tr><th>Clause</th><th>Result</th><th>Evidence</th></tr>'+(a.clauses||[]).map(function(c){return '<tr><td>'+e(c.clause+' '+(c.title||''))+'</td><td class="'+(c.result==='Nonconforming'?'bad':c.result==='Conforming'?'ok':'')+'">'+e(c.result||'-')+'</td><td>'+e(c.evidence||'')+'</td></tr>';}).join('')+'</table>';
+  h+='<table><tr class="sec"><td colspan="5">Findings</td></tr><tr><th>Clause / severity</th><th>Finding</th><th>Corrective action / deviation</th><th>Owner / due</th><th>Status / verification</th></tr>'+(F.length?F.map(function(x){return '<tr><td>'+e(x.clause)+'<br>'+e(IA_SEV[x.severity])+'</td><td>'+e(x.description)+'</td><td>'+e(x.corrective_action)+(x.deviation_number?'<br>'+e(x.deviation_number):'')+'</td><td>'+e(x.owner_name)+'<br>'+e(x.due_date||'')+'</td><td class="'+(x.status==='closed'?'ok':'bad')+'">'+e(x.status)+(x.verification?'<br>'+e(x.verification):'')+'</td></tr>';}).join(''):'<tr><td colspan="5">No findings</td></tr>')+'</table></div>';
+  return h;}
+function AuditDetail(props){
+  const a=props.rec,F=props.findings,lic=props.license,st=props.state,canE=can('intaudits',2),canF=can('intaudits',3),live=a.status!=='closed'&&a.status!=='cancelled';
+  const[err,setErr]=useState('');const[ask,setAsk]=useState(null);const[share,setShare]=useState({shared_with:a.shared_with||'',shared_on:a.shared_on||todayStr()});
+  function upd(rec,msg){setErr('');return db.update('hx_audits',a.id,rec).then(function(){props.onDone(msg);}).catch(function(e){setErr(cmpErr(e));});}
+  const nc=(a.clauses||[]).filter(function(c){return c.result==='Nonconforming';}),noF=nc.filter(function(c){return !F.some(function(x){return x.clause===c.clause;});});
+  const res={};(a.clauses||[]).forEach(function(c){res[c.result||'(no result)']=(res[c.result||'(no result)']||0)+1;});
+  return el(Modal,{title:a.number+' \u00b7 '+a.title,wide:true,onClose:props.onClose},
+    el('div',{className:'row',style:{gap:6,marginBottom:10}},el('span',{className:'badge '+(a.status==='closed'?'ok':a.status==='cancelled'?'off':'warn')},IA_STATUS[a.status]),el('span',{className:'badge off'},a.audit_type),el('span',{className:'badge off'},a.dept),
+      a.independent?el('span',{className:'badge ok'},'Independent auditor'):el('span',{className:'badge bad'},'Independence not confirmed')),
+    el('div',{className:'card gold',style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:10,padding:'10px 14px'}},
+      [['Planned',a.planned_date],['Done',a.audit_date],['Lead auditor',a.auditor_name],['Qualification',a.auditor_qualification],['Next audit',a.next_audit_date],['Shared with',a.shared_with?a.shared_with+' \u00b7 '+a.shared_on:'']].filter(function(p){return p[1];}).map(function(p){return el('div',{key:p[0]},el('div',{className:'k'},p[0]),el('div',{style:{fontSize:13}},p[1]));})),
+    a.scope&&el('div',{style:{fontSize:13,marginBottom:8}},el('b',null,'Scope: '),a.scope),
+    (a.clauses||[]).length>0&&el('div',null,el('div',{className:'k',style:{margin:'8px 0 6px'}},'Checklist \u00b7 '+Object.keys(res).map(function(k){return res[k]+' '+k.toLowerCase();}).join(' \u00b7 ')),
+      el('div',{style:{maxHeight:240,overflowY:'auto'}},(a.clauses||[]).map(function(c){return el('div',{key:c.clause,className:'row',style:{gap:8,fontSize:12,padding:'3px 0',borderBottom:'1px dashed var(--line)',flexWrap:'nowrap'}},
+        el('b',{style:{width:60,flex:'0 0 auto'}},c.clause),el('span',{style:{flex:1}},c.title),el('span',{className:'badge '+(c.result==='Nonconforming'?'bad':c.result==='Conforming'?'ok':c.result?'warn':'off')},c.result||'No result'),c.evidence&&el('span',{className:'muted',style:{maxWidth:260}},c.evidence));}))),
+    noF.length>0&&el('div',{className:'msg err',style:{marginTop:8}},'Nonconforming clauses without a finding: '+noF.map(function(c){return c.clause;}).join(', ')),
+    el('div',{className:'row',style:{justifyContent:'space-between',margin:'12px 0 6px'}},el('div',{className:'k'},'Findings ('+F.length+', '+F.filter(function(x){return x.status==='open';}).length+' open)'),live&&canE&&el('button',{className:'btn ghost sm',onClick:function(){props.onFinding(null,noF[0]?noF[0].clause:'');}},'+ Finding')),
+    F.map(function(x){const late=x.status==='open'&&x.due_date&&x.due_date<todayStr();return el('div',{key:x.id,className:'card',style:{padding:'10px 12px',marginBottom:6,borderLeft:'3px solid '+(x.status==='closed'?'var(--green)':x.severity==='critical'?'var(--red)':'var(--gold)')}},
+      el('div',{className:'row',style:{gap:6,marginBottom:4}},el('span',{className:'badge '+(x.severity==='critical'?'bad':x.severity==='major'?'warn':'off')},IA_SEV[x.severity]),x.clause&&el('b',null,x.clause),el('span',{className:'badge '+(x.status==='closed'?'ok':'warn')},x.status),late&&el('span',{className:'badge bad'},'Overdue'),x.deviation_number&&el('span',{className:'badge off'},x.deviation_number)),
+      el('div',{style:{fontSize:13,fontWeight:600}},x.description),x.corrective_action&&el('div',{className:'muted',style:{fontSize:12}},'Required: '+x.corrective_action),
+      el('div',{className:'muted',style:{fontSize:11}},[x.owner_name&&'Owner '+x.owner_name,x.due_date&&'due '+x.due_date,x.closed_by&&'closed by '+x.closed_by+' \u00b7 '+x.verification].filter(Boolean).join(' \u00b7 ')),
+      x.status==='open'&&live&&canE&&el('div',{className:'row',style:{gap:6,marginTop:6}},el('button',{className:'btn ghost sm',onClick:function(){props.onFinding(x);}},'Edit'),
+        !x.deviation_id&&x.severity!=='observation'&&el(LinkDeviation,{state:st,license:lic,label:'Raise deviation (CAPA)',prefill:{title:'Audit finding '+a.number+(x.clause?' '+x.clause:'')+': '+x.description.slice(0,60),dept:a.dept||'Compliance',category:'Documentation',priority:x.severity==='critical'?'critical':x.severity==='major'?'major':'minor',description:x.description},
+          onLinked:function(r){db.update('hx_audit_findings',x.id,{deviation_id:r.id}).then(function(){props.onDone('Linked '+r.number);}).catch(function(e){setErr(cmpErr(e));});}}),
+        el('button',{className:'btn sm',onClick:function(){setAsk({t:'closef',f:x});}},'Close finding')),
+      x.status==='closed'&&canF&&live&&el('button',{className:'btn ghost sm',style:{marginTop:6},onClick:function(){db.update('hx_audit_findings',x.id,{status:'open'}).then(function(){props.onDone('Reopened finding');}).catch(function(e){setErr(cmpErr(e));});}},'Reopen'));}),
+    a.status==='completed'&&canF&&el('div',{className:'card',style:{padding:'10px 12px'}},el('div',{className:'k',style:{marginBottom:6}},'Share the results (CSQ 1.5 e)'),
+      el('div',{className:'grid',style:{gridTemplateColumns:'2fr 1fr',gap:10}},el(Field,{label:'Shared with'},el('input',{value:share.shared_with,placeholder:'e.g. Managers meeting, production team',onChange:function(e){setShare({...share,shared_with:e.target.value});}})),
+        el(Field,{label:'On'},el('input',{type:'date',value:share.shared_on,max:todayStr(),onChange:function(e){setShare({...share,shared_on:e.target.value});}})))),
+    err&&el('div',{className:'msg err'},err),
+    ask&&ask.t==='closef'&&el(SimpleReason,{title:'Close finding'+(ask.f.clause?' '+ask.f.clause:''),label:'How the correction was verified as effective',btn:'Close finding',onClose:function(){setAsk(null);},onGo:function(v){return db.update('hx_audit_findings',ask.f.id,{status:'closed',verification:v}).then(function(){setAsk(null);props.onDone('Finding closed');});}}),
+    ask&&ask.t==='cancel'&&el(SimpleReason,{title:'Cancel '+a.number,btn:'Cancel audit',onClose:function(){setAsk(null);},onGo:function(v){return db.update('hx_audits',a.id,{status:'cancelled',cancel_reason:v}).then(function(){props.onDone('Cancelled '+a.number);});}}),
+    el('div',{className:'row',style:{justifyContent:'space-between',marginTop:14}},
+      el('div',{className:'row',style:{gap:6}},
+        live&&canE&&el('button',{className:'btn ghost sm',onClick:props.onEdit},'Edit / checklist'),
+        a.status==='planned'&&canE&&el('button',{className:'btn ghost sm',onClick:function(){upd({status:'in_progress'},'Started '+a.number);}},'Start audit'),
+        (a.status==='planned'||a.status==='in_progress')&&canE&&el('button',{className:'btn sm',onClick:function(){upd({status:'completed'},'Completed '+a.number);}},'Complete audit'),
+        a.status==='completed'&&canF&&el('button',{className:'btn sm',onClick:function(){upd({status:'closed',shared_with:share.shared_with.trim(),shared_on:share.shared_on||null},'Closed '+a.number);}},'Close audit'),
+        !live&&canF&&el('button',{className:'btn ghost sm',onClick:function(){upd({status:'completed'},'Reopened '+a.number);}},'Reopen'),
+        live&&canF&&el('button',{className:'btn danger sm',onClick:function(){setAsk({t:'cancel'});}},'Cancel'),
+        el('button',{className:'btn ghost sm',onClick:function(){printRecords(a.number,[iaHtml(a,F,lic)]);}},'Print report')),
+      el('button',{className:'btn ghost sm',onClick:props.onClose},'Close window')));
+}
+function AuditsPage(props){
+  const st=props.state,lic=props.license,lid=lic?lic.id:'';
+  const[rows,setRows]=useState(null);const[finds,setFinds]=useState([]);const[level,setLevel]=useState(1);const[scopes,setScopes]=useState(csqScopes(null,props.license));const[msg,setMsg]=useState('');const[tab,setTab]=useState('audits');const[selId,setSelId]=useState(null);const[modal,setModal]=useState(null);const[cf,setCf]=useState('ALL');
+  const load=useCallback(function(){if(!lid){setRows([]);return;}const enc=encodeURIComponent;
+    db.get('hx_audits','license_id=eq.'+enc(lid)+'&select=*&order=created_at.desc').then(function(r){setRows((r||[]).filter(function(x){return x.license_id===lid;}));}).catch(function(e){setMsg(cmpErr(e));setRows([]);});
+    db.get('hx_audit_findings','license_id=eq.'+enc(lid)+'&select=*&order=created_at').then(function(r){setFinds((r||[]).filter(function(x){return x.license_id===lid;}));}).catch(function(){setFinds([]);});
+    db.get('hx_license_standards','license_id=eq.'+enc(lid)+'&select=target_level,status,scopes,license_id').then(function(r){const a=(r||[]).filter(function(x){return x.license_id===lid&&x.status!=='Withdrawn';})[0];setLevel(a?a.target_level:1);setScopes(csqScopes(a,lic));}).catch(function(){setLevel(1);setScopes(csqScopes(null,lic));});},[lid]);
+  useEffect(load,[load]);
+  if(!st||!lic)return el('div',null,el('h1',null,el('span',{className:'g'},'Internal Audits')),el('div',{className:'empty'},'Pick a state and a license at the top first.'));
+  if(!rows)return el('div',{className:'muted'},'Loading...');
+  function done(t){setModal(null);if(t)setMsg(t);load();}
+  const canE=can('intaudits',2),cov=iaCoverage(rows,level,scopes),pct=cov.all.length?Math.round(cov.done*100/cov.all.length):0;
+  const openF=finds.filter(function(f){const a=rows.find(function(x){return x.id===f.audit_id;});return f.status==='open'&&a&&a.status!=='cancelled';}),lateF=openF.filter(function(f){return f.due_date&&f.due_date<todayStr();});
+  const next=rows.filter(function(a){return a.status==='planned'&&a.planned_date;}).sort(function(a,b){return a.planned_date<b.planned_date?-1:1;})[0];
+  const sel=rows.find(function(a){return a.id===selId;});
+  const stat=function(l,v,tone,sub){return el('div',{key:l,className:'card gold',style:{marginBottom:0}},el('div',{className:'k'},l),el('div',{className:'v',style:{fontSize:26,color:tone||'var(--text)'}},v),sub&&el('div',{className:'muted',style:{fontSize:11,marginTop:2}},sub));};
+  let body;
+  if(tab==='coverage'){
+    const list=cov.all.filter(function(c){const l=cov.last[c.clause];if(cf==='MISS')return !l;if(cf==='NC')return l&&l.result==='Nonconforming';return true;});
+    body=el('div',null,
+      el('div',{className:'card'},el('div',{className:'row',style:{justifyContent:'space-between'}},el('h3',null,'Annual audit program \u00b7 '+csqPartNames(scopes).join(' + ')+' \u00b7 Level '+level+' ('+cov.all.length+' clauses)'),el('b',{style:{color:pct===100?'var(--green)':pct>=50?'var(--gold-hi)':'var(--red)'}},pct+'% audited in the last 12 months')),
+        el('div',{style:{height:10,background:'#1d1d1d',borderRadius:5,overflow:'hidden',margin:'6px 0 10px'}},el('div',{style:{width:pct+'%',height:'100%',background:'var(--gold-grad)'}})),
+        el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:8}},Object.keys(IA_MOD_NAME).filter(function(m){return cov.all.some(function(c){return c.module===m;});}).map(function(m){const t=cov.all.filter(function(c){return c.module===m;}),d=t.filter(function(c){return cov.last[c.clause];}).length;
+          return el('div',{key:m},el('div',{style:{fontSize:12}},IA_MOD_NAME[m]+' \u00b7 '+d+' / '+t.length),el('div',{style:{height:6,background:'#1d1d1d',borderRadius:3,overflow:'hidden',marginTop:3}},el('div',{style:{width:(d*100/t.length)+'%',height:'100%',background:d===t.length?'var(--green)':'var(--gold)'}})));}))),
+      el('div',{className:'row',style:{marginBottom:10}},el('select',{value:cf,onChange:function(e){setCf(e.target.value);}},el('option',{value:'ALL'},'Every clause'),el('option',{value:'MISS'},'Not audited in 12 months'),el('option',{value:'NC'},'Nonconforming')),
+        canE&&cov.done<cov.all.length&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'form',rec:{title:'CSQ audit - clauses not yet audited',clauses:cov.all.filter(function(c){return !cov.last[c.clause];}).map(function(c){return {clause:c.clause,title:c.title,result:'',evidence:''};})},fresh:true});}},'Plan an audit of the '+(cov.all.length-cov.done)+' clauses not audited')),
+      el('div',{className:'card',style:{padding:0,overflowX:'auto'}},el('table',null,el('thead',null,el('tr',null,['Clause','Requirement','Last audited','Result','Audit','Auditor'].map(function(h){return el('th',{key:h},h);}))),
+        el('tbody',null,list.map(function(c){const l=cov.last[c.clause];return el('tr',{key:c.clause},el('td',null,el('b',null,c.clause)),el('td',null,c.title),el('td',null,l?l.date:el('span',{className:'badge bad'},'Not audited')),
+          el('td',null,l?el('span',{className:'badge '+(l.result==='Nonconforming'?'bad':l.result==='Conforming'?'ok':'warn')},l.result):'-'),el('td',null,l?l.number:''),el('td',null,l?l.auditor:''));})))));
+  }else{
+    body=!rows.length?el('div',{className:'empty'},'No internal audits yet. Plan one: CSQ requires every applicable clause to be audited every year by someone who does not audit their own work.'):
+      rows.map(function(a){const af=finds.filter(function(f){return f.audit_id===a.id;}),op=af.filter(function(f){return f.status==='open';}).length,ncs=(a.clauses||[]).filter(function(c){return c.result==='Nonconforming';}).length;
+        return el('div',{key:a.id,className:'card',style:{cursor:'pointer',padding:'12px 16px',borderLeft:'3px solid '+(a.status==='closed'?'var(--green)':a.status==='cancelled'?'var(--line)':'var(--gold)')},onClick:function(){setSelId(a.id);}},
+          el('div',{className:'row',style:{justifyContent:'space-between',flexWrap:'nowrap'}},
+            el('div',{style:{minWidth:0}},el('div',{className:'row',style:{gap:6,marginBottom:4}},el('b',null,a.number),el('span',{className:'badge '+(a.status==='closed'?'ok':a.status==='cancelled'?'off':'warn')},IA_STATUS[a.status]),el('span',{className:'badge off'},a.audit_type),
+                (a.clauses||[]).length>0&&el('span',{className:'badge off'},(a.clauses||[]).length+' clauses'),ncs>0&&el('span',{className:'badge bad'},ncs+' nonconforming'),op>0&&el('span',{className:'badge warn'},op+' open finding'+(op===1?'':'s'))),
+              el('div',{style:{fontWeight:700}},a.title),el('div',{className:'muted',style:{fontSize:12}},[a.auditor_name,af.length+' finding'+(af.length===1?'':'s')].filter(Boolean).join(' \u00b7 '))),
+            el('div',{className:'muted',style:{fontSize:11,textAlign:'right',flex:'0 0 auto'}},a.audit_date||('Planned '+(a.planned_date||'-')),a.next_audit_date&&el('div',null,'Next: '+a.next_audit_date))));});
+  }
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,el('span',{className:'g'},'Internal Audits')),el('div',{className:'sub'},lic.name+' \u00b7 every CSQ clause audited yearly, independent auditors, findings closed through CAPA (CSQ 1.5)')),
+      canE&&el('button',{className:'btn',onClick:function(){setModal({t:'form'});}},'+ Plan audit')),
+    msg&&el('div',{className:/^(Saved|Planned|Started|Completed|Closed|Reopened|Cancelled|Finding|Linked)/.test(msg)?'msg':'msg err'},msg),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',marginBottom:14}},
+      stat('CSQ clauses audited',pct+'%',pct===100?'var(--green)':pct>=50?'var(--gold-hi)':'var(--red)',cov.done+' of '+cov.all.length+' in the last 12 months'),
+      stat('Audits done (12 months)',rows.filter(function(a){return (a.status==='completed'||a.status==='closed')&&a.audit_date&&daysAgo(a.audit_date)<=365;}).length),
+      stat('Open findings',openF.length,openF.length?'var(--gold-hi)':'var(--green)'),stat('Overdue findings',lateF.length,lateF.length?'var(--red)':'var(--green)'),
+      stat('Next planned',next?next.planned_date:'None',next?null:'var(--red)',next?next.title:'')),
+    el('div',{className:'tabs',style:{marginBottom:12}},[['audits','Audits'],['coverage','Annual program (coverage)']].map(function(x){return el('button',{key:x[0],className:tab===x[0]?'on':'',onClick:function(){setTab(x[0]);}},x[1]);})),
+    body,
+    sel&&!modal&&el(AuditDetail,{key:sel.id+sel.status,rec:sel,findings:finds.filter(function(f){return f.audit_id===sel.id;}),state:st,license:lic,onClose:function(){setSelId(null);},onDone:function(t){done(t);},
+      onEdit:function(){setModal({t:'form',rec:sel});},onFinding:function(f,clause){setModal({t:'finding',rec:f,clause:clause});}}),
+    modal&&modal.t==='form'&&el(AuditForm,{rec:modal.fresh?{...modal.rec}:modal.rec,state:st,license:lic,level:level,scopes:scopes,onClose:function(){setModal(null);},onDone:function(r){if(r&&(!modal.rec||modal.fresh))setSelId(r.id);done(modal.rec&&!modal.fresh?'Saved.':'Planned '+(r?r.number:''));}}),
+    modal&&modal.t==='finding'&&sel&&el(FindingForm,{audit:sel,rec:modal.rec,clause:modal.clause,onClose:function(){setModal(null);},onDone:function(){done('Finding saved');}}));
+}
+function IaDashCard(props){
+  const lid=props.license?props.license.id:'';const[d,setD]=useState(null);
+  useEffect(function(){if(!lid||!can('intaudits',1)){setD(null);return;}let dead=false;const enc=encodeURIComponent;
+    Promise.all([db.get('hx_audits','license_id=eq.'+enc(lid)+'&select=id,status,audit_date,clauses,license_id'),db.get('hx_audit_findings','license_id=eq.'+enc(lid)+'&status=eq.open&select=id,license_id'),
+      db.get('hx_license_standards','license_id=eq.'+enc(lid)+'&select=target_level,status,scopes,license_id').catch(function(){return [];})]).then(function(r){
+      const a=(r[0]||[]).filter(function(x){return x.license_id===lid;}),ls=(r[2]||[]).filter(function(x){return x.license_id===lid&&x.status!=='Withdrawn';})[0],cov=iaCoverage(a,ls?ls.target_level:1,csqScopes(ls,props.license));
+      if(!dead)setD({pct:cov.all.length?Math.round(cov.done*100/cov.all.length):0,open:(r[1]||[]).filter(function(x){return x.license_id===lid;}).length});}).catch(function(){if(!dead)setD(null);});return function(){dead=true;};},[lid]);
+  if(!d)return null;
+  return el('div',{className:'card gold'},el('div',{className:'k'},'Internal audits'),el('div',{className:'v',style:{color:d.pct===100?'var(--green)':d.pct>=50?'var(--gold-hi)':'var(--red)'}},d.pct+'% audited'),
+    el('div',{className:'muted',style:{margin:'4px 0 8px'}},'CSQ clauses in the last 12 months \u00b7 '+d.open+' open finding'+(d.open===1?'':'s')),
+    el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go('intaudits');}},'Open audits'));
+}
+
+/* ---------- Training (Black Fox / Michigan SOP training matrix + CSQ 2A.13.2 training program) ---------- */
+const TRAIN_TOPICS=['Required by law','cGMP','cGACP','Extraction','Cannabis safety','Personnel hygiene & safety','Product defense','Job-specific','Safety','CSQ program','HACCP','Other'];
+const TRAIN_METHODS=['Classroom','On the job','Online course','Read and sign','External certification'];
+const TRAIN_MODES={everyone:'Everyone on the license',roles:'Chosen roles',at_least:'At least N people',optional:'Optional'};
+const TRAIN_STARTER=[
+  ['Regulatory compliance (state rules)','Required by law','The state cannabis rules that apply to each person\'s work (CSQ 1.3, 2A.13.2 g1).','everyone',12,false,1],
+  ['Current Good Manufacturing Practices (cGMP)','cGMP','cGMP principles for cannabis manufacturing (CSQ 2A.13.2 g2).','everyone',12,true,1],
+  ['Cannabis safety principles','Cannabis safety','Cannabis Safety 101 or an equivalent food safety course (CSQ 2A.13.2 g3).','everyone',12,true,1],
+  ['Personnel hygiene, handwashing and PPE','Personnel hygiene & safety','Hygiene, clothing and jewelry rules, handwashing, PPE (CSQ 2A.13.2 g4, 2A.13.4-2A.13.7).','everyone',12,false,1],
+  ['Product defense and security awareness','Product defense','Protecting product from theft and intentional adulteration (CSQ 1.9 f, 2A.13.2 g5).','everyone',12,false,1],
+  ['Chemical safety and SDS','Safety','Safe use and storage of chemicals, reading an SDS. Required for managers and sanitation.','optional',12,false,1,'managers+sanitation'],
+  ['CSQ Certification Program Overview','CSQ program','Manager training. At least one person responsible for CSQ conformance completes the CSQ Program Overview course or equivalent (CSQ 2A.13.2 h).','at_least',0,false,1,'managers'],
+  ['HACCP certification (International HACCP Alliance)','HACCP','Manager training. One person and one backup certified in an International HACCP Alliance approved course (CSQ 4A.2 b, Level 2).','at_least',0,false,2,'managers'],
+  ['Current Good Agricultural and Collection Practices (cGACP)','cGACP','Good practices for growing, harvesting, drying and curing (CSQ Standard for Cultivation 2A.13.2 and Module 3A). Cultivation licenses only.','everyone',12,true,1,null,'cultivation'],
+  ['Extraction safety and solvent controls','Extraction','Safe extraction and refinement: solvents and gases, equipment, solventless, residual solvents (CSQ Standard for Extraction, Module 3B). Manufacturing licenses.','optional',12,true,1,'extraction','manufacturing']];
+// starter courses for this license's operation
+function trStarterFor(lic){const op=licOp(lic);return TRAIN_STARTER.filter(function(s){return !s[8]||s[8]===op;});}
+// the law course is per state: Missouri licenses get Missouri rules, Michigan licenses get Michigan rules
+const TR_GENERIC_LAW='Regulatory compliance (state rules)';
+function trLawCourse(st){const n=(st&&st.name)||'State';return {name:n+' regulatory compliance (state rules)',description:'The '+n+' cannabis rules'+(st&&st.agency?' ('+st.agency+')':'')+' that apply to each person\'s work. Only for '+n+' licenses; train from the '+n+' Rulebook in Hendrix (CSQ 1.3, 2A.13.2 g1).'};}
+function trStarterNamed(s,st){return s[1]==='Required by law'?trLawCourse(st):{name:s[0],description:s[2]};}
+// shared courses (step 23): the same course at every license counts once per person.
+// csq:<topic> = every license in both states; law:<state> = every license of that state; custom:<name> = marked shared
+function trSlug(t){return String(t||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');}
+function trShareKey(s,st){return s[1]==='Required by law'?'law:'+((st&&st.id)||''):'csq:'+trSlug(s[1]);}
+function trShareLabel(c,st){const k=c&&c.share_key;if(!k)return '';return /^law:/.test(k)?'Shared \u00b7 all '+((st&&st.name)||'state')+' licenses':'Shared \u00b7 all licenses';}
+// insert rows; columns the database does not have yet (a newer SQL step not run) are dropped
+async function trInsertAll(rows){let rs=rows.slice();
+  for(let t=0;t<6;t++){try{return await db.insert('hx_training_courses',rs);}catch(e){const m=/Could not find the '([A-Za-z0-9_]+)' column/.exec(String(e&&e.message||e));if(!m)throw e;rs=rs.map(function(r){const x={...r};delete x[m[1]];return x;});}}}
+// training done for the same shared course at other licenses, shown as this license's course (the record stays where it was made)
+function trSharedMap(shared,courses){const out=[];(shared||[]).forEach(function(r){const c=(courses||[]).find(function(x){return x.share_key&&x.share_key===r.share_key;});
+  if(c)out.push({...r,course_id:c.id,src_course_id:r.course_id,shared:true,voided:false,trainer_name:(r.trainer_name||'')+' (at '+r.license_name+(r.state_name?', '+r.state_name:'')+')'});});return out;}
+async function trSharedGet(lid){try{return (await sb('rpc/hx_training_shared',{method:'POST',body:{p_lic:lid}}))||[];}catch(e){return [];}}
+// manager roles: any role whose name says manager, compliance, director, supervisor or owner
+function trManagerRoles(roles){return (roles||[]).filter(function(r){return /manager|compliance|director|supervisor|owner/i.test(r.name||'');});}
+// who a starter course is for: managers (and sanitation for chemicals) when those roles exist, otherwise its default
+function trStarterWho(s,roles){if(!s[7])return {required_mode:s[3],role_ids:[]};
+  if(s[7]==='extraction'){const ex=(roles||[]).filter(function(r){return /extract/i.test(r.name||'');});return ex.length?{required_mode:'roles',role_ids:ex.map(function(r){return r.id;})}:{required_mode:s[3],role_ids:[]};}
+  let rs=trManagerRoles(roles);
+  if(s[7]==='managers+sanitation')rs=rs.concat((roles||[]).filter(function(r){return /sanitation/i.test(r.name||'')&&rs.indexOf(r)<0;}));
+  return rs.length?{required_mode:'roles',role_ids:rs.map(function(r){return r.id;})}:{required_mode:s[3],role_ids:[]};}
+// courses that also show an "at least N people certified" count
+function trCounted(c){return c.required_mode==='at_least'||(c.required_mode==='roles'&&(c.topic==='CSQ program'||c.topic==='HACCP'));}
+// first visit by someone with Full access: create the CSQ courses; turn the starter manager courses into required manager training
+async function trAutoSetup(st,lic,C){
+  const roles=ACC.roles||[],out=[];
+  if(!C.length){const add=trStarterFor(lic).map(function(s,i){return {id:newId('crs')+i,state_id:st.id,license_id:lic.id,...trStarterNamed(s,st),topic:s[1],...trStarterWho(s,roles),refresher_months:s[4],assessment_required:s[5],min_people:s[6],sort:i,share_key:trShareKey(s,st)};});
+    await trInsertAll(add);out.push('Created the '+add.length+' CSQ training courses');}
+  else{const extra=trStarterFor(lic).filter(function(s){return s[8]&&!C.some(function(c){return c.name.trim().toLowerCase()===s[0].toLowerCase();});});
+    if(extra.length){await trInsertAll(extra.map(function(s,i){return {id:newId('crs')+i,state_id:st.id,license_id:lic.id,name:s[0],topic:s[1],description:s[2],...trStarterWho(s,roles),refresher_months:s[4],assessment_required:s[5],min_people:s[6],sort:C.length+i,share_key:trShareKey(s,st)};}));
+      out.push('Added '+extra.map(function(s){return s[0];}).join(', '));}
+    let n=0;for(const s of TRAIN_STARTER){if(!s[7]||(s[8]&&s[8]!==licOp(lic)))continue;const c=C.find(function(x){return x.name.trim().toLowerCase()===s[0].toLowerCase();});
+      if(!c||!(c.required_mode==='at_least'||c.required_mode==='optional')||(c.role_ids||[]).length)continue;const w=trStarterWho(s,roles);if(w.required_mode!=='roles')continue;
+      await db.update('hx_training_courses',c.id,{required_mode:'roles',role_ids:w.role_ids,description:s[2]});n++;}
+    if(n)out.push(n+' course'+(n===1?' is':'s are')+' now required manager training');
+    const law=C.find(function(x){return x.name.trim().toLowerCase()===TR_GENERIC_LAW.toLowerCase();}),L=trLawCourse(st);
+    if(law&&!C.some(function(x){return x.name.trim().toLowerCase()===L.name.toLowerCase();})){await db.update('hx_training_courses',law.id,L);out.push((out.length?'r':'R')+'egulatory course is now '+L.name);}
+    // step 23: link the starter courses made before sharing, so one pass counts at every license
+    let lk=0;if(C.some(function(c){return 'share_key' in c;}))for(const s of trStarterFor(lic)){const nm=[s[0],trStarterNamed(s,st).name].map(function(x){return x.toLowerCase();});
+      const c=C.find(function(x){return !x.share_key&&nm.indexOf(x.name.trim().toLowerCase())>=0;});if(!c)continue;
+      try{await db.update('hx_training_courses',c.id,{share_key:trShareKey(s,st)});lk++;}catch(e){break;}}
+    if(lk)out.push(lk+' course'+(lk===1?' is':'s are')+' now shared with your other licenses (one pass counts everywhere)');}
+  // online content: load the Hendrix starter lessons and quizzes as drafts (step 20)
+  let list=C;if(!C.length||out.some(function(x){return /^Added |now shared/.test(x);})){try{list=((await db.get('hx_training_courses','license_ids=cs.%7B'+encodeURIComponent(lic.id)+'%7D&select=*'))||[]).filter(function(c){return (c.license_ids||[c.license_id]).indexOf(lic.id)>=0;});}catch(e){list=[];}}
+  let d=0;for(const c of list){if(c.content_status!=='none')continue;const t=trContentFor(c);if(!t)continue;try{await trSaveContent(c,trStarterForm(t),false);d++;}catch(e){break;}}
+  if(d)out.push((out.length?'':'')+d+' online course'+(d===1?' is':'s are')+' ready to review and publish');
+  return out.join('. ');
+}
+function trErr(e){const m=String((e&&e.message)||e);return /hx_training/.test(m)&&/missing|does not exist|schema cache/i.test(m)?'Training is not set up yet - run hendrix_step15.sql in the Hendrix Supabase project.':m;}
+function trRequired(c,u){if(!c.active)return false;if(c.required_mode==='everyone')return true;if(c.required_mode==='roles')return (u.role_ids||[]).some(function(r){return (c.role_ids||[]).indexOf(r)>=0;});return false;}
+function trAddMonths(d,m){const x=new Date(d+'T12:00:00');x.setMonth(x.getMonth()+m);return x.toISOString().slice(0,10);}
+// best evidence for one person and one course: a training record, or (for read-and-sign courses) a signature on the SOP's current version
+function trCell(c,u,recs,acks,sops){
+  let best=null;
+  recs.forEach(function(r){if(r.course_id!==c.id||r.user_id!==u.id||r.voided||r.assessment==='Failed')return;if(!best||r.completed_on>best.on)best={on:r.completed_on,exp:r.expires_on,by:r.trainer_name,rec:r};});
+  if(c.sop_id){const s=(sops||[]).find(function(x){return x.id===c.sop_id;});if(s){const a=(acks||[]).find(function(k){return k.sop_id===s.id&&k.version===s.version&&k.user_id===u.id;});
+    if(a){const on=String(a.at).slice(0,10);if(!best||on>best.on)best={on:on,exp:c.refresher_months>0?trAddMonths(on,c.refresher_months):null,by:'Signed SOP v'+s.version,sop:true};}}}
+  const today=todayStr(),soon=trAddMonths(today,1);
+  if(!best)return {st:'missing'};
+  if(best.exp&&best.exp<today)return {st:'expired',...best};
+  if(best.exp&&best.exp<=soon)return {st:'due',...best};
+  return {st:'current',...best};
+}
+const TR_TONE={current:'var(--green)',due:'var(--gold)',expired:'var(--red)',missing:'var(--red)'};
+function trStats(courses,people,recs,acks,sops){
+  let req=0,ok=0,due=0,bad=0;const per={};
+  people.forEach(function(u){let r=0,o=0;courses.forEach(function(c){if(!trRequired(c,u))return;const x=trCell(c,u,recs,acks,sops);r++;if(x.st==='current'||x.st==='due')o++;if(x.st==='due')due++;if(x.st==='expired'||x.st==='missing')bad++;});
+    req+=r;ok+=o;per[u.id]={req:r,ok:o,pct:r?Math.round(o*100/r):100};});
+  const atLeast=courses.filter(function(c){return c.active&&trCounted(c);}).map(function(c){
+    const have=people.filter(function(u){const x=trCell(c,u,recs,acks,sops);return x.st==='current'||x.st==='due';});return {c:c,have:have,ok:have.length>=c.min_people};});
+  return {pct:req?Math.round(ok*100/req):null,req:req,ok:ok,due:due,bad:bad,per:per,atLeast:atLeast,full:people.filter(function(u){return per[u.id].req&&per[u.id].pct===100;}).length};
+}
+function TrainingCourseForm(props){
+  const c=props.course||{},st=props.state,lic=props.license;
+  const[f,setF]=useState({name:c.name||'',topic:c.topic||'Job-specific',description:c.description||'',required_mode:c.required_mode||'everyone',role_ids:(c.role_ids||[]).slice(),min_people:c.min_people||1,
+    refresher_months:c.refresher_months==null?12:c.refresher_months,assessment_required:!!c.assessment_required,sop_id:c.sop_id||'',active:c.active!==false,shared:!!c.share_key});
+  const fixedKey=/^(csq|law):/.test(c.share_key||'');
+  const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  function set(k,v){setF(function(p){return {...p,[k]:v};});}
+  async function save(){
+    setErr('');if(!f.name.trim()){setErr('Enter the course name.');return;}
+    const rec={name:f.name.trim(),topic:f.topic,description:f.description.trim(),required_mode:f.required_mode,role_ids:f.required_mode==='roles'?f.role_ids:[],min_people:Math.max(1,parseInt(f.min_people,10)||1),
+      refresher_months:Math.max(0,parseInt(f.refresher_months,10)||0),assessment_required:f.assessment_required,sop_id:f.sop_id||null,active:f.active};
+    if(!fixedKey&&(c.share_key||f.shared))rec.share_key=f.shared&&!f.sop_id?(c.share_key||'custom:'+trSlug(rec.name)):null;
+    setBusy(true);
+    try{if(c.id)await dbSave('hx_training_courses',c.id,rec);else await dbSave('hx_training_courses',null,{...rec,id:newId('crs'),state_id:st.id,license_id:lic.id,sort:props.count||0});props.onDone();}
+    catch(e){setErr(/hx_training_courses_name/.test(String(e.message))?'A course with that name already exists.':trErr(e));}
+    setBusy(false);
+  }
+  return el(Modal,{title:(c.id?'Edit course':'New course')+' \u00b7 '+lic.name,wide:true,onClose:props.onClose},
+    el('div',{className:'grid',style:{gridTemplateColumns:'2fr 1fr',gap:10}},
+      el(Field,{label:'Course name *'},el('input',{value:f.name,placeholder:'e.g. Cart filling machine operation',onChange:function(e){set('name',e.target.value);}})),
+      el(Field,{label:'Topic'},el('select',{value:f.topic,onChange:function(e){set('topic',e.target.value);}},TRAIN_TOPICS.map(function(t){return el('option',{key:t,value:t},t);})))),
+    el(Field,{label:'What it covers'},el('textarea',{rows:2,value:f.description,onChange:function(e){set('description',e.target.value);}})),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:10}},
+      el(Field,{label:'Who must take it'},el('select',{value:f.required_mode,onChange:function(e){set('required_mode',e.target.value);}},Object.keys(TRAIN_MODES).map(function(k){return el('option',{key:k,value:k},TRAIN_MODES[k]);}))),
+      trCounted(f)?el(Field,{label:f.required_mode==='roles'?'Certified people needed (at least)':'How many people (at least)'},el('input',{type:'number',min:1,value:f.min_people,onChange:function(e){set('min_people',e.target.value);}})):el('div'),
+      el(Field,{label:'Refresher every (months, 0 = once)'},el('input',{type:'number',min:0,value:f.refresher_months,onChange:function(e){set('refresher_months',e.target.value);}}))),
+    f.required_mode==='roles'&&el(Field,{label:'Roles that must take it',plain:true},el('div',{className:'row',style:{gap:6}},
+      trManagerRoles(ACC.roles).length>0&&el('button',{type:'button',className:'btn ghost sm',onClick:function(){setF(function(p){const a=p.role_ids.slice();trManagerRoles(ACC.roles).forEach(function(r){if(a.indexOf(r.id)<0)a.push(r.id);});return {...p,role_ids:a};});}},'+ All manager roles'),
+      (ACC.roles||[]).map(function(r){const on=f.role_ids.indexOf(r.id)>=0;
+      return el('label',{key:r.id,className:'ck'},el('input',{type:'checkbox',checked:on,onChange:function(){setF(function(p){const a=p.role_ids.slice(),i=a.indexOf(r.id);if(i>=0)a.splice(i,1);else a.push(r.id);return {...p,role_ids:a};});}}),el('span',null,r.name));}))),
+    el('div',{className:'grid',style:{gridTemplateColumns:'2fr 1fr',gap:10}},
+      el(Field,{label:'Met by signing an SOP (read and sign training)'},el('select',{value:f.sop_id,onChange:function(e){set('sop_id',e.target.value);}},el('option',{value:''},'(no - record it as training)'),(props.sops||[]).filter(function(s){return s.status==='published';}).map(function(s){return el('option',{key:s.id,value:s.id},(s.sop_number?s.sop_number+' \u00b7 ':'')+s.title);}))),
+      el('div',null,el('label',{className:'ck',style:{marginTop:24}},el('input',{type:'checkbox',checked:f.assessment_required,onChange:function(e){set('assessment_required',e.target.checked);}}),el('span',null,'Assessment required')),
+        el('label',{className:'ck'},el('input',{type:'checkbox',checked:f.active,onChange:function(e){set('active',e.target.checked);}}),el('span',null,'Active')))),
+    fixedKey?el('div',{className:'muted',style:{fontSize:13,margin:'4px 0 10px'}},trShareLabel(c,st)+': one pass counts at every license that has this course, and its online content is shared.'):
+      el('label',{className:'ck',style:{marginBottom:8}},el('input',{type:'checkbox',checked:f.shared&&!f.sop_id,disabled:!!f.sop_id,onChange:function(e){set('shared',e.target.checked);}}),
+        el('span',null,'Same course at all my licenses (one pass counts everywhere)'+(f.sop_id?' - not for courses met by an SOP of this license':''))),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:save},busy?'Saving...':'Save course')));
+}
+function TrainingRecordForm(props){
+  const st=props.state,lic=props.license,courses=(props.courses||[]).filter(function(c){return c.active;});
+  const[f,setF]=useState({course_id:props.courseId||(courses[0]?courses[0].id:''),people:props.personId?[props.personId]:[],completed_on:todayStr(),trainer_name:'',trainer_qualification:'',method:'Classroom',language:'English',assessment:'',score:'',notes:'',files:[]});
+  const[err,setErr]=useState('');const[busy,setBusy]=useState('');
+  const course=courses.find(function(c){return c.id===f.course_id;});
+  function set(k,v){setF(function(p){return {...p,[k]:v};});}
+  async function upload(file){if(!file)return;setBusy('Uploading...');try{const ext=(file.name.split('.').pop()||'pdf').toLowerCase().replace(/[^a-z0-9]/g,'');const path=await storagePut(file,'training/'+lic.id+'/'+Date.now()+'-'+Math.random().toString(36).slice(2,6)+'.'+ext);
+    setF(function(p){return {...p,files:p.files.concat([{path:path,name:file.name}])};});}catch(e){setErr(String(e.message||e));}setBusy('');}
+  async function save(){
+    setErr('');if(!course){setErr('Choose the course.');return;}if(!f.people.length){setErr('Pick who was trained.');return;}if(!f.trainer_name.trim()){setErr('Enter the trainer (CSQ: trainers must be qualified).');return;}
+    const assess=f.assessment||(course.assessment_required?'':'Not required');if(!assess){setErr('This course requires an assessment: choose Passed or Failed.');return;}
+    setBusy('Saving...');
+    try{await db.insert('hx_training_records',f.people.map(function(uid,i){return {id:newId('trn')+i,state_id:st.id,license_id:lic.id,course_id:course.id,user_id:uid,completed_on:f.completed_on,trainer_name:f.trainer_name.trim(),
+      trainer_qualification:f.trainer_qualification.trim(),method:f.method,language:f.language.trim()||'English',assessment:assess,score:f.score.trim(),notes:f.notes.trim(),files:f.files};}));props.onDone(f.people.length);}
+    catch(e){setErr(trErr(e));}
+    setBusy('');
+  }
+  const people=props.people||[];
+  return el(Modal,{title:'Record training \u00b7 '+lic.name,wide:true,onClose:props.onClose},
+    el('div',{className:'grid',style:{gridTemplateColumns:'2fr 1fr',gap:10}},
+      el(Field,{label:'Course *'},el('select',{value:f.course_id,onChange:function(e){set('course_id',e.target.value);}},courses.map(function(c){return el('option',{key:c.id,value:c.id},c.name);}))),
+      el(Field,{label:'Date completed *'},el('input',{type:'date',value:f.completed_on,max:todayStr(),onChange:function(e){set('completed_on',e.target.value);}}))),
+    course&&el('div',{className:'muted',style:{fontSize:12,marginTop:-4,marginBottom:8}},(course.refresher_months?'Refresher every '+course.refresher_months+' months.':'One-time course.')+(course.assessment_required?' Assessment required.':'')+(course.sop_id?' Also met by signing its SOP.':'')),
+    el(Field,{label:'Who was trained * ('+f.people.length+' selected)',plain:true},el('div',null,
+      el('div',{className:'row',style:{gap:6,marginBottom:6}},el('button',{type:'button',className:'btn ghost sm',onClick:function(){set('people',people.map(function(u){return u.id;}));}},'Select all'),el('button',{type:'button',className:'btn ghost sm',onClick:function(){set('people',[]);}},'Clear')),
+      el('div',{style:{maxHeight:180,overflowY:'auto',border:'1px solid var(--line)',borderRadius:8,padding:8,display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(190px,1fr))',gap:4}},
+        people.map(function(u){const on=f.people.indexOf(u.id)>=0;return el('label',{key:u.id,className:'ck'},el('input',{type:'checkbox',checked:on,onChange:function(){setF(function(p){const a=p.people.slice(),i=a.indexOf(u.id);if(i>=0)a.splice(i,1);else a.push(u.id);return {...p,people:a};});}}),el('span',null,u.name));})))),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:10}},
+      el(Field,{label:'Trainer *'},el('input',{value:f.trainer_name,placeholder:'Name or provider',onChange:function(e){set('trainer_name',e.target.value);}})),
+      el(Field,{label:'Trainer qualification'},el('input',{value:f.trainer_qualification,placeholder:'e.g. QA Manager, 8 yrs; PCQI certified',onChange:function(e){set('trainer_qualification',e.target.value);}})),
+      el(Field,{label:'Method'},el('select',{value:f.method,onChange:function(e){set('method',e.target.value);}},TRAIN_METHODS.map(function(m){return el('option',{key:m,value:m},m);}))),
+      el(Field,{label:'Language'},el('input',{value:f.language,onChange:function(e){set('language',e.target.value);}})),
+      el(Field,{label:'Assessment'+(course&&course.assessment_required?' *':'')},el('select',{value:f.assessment,onChange:function(e){set('assessment',e.target.value);}},el('option',{value:''},course&&course.assessment_required?'(choose)':'Not required'),el('option',{value:'Passed'},'Passed'),el('option',{value:'Failed'},'Failed'))),
+      el(Field,{label:'Score'},el('input',{value:f.score,placeholder:'e.g. 18/20',onChange:function(e){set('score',e.target.value);}}))),
+    el(Field,{label:'Notes'},el('textarea',{rows:2,value:f.notes,onChange:function(e){set('notes',e.target.value);}})),
+    f.files.map(function(a,i){return el('div',{key:a.path,className:'row',style:{fontSize:12}},el('span',null,'\ud83d\udcce '+a.name),el('button',{className:'btn ghost sm',onClick:function(){setF(function(p){return {...p,files:p.files.filter(function(_,j){return j!==i;})};});}},'Remove'));}),
+    el('label',{className:'btn ghost sm',style:{display:'inline-block'}},busy==='Uploading...'?'Uploading...':'+ Attach certificate / sign-in sheet',el('input',{type:'file',style:{display:'none'},onChange:function(e){upload(e.target.files[0]);e.target.value='';}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:!!busy,onClick:save},busy==='Saving...'?'Saving...':'Save '+(f.people.length>1?f.people.length+' records':'record'))));
+}
+function trPersonPdf(u,lic,st,courses,recs,acks,sops){
+  if(!window.jspdf){window.alert('The PDF library did not load.');return;}
+  const doc=pdfSafeDoc(new window.jspdf.jsPDF({unit:'pt',format:'letter'}));const W=612,H=792,m=48;let y=0;
+  function head(){doc.setFillColor(10,10,10);doc.rect(0,0,W,70,'F');doc.setFillColor(190,150,40);doc.rect(0,68,W,2,'F');doc.setTextColor(241,213,122);doc.setFont('helvetica','bold');doc.setFontSize(16);doc.text('HENDRIX QMS',m,30);
+    doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(210,200,170);doc.text('Employee Training Record \u00b7 CSQ 2A.13.2',m,48);doc.text(todayStr(),W-m,30,{align:'right'});doc.text(lic.name,W-m,48,{align:'right'});y=96;}
+  function brk(n){if(y+n>H-60){doc.addPage();head();}}
+  head();
+  const roles=(ACC.roles||[]).filter(function(r){return (u.role_ids||[]).indexOf(r.id)>=0;}).map(function(r){return r.name;}).join(', ');
+  doc.setTextColor(15,15,15);doc.setFont('helvetica','bold');doc.setFontSize(20);doc.text(u.name,m,y);y+=18;doc.setFont('helvetica','normal');doc.setFontSize(11);doc.setTextColor(80,80,80);doc.text((roles||'No role')+' \u00b7 '+st.name,m,y);y+=22;
+  const req=courses.filter(function(c){return trRequired(c,u);}),cells=req.map(function(c){return [c,trCell(c,u,recs,acks,sops)];});
+  const okN=cells.filter(function(x){return x[1].st==='current'||x[1].st==='due';}).length,pct=req.length?Math.round(okN*100/req.length):100;
+  const pub=(sops||[]).filter(function(s){return s.status==='published'&&sopTargets(s,[u])&&sopTargets(s,[u]).length;});
+  const signed=pub.filter(function(s){return (acks||[]).some(function(a){return a.sop_id===s.id&&a.version===s.version&&a.user_id===u.id;});});
+  [[pct+'%','Training current'],[okN+' / '+req.length,'Required courses'],[signed.length+' / '+pub.length,'SOPs signed']].forEach(function(b,i){const bw=(W-m*2-16)/3,x=m+i*(bw+8);doc.setFillColor(246,243,234);doc.rect(x,y,bw,54,'F');
+    doc.setTextColor(15,15,15);doc.setFont('helvetica','bold');doc.setFontSize(20);doc.text(b[0],x+12,y+30);doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(90,90,90);doc.text(b[1].toUpperCase(),x+12,y+46);});y+=74;
+  function sec(t){brk(40);doc.setFillColor(246,243,234);doc.rect(m,y,W-m*2,22,'F');doc.setFillColor(190,150,40);doc.rect(m,y,4,22,'F');doc.setTextColor(10,10,10);doc.setFont('helvetica','bold');doc.setFontSize(10);doc.text(t,m+12,y+15);y+=32;}
+  sec('REQUIRED TRAINING');
+  if(!cells.length){doc.setFont('helvetica','normal');doc.setFontSize(10);doc.text('No required courses.',m,y);y+=16;}
+  cells.forEach(function(x){brk(34);const c=x[0],s=x[1],col=s.st==='current'?[22,130,60]:s.st==='due'?[180,130,20]:[190,40,40];
+    doc.setFillColor(col[0],col[1],col[2]);doc.circle(m+6,y-3,4,'F');doc.setTextColor(15,15,15);doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text(c.name,m+18,y);
+    doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(80,80,80);
+    doc.text(s.st==='missing'?'Not completed':((s.st==='expired'?'EXPIRED':s.st==='due'?'Due soon':'Current')+' \u00b7 completed '+s.on+(s.exp?' \u00b7 expires '+s.exp:' \u00b7 no expiry')+(s.by?' \u00b7 '+s.by:'')),m+18,y+13);y+=30;});
+  sec('SOP SIGNATURES');
+  pub.forEach(function(s){brk(30);const a=(acks||[]).find(function(k){return k.sop_id===s.id&&k.version===s.version&&k.user_id===u.id;});
+    doc.setTextColor(15,15,15);doc.setFont('helvetica','bold');doc.setFontSize(10);doc.text((s.sop_number?s.sop_number+' \u00b7 ':'')+s.title,m+18,y);doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(a?22:190,a?130:40,a?60:40);
+    doc.text('Rev '+s.version+(a?' \u00b7 signed '+String(a.at).slice(0,10):' \u00b7 not yet signed'),m+18,y+12);y+=26;});
+  if(!pub.length){doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(80,80,80);doc.text('No published SOPs apply.',m,y);y+=16;}
+  const n=doc.internal.getNumberOfPages();for(let i=1;i<=n;i++){doc.setPage(i);doc.setFontSize(8);doc.setTextColor(110,110,110);doc.text('Training record from Hendrix QMS \u2014 every record keeps who recorded it, when, and why it changed.',m,H-30);doc.text('Page '+i+' of '+n,W-m,H-30,{align:'right'});}
+  doc.save('Training_'+String(u.name).replace(/[^a-z0-9]/gi,'_')+'_'+todayStr()+'.pdf');
+}
+/* ---------- Online course content (Hendrix starter courses, written from the CSQ Standard for Manufacturing v2.0) ---------- */
+// lesson body: blank line = new paragraph, "- " = bullet, "## " = heading
+// quiz: [question, [options], index of the correct option, why]
+const TRAIN_CONTENT={
+'cGMP':{source:'Hendrix starter course, based on CSQ Standard for Manufacturing v2.0 (Modules 1 and 2A)',minutes:25,
+ lessons:[
+  ['What cGMP means and why it matters','Current Good Manufacturing Practices (cGMP) are the basic rules that make sure every product we make is safe, consistent and exactly what the label says. They cover the people, the building, the equipment, the materials, the process and the records.\n\nThe "c" stands for current: the rules improve over time and we follow the version in force today. Our facility follows the CSQ standards (Manufacturing, Extraction or Cultivation, depending on the license), published international cannabis safety and quality standards, on top of the state rules.\n\n## The idea behind every rule\n- Do it the same way every time: follow the approved SOP.\n- Prevent problems instead of fixing them later.\n- If it is not written down, it did not happen.\n- When something goes wrong, stop, report it and fix the cause.'],
+  ['Standard Operating Procedures (SOPs)','Every production task has an approved, numbered SOP. You must read and sign the current version of each SOP that applies to your job before you do the work. Hendrix keeps the list of SOPs you must sign under SOPs and Training.\n\n- Use only the current version. Old printed copies are not allowed on the floor.\n- Do not skip, add or change steps. If the SOP cannot be followed, stop and tell your supervisor.\n- Suggest improvements to your supervisor; only an approved revision changes the SOP.'],
+  ['Good documentation','Batch records, logs and checklists are legal records. Inspectors and auditors use them to see what really happened.\n\n- Record at the time you do the work, never from memory later.\n- Write clearly, in ink on paper; never use white-out or pencil.\n- On paper, correct a mistake with one line through it, write the correct value, your initials, the date and the reason. In Hendrix, changes need a reason and are kept in the Audit Trail.\n- Never sign for work someone else did, and never fill in a record ahead of time.\n- Blank fields are not allowed: write N/A when a field does not apply.'],
+  ['Clean, ready and in control','Before production starts, the area and equipment must pass a pre-operational inspection (line clearance): clean, nothing left from the previous product, equipment in its maintenance and calibration dates, and the right materials and labels only.\n\n- Use only equipment that is clean, working and calibrated (check the calibration sticker or log).\n- Keep one product and one batch on the line at a time.\n- Use only materials that were received, inspected and accepted. Never use anything marked HOLD, QUARANTINE or REJECTED.\n- Keep doors closed, keep the area tidy and remove anything that does not belong.'],
+  ['Deviations and holds','A deviation is anything that does not go as written: a failed check, a wrong reading, a spill, a machine problem, a label mix-up or a missed step.\n\n- Stop and make the product safe. Report it right away to your supervisor.\n- The deviation is recorded in Hendrix (QMS) with the correction taken. An authorized person decides if a root cause investigation (CAPA) is needed.\n- Product that may be affected goes ON HOLD. Only an authorized person can release, rework or destroy it.\n- Reporting a mistake is always the right thing to do. Hiding it puts customers and the license at risk.']],
+ quiz:[
+  ['What does the "c" in cGMP stand for?',['Cannabis','Current','Certified','Controlled'],1,'cGMP means Current Good Manufacturing Practices: the practices in force today.'],
+  ['You find that an SOP step cannot be done the way it is written. What do you do?',['Skip the step and finish the batch','Do it your own way and write a note','Stop and tell your supervisor','Ask a coworker to sign for it'],2,'Never change an SOP on the fly. Stop and report it; only an approved revision changes the SOP.'],
+  ['When should you fill in a batch record or log?',['At the end of the shift','At the time you do the work','The next morning','Whenever there is time'],1,'Records are made at the time of the activity, never from memory.'],
+  ['How do you correct a mistake on a paper record?',['White-out and rewrite','Scribble it out','One line through it, correct value, initials, date and reason','Tear out the page and start again'],2,'The original entry must stay readable and the correction must show who, when and why.'],
+  ['A field on the record does not apply to this batch. What do you write?',['Leave it blank','N/A','A dash only if you have time','Copy the value from the last batch'],1,'Blank fields are not allowed; N/A shows the field was considered.'],
+  ['What is a line clearance (pre-operational inspection)?',['A cleaning chemical','A check that the area and equipment are clean, ready and free of the previous product before starting','The end-of-day trash run','A security patrol'],1,'Line clearance confirms the area is clean, ready and holds nothing from the previous product.'],
+  ['A container in the warehouse is marked HOLD. Can you use it if production is short?',['Yes, if your supervisor is busy','Yes, if it looks fine','No, never use held material','Only half of it'],2,'Held, quarantined or rejected material can only be released by an authorized person.'],
+  ['The scale calibration sticker is out of date. What do you do?',['Use it, it is probably fine','Use another calibrated scale and report the expired one','Adjust it yourself','Write the weight a little higher'],1,'Only calibrated equipment may be used. Report the expired one so it is calibrated or taken out of use.'],
+  ['You spilled product on the floor during filling. This is:',['Not worth mentioning','A deviation to report right away','Only a problem if the supervisor saw it','Something to fix next week'],1,'Anything that does not go as written is a deviation and must be reported and recorded.'],
+  ['Who decides whether product on hold is released, reworked or destroyed?',['Anyone on the line','The person who found the problem','An authorized person (Full access)','The customer'],2,'Only qualified, authorized people decide the disposition of held product (CSQ 2A.10.4).']]},
+'Cannabis safety':{source:'Hendrix starter course, based on CSQ Standard for Manufacturing v2.0 (2A.12, 3C) - a Cannabis Safety 101 or food safety course may replace it after a qualified review',minutes:25,
+ lessons:[
+  ['Hazards: what can make a product unsafe','A hazard is anything that can make a product unsafe for the person who uses it. We control three kinds:\n\n- Biological: mold, yeast, bacteria (for example from dirty hands, wet materials or poor storage).\n- Chemical: pesticides, heavy metals, residual solvents, cleaning chemicals, lubricants, unapproved ingredients.\n- Physical: glass, metal, hard plastic, hair, jewelry, packaging pieces, insects.\n\nEvery step of the process is planned so these hazards are prevented, removed or reduced to a safe level, and the controls are checked and recorded.'],
+  ['Contamination and cross-contact','Contamination happens when a hazard gets into the product. Cross-contact happens when one material ends up in another (for example a residue of the previous flavor or an allergen).\n\n- Keep raw materials, work in progress and finished product covered and off the floor.\n- Clean and sanitize between products and record it in the Sanitation log.\n- Control cutting tools, glass and brittle items: count them in and out and report any breakage right away.\n- Dust from flower and pre-roll work spreads: use the dust controls and clean surfaces often.'],
+  ['Allergens','Some ingredients cause allergic reactions (for example milk, egg, peanuts, tree nuts, soy, wheat, fish, shellfish, sesame). Edibles and some ingredients can contain them.\n\n- Know which materials on site contain allergens; they are labeled and stored apart.\n- Clean thoroughly at changeover from an allergen product and verify it before the next run.\n- The label must declare allergens correctly; verify the label before releasing the batch.\n- Do not bring food into production areas: it can carry allergens.'],
+  ['Ingredients fit for use','Every input must be approved and meet its specification: from an approved supplier, received with its COA, inspected and accepted.\n\n- Terpenes and other ingredients must be food grade, and for products that are inhaled they must be fit for inhalation: food grade alone is not enough.\n- Solvents and gases must meet purity specifications (for example food-grade, undenatured ethanol; CO2 beverage grade or better, never medical grade).\n- Never use an expired, unlabeled or held material.'],
+  ['Testing, labels and release','Finished product is released only after it meets specifications and regulations: approved lab results, correct potency, correct label and package tag.\n\n- Retained samples are kept so complaints can be investigated.\n- A failed test means the batch goes on hold; it cannot ship until an authorized decision is made.\n- Label errors are a safety issue: the wrong potency or a missing allergen can hurt someone. Check the label against the batch record every time.']],
+ quiz:[
+  ['Which of these is a physical hazard?',['Mold','Residual solvent','A piece of glass','Pesticide'],2,'Glass, metal, plastic and hair are physical hazards.'],
+  ['Which of these is a biological hazard?',['Mold','A metal shaving','Heavy metals','Cleaning chemical'],0,'Mold, yeast and bacteria are biological hazards.'],
+  ['What is cross-contact?',['Two employees talking','One material ending up in another product, such as an allergen or a previous flavor','A supplier visit','A shipping mistake'],1,'Cross-contact moves residues of one material into another product.'],
+  ['A glass jar breaks in the production room. What do you do?',['Sweep it up and continue','Stop, report it right away and follow the breakage procedure','Wait until the end of the shift','Keep working but avoid that spot'],1,'Glass breakage must be reported immediately; nearby product may be contaminated.'],
+  ['For a vape product, is a food-grade terpene always enough?',['Yes, food grade is always safe','No, it must also be fit for inhalation','Only if it smells good','Only for edibles'],1,'For inhaled products, food grade or GRAS alone is not enough (CSQ 3C.2.5).'],
+  ['Which CO2 grade is NOT allowed for processing?',['Beverage grade','Food grade','Medical grade','A higher purity than beverage grade'],2,'The standard requires beverage grade or better and never medical grade.'],
+  ['Why do we keep retained samples?',['To sell later','To investigate complaints and confirm results','To give to visitors','They are not needed'],1,'Retained samples let us investigate complaints and confirm quality later.'],
+  ['A batch failed its lab test. What happens?',['Ship it anyway','It goes on hold until an authorized decision is made','Mix it with a passing batch','Relabel it'],1,'Failed product is held; it cannot ship without a passing retest or authorized decision.'],
+  ['Why must allergen products have a verified changeover clean?',['To save time','To stop allergens reaching the next product','Because inspectors like it','It is optional'],1,'Cleaning and verifying at changeover prevents allergen cross-contact.'],
+  ['Who checks the label against the batch record?',['Nobody, the printer is always right','The trained person releasing the batch, every time','Only the customer','Only the lab'],1,'Label errors (potency, allergens) are a safety issue and must be verified every time.']]},
+'Personnel hygiene & safety':{source:'Hendrix starter course, based on CSQ Standard for Manufacturing v2.0 (2A.13.3 to 2A.13.7)',minutes:20,
+ lessons:[
+  ['Health and illness','You must not be a source of illness or contamination.\n\n- Tell your supervisor before your shift if you have vomiting, diarrhea, fever, jaundice, a sore throat with fever, or an infected cut. You will be kept away from product until it is safe.\n- Open cuts, sores or lesions: do not handle product. Small cuts must be covered with a bandage and a disposable glove.\n- If blood or vomit gets on a surface, the area is closed off, cleaned, sanitized and released by an authorized person before work continues.'],
+  ['Personal cleanliness','- Come to work clean and well kept.\n- No false nails, nail polish or false eyelashes. Keep nails short and clean.\n- No strong perfume or aftershave.\n- Eat, drink, smoke, vape and chew gum or tobacco only in the break areas, never in production or storage areas.\n- If you smoke, wash your hands as soon as you come back to work.\n- Medicines, creams and sweat must not reach the product: cover up and wash.'],
+  ['Clothing, jewelry and personal items','- No jewelry except a plain wedding band or a medical alert bracelet. Jewelry that cannot be removed must be covered.\n- Wear the clean outer garments provided for the area.\n- Nothing in top pockets: pens, phones and badges can fall into product.\n- Long hair is tied back and covered. Personal items and outdoor clothes stay in the lockers provided.'],
+  ['PPE: hair nets, beard covers and gloves','Personal protective equipment (PPE) protects the product and you.\n\n- Hair nets and gloves are worn wherever product is or may be exposed. Facial hair of any length needs a beard cover.\n- Put PPE on in the right order at the entrance and take it off when you leave the area. Dirty PPE goes in the collection bin; never wear it into the break room or outside.\n- Change gloves when they tear, get dirty, or after touching your face, phone, trash or the floor.\n- Use the extra PPE an SOP or SDS asks for (eye protection, respirator, chemical gloves).'],
+  ['Handwashing','Clean hands are the most important hygiene control.\n\n## How\n- Wet hands with warm water, apply soap.\n- Scrub for at least 20 seconds: palms, backs, between fingers, thumbs, nails and wrists.\n- Rinse, dry with a single-use towel, turn off the tap with the towel.\n\n## When\n- Before starting work and when entering production.\n- After the restroom, a break, eating, drinking or smoking.\n- After touching anything dirty: trash, the floor, your face or hair, your phone.\n- Before putting on new gloves, and whenever hands are soiled.']],
+ quiz:[
+  ['You woke up with vomiting and fever. What do you do?',['Come in and work as normal','Tell your supervisor before your shift','Wear two pairs of gloves','Only avoid the break room'],1,'Report symptoms before work; you will be kept away from product.'],
+  ['You have a small cut on your finger. Can you handle product?',['Yes, nothing is needed','Only if it is covered with a bandage and a disposable glove','Only on Fridays','Yes, if you work fast'],1,'Minor cuts must be covered with a bandage and a disposable glove.'],
+  ['Which jewelry is allowed in production?',['Earrings','A plain wedding band','A watch','Any ring'],1,'Only a plain wedding band or a medical alert bracelet is allowed.'],
+  ['Who must wear a beard cover?',['Only people with long beards','Anyone with facial hair of any length in exposed-product areas','Only visitors','Nobody'],1,'Facial hair of any length needs a beard cover.'],
+  ['How long should you scrub your hands with soap?',['3 seconds','At least 20 seconds','Only rinse with water','1 minute only on Mondays'],1,'Scrub at least 20 seconds, covering all parts of the hands.'],
+  ['When must you change your gloves?',['Once a day','When they tear or get dirty, or after touching your face, phone, trash or the floor','Never during a shift','Only after lunch'],1,'Gloves must be changed whenever they could carry contamination.'],
+  ['Where can you eat or drink?',['At your workstation','Only in the designated break areas','In the warehouse','Anywhere if you are careful'],1,'Eating and drinking happen only in permitted areas away from production.'],
+  ['You smoked on your break. What do you do when you return?',['Go straight to the line','Wash your hands immediately','Put on cologne','Nothing'],1,'Smokers wash their hands immediately on returning to work (CSQ 2A.13.4 f).'],
+  ['Are false nails or nail polish allowed in production?',['Yes','No','Only clear polish','Only under gloves'],1,'False nails, polish and false eyelashes are not allowed.'],
+  ['Where do used hair nets and coats go when you leave production?',['In your pocket','In the collection bin at the exit','On the break room chair','Wear them home'],1,'Dirty PPE is separated in the collection bins and never worn outside the area.']]},
+'Product defense':{source:'Hendrix starter course, based on CSQ Standard for Manufacturing v2.0 (1.9, 2A.13.8) and the state security rules',minutes:15,
+ lessons:[
+  ['What product defense is','Product defense protects our products from theft and from intentional harm (someone deliberately adding something to a product). Cannabis is valuable and regulated, so the risk is real.\n\nThe facility has a threat assessment that lists the possible threats and how each is controlled. Your job is to follow the controls and report anything unusual.'],
+  ['Access control','- Sensitive areas (vault, production, extraction, storage, camera room) are restricted to authorized people. Use your own badge every time; never lend it.\n- Do not hold doors open or let anyone follow you through ("tailgating").\n- Every visitor and contractor signs in, wears a visitor badge, follows the GMP rules and is escorted.\n- A person you do not recognize in a restricted area: politely ask who they are and tell your supervisor or security right away.'],
+  ['Securing materials and product','- Flower, extracts, waste and finished product are stored in secured, locked areas and tracked in the state system (METRC).\n- Containers stay closed and sealed when not in use; look for broken seals, signs of tampering or anything that looks or smells wrong.\n- Cannabinoid waste is secured and destroyed according to the rules and recorded in the Waste log.\n- Inventory differences are reported immediately, never "fixed" on paper.'],
+  ['Transport and reporting','- Shipments travel in secure vehicles with the manifest; packages are sealed and tamper evident and checked before loading.\n- Report suspicious behavior, threats, missing product, broken seals, alarms or camera problems immediately to your supervisor or security.\n- You will never get in trouble for reporting a concern in good faith.']],
+ quiz:[
+  ['What does product defense protect against?',['Only fire','Theft and intentional harm to products','Only bad weather','Slow sales'],1,'Product defense covers theft, bioterrorism and intentional adulteration (CSQ 1.9).'],
+  ['A coworker forgot their badge and asks you to let them in. What do you do?',['Let them in','Lend them your badge','Send them to security or a supervisor to be logged in','Prop the door open'],2,'Never share badges or let others follow you in; access must be controlled and recorded.'],
+  ['What is tailgating?',['Parking too close','Letting someone follow you through a secured door','A shipping method','A type of label'],1,'Tailgating is following someone through a secured door without using your own access.'],
+  ['You see a person you do not recognize in the extraction room. What do you do?',['Ignore them','Politely ask who they are and tell your supervisor or security','Take a photo for social media','Leave the building'],1,'Unknown people in restricted areas must be challenged politely and reported.'],
+  ['A product container has a broken seal. What do you do?',['Use it','Reseal it','Do not use it; report it and put it on hold','Throw it away quietly'],2,'Broken seals can mean tampering; report and hold the product.'],
+  ['Must visitors be escorted in restricted areas?',['No','Yes','Only on weekends','Only if they ask'],1,'Visitors sign in, wear a badge, follow GMP rules and are escorted.'],
+  ['Your count of finished units is 10 short of the system. What do you do?',['Change the count to match','Report it immediately','Wait to see if it shows up','Ask a friend to cover it'],1,'Inventory differences are reported immediately, never fixed on paper.'],
+  ['What must travel with a shipment of product?',['Nothing','The state manifest, with sealed tamper-evident packages','Only an invoice','A sample for the driver'],1,'Product travels with its manifest in sealed, tamper-evident packages.']]},
+'Safety':{source:'Hendrix starter course, based on CSQ Standard for Manufacturing v2.0 (2A.9.2) and the chemical labels / SDS',minutes:15,
+ lessons:[
+  ['Approved chemicals only','Only chemicals on the approved chemical list may be brought on site and used. Each one has a Safety Data Sheet (SDS) on file.\n\n- Never bring cleaning products or other chemicals from home.\n- Use each chemical only for its approved purpose, at the dilution on the label or SOP.\n- Never mix chemicals (for example bleach and ammonia make a toxic gas).'],
+  ['Reading an SDS','The SDS tells you everything about a chemical. The most useful sections:\n\n- Section 2: hazards (pictograms, signal word "Danger" or "Warning").\n- Section 4: first aid.\n- Section 6: what to do for a spill.\n- Section 7: handling and storage.\n- Section 8: the PPE you must wear.\n\nSDS binders are kept in each chemical storage area. Read the SDS before using a chemical for the first time.'],
+  ['Storage and labeling','- Store chemicals in their original containers, or in secondary containers clearly labeled with the name and hazard.\n- Food-grade chemicals are stored apart from non-food-grade chemicals.\n- Keep chemicals away from product, packaging and ingredients, in the ventilated, marked chemical areas.\n- Keep containers closed. Report damaged or leaking containers.'],
+  ['Spills, exposure and disposal','- Know where the spill kit, eye wash, first aid kit and PPE are in each chemical area.\n- Small spill: put on the PPE from the SDS, contain and clean it with the spill kit, and report it. Large spill: leave the area and alert your supervisor.\n- Skin or eye contact: rinse with water right away (eye wash at least 15 minutes) and follow the SDS first aid section; report it.\n- Chemicals and empty containers are disposed of according to the rules, never down the drain unless the SDS allows it.']],
+ quiz:[
+  ['Can you bring a cleaner from home to use at work?',['Yes, if it works well','No, only approved chemicals with an SDS on file','Only on weekends','Only if it is natural'],1,'Only chemicals on the approved list, with an SDS on file, may be used.'],
+  ['Which SDS section tells you which PPE to wear?',['Section 2','Section 4','Section 8','Section 16'],2,'Section 8 covers exposure controls and personal protection.'],
+  ['Which SDS section tells you what to do for a spill?',['Section 1','Section 6','Section 9','Section 12'],1,'Section 6 covers accidental release measures.'],
+  ['What happens if you mix bleach and ammonia?',['Nothing','It cleans better','It makes a toxic gas','It becomes food grade'],2,'Never mix chemicals; bleach and ammonia release a toxic gas.'],
+  ['How must a chemical in a spray bottle be labeled?',['No label is needed','With the chemical name and hazard','With your name only','With the date only'],1,'Secondary containers must be clearly labeled with the contents and hazard.'],
+  ['Food-grade and non-food-grade chemicals are stored:',['Together on the same shelf','Separately','In the break room','In production'],1,'Food-grade chemicals are stored separately from non-food-grade chemicals.'],
+  ['You splash a chemical in your eye. First step?',['Rub it','Rinse at the eye wash right away for at least 15 minutes','Finish your task first','Put on sunglasses'],1,'Rinse immediately and follow the SDS first aid section, then report it.'],
+  ['A large chemical spill happens. What do you do?',['Clean it with paper towels','Leave the area and alert your supervisor','Ignore it','Cover it with product boxes'],1,'Large spills: leave the area and alert your supervisor; small spills are handled with the spill kit and PPE.']]}};
+
+// ----- online courses: read the lessons, pass the quiz -----
+function trIsCert(c){return c.topic==='HACCP'||c.topic==='CSQ program';}
+function trOnline(c){return c&&c.active&&c.online&&c.content_status==='published'&&(c.quiz||[]).length>0;}
+function LessonBody(props){
+  const blocks=String(props.text||'').split(/\n\s*\n/);
+  return el('div',{style:{fontSize:15,lineHeight:1.65}},blocks.map(function(b,i){const lines=b.split('\n').filter(function(x){return x.trim();});
+    if(!lines.length)return null;
+    if(lines.every(function(x){return /^\s*- /.test(x);}))return el('ul',{key:i,style:{margin:'6px 0 12px 18px',padding:0}},lines.map(function(x,j){return el('li',{key:j,style:{marginBottom:4}},x.replace(/^\s*- /,''));}));
+    return el('div',{key:i,style:{marginBottom:12}},lines.map(function(x,j){
+      if(/^## /.test(x))return el('div',{key:j,style:{color:'var(--gold-hi)',fontWeight:700,margin:'10px 0 4px'}},x.slice(3));
+      if(/^\s*- /.test(x))return el('div',{key:j,style:{paddingLeft:14,textIndent:-10}},'\u2022 '+x.replace(/^\s*- /,''));
+      return el('div',{key:j},x);}));}));
+}
+TRAIN_CONTENT['cGACP']={source:'Hendrix starter course, based on CSQ Standard for Cultivation v2.0 (Module 3A, 2A.13.2)',minutes:25,
+ lessons:[
+  ['What cGACP means','Current Good Agricultural and Collection Practices (cGACP) are the good practices for growing, harvesting and handling cannabis plants so the flower is safe and consistent. They sit on top of cGMP: in the field we follow cGACP, and once plants come indoors (harvest rooms, drying, curing, trimming, packaging) we follow cGMP.\n\nThe goal is to protect plants and flower from disease, pests, foreign matter and microbes (mold, bacteria) at every step, and to record what we do so every batch can be traced.'],
+  ['Grow rooms and environment','- Grow rooms are identified and signed. Keep doors closed and follow the entry rules (clean clothing, hand washing, foot baths where used).\n- Air is filtered and conditioned. Temperature, humidity and airflow have limits for each room: record them in the Temp / Humidity log and report readings out of range right away.\n- Air must never be stagnant: stagnant, humid air grows mold.\n- Keep equipment and utensils clean, used only for their purpose (color coded or labeled) and stored apart from plants and product. Hoses are emptied and hung on racks off the floor.'],
+  ['Inputs: nutrients, media, water and propagation material','- Use only approved nutrients, fertilizers, additives and grow media, from approved suppliers, received and accepted. Follow the nutrient plan; never improvise a mix.\n- No untreated manure or untreated grow media, ever.\n- Store organic and inorganic inputs apart, and keep them away from water supplies.\n- Water is tested; irrigation and fertigation systems are maintained (no leaks, no lead fittings) and set to the plants\' needs without runoff or soggy media.\n- Clones and seeds come from approved sources or our own mothers and are labeled with name, source and date. Record every input used on each batch.'],
+  ['Crop protection and pests','- Inspect plants as you work. Report pests, mold, powdery mildew or sick plants to your supervisor at once; isolate affected plants as directed.\n- Only approved crop protection products are applied, by trained people, at the label rate, and every application is recorded (product, rate, date, area, who).\n- Respect re-entry and pre-harvest intervals on the label.\n- Never bring outside plants, soil or pets into the facility.'],
+  ['Harvest, drying and curing','- Harvest with clean tools and clean containers; keep harvested material off the floor and away from contamination.\n- Every harvest batch is identified and tagged in the state system (METRC) and its weights recorded.\n- Dry and cure rooms have temperature and humidity limits; record them and report problems.\n- Trim, grinding and milling areas control dust: use the dust collection and PPE.\n- Flower that is moldy, contaminated or dropped is set aside and put on hold, never mixed back in.']],
+ quiz:[
+  ['When do cGMP rules take over from cGACP?',['Never','Once plants are brought indoors for harvest, drying and processing','Only for edibles','Only during inspections'],1,'In the field follow cGACP; once plants are indoors, all activities follow cGMP (CSQ 3A.1.15).'],
+  ['Why must air in a grow room never be stagnant?',['It is noisy','Stagnant humid air promotes mold and disease','It wastes electricity','It is a fire risk only'],1,'Moving, conditioned air prevents mold and microbial growth.'],
+  ['Can untreated manure be used as a soil amendment?',['Yes, it is organic','No, never untreated','Only outdoors','Only on Fridays'],1,'Untreated manure is not allowed; amendments must be treated and verified.'],
+  ['How are hoses stored?',['On the floor','Emptied, on racks, off the floor','Full of water in a bucket','Anywhere'],1,'Hoses are emptied and stored on racks off the floor (CSQ 3A.1.4).'],
+  ['You see powdery mildew on a plant. What do you do?',['Wipe it off and continue','Report it to your supervisor right away','Ignore it until harvest','Spray any product you find'],1,'Report pests and disease immediately so plants can be isolated and treated by trained people.'],
+  ['Who may apply crop protection products?',['Anyone','Trained people, approved products, at the label rate, with a record','Visitors','Only at night'],1,'Only approved products, applied by trained staff and recorded.'],
+  ['Clones must be labeled with:',['Nothing','Name, source and date','Only the price','Only the room number'],1,'Propagation material is labeled with name, origin and date (CSQ 3A.1.13).'],
+  ['A bud falls on the floor during trimming. What happens to it?',['Put it back in the batch','Set it aside as waste or hold as directed; never back into the batch','Give it away','Hide it'],1,'Contaminated material is kept out of product and handled as waste or held.']]};
+TRAIN_CONTENT['Extraction']={source:'Hendrix starter course, based on CSQ Standard for Extraction v2.0 (Module 3B)',minutes:25,
+ lessons:[
+  ['Extraction areas and equipment','Extraction and refinement follow cGMP and must protect the extract from adulterants, foreign matter and residual solvents.\n\n- Extraction areas are identified and signed. Only trained, authorized people operate the equipment.\n- Spill kits sized for the solvents used sit next to every extraction area.\n- Closed-loop systems are used where they apply, built to the safety standards for their use, and cleaned as designed.\n- Before you start: fire and life safety systems (gas detection, ventilation, alarms) are working, and the equipment is within its maintenance and calibration dates. If not, do not start.'],
+  ['Solvents and gases','- Use only approved solvents and gases, received with a COA and accepted. Butane, propane, CO2, nitrogen and other gases must be at least 99.5% pure unless specified.\n- CO2 must be beverage grade or better. Medical-grade CO2 is not allowed (it can carry metal impurities).\n- Ethanol must be at least 99.5% pure, food grade and not denatured (approved denaturants only if the state allows, and reduced to legal levels).\n- Gas and solvent levels are monitored in the room, on the person and in the product. Report any alarm or smell immediately and follow the emergency procedure.'],
+  ['Solventless and water','- Solventless means no solvent dissolves the cannabinoids (ice water, dry sift, rosin). Water used only as a process aid counts as solventless.\n- Process water and ice must be at least potable and meet spec. Ice machines and bins are emptied and cleaned at least weekly.\n- Dry ice is used sparingly, only to control temperature, and never touches the material or the extract.'],
+  ['Records, residual solvents and release','- Record every input on the batch record: biomass lot, solvent or gas lot, quantities, times, temperatures and pressures.\n- Residual solvents in the final product must meet the stricter of the state limit or our spec. Every batch is tested before release.\n- A failed test puts the batch on hold. It can only be reprocessed, released or destroyed by an authorized decision.\n- Clean the equipment with methods suited to the solvent used, and record the clean.']],
+ quiz:[
+  ['Before starting a solvent extraction, what must be checked?',['Nothing','Fire and life safety systems working; equipment within maintenance and calibration','Only the music','Only the weather'],1,'Safety systems and maintenance/calibration status are checked before use (CSQ 3B.1.2).'],
+  ['Which CO2 grade is NOT allowed for extraction?',['Beverage grade','Higher than beverage grade','Medical grade','Food grade'],2,'Medical-grade CO2 may carry elemental impurities and is not allowed.'],
+  ['What minimum purity do extraction gases and solvents need unless specified?',['90%','95%','99.5%','50%'],2,'Gases, LPG and solvents must be at least 99.5% pure unless otherwise specified.'],
+  ['Can dry ice touch the biomass or the extract?',['Yes','No, never; it only controls temperature','Only for rosin','Only if clean'],1,'Dry ice must be isolated from product (CSQ 3B.1.8).'],
+  ['Ice water extraction is considered:',['Solvent-based','Solventless, because water is only a process aid','Illegal','Ethanol extraction'],1,'Water used as a process aid, not to dissolve compounds, is solventless.'],
+  ['The gas detector alarms during a run. What do you do?',['Finish the run quickly','Follow the emergency procedure and report it immediately','Turn the alarm off','Open a window and continue'],1,'Alarms are acted on immediately following the emergency procedure.'],
+  ['A batch fails residual solvent testing. What happens?',['Ship it','It goes on hold until an authorized decision','Blend it with a good batch','Relabel it'],1,'Failed product is held; only an authorized decision releases, reprocesses or destroys it.'],
+  ['How often are ice machines and ice bins emptied and cleaned?',['Yearly','At least weekly','Never','When they smell'],1,'Ice storage and production parts are emptied and cleaned at least weekly.']]};
+
+function CoursePlayer(props){
+  const c=props.course,lic=props.license,L=c.lessons||[],Q=c.quiz||[];
+  const[step,setStep]=useState(0);const[ans,setAns]=useState(Q.map(function(){return null;}));const[res,setRes]=useState(null);const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  const started=useRef(new Date().toISOString());
+  const quizStep=L.length,done=!!res;
+  async function submit(){setErr('');if(ans.some(function(a){return a===null;})){setErr('Answer every question.');return;}setBusy(true);
+    try{const r=await sb('rpc/hx_course_submit',{method:'POST',body:{p_course:c.id,p_lic:lic.id,p_answers:ans,p_started:started.current}});setRes(r);if(r&&r.passed&&props.onPassed)props.onPassed(r);}
+    catch(e){setErr(/hx_course_submit/.test(String(e.message))?'Online courses are not set up yet - run hendrix_step20.sql.':String(e.message||e));}setBusy(false);}
+  const pct=Math.round(Math.min(step,quizStep)*100/Math.max(1,quizStep+1));
+  return el(Modal,{title:c.name+(props.preview?' (preview)':''),wide:true,onClose:props.onClose},
+    el('div',{className:'row',style:{justifyContent:'space-between',marginBottom:8}},el('div',{className:'muted',style:{fontSize:12}},(c.minutes?'About '+c.minutes+' min \u00b7 ':'')+L.length+' lesson'+(L.length===1?'':'s')+' \u00b7 '+Q.length+' questions \u00b7 pass mark '+c.pass_mark+'%'+(c.content_version?' \u00b7 version '+c.content_version:'')),
+      el('div',{className:'muted',style:{fontSize:12}},done?'Finished':step<quizStep?'Lesson '+(step+1)+' of '+L.length:'Quiz')),
+    el('div',{style:{height:6,background:'#1d1d1d',borderRadius:3,overflow:'hidden',marginBottom:14}},el('div',{style:{width:(done?100:pct)+'%',height:'100%',background:'var(--gold-grad)'}})),
+    !done&&step<quizStep&&el('div',null,el('h2',{style:{margin:'0 0 10px',color:'var(--gold-hi)'}},L[step].title),el(LessonBody,{text:L[step].body}),
+      el('div',{className:'row',style:{justifyContent:'space-between',marginTop:16}},el('button',{className:'btn ghost',disabled:step===0,onClick:function(){setStep(step-1);}},'Back'),
+        el('button',{className:'btn',onClick:function(){setStep(step+1);}},step===quizStep-1?'Go to the quiz':'Next lesson'))),
+    !done&&step>=quizStep&&el('div',null,
+      el('div',{className:'muted',style:{marginBottom:10}},'Answer every question. You need '+c.pass_mark+'% to pass.'),
+      Q.map(function(q,i){return el('div',{key:i,className:'card',style:{padding:'10px 14px',marginBottom:8}},el('div',{style:{fontWeight:600,marginBottom:6}},(i+1)+'. '+q.q),
+        (q.options||[]).map(function(o,j){return el('label',{key:j,className:'ck',style:{display:'flex',margin:'4px 0'}},el('input',{type:'radio',name:'q'+i,checked:ans[i]===j,onChange:function(){setAns(function(a){const b=a.slice();b[i]=j;return b;});}}),el('span',null,o));}));}),
+      err&&el('div',{className:'msg err'},err),
+      el('div',{className:'row',style:{justifyContent:'space-between'}},el('button',{className:'btn ghost',onClick:function(){setStep(Math.max(0,quizStep-1));}},'Back to the lessons'),
+        props.preview?el('span',{className:'muted',style:{fontSize:12}},'Preview: answers are checked when someone takes the course.'):el('button',{className:'btn',disabled:busy,onClick:submit},busy?'Checking...':'Submit answers'))),
+    done&&el('div',null,
+      el('div',{className:'card gold',style:{textAlign:'center',padding:'18px'}},el('div',{style:{fontSize:42,fontWeight:700,color:res.passed?'var(--green)':'var(--red)'}},res.score+'%'),
+        el('div',{style:{fontSize:16,fontWeight:700,marginTop:4}},res.passed?'Passed - your training is recorded':'Not passed (pass mark '+res.pass_mark+'%)'),el('div',{className:'muted',style:{marginTop:4}},res.correct+' of '+res.total+' correct')),
+      (res.wrong||[]).length>0&&el('div',null,el('div',{className:'k',style:{margin:'10px 0 6px'}},'Review'),(res.wrong||[]).map(function(w){const q=Q[w.q]||{};return el('div',{key:w.q,className:'card',style:{padding:'8px 12px',marginBottom:6,borderLeft:'3px solid var(--red)'}},
+        el('div',{style:{fontWeight:600}},(w.q+1)+'. '+q.q),w.explain&&el('div',{className:'muted',style:{fontSize:13,marginTop:4}},w.explain));})),
+      el('div',{className:'row',style:{justifyContent:'flex-end',marginTop:10}},!res.passed&&el('button',{className:'btn ghost',onClick:function(){setRes(null);setStep(0);setAns(Q.map(function(){return null;}));started.current=new Date().toISOString();}},'Read again and retake'),
+        el('button',{className:'btn',onClick:props.onClose},'Done'))));
+}
+async function trKeyGet(cid){const r=await sb('hx_training_keys?course_id=eq.'+encodeURIComponent(cid)+'&select=*');return (r||[])[0]||null;}
+async function trKeySave(cid,answers,explain){const have=await trKeyGet(cid);
+  if(have)return sb('hx_training_keys?course_id=eq.'+encodeURIComponent(cid),{method:'PATCH',body:{answers:answers,explain:explain},prefer:'return=representation'});
+  return sb('hx_training_keys',{method:'POST',body:{course_id:cid,answers:answers,explain:explain},prefer:'return=representation'});}
+function trContentFor(c){return c&&!trIsCert(c)?TRAIN_CONTENT[c.topic]||null:null;}
+// save lessons, quiz (no answers) and the answer key; publish when asked
+async function trSaveContent(c,f,publish){
+  await trKeySave(c.id,f.quiz.map(function(q){return q.answer;}),f.quiz.map(function(q){return q.explain||'';}));
+  return db.update('hx_training_courses',c.id,{online:true,lessons:f.lessons,quiz:f.quiz.map(function(q){return {q:q.q,options:q.options};}),pass_mark:f.pass_mark,minutes:f.minutes,content_source:f.content_source,content_status:publish?'published':'draft'});
+}
+function trStarterForm(t){return {lessons:t.lessons.map(function(l){return {title:l[0],body:l[1]};}),quiz:t.quiz.map(function(q){return {q:q[0],options:q[1].slice(),answer:q[2],explain:q[3]};}),pass_mark:80,minutes:t.minutes,content_source:t.source};}
+async function trAiDraftLaw(st,c){
+  const rules=(await db.get('hx_rules','state_id=eq.'+encodeURIComponent(st.id)+'&select=category,citation,title,body&order=category'))||[];
+  if(!rules.length)throw new Error('The '+st.name+' Rulebook is empty. Add the state rules first; the course is written from them.');
+  let txt='';rules.forEach(function(r){const add='['+(r.citation||'')+'] '+r.category+' - '+r.title+': '+String(r.body||'').replace(/\s+/g,' ').slice(0,700)+'\n';if(txt.length+add.length<45000)txt+=add;});
+  const intro='You write a training course for employees of a licensed cannabis manufacturer in '+st.name+(st.agency?' (regulator: '+st.agency+')':'')+'. Use ONLY the state rules below; do not invent rules, numbers or citations. ';
+  const notSet=function(e){if(String(e.message)==='AI_NOT_SETUP')return new Error('AI is not set up yet - deploy the hendrix-ai function (see hendrix-ai.ts).');return e;};
+  if(c&&c.onStep)c.onStep('Writing the lessons (1 of 2)...');
+  const p1=intro+'Cover what a production employee must know and do: licensing and badges, security and access, inventory tracking (METRC), testing, packaging and labeling, waste, recordkeeping, and anything else the rules require of employees. Cite the rule citation in brackets after each requirement.\n'+
+    'Return ONLY JSON: {"lessons":[{"title":"...","body":"plain text, blank line between paragraphs, lines starting with - for bullets"}]}. Write 4 to 6 lessons.\n\nRULES OF '+st.name.toUpperCase()+':\n'+txt;
+  let j;try{j=await aiCall({module:'training',max_tokens:5000,messages:[{role:'user',content:p1}]});}catch(e){throw notSet(e);}
+  const o1=sopAiJson(((j.content||[])[0]||{}).text||'');
+  const lessons=(o1.lessons||[]).filter(function(l){return l&&l.title&&l.body;}).map(function(l){return {title:String(l.title),body:String(l.body)};});
+  if(!lessons.length)throw new Error('The AI did not return usable lessons. Try again.');
+  if(c&&c.onStep)c.onStep('Writing the quiz (2 of 2)...');
+  const p2=intro+'Write a quiz that checks the lessons below. Every question must be answered by the lessons. '+
+    'Return ONLY JSON: {"quiz":[{"q":"...","options":["...","...","...","..."],"answer":0,"explain":"one sentence with the citation"}]}. Write 10 questions with 4 options each; vary the position of the correct option.\n\nLESSONS:\n'+
+    lessons.map(function(l){return '## '+l.title+'\n'+l.body;}).join('\n\n');
+  try{j=await aiCall({module:'training',max_tokens:3500,messages:[{role:'user',content:p2}]});}catch(e){throw notSet(e);}
+  const out=sopAiJson(((j.content||[])[0]||{}).text||'');
+  const quiz=(out.quiz||[]).filter(function(q){return q&&q.q&&Array.isArray(q.options)&&q.options.length>=2&&q.answer>=0&&q.answer<q.options.length;}).map(function(q){return {q:String(q.q),options:q.options.map(String),answer:Number(q.answer),explain:String(q.explain||'')};});
+  if(!quiz.length)throw new Error('The AI did not return a usable quiz. Try again.');
+  return {lessons:lessons,quiz:quiz,pass_mark:80,minutes:20,content_source:'AI draft from the '+st.name+' Rulebook ('+rules.length+' rules) - review before publishing'};
+}
+function CourseContentEditor(props){
+  const c=props.course,st=props.state;const starter=trContentFor(c),isLaw=c.topic==='Required by law';
+  const[f,setF]=useState(null);const[err,setErr]=useState('');const[busy,setBusy]=useState('');const[prev,setPrev]=useState(false);
+  useEffect(function(){let dead=false;trKeyGet(c.id).then(function(k){if(dead)return;const a=(k&&k.answers)||[],x=(k&&k.explain)||[];
+    setF({lessons:(c.lessons||[]).map(function(l){return {...l};}),quiz:(c.quiz||[]).map(function(q,i){return {q:q.q,options:(q.options||[]).slice(),answer:a[i]!=null?a[i]:0,explain:x[i]||''};}),pass_mark:c.pass_mark||80,minutes:c.minutes||15,content_source:c.content_source||''});})
+    .catch(function(e){if(!dead){setErr(String(e.message||e));setF({lessons:[],quiz:[],pass_mark:80,minutes:15,content_source:''});}});return function(){dead=true;};},[c.id]);
+  if(!f)return el(Modal,{title:'Course content \u00b7 '+c.name,onClose:props.onClose},el('div',{className:'muted'},'Loading...'));
+  function set(k,v){setF(function(p){return {...p,[k]:v};});}
+  function setL(i,k,v){setF(function(p){return {...p,lessons:p.lessons.map(function(l,j){return j===i?{...l,[k]:v}:l;})};});}
+  function setQ(i,k,v){setF(function(p){return {...p,quiz:p.quiz.map(function(q,j){return j===i?{...q,[k]:v}:q;})};});}
+  async function save(pub){setErr('');
+    if(pub){if(!f.lessons.length||!f.quiz.length){setErr('Add at least one lesson and one question.');return;}
+      if(f.quiz.some(function(q){return !q.q.trim()||q.options.length<2||q.options.some(function(o){return !String(o).trim();});})){setErr('Every question needs text and at least two filled options.');return;}}
+    setBusy(pub?'Publishing...':'Saving...');try{await trSaveContent(c,f,pub);props.onDone(pub?'Published '+c.name+' online.':'Draft saved.');}catch(e){setErr(trErr(e));}setBusy('');}
+  async function ai(){setErr('');setBusy('The AI is writing the course from the '+st.name+' Rulebook...');try{const d=await trAiDraftLaw(st,{...c,onStep:function(m){setBusy(m);}});setF(d);}catch(e){setErr(String(e.message||e));}setBusy('');}
+  return el(Modal,{title:'Online course \u00b7 '+c.name,wide:true,onClose:props.onClose},
+    el('div',{className:'row',style:{gap:6,marginBottom:10}},el('span',{className:'badge '+(c.content_status==='published'?'ok':c.content_status==='draft'?'warn':'off')},c.content_status==='published'?'Published v'+c.content_version+' by '+c.content_by:c.content_status==='draft'?'Draft':'No content yet'),
+      starter&&el('button',{className:'btn ghost sm',onClick:function(){setF(trStarterForm(starter));}},'Load Hendrix starter content'),
+      isLaw&&el('button',{className:'btn ghost sm',disabled:!!busy,onClick:ai},'Draft from the '+st.name+' Rulebook with AI'),
+      c.share_key&&el('span',{className:'badge',title:'Publishing updates this course at every license that shares it'},trShareLabel(c,st)),
+      el('button',{className:'btn ghost sm',disabled:!f.lessons.length,onClick:function(){setPrev(true);}},'Preview')),
+    isLaw&&el('div',{className:'muted',style:{fontSize:12,marginBottom:8}},'The '+st.name+' course is written only from the '+st.name+' Rulebook in Hendrix. Read it and correct it before publishing: you are approving the legal content.'),
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr 3fr',gap:10}},
+      el(Field,{label:'Pass mark %'},el('input',{type:'number',min:50,max:100,value:f.pass_mark,onChange:function(e){set('pass_mark',Math.max(50,Math.min(100,parseInt(e.target.value,10)||80)));}})),
+      el(Field,{label:'Minutes (about)'},el('input',{type:'number',min:1,value:f.minutes,onChange:function(e){set('minutes',parseInt(e.target.value,10)||15);}})),
+      el(Field,{label:'Source of the content'},el('input',{value:f.content_source,placeholder:'e.g. Written by QA from SOP-PRD-001',onChange:function(e){set('content_source',e.target.value);}}))),
+    el('div',{className:'k',style:{margin:'8px 0 6px'}},'Lessons ('+f.lessons.length+')'),
+    f.lessons.map(function(l,i){return el('div',{key:i,className:'card',style:{padding:'8px 12px',marginBottom:6}},
+      el('div',{className:'row',style:{gap:6,flexWrap:'nowrap'}},el('b',null,(i+1)+'.'),el('input',{value:l.title,placeholder:'Lesson title',style:{flex:1},onChange:function(e){setL(i,'title',e.target.value);}}),
+        el('button',{className:'btn ghost sm',disabled:i===0,onClick:function(){setF(function(p){const a=p.lessons.slice();const t=a[i-1];a[i-1]=a[i];a[i]=t;return {...p,lessons:a};});}},'\u2191'),
+        el('button',{className:'btn ghost sm',onClick:function(){setF(function(p){return {...p,lessons:p.lessons.filter(function(_,j){return j!==i;})};});}},'\u00d7')),
+      el('textarea',{rows:5,value:l.body,style:{marginTop:6,width:'100%'},placeholder:'Text. Blank line = new paragraph, "- " = bullet, "## " = heading',onChange:function(e){setL(i,'body',e.target.value);}}));}),
+    el('button',{className:'btn ghost sm',onClick:function(){setF(function(p){return {...p,lessons:p.lessons.concat([{title:'',body:''}])};});}},'+ Lesson'),
+    el('div',{className:'k',style:{margin:'14px 0 6px'}},'Quiz ('+f.quiz.length+' questions) \u00b7 tick the correct answer'),
+    f.quiz.map(function(q,i){return el('div',{key:i,className:'card',style:{padding:'8px 12px',marginBottom:6}},
+      el('div',{className:'row',style:{gap:6,flexWrap:'nowrap'}},el('b',null,(i+1)+'.'),el('input',{value:q.q,placeholder:'Question',style:{flex:1},onChange:function(e){setQ(i,'q',e.target.value);}}),
+        el('button',{className:'btn ghost sm',onClick:function(){setF(function(p){return {...p,quiz:p.quiz.filter(function(_,j){return j!==i;})};});}},'\u00d7')),
+      q.options.map(function(o,j){return el('div',{key:j,className:'row',style:{gap:6,margin:'4px 0 0 18px',flexWrap:'nowrap'}},el('input',{type:'radio',name:'ans'+i,checked:q.answer===j,title:'Correct answer',onChange:function(){setQ(i,'answer',j);}}),
+        el('input',{value:o,placeholder:'Option '+(j+1),style:{flex:1,borderColor:q.answer===j?'var(--green)':''},onChange:function(e){const a=q.options.slice();a[j]=e.target.value;setQ(i,'options',a);}}),
+        q.options.length>2&&el('button',{className:'btn ghost sm',onClick:function(){const a=q.options.filter(function(_,k){return k!==j;});setQ(i,'options',a);if(q.answer>=a.length)setQ(i,'answer',0);}},'\u00d7'));}),
+      el('div',{className:'row',style:{gap:6,margin:'4px 0 0 18px'}},q.options.length<6&&el('button',{className:'btn ghost sm',onClick:function(){setQ(i,'options',q.options.concat(['']));}},'+ Option'),
+        el('input',{value:q.explain,placeholder:'Why (shown after a wrong answer)',style:{flex:1},onChange:function(e){setQ(i,'explain',e.target.value);}})));}),
+    el('button',{className:'btn ghost sm',onClick:function(){setF(function(p){return {...p,quiz:p.quiz.concat([{q:'',options:['','','',''],answer:0,explain:''}])};});}},'+ Question'),
+    busy&&el('div',{className:'msg'},busy),err&&el('div',{className:'msg err'},err),
+    prev&&el(CoursePlayer,{course:{...c,lessons:f.lessons,quiz:f.quiz,pass_mark:f.pass_mark,minutes:f.minutes},license:props.license,preview:true,onClose:function(){setPrev(false);}}),
+    el('div',{className:'row',style:{justifyContent:'flex-end',marginTop:12}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn ghost',disabled:!!busy,onClick:function(){save(false);}},'Save draft'),
+      el('button',{className:'btn',disabled:!!busy,onClick:function(){save(true);}},c.content_status==='published'?'Publish new version':'Publish online')));
+}
+
+function TrainingPage(props){
+  const st=props.state,lic=props.license,lid=lic?lic.id:'';
+  const[courses,setCourses]=useState(null);const[recs,setRecs]=useState([]);const[people,setPeople]=useState([]);const[sops,setSops]=useState([]);const[acks,setAcks]=useState([]);
+  const[tab,setTab]=useState(can('training',2)?(lsGet('hx_trtab')||'matrix'):'mine');const[msg,setMsg]=useState('');const[modal,setModal]=useState(null);
+  const[roleF,setRoleF]=useState('ALL');const[stF,setStF]=useState('ALL');const[q,setQ]=useState('');const[atts,setAtts]=useState([]);const[shared,setShared]=useState([]);
+  const load=useCallback(function(){
+    if(!lid){setCourses([]);return;}const enc=encodeURIComponent;
+    Promise.all([db.get('hx_training_courses','license_ids=cs.%7B'+enc(lid)+'%7D&select=*&order=sort,name'),db.get('hx_training_records','license_id=eq.'+enc(lid)+'&select=*&order=completed_on.desc&limit=20000')])
+      .then(function(r){setCourses((r[0]||[]).filter(function(c){return (c.license_ids||[c.license_id]).indexOf(lid)>=0;}));setRecs((r[1]||[]).filter(function(x){return x.license_id===lid;}));})
+      .catch(function(e){setMsg(trErr(e));setCourses([]);});
+    sb('rpc/hx_training_roster',{method:'POST',body:{p_lic:lid}}).then(function(r){setPeople(r||[]);}).catch(function(){setPeople([]);});
+    db.get('hx_sops','license_ids=cs.%7B'+enc(lid)+'%7D&status=eq.published&select=id,title,sop_number,version,status,license_id,license_ids,target_mode,target_role_ids,target_user_ids').then(function(r){setSops((r||[]).filter(function(s){return s.status==='published'&&(s.license_ids||[]).indexOf(lid)>=0;}));}).catch(function(){setSops([]);});
+    sb('rpc/hx_training_sop_acks',{method:'POST',body:{p_lic:lid}}).then(function(r){setAcks(r||[]);}).catch(function(){setAcks([]);});
+    trSharedGet(lid).then(setShared);
+    db.get('hx_training_attempts','license_id=eq.'+enc(lid)+'&select=*&order=finished_at.desc&limit=500').then(function(r){setAtts((r||[]).filter(function(x){return x.license_id===lid;}));}).catch(function(){setAtts([]);});
+  },[lid]);
+  useEffect(load,[load]);
+  const autoRef=useRef('');
+  useEffect(function(){if(!courses||!lid||!st||!can('training',3)||autoRef.current===lid)return;autoRef.current=lid;
+    trAutoSetup(st,lic,courses).then(function(m){if(m){setMsg(m+'.');load();}}).catch(function(e){setMsg(trErr(e));});},[courses,lid]);
+  if(!st||!lic)return el('div',null,el('h1',null,el('span',{className:'g'},'Training')),el('div',{className:'empty'},'Pick a state and a license at the top first.'));
+  const canE=can('training',2),canF=can('training',3),me=ACC.profile&&ACC.profile.id;
+  const C=(courses||[]),active=C.filter(function(c){return c.active;});
+  const shRecs=trSharedMap(shared,C),allRecs=recs.concat(shRecs);
+  const S=trStats(active,people,allRecs,acks,sops);
+  function go(t){setTab(t);lsSet('hx_trtab',t);}
+  async function starter(){
+    setMsg('');try{const have={};C.forEach(function(c){have[c.name.trim().toLowerCase()]=1;});
+      const add=trStarterFor(lic).filter(function(s){return !have[trStarterNamed(s,st).name.toLowerCase()]&&!have[s[0].toLowerCase()];}).map(function(s,i){return {id:newId('crs')+i,state_id:st.id,license_id:lic.id,...trStarterNamed(s,st),topic:s[1],...trStarterWho(s,ACC.roles),refresher_months:s[4],assessment_required:s[5],min_people:s[6],sort:C.length+i,share_key:trShareKey(s,st)};});
+      if(add.length)await trInsertAll(add);setMsg('Added '+add.length+' CSQ starter course'+(add.length===1?'':'s')+'.');load();}catch(e){setMsg(trErr(e));}
+  }
+  const shownPeople=people.filter(function(u){if(roleF!=='ALL'&&(u.role_ids||[]).indexOf(roleF)<0)return false;if(q&&u.name.toLowerCase().indexOf(q.toLowerCase())<0)return false;
+    if(stF==='GAPS')return S.per[u.id]&&S.per[u.id].pct<100;if(stF==='OK')return S.per[u.id]&&S.per[u.id].pct===100;return true;});
+  const stat=function(l,v,tone,sub){return el('div',{key:l,className:'card gold',style:{marginBottom:0}},el('div',{className:'k'},l),el('div',{className:'v',style:{fontSize:26,color:tone||'var(--text)'}},v),sub&&el('div',{className:'muted',style:{fontSize:11,marginTop:2}},sub));};
+  const cellEl=function(c,u){const req=trRequired(c,u),x=trCell(c,u,allRecs,acks,sops);
+    if(!req&&x.st==='missing')return el('td',{key:c.id,style:{textAlign:'center',color:'var(--faint)'}},'\u2014');
+    const col=req?TR_TONE[x.st]:(x.st==='missing'?'var(--faint)':'var(--green)');
+    return el('td',{key:c.id,style:{textAlign:'center'},title:x.st==='missing'?'Not completed':(x.st+' \u00b7 '+x.on+(x.exp?' \u00b7 expires '+x.exp:'')+(x.by?' \u00b7 '+x.by:''))},
+      canE&&x.st!=='current'?el('button',{className:'trcell',style:{background:col},onClick:function(){setModal({t:'rec',course:c.id,person:u.id});}},x.st==='missing'?'+':x.st==='due'?'!':'\u00d7'):
+      el('span',{className:'trcell',style:{background:col}},x.st==='current'?'\u2713':x.st==='due'?'!':x.st==='expired'?'\u00d7':'+'));};
+  const mine=people.find(function(u){return u.id===me;})||(ACC.profile?{id:me,name:ACC.profile.name||ACC.profile.email,role_ids:ACC.profile.role_ids||[],license_ids:ACC.profile.license_ids||[]}:null);
+  const tabs=(canE?[['matrix','Training matrix'],['sops','SOP signatures'],['records','Records ('+recs.filter(function(r){return !r.voided;}).length+')']]:[]).concat([['mine','My training'],['courses','Courses ('+active.length+')']]);
+  return el('div',null,
+    el('style',null,'.trcell{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;color:#000;font-weight:800;font-size:12px;border:0;cursor:default}button.trcell{cursor:pointer}'),
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,el('span',{className:'g'},'Training')),el('div',{className:'sub'},'Training matrix \u00b7 '+lic.name+' \u00b7 required training per role, refreshers, qualified trainers, assessments and SOP signatures (CSQ 2A.13.2)')),
+      el('div',{className:'row'},canE&&el('button',{className:'btn',disabled:!active.length,onClick:function(){setModal({t:'rec'});}},'+ Record training'),canF&&el('button',{className:'btn ghost',onClick:function(){setModal({t:'course'});}},'+ Course'))),
+    msg&&el('div',{className:/^(Added|Saved|Recorded|Voided|Created|Regulatory|Published|Draft|Passed|\d+ (online )?course)/.test(msg)?'msg':'msg err'},msg),
+    canF&&C.some(function(c){return c.content_status==='draft'&&/^Hendrix starter/.test(c.content_source||'');})&&el('div',{className:'card',style:{borderColor:'var(--gold)',padding:'10px 14px',marginBottom:12}},
+      el('div',{className:'row',style:{justifyContent:'space-between'}},el('div',null,el('b',null,'Online courses ready: '),C.filter(function(c){return c.content_status==='draft'&&/^Hendrix starter/.test(c.content_source||'');}).map(function(c){return c.name;}).join(', '),
+        el('div',{className:'muted',style:{fontSize:12}},'Hendrix starter lessons and quizzes written from the CSQ standard. Review them (Courses tab > Online course), then publish so people can take them.')),
+        el('button',{className:'btn sm',onClick:async function(){let n=0;try{for(const c of C){if(c.content_status==='draft'&&/^Hendrix starter/.test(c.content_source||'')){await db.update('hx_training_courses',c.id,{content_status:'published'});n++;}}setMsg('Published '+n+' online course'+(n===1?'':'s')+'.');load();}catch(e){setMsg(trErr(e));load();}}},'Publish all'))),
+    canE&&courses!==null&&el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',marginBottom:14}},
+      stat('Training current',S.pct==null?'-':S.pct+'%',S.pct==null?'var(--faint)':S.pct>=95?'var(--green)':S.pct>=80?'var(--gold-hi)':'var(--red)',S.ok+' of '+S.req+' required'),
+      stat('Fully trained',S.full+' / '+people.length,'var(--text)','people at 100%'),
+      stat('Expired or missing',S.bad,S.bad?'var(--red)':'var(--green)'),stat('Due in 30 days',S.due,S.due?'var(--gold-hi)':'var(--green)'),
+      S.atLeast.map(function(a){return stat(a.c.name.replace(/ \(.*\)$/,''),a.have.length+' / '+a.c.min_people,a.ok?'var(--green)':'var(--red)',a.ok?a.have.map(function(u){return u.name;}).join(', '):'needs '+(a.c.min_people-a.have.length)+' more');})),
+    el('div',{className:'tabs'},tabs.map(function(t){return el('button',{key:t[0],className:tab===t[0]?'on':'',onClick:function(){go(t[0]);}},t[1]);})),
+    courses===null?el('div',{className:'muted'},'Loading...'):
+    tab==='courses'?el('div',null,
+      canF&&!C.length&&el('div',{className:'empty'},el('div',{style:{marginBottom:10}},'No courses yet. Start from the CSQ training list: law, cGMP, cannabis safety, hygiene and PPE, product defense, chemical safety, CSQ Program Overview and HACCP.'),el('button',{className:'btn',onClick:starter},'Add CSQ starter courses')),
+      canF&&C.length>0&&el('div',{className:'row',style:{justifyContent:'flex-end',marginBottom:8}},el('button',{className:'btn ghost sm',onClick:starter},'Add missing CSQ starter courses')),
+      C.map(function(c){const roles=(ACC.roles||[]).filter(function(r){return (c.role_ids||[]).indexOf(r.id)>=0;}).map(function(r){return r.name;});
+        const sop=sops.find(function(s){return s.id===c.sop_id;});
+        return el('div',{key:c.id,className:'card',style:{padding:'12px 16px',opacity:c.active?1:.55}},el('div',{className:'row',style:{justifyContent:'space-between',flexWrap:'nowrap',alignItems:'flex-start'}},
+          el('div',null,el('div',{className:'row',style:{gap:6,marginBottom:4}},el('b',null,c.name),el('span',{className:'badge off'},c.topic),!c.active&&el('span',{className:'badge off'},'Off'),
+              trOnline(c)?el('span',{className:'badge ok'},'Online \u00b7 v'+c.content_version+' \u00b7 pass '+c.pass_mark+'%'):c.content_status==='draft'?el('span',{className:'badge warn'},'Online draft'):trIsCert(c)?el('span',{className:'badge off'},'Outside certification'):null,
+              c.share_key&&el('span',{className:'badge',title:'One pass counts at every license that has this course'},trShareLabel(c,st))),
+            c.description&&el('div',{className:'muted',style:{fontSize:12}},c.description),
+            el('div',{style:{fontSize:12,marginTop:4}},TRAIN_MODES[c.required_mode]+(c.required_mode==='roles'?': '+roles.join(', '):'')+(c.required_mode==='at_least'?' ('+c.min_people+')':trCounted(c)?' \u00b7 at least '+c.min_people+' certified':'')+' \u00b7 '+(c.refresher_months?'refresher every '+c.refresher_months+' months':'one time')+(c.assessment_required?' \u00b7 assessment required':'')+(sop?' \u00b7 met by signing '+(sop.sop_number||sop.title):''))),
+          el('div',{className:'row',style:{gap:6,flex:'0 0 auto'}},trOnline(c)&&el('button',{className:'btn sm',onClick:function(){setModal({t:'take',course:c});}},'Take course'),
+            canF&&!trIsCert(c)&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'content',course:c});}},'Online course'),
+            canF&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'course',course:c});}},'Edit'))));})):
+    tab==='matrix'?(!active.length?el('div',{className:'empty'},'Add courses first (Courses tab).'):el('div',null,
+      el('div',{className:'row',style:{marginBottom:10}},el('input',{value:q,placeholder:'Search people',style:{width:200},onChange:function(e){setQ(e.target.value);}}),
+        el('select',{value:roleF,onChange:function(e){setRoleF(e.target.value);}},el('option',{value:'ALL'},'All roles'),(ACC.roles||[]).map(function(r){return el('option',{key:r.id,value:r.id},r.name);})),
+        el('select',{value:stF,onChange:function(e){setStF(e.target.value);}},el('option',{value:'ALL'},'Everyone'),el('option',{value:'GAPS'},'Has gaps'),el('option',{value:'OK'},'Fully trained')),
+        el('span',{className:'muted',style:{fontSize:12}},el('span',{className:'trcell',style:{background:'var(--green)',width:14,height:14,marginRight:4}}),'current ',el('span',{className:'trcell',style:{background:'var(--gold)',width:14,height:14,margin:'0 4px 0 10px'}}),'due in 30 days ',el('span',{className:'trcell',style:{background:'var(--red)',width:14,height:14,margin:'0 4px 0 10px'}}),'expired / missing \u00b7 \u2014 not required'),
+        el('button',{className:'btn ghost sm',style:{marginLeft:'auto'},onClick:function(){
+          const e=esc3;let h='<div class="hxrec"><h2>Training matrix \u2014 '+e(lic.name)+'</h2><div class="m">'+e(st.name)+' \u00b7 printed '+e(new Date().toLocaleString())+' \u00b7 overall '+(S.pct==null?'-':S.pct+'%')+' current</div><table><tr><th>Person</th>'+active.map(function(c){return '<th style="font-size:10px">'+e(c.name)+'</th>';}).join('')+'<th>%</th></tr>';
+          shownPeople.forEach(function(u){h+='<tr><td>'+e(u.name)+'</td>'+active.map(function(c){const r=trRequired(c,u),x=trCell(c,u,allRecs,acks,sops);return '<td class="'+(r&&(x.st==='expired'||x.st==='missing')?'bad':x.st==='current'?'ok':'')+'">'+(!r&&x.st==='missing'?'\u2014':x.st==='missing'?'MISSING':(x.st==='expired'?'EXPIRED ':x.st==='due'?'DUE ':'')+x.on)+'</td>';}).join('')+'<td>'+(S.per[u.id]?S.per[u.id].pct+'%':'')+'</td></tr>';});
+          printRecords('Training matrix - '+lic.name,[h+'</table></div>']);}},'Print matrix')),
+      el('div',{className:'card',style:{overflowX:'auto',padding:0}},el('table',null,
+        el('thead',null,el('tr',null,el('th',{style:{minWidth:170,position:'sticky',left:0,background:'var(--panel)'}},'Person'),active.map(function(c){return el('th',{key:c.id,style:{fontSize:11,minWidth:84,maxWidth:96,whiteSpace:'normal',textAlign:'center',textTransform:'none',letterSpacing:0,lineHeight:1.25,wordBreak:'break-word',verticalAlign:'bottom'},title:c.name},c.name.length>34?c.name.slice(0,32)+'...':c.name);}),el('th',null,'%'),el('th',null,''))),
+        el('tbody',null,shownPeople.map(function(u){const p=S.per[u.id]||{};return el('tr',{key:u.id},
+          el('td',{style:{position:'sticky',left:0,background:'var(--panel)'}},el('div',{style:{fontWeight:600}},u.name),el('div',{className:'muted',style:{fontSize:11}},(ACC.roles||[]).filter(function(r){return (u.role_ids||[]).indexOf(r.id)>=0;}).map(function(r){return r.name;}).join(', ')||'No role')),
+          active.map(function(c){return cellEl(c,u);}),
+          el('td',{style:{fontWeight:700,color:p.pct===100?'var(--green)':p.pct>=80?'var(--gold-hi)':'var(--red)'}},p.req?p.pct+'%':'-'),
+          el('td',null,el('button',{className:'btn ghost sm',onClick:function(){trPersonPdf(u,lic,st,active,allRecs,acks,sops);}},'PDF')));})))),
+      !people.length&&el('div',{className:'muted',style:{marginTop:8}},'No team members found for this license.'))):
+    tab==='sops'?(!sops.length?el('div',{className:'empty'},'No published SOPs yet for '+lic.name+'.'):el('div',{className:'card',style:{overflowX:'auto',padding:0}},el('table',null,
+      el('thead',null,el('tr',null,el('th',{style:{minWidth:170}},'Person'),sops.map(function(s){return el('th',{key:s.id,style:{fontSize:11,textAlign:'center',minWidth:84,maxWidth:96,whiteSpace:'normal',textTransform:'none',letterSpacing:0,wordBreak:'break-word'},title:s.title},(s.sop_number||s.title).slice(0,24));}),el('th',null,'Rate'))),
+      el('tbody',null,people.map(function(u){let n=0,d=0;const cells=sops.map(function(s){const t=sopTargets(s,[u]);if(!t||!t.length)return el('td',{key:s.id,style:{textAlign:'center',color:'var(--faint)'}},'\u2014');n++;
+          const a=acks.find(function(k){return k.sop_id===s.id&&k.version===s.version&&k.user_id===u.id;});if(a)d++;
+          return el('td',{key:s.id,style:{textAlign:'center'},title:a?'Signed '+String(a.at).slice(0,10):'Not signed (v'+s.version+')'},el('span',{className:'trcell',style:{background:a?'var(--green)':'#333',color:a?'#000':'#888'}},a?'\u2713':'\u25a1'));});
+        const rate=n?Math.round(d*100/n):100;
+        return el('tr',{key:u.id},el('td',null,u.name),cells,el('td',{style:{fontWeight:700,color:rate===100?'var(--green)':rate>=80?'var(--gold-hi)':'var(--red)'}},rate+'%'));}))))):
+    tab==='records'?el('div',null,atts.length>0&&el('div',{className:'card'},el('h3',null,'Online quiz attempts ('+atts.length+')'),el('div',{style:{overflowX:'auto'}},el('table',null,
+        el('thead',null,el('tr',null,['Date','Person','Course','Score','Result','Time','Version'].map(function(h){return el('th',{key:h},h);}))),
+        el('tbody',null,atts.slice(0,200).map(function(a){const c=C.find(function(x){return x.id===a.course_id;});return el('tr',{key:a.id},el('td',null,String(a.finished_at).slice(0,16).replace('T',' ')),el('td',null,a.person_name),el('td',null,c?c.name:'-'),
+          el('td',null,a.correct+'/'+a.total+' ('+a.score+'%)'),el('td',null,el('span',{className:'badge '+(a.passed?'ok':'bad')},a.passed?'Passed':'Not passed')),el('td',null,a.minutes!=null?a.minutes+' min':'-'),el('td',null,'v'+a.content_version));}))))),
+      shRecs.length>0&&el('div',{className:'card'},el('h3',null,'Counted from your other licenses ('+shRecs.length+')'),
+        el('div',{className:'muted',style:{fontSize:12,marginBottom:6}},'Training done once for a shared course at another license. It counts here too; the record itself stays at the license where it was done.'),
+        el('div',{style:{overflowX:'auto'}},el('table',null,el('thead',null,el('tr',null,['Date','Person','Course','Done at','Trainer','Assessment','Expires'].map(function(h){return el('th',{key:h},h);}))),
+          el('tbody',null,shRecs.map(function(r){const c=C.find(function(x){return x.id===r.course_id;});return el('tr',{key:'sh'+r.id},el('td',null,r.completed_on),el('td',null,r.person_name),el('td',null,c?c.name:'-'),
+            el('td',null,r.license_name+(r.state_name?' \u00b7 '+r.state_name:'')),el('td',null,String(r.trainer_name||'').replace(/ \(at .*\)$/,'')),
+            el('td',null,el('span',{className:'badge '+(r.assessment==='Passed'?'ok':'off')},r.assessment),r.score&&el('span',{className:'muted',style:{marginLeft:4,fontSize:11}},r.score)),el('td',null,r.expires_on||'No expiry'));}))))),
+      !recs.length?el('div',{className:'empty'},'No training recorded yet'+(shRecs.length?' at this license.':'.')):el('div',{className:'card',style:{overflowX:'auto'}},el('table',null,
+      el('thead',null,el('tr',null,['Date','Person','Course','Trainer','Method','Assessment','Expires','',''].map(function(h,i){return el('th',{key:i},h);}))),
+      el('tbody',null,recs.map(function(r){const c=C.find(function(x){return x.id===r.course_id;});return el('tr',{key:r.id,className:r.voided?'voidrow':''},
+        el('td',null,r.completed_on),el('td',null,r.person_name),el('td',null,c?c.name:'-'),el('td',null,r.trainer_name,r.trainer_qualification&&el('div',{className:'muted',style:{fontSize:11}},r.trainer_qualification)),el('td',null,r.method+(r.language&&r.language!=='English'?' \u00b7 '+r.language:'')),
+        el('td',null,el('span',{className:'badge '+(r.assessment==='Passed'?'ok':r.assessment==='Failed'?'bad':'off')},r.assessment),r.score&&el('span',{className:'muted',style:{marginLeft:4,fontSize:11}},r.score)),
+        el('td',null,r.voided?el('span',{className:'badge bad',title:r.void_reason},'Void'):r.expires_on||'No expiry'),
+        el('td',null,(r.files||[]).map(function(a){return el('a',{key:a.path,href:'#',style:{color:'var(--gold-hi)',fontSize:12,marginRight:6},onClick:function(e){e.preventDefault();openStored(a.path,a.name).catch(function(){});}},'\ud83d\udcce');})),
+        el('td',null,canF&&!r.voided&&el('button',{className:'btn danger sm',onClick:function(){setModal({t:'void',rec:r});}},'Void')));}))))):
+    el('div',null,!mine?el('div',{className:'empty'},'Your profile was not found.'):(function(){
+      const req=active.filter(function(c){return trRequired(c,mine);}),pend=sops.filter(function(s){const t=sopTargets(s,[mine]);return t&&t.length&&!acks.some(function(a){return a.sop_id===s.id&&a.version===s.version&&a.user_id===mine.id;});});
+      return el('div',null,
+        el('div',{className:'card gold'},el('div',{className:'k'},'My required training'),!req.length?el('div',{className:'muted',style:{marginTop:6}},'No required courses for your roles yet.'):
+          req.map(function(c){const x=trCell(c,mine,allRecs,acks,sops);return el('div',{key:c.id,className:'row',style:{gap:10,padding:'6px 0',borderTop:'1px solid var(--line)',flexWrap:'nowrap'}},
+            el('span',{className:'trcell',style:{background:TR_TONE[x.st]}},x.st==='current'?'\u2713':x.st==='due'?'!':'\u00d7'),el('span',{style:{flex:1}},c.name),
+            el('span',{className:'muted',style:{fontSize:12}},x.st==='missing'?(trOnline(c)?'Not completed':'Not completed - ask your trainer'):(x.st==='expired'?'Expired ':x.st==='due'?'Due soon \u00b7 ':'Completed ')+x.on+(x.exp?' \u00b7 expires '+x.exp:'')),
+            trOnline(c)&&el('button',{className:x.st==='current'?'btn ghost sm':'btn sm',onClick:function(){setModal({t:'take',course:c});}},x.st==='current'?'Take again':'Take course'));})),
+        (function(){const opt=active.filter(function(c){return trOnline(c)&&!trRequired(c,mine);});return opt.length?el('div',{className:'card'},el('div',{className:'k'},'Other online courses'),opt.map(function(c){return el('div',{key:c.id,className:'row',style:{gap:10,padding:'6px 0',borderTop:'1px solid var(--line)',flexWrap:'nowrap'}},
+          el('span',{style:{flex:1}},c.name),el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'take',course:c});}},'Take course'));})):null;})(),
+        atts.filter(function(a){return a.user_id===mine.id;}).length>0&&el('div',{className:'card'},el('div',{className:'k'},'My quiz attempts'),atts.filter(function(a){return a.user_id===mine.id;}).slice(0,20).map(function(a){const c=C.find(function(x){return x.id===a.course_id;});
+          return el('div',{key:a.id,style:{fontSize:13,padding:'3px 0'}},String(a.finished_at).slice(0,10)+' \u00b7 '+(c?c.name:'')+' \u00b7 '+a.score+'% ',el('span',{className:'badge '+(a.passed?'ok':'bad')},a.passed?'Passed':'Not passed'));})),
+        el('div',{className:'card'},el('div',{className:'k'},'SOPs waiting for my signature'),pend.length?pend.map(function(s){return el('div',{key:s.id,style:{fontSize:13,padding:'4px 0'}},(s.sop_number?s.sop_number+' \u00b7 ':'')+s.title+' (v'+s.version+')');}):el('div',{className:'muted',style:{marginTop:6}},'None - all signed.'),
+          pend.length>0&&props.go&&el('button',{className:'btn sm',style:{marginTop:8},onClick:function(){props.go('sops');}},'Open SOPs')),
+        el('button',{className:'btn ghost',onClick:function(){trPersonPdf(mine,lic,st,active,allRecs,acks,sops);}},'Download my training record (PDF)'));})()),
+    modal&&modal.t==='course'&&el(TrainingCourseForm,{course:modal.course,state:st,license:lic,sops:sops,count:C.length,onClose:function(){setModal(null);},onDone:function(){setModal(null);setMsg('Saved.');load();}}),
+    modal&&modal.t==='rec'&&el(TrainingRecordForm,{state:st,license:lic,courses:C,people:people,courseId:modal.course,personId:modal.person,onClose:function(){setModal(null);},onDone:function(n){setModal(null);setMsg('Recorded '+n+' training record'+(n===1?'':'s')+'.');load();}}),
+    modal&&modal.t==='content'&&el(CourseContentEditor,{course:modal.course,state:st,license:lic,onClose:function(){setModal(null);},onDone:function(t){setModal(null);setMsg(t);load();}}),
+    modal&&modal.t==='take'&&el(CoursePlayer,{course:modal.course,license:lic,onPassed:function(){load();},onClose:function(){setModal(null);load();}}),
+    modal&&modal.t==='void'&&el(VoidModal,{what:'training record ('+modal.rec.person_name+')',onClose:function(){setModal(null);},onVoid:function(why){return db.update('hx_training_records',modal.rec.id,{voided:true,void_reason:why}).then(function(){setModal(null);setMsg('Voided.');load();});}}));
+}
+function TrainingDashCard(props){
+  const lid=props.license?props.license.id:'';const[d,setD]=useState(null);
+  useEffect(function(){if(!lid||!can('training',1)){setD(null);return;}let dead=false;const enc=encodeURIComponent;
+    Promise.all([db.get('hx_training_courses','license_ids=cs.%7B'+enc(lid)+'%7D&active=eq.true&select=*'),db.get('hx_training_records','license_id=eq.'+enc(lid)+'&select=course_id,user_id,completed_on,expires_on,voided,assessment,license_id'),
+      sb('rpc/hx_training_roster',{method:'POST',body:{p_lic:lid}}),db.get('hx_sops','license_ids=cs.%7B'+enc(lid)+'%7D&status=eq.published&select=id,version,status,license_ids,target_mode,target_role_ids,target_user_ids').catch(function(){return [];}),
+      sb('rpc/hx_training_sop_acks',{method:'POST',body:{p_lic:lid}}).catch(function(){return [];}),trSharedGet(lid)])
+      .then(function(r){const c=(r[0]||[]).filter(function(x){return x.active&&(x.license_ids||[]).indexOf(lid)>=0;});if(!c.length){if(!dead)setD({none:true});return;}
+        const S=trStats(c,r[2]||[],(r[1]||[]).filter(function(x){return x.license_id===lid;}).concat(trSharedMap(r[5],c)),r[4]||[],(r[3]||[]).filter(function(x){return x.status==='published';}));if(!dead)setD({S:S,mine:can('training',2)?null:(S.per[ACC.profile.id]||null)});})
+      .catch(function(){if(!dead)setD(null);});return function(){dead=true;};},[lid]);
+  if(!d)return null;
+  const link=el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go('training');}},'Open training');
+  if(d.none)return el('div',{className:'card gold'},el('div',{className:'k'},'Training'),el('div',{className:'v'},'No courses yet'),el('div',{className:'muted',style:{margin:'4px 0 8px'}},'Set up the training program.'),link);
+  const v=d.mine?d.mine.pct:d.S.pct;
+  return el('div',{className:'card gold'},el('div',{className:'k'},d.mine?'My training':'Training'),el('div',{className:'v',style:{color:v>=95?'var(--green)':v>=80?'var(--gold-hi)':'var(--red)'}},(v==null?'-':v+'%')+' current'),
+    el('div',{className:'muted',style:{margin:'4px 0 8px'}},d.mine?d.mine.ok+' of '+d.mine.req+' required courses':d.S.bad+' expired or missing \u00b7 '+d.S.due+' due in 30 days'),link);
+}
+
+/* ---------- QMS: Deviations and CAPA (Black Fox fields + CSQ 1.6) ---------- */
+const QMS_DEPTS=['Facility','Production','Sanitation','Compliance','Security','Warehouse','Distribution','Sales'];
+const QMS_PRIORITIES={critical:'Critical',major:'Major',minor:'Minor'};
+const QMS_STATUSES={open:'Open',in_progress:'In Progress',closed:'Closed',cancelled:'Cancelled'};
+const QMS_STATUS_TONE={open:'bad',in_progress:'warn',closed:'ok',cancelled:'off'};
+const QMS_PRI_TONE={critical:'bad',major:'warn',minor:''};
+const DEV_CATEGORIES=['Product quality','Process / procedure','Equipment','Environment / temperature','Sanitation','Pest','Security','Documentation','Labeling / packaging','Testing result','Supplier / material','Safety','Other'];
+const DEV_SOURCES={manual:'Reported',facility_log:'Facility log',batch:'Batch',test:'Lab test',visitor:'Visitor',standard:'Standard clause',complaint:'Complaint',audit:'Audit'};
+const DEV_SOURCE_PAGE={facility_log:'logs',batch:'batches',test:'testing',visitor:'visitors',standard:'standards'};
+const CAPA_EFF={effective:'Effective',partially:'Partially effective',ineffective:'Ineffective'};
+function qmsErr(e){const m=String((e&&e.message)||e);return /hx_deviations|hx_capas/.test(m)&&/missing|does not exist|schema cache/i.test(m)?'QMS is not set up yet - run hendrix_step14.sql in the Hendrix Supabase project.':m;}
+function qmsOpen(r){return r.status==='open'||r.status==='in_progress';}
+function qmsLate(r){return qmsOpen(r)&&r.due_date&&r.due_date<todayStr();}
+function qmsDays(a,b){return Math.max(0,Math.round((new Date(b).getTime()-new Date(a).getTime())/86400000));}
+function QmsBadges(props){const r=props.r;return el('span',{className:'row',style:{gap:6,display:'inline-flex'}},
+  el('span',{className:'badge '+QMS_STATUS_TONE[r.status]},QMS_STATUSES[r.status]),el('span',{className:'badge '+(QMS_PRI_TONE[r.priority]||'')},QMS_PRIORITIES[r.priority]||r.priority),
+  qmsLate(r)&&el('span',{className:'badge bad'},'Overdue'));}
+
+function DeviationForm(props){
+  const x=props.existing||{},pre=props.prefill||{},st=props.state,lic=props.license,canF=can('qms',3);
+  const[f,setF]=useState({title:x.title||pre.title||'',dept:x.dept||pre.dept||'Production',category:x.category||pre.category||'',priority:x.priority||pre.priority||'major',
+    description:x.description||pre.description||'',product_affected:x.product_affected||pre.product_affected||'',lot_number:x.lot_number||pre.lot_number||'',occurred_on:x.occurred_on||pre.occurred_on||todayStr(),
+    immediate_action:x.immediate_action||'',rca:x.rca_required==null?'':x.rca_required?'yes':'no',root_cause:x.root_cause||'',owner_name:x.owner_name||'',due_date:x.due_date||'',status:x.status||'open',attachments:(x.attachments||[]).slice()});
+  const[err,setErr]=useState('');const[busy,setBusy]=useState('');
+  function set(k,v){setF(function(p){return {...p,[k]:v};});}
+  async function upload(file){if(!file)return;setBusy('Uploading...');setErr('');
+    try{const ext=(file.name.split('.').pop()||'pdf').toLowerCase().replace(/[^a-z0-9]/g,'');const path=await storagePut(file,'qms/'+lic.id+'/'+Date.now()+'-'+Math.random().toString(36).slice(2,6)+'.'+ext);
+      setF(function(p){return {...p,attachments:p.attachments.concat([{path:path,name:file.name}])};});}catch(e){setErr(String(e.message||e));}setBusy('');}
+  async function save(){
+    setErr('');if(!f.title.trim()){setErr('Enter the deviation title.');return;}if(!f.description.trim()){setErr('Describe what happened.');return;}
+    const rec={title:f.title.trim(),dept:f.dept,category:f.category,priority:f.priority,description:f.description.trim(),product_affected:f.product_affected.trim(),lot_number:f.lot_number.trim(),occurred_on:f.occurred_on||null,
+      immediate_action:f.immediate_action.trim(),root_cause:f.root_cause.trim(),owner_name:f.owner_name.trim(),due_date:f.due_date||null,attachments:f.attachments};
+    if(canF)rec.rca_required=f.rca===''?null:f.rca==='yes';
+    if(x.id)rec.status=f.status;
+    setBusy('Saving...');
+    try{
+      const out=x.id?await db.update('hx_deviations',x.id,rec):await db.insert('hx_deviations',{...rec,id:newId('dev'),state_id:st.id,license_id:lic.id,status:'open',source_type:pre.source_type||'manual',source_id:pre.source_id||'',source_label:pre.source_label||''});
+      props.onDone(out&&out[0]);
+    }catch(e){setErr(qmsErr(e));}
+    setBusy('');
+  }
+  const inp=function(k,l,ph,type){return el(Field,{label:l},el('input',{type:type||'text',value:f[k]||'',placeholder:ph||'',onChange:function(e){set(k,e.target.value);}}));};
+  const ta=function(k,l,ph){return el(Field,{label:l},el('textarea',{rows:3,value:f[k],placeholder:ph||'',onChange:function(e){set(k,e.target.value);}}));};
+  return el(Modal,{title:(x.id?'Edit deviation '+x.number:'Report deviation')+' \u00b7 '+lic.name,wide:true,onClose:props.onClose},
+    (pre.source_label||x.source_label)&&el('div',{className:'msg',style:{marginBottom:10}},'Source: '+(DEV_SOURCES[pre.source_type||x.source_type]||'')+' \u00b7 '+(pre.source_label||x.source_label)),
+    inp('title','Deviation title *','e.g. Wrong label applied to Pre-Roll batch'),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:10}},
+      el(Field,{label:'Department'},el('select',{value:f.dept,onChange:function(e){set('dept',e.target.value);}},QMS_DEPTS.map(function(d){return el('option',{key:d,value:d},d);}))),
+      el(Field,{label:'Category'},el('select',{value:f.category,onChange:function(e){set('category',e.target.value);}},el('option',{value:''},'(choose)'),DEV_CATEGORIES.map(function(d){return el('option',{key:d,value:d},d);}))),
+      el(Field,{label:'Priority'},el('select',{value:f.priority,onChange:function(e){set('priority',e.target.value);}},Object.keys(QMS_PRIORITIES).map(function(k){return el('option',{key:k,value:k},QMS_PRIORITIES[k]);}))),
+      inp('occurred_on','Date it happened','','date')),
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr',gap:10}},inp('product_affected','Product affected','e.g. Live Resin Carts 1g'),inp('lot_number','Lot / batch number','e.g. LOT-2026-0601')),
+    ta('description','What happened? *','Describe the deviation in detail...'),
+    ta('immediate_action','Correction / immediate action taken','What was done right away to contain the issue? (required before closing)'),
+    canF&&el(Field,{label:'Root cause analysis needed? (authorized decision, CSQ 1.6)'},el('select',{value:f.rca,onChange:function(e){set('rca',e.target.value);}},el('option',{value:''},'Not decided yet'),el('option',{value:'yes'},'Yes - find the root cause'),el('option',{value:'no'},'No - the correction is enough'))),
+    !canF&&x.rca_required!=null&&el('div',{className:'muted',style:{fontSize:12,marginBottom:8}},'Root cause analysis '+(x.rca_required?'needed':'not needed')+(x.rca_decided_by?' (decided by '+x.rca_decided_by+')':'')),
+    ta('root_cause','Root cause'+(f.rca==='yes'?' *':' (if known)'),'Why did this happen?'),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:10}},
+      inp('owner_name','Owner (who resolves it)','Name'),inp('due_date','Due date','','date'),
+      x.id&&el(Field,{label:'Status'},el('select',{value:f.status,onChange:function(e){set('status',e.target.value);}},['open','in_progress'].map(function(k){return el('option',{key:k,value:k},QMS_STATUSES[k]);})))),
+    el('div',{className:'k',style:{margin:'4px 0 6px'}},'Photos / files'),
+    f.attachments.map(function(a,i){return el('div',{key:a.path,className:'row',style:{fontSize:12,marginBottom:4}},el('span',null,'\ud83d\udcce '+a.name),!(x.attachments||[]).some(function(o){return o.path===a.path;})&&el('button',{className:'btn ghost sm',onClick:function(){setF(function(p){return {...p,attachments:p.attachments.filter(function(_,j){return j!==i;})};});}},'Remove'));}),
+    el('label',{className:'btn ghost sm',style:{display:'inline-block'}},busy==='Uploading...'?'Uploading...':'+ Attach file',el('input',{type:'file',style:{display:'none'},onChange:function(e){upload(e.target.files[0]);e.target.value='';}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:!!busy,onClick:save},busy==='Saving...'?'Saving...':x.id?'Update':'Submit deviation')));
+}
+function CapaForm(props){
+  const x=props.existing||{},dv=props.deviation,st=props.state,lic=props.license;
+  const[f,setF]=useState({title:x.title||(dv?'CAPA for '+dv.number+': '+dv.title:''),deviation_id:x.deviation_id||(dv?dv.id:''),dept:x.dept||(dv?dv.dept:'Production'),priority:x.priority||(dv?dv.priority:'major'),
+    issue_description:x.issue_description||(dv?dv.description:''),root_cause:x.root_cause||(dv?dv.root_cause:''),correction:x.correction||(dv?dv.immediate_action:''),preventive_action:x.preventive_action||'',
+    responsible_person_id:x.responsible_person_id||'',responsible_person_name:x.responsible_person_name||'',due_date:x.due_date||'',verification_method:x.verification_method||'',status:x.status||'open'});
+  const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  function set(k,v){setF(function(p){return {...p,[k]:v};});}
+  async function save(){
+    setErr('');if(!f.title.trim()){setErr('Enter the CAPA title.');return;}if(!f.issue_description.trim()){setErr('Describe the issue.');return;}
+    if(!f.due_date){setErr('Set a due date (CSQ 1.6: a timescale for every action).');return;}
+    const rec={title:f.title.trim(),deviation_id:f.deviation_id||null,dept:f.dept,priority:f.priority,issue_description:f.issue_description.trim(),root_cause:f.root_cause.trim(),correction:f.correction.trim(),
+      preventive_action:f.preventive_action.trim(),responsible_person_id:f.responsible_person_id,responsible_person_name:f.responsible_person_name,due_date:f.due_date,verification_method:f.verification_method.trim()};
+    if(x.id)rec.status=f.status;
+    setBusy(true);
+    try{const out=x.id?await db.update('hx_capas',x.id,rec):await db.insert('hx_capas',{...rec,id:newId('capa'),state_id:st.id,license_id:lic.id,status:'open'});props.onDone(out&&out[0]);}
+    catch(e){setErr(qmsErr(e));}
+    setBusy(false);
+  }
+  const ta=function(k,l,ph){return el(Field,{label:l},el('textarea',{rows:3,value:f[k],placeholder:ph||'',onChange:function(e){set(k,e.target.value);}}));};
+  return el(Modal,{title:(x.id?'Edit '+x.number:'New CAPA')+' \u00b7 '+lic.name,wide:true,onClose:props.onClose},
+    el(Field,{label:'CAPA title *'},el('input',{value:f.title,placeholder:'e.g. Pre-roll weight deviation CAPA',onChange:function(e){set('title',e.target.value);}})),
+    el('div',{className:'grid',style:{gridTemplateColumns:'2fr 1fr 1fr',gap:10}},
+      el(Field,{label:'Linked deviation'},el('select',{value:f.deviation_id,onChange:function(e){set('deviation_id',e.target.value);}},el('option',{value:''},'(none)'),(props.deviations||[]).map(function(d){return el('option',{key:d.id,value:d.id},d.number+' \u00b7 '+d.title);}))),
+      el(Field,{label:'Department'},el('select',{value:f.dept,onChange:function(e){set('dept',e.target.value);}},QMS_DEPTS.map(function(d){return el('option',{key:d,value:d},d);}))),
+      el(Field,{label:'Priority'},el('select',{value:f.priority,onChange:function(e){set('priority',e.target.value);}},Object.keys(QMS_PRIORITIES).map(function(k){return el('option',{key:k,value:k},QMS_PRIORITIES[k]);})))),
+    ta('issue_description','Issue description *','Describe the problem being addressed...'),
+    ta('root_cause','Root cause','Why it happened'),
+    ta('correction','Correction (immediate fix)','What was done to fix the immediate problem?'),
+    ta('preventive_action','Preventive action (long-term fix)','What process changes prevent recurrence? e.g. Add hourly weight verification, supervisor sign-off every batch'),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:10}},
+      el(Field,{label:'Responsible person'},el('select',{value:f.responsible_person_id,onChange:function(e){const u=(props.people||[]).find(function(p){return p.id===e.target.value;});setF(function(p){return {...p,responsible_person_id:e.target.value,responsible_person_name:u?u.name:''};});}},
+        el('option',{value:''},'(select)'),(props.people||[]).map(function(u){return el('option',{key:u.id,value:u.id},u.name);}))),
+      el(Field,{label:'Due date *'},el('input',{type:'date',value:f.due_date,onChange:function(e){set('due_date',e.target.value);}})),
+      x.id&&el(Field,{label:'Status'},el('select',{value:f.status,onChange:function(e){set('status',e.target.value);}},['open','in_progress'].map(function(k){return el('option',{key:k,value:k},QMS_STATUSES[k]);})))),
+    el(Field,{label:'Verification method'},el('input',{value:f.verification_method,placeholder:'How will you verify the fix worked? e.g. 30 days of in-range temperature logs',onChange:function(e){set('verification_method',e.target.value);}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:save},busy?'Saving...':x.id?'Update CAPA':'Create CAPA')));
+}
+function QmsCloseDev(props){
+  const d=props.dev;const[note,setNote]=useState('');const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  const checks=[[!!String(d.immediate_action||'').trim(),'Correction / immediate action recorded'],[d.rca_required!=null,'Root cause analysis decision made'],[d.rca_required!==true||!!String(d.root_cause||'').trim(),'Root cause recorded (when needed)']];
+  const ok=checks.every(function(c){return c[0];});
+  async function close(){setBusy(true);setErr('');try{await db.update('hx_deviations',d.id,{status:'closed',close_note:note.trim()});props.onDone();}catch(e){setErr(qmsErr(e));}setBusy(false);}
+  return el(Modal,{title:'Close '+d.number,onClose:props.onClose},
+    checks.map(function(c,i){return el('div',{key:i,className:'row',style:{gap:8,fontSize:13,marginBottom:6}},el('span',{className:'badge '+(c[0]?'ok':'bad')},c[0]?'\u2713':'\u2717'),c[1]);}),
+    !ok&&el('div',{className:'msg err'},'Edit the deviation to complete the missing items first.'),
+    (props.capas||[]).filter(qmsOpen).length>0&&el('div',{className:'msg',style:{marginTop:8}},'Note: '+props.capas.filter(qmsOpen).length+' linked CAPA(s) are still open. They stay open until verified.'),
+    el(Field,{label:'Closing note'},el('textarea',{rows:2,value:note,onChange:function(e){setNote(e.target.value);}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy||!ok,onClick:close},'Close deviation')));
+}
+function QmsVerifyCapa(props){
+  const c=props.capa;const[ev,setEv]=useState(c.verification_evidence||'');const[rate,setRate]=useState(c.effectiveness_rating||'');const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  async function save(close){
+    setErr('');if(!ev.trim()){setErr('Write the verification evidence: what you checked and what you found.');return;}if(!rate){setErr('Rate the effectiveness.');return;}
+    setBusy(true);
+    try{await db.update('hx_capas',c.id,{verification_evidence:ev.trim(),effectiveness_rating:rate});if(close)await db.update('hx_capas',c.id,{status:'closed'});else if(rate!=='effective'&&c.status==='open')await db.update('hx_capas',c.id,{status:'in_progress'});props.onDone();}
+    catch(e){setErr(qmsErr(e));}
+    setBusy(false);
+  }
+  return el(Modal,{title:'Verify effectiveness \u00b7 '+c.number,onClose:props.onClose},
+    c.verification_method&&el('div',{className:'muted',style:{fontSize:12,marginBottom:8}},'Planned verification: '+c.verification_method),
+    el(Field,{label:'Verification evidence *'},el('textarea',{rows:4,value:ev,placeholder:'e.g. Reviewed 30 days of Temp / Humidity logs for Vault 1: all in range. No repeat deviations.',onChange:function(e){setEv(e.target.value);}})),
+    el(Field,{label:'Effectiveness *'},el('select',{value:rate,onChange:function(e){setRate(e.target.value);}},el('option',{value:''},'(rate it)'),Object.keys(CAPA_EFF).map(function(k){return el('option',{key:k,value:k},CAPA_EFF[k]);}))),
+    rate&&rate!=='effective'&&el('div',{className:'msg err'},'Not effective yet: the CAPA stays open. Update the preventive action and verify again.'),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),
+      el('button',{className:'btn ghost',disabled:busy,onClick:function(){save(false);}},'Save rating'),
+      rate==='effective'&&el('button',{className:'btn',disabled:busy||!String(c.correction||'').trim(),title:String(c.correction||'').trim()?'':'Record the correction first',onClick:function(){save(true);}},'Verify & close CAPA')));
+}
+function QmsCancel(props){
+  const[why,setWhy]=useState('');const[err,setErr]=useState('');
+  return el(Modal,{title:'Cancel '+props.rec.number,onClose:props.onClose},
+    el('div',{className:'muted',style:{fontSize:13,marginBottom:8}},'Records are never deleted. A cancelled record stays on file with your reason.'),
+    el(Field,{label:'Reason *'},el('textarea',{rows:3,value:why,onChange:function(e){setWhy(e.target.value);}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Back'),
+      el('button',{className:'btn danger',disabled:!why.trim(),onClick:function(){db.update(props.table,props.rec.id,{status:'cancelled',cancel_reason:why.trim()}).then(props.onDone).catch(function(e){setErr(qmsErr(e));});}},'Cancel record')));
+}
+function qmsRecHtml(kind,r,lic,st,extra){
+  const e=esc3,row=function(l,v){return v?'<tr><th>'+e(l)+'</th><td style="white-space:pre-wrap">'+e(v)+'</td></tr>':'';};
+  let h='<div class="hxrec"><h2>'+(kind==='dev'?'Deviation ':'CAPA ')+e(r.number)+' \u2014 '+e(r.title)+'</h2><div class="m">'+e(lic.name)+(lic.license_number?' ('+e(lic.license_number)+')':'')+' \u00b7 '+e(st.name)+' \u00b7 printed '+e(new Date().toLocaleString())+'</div><table>'+
+    row('Status',QMS_STATUSES[r.status])+row('Priority',QMS_PRIORITIES[r.priority])+row('Department',r.dept);
+  if(kind==='dev')h+=row('Category',r.category)+row('Date it happened',r.occurred_on)+row('Source',r.source_label?(DEV_SOURCES[r.source_type]||'')+': '+r.source_label:'')+row('Product affected',r.product_affected)+row('Lot / batch',r.lot_number)+
+    row('What happened',r.description)+row('Correction / immediate action',r.immediate_action)+row('Root cause analysis',r.rca_required==null?'Not decided':(r.rca_required?'Needed':'Not needed')+(r.rca_decided_by?' (decided by '+r.rca_decided_by+')':''))+
+    row('Root cause',r.root_cause)+row('Owner',r.owner_name)+row('Due date',r.due_date)+row('Reported by',r.reported_by+' \u00b7 '+new Date(r.created_at).toLocaleString())+row('Linked CAPAs',extra);
+  else h+=row('Linked deviation',extra)+row('Issue',r.issue_description)+row('Root cause',r.root_cause)+row('Correction',r.correction)+row('Preventive action',r.preventive_action)+row('Responsible',r.responsible_person_name)+row('Due date',r.due_date)+
+    row('Verification method',r.verification_method)+row('Verification evidence',r.verification_evidence)+row('Effectiveness',CAPA_EFF[r.effectiveness_rating])+row('Verified by',r.verified_by?r.verified_by+' \u00b7 '+new Date(r.verified_at).toLocaleString():'')+row('Opened by',r.created_by+' \u00b7 '+new Date(r.created_at).toLocaleString());
+  h+=row('Closed',r.closed_at?r.closed_by+' \u00b7 '+new Date(r.closed_at).toLocaleString()+(r.close_note?' \u00b7 '+r.close_note:''):'')+row('Cancelled',r.status==='cancelled'?r.cancel_reason:'');
+  return h+'</table></div>';
+}
+function QmsBarChart(props){
+  // simple vertical bars, one or two series, gold / green
+  const data=props.data,max=Math.max(1,...data.map(function(d){return Math.max(d.a||0,d.b||0);})),W=Math.max(320,data.length*48),H=170,bw=props.two?14:22;
+  return el('svg',{viewBox:'0 0 '+W+' '+(H+34),style:{width:'100%',maxHeight:260,height:'auto'},preserveAspectRatio:'xMinYMid meet'},
+    [0,.5,1].map(function(t,i){const y=10+(1-t)*H;return el('g',{key:i},el('line',{x1:28,x2:W,y1:y,y2:y,stroke:'#2a2a2a'}),el('text',{x:24,y:y+4,fill:'#6c685e',fontSize:10,textAnchor:'end'},Math.round(max*t)));}),
+    data.map(function(d,i){const x=40+i*((W-48)/data.length),ha=(d.a||0)/max*H,hb=(d.b||0)/max*H;
+      return el('g',{key:i},
+        el('rect',{x:x,y:10+H-ha,width:bw,height:Math.max(ha,0),fill:'#d4af37',rx:2},el('title',null,props.la+': '+(d.a||0))),
+        props.two&&el('rect',{x:x+bw+3,y:10+H-hb,width:bw,height:Math.max(hb,0),fill:'#5fbf8a',rx:2},el('title',null,props.lb+': '+(d.b||0))),
+        el('text',{x:x+(props.two?bw:bw/2),y:H+26,fill:'#9a968a',fontSize:10,textAnchor:'middle'},d.label));}));
+}
+function QmsHBars(props){
+  const rows=props.rows,max=Math.max(1,...rows.map(function(r){return r[1];}));
+  return el('div',null,rows.length?rows.map(function(r){return el('div',{key:r[0],className:'barrow'},el('div',{style:{width:170,flex:'0 0 auto',fontSize:12}},r[0]),
+    el('div',{style:{flex:1,height:10,background:'#1d1d1d',borderRadius:5,overflow:'hidden'}},el('div',{style:{width:(r[1]*100/max)+'%',height:'100%',background:'var(--gold-grad)'}})),el('div',{style:{width:34,textAlign:'right',fontSize:12}},r[1]));}):el('div',{className:'muted',style:{fontSize:12}},'No data yet'));
+}
+function QmsPage(props){
+  const st=props.state,lic=props.license,lid=lic?lic.id:'';
+  const[devs,setDevs]=useState(null);const[capas,setCapas]=useState([]);const[people,setPeople]=useState([]);
+  const[tab,setTab]=useState(lsGet('hx_qmstab')||'dashboard');
+  const[msg,setMsg]=useState('');const[q,setQ]=useState('');const[sf,setSf]=useState('OPEN');
+  const[sel,setSel]=useState(null);const[modal,setModal]=useState(null);
+  const load=useCallback(function(){
+    if(!lid){setDevs([]);return;}
+    Promise.all([db.get('hx_deviations','license_id=eq.'+encodeURIComponent(lid)+'&select=*&order=created_at.desc&limit=5000'),db.get('hx_capas','license_id=eq.'+encodeURIComponent(lid)+'&select=*&order=created_at.desc&limit=5000')])
+      .then(function(r){setDevs((r[0]||[]).filter(function(x){return x.license_id===lid;}));setCapas((r[1]||[]).filter(function(x){return x.license_id===lid;}));})
+      .catch(function(e){setMsg(qmsErr(e));setDevs([]);});
+    sb('rpc/hx_qms_people',{method:'POST',body:{p_lic:lid}}).then(function(r){setPeople(r||[]);}).catch(function(){setPeople([]);});
+  },[lid]);
+  useEffect(load,[load]);
+  if(!st||!lic)return el('div',null,el('h1',null,el('span',{className:'g'},'QMS')),el('div',{className:'empty'},'Pick a state and a license at the top first.'));
+  const canE=can('qms',2),canF=can('qms',3),D=devs||[],today=todayStr(),year=today.slice(0,4);
+  function go(t){setTab(t);lsSet('hx_qmstab',t);setSel(null);}
+  function done(text){setModal(null);if(text)setMsg(text);load();}
+  const capOf=function(d){return capas.filter(function(c){return c.deviation_id===d.id;});};
+  const devOf=function(c){return D.find(function(d){return d.id===c.deviation_id;});};
+  const openD=D.filter(qmsOpen),openC=capas.filter(qmsOpen),lateD=D.filter(qmsLate),lateC=capas.filter(qmsLate);
+  const awaitingRca=openD.filter(function(d){return d.rca_required==null;}),awaitingVerify=openC.filter(function(c){return c.effectiveness_rating!=='effective';});
+  const closedY=D.filter(function(d){return d.status==='closed'&&String(d.closed_at||'').slice(0,4)===year;});
+  const avgClose=closedY.length?Math.round(closedY.reduce(function(a,d){return a+qmsDays(d.created_at,d.closed_at);},0)/closedY.length):null;
+  const stat=function(l,v,tone,sub){return el('div',{key:l,className:'card gold',style:{marginBottom:0}},el('div',{className:'k'},l),el('div',{className:'v',style:{fontSize:26,color:tone||'var(--text)'}},v),sub&&el('div',{className:'muted',style:{fontSize:11,marginTop:2}},sub));};
+  function filt(list){const ql=q.trim().toLowerCase();return list.filter(function(r){
+    if(sf==='OPEN'&&!qmsOpen(r))return false;if(sf==='LATE'&&!qmsLate(r))return false;if(['open','in_progress','closed','cancelled'].indexOf(sf)>=0&&r.status!==sf)return false;
+    if(ql&&(r.number+' '+r.title+' '+(r.description||r.issue_description||'')+' '+(r.lot_number||'')+' '+(r.product_affected||'')+' '+(r.owner_name||r.responsible_person_name||'')).toLowerCase().indexOf(ql)<0)return false;return true;});}
+  // trends: last 12 months
+  const months=[];for(let i=11;i>=0;i--){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);months.push(d.toISOString().slice(0,7));}
+  const trend=months.map(function(m){return {label:new Date(m+'-15').toLocaleDateString([],{month:'short'}),a:D.filter(function(d){return String(d.created_at).slice(0,7)===m;}).length,b:capas.filter(function(c){return String(c.closed_at||'').slice(0,7)===m;}).length};});
+  const countBy=function(list,k,labels){const m={};list.forEach(function(r){const v=r[k]||'(none)';m[v]=(m[v]||0)+1;});return Object.keys(m).map(function(x){return [labels?labels[x]||x:x,m[x]];}).sort(function(a,b){return b[1]-a[1];});};
+  const yearD=D.filter(function(d){return String(d.created_at).slice(0,4)===year;});
+  const effRate=(function(){const v=capas.filter(function(c){return c.effectiveness_rating;});return v.length?Math.round(v.filter(function(c){return c.effectiveness_rating==='effective';}).length*100/v.length):null;})();
+  function trendReport(){
+    const e=esc3;let h='<div class="hxrec"><h2>Deviation and CAPA trend review \u2014 '+year+'</h2><div class="m">'+e(lic.name)+' \u00b7 '+e(st.name)+' \u00b7 CSQ 1.6 (g) annual review \u00b7 printed '+e(new Date().toLocaleString())+'</div>';
+    h+='<table><tr><th>Deviations this year</th><td>'+yearD.length+'</td></tr><tr><th>Open now</th><td>'+openD.length+' ('+lateD.length+' overdue)</td></tr><tr><th>CAPAs open</th><td>'+openC.length+' ('+lateC.length+' overdue)</td></tr><tr><th>Average days to close a deviation</th><td>'+(avgClose==null?'-':avgClose)+'</td></tr><tr><th>CAPAs verified effective</th><td>'+(effRate==null?'-':effRate+'%')+'</td></tr></table>';
+    h+='<table><tr class="sec"><td colspan="2">BY MONTH (deviations opened / CAPAs closed)</td></tr>'+trend.map(function(t){return '<tr><th>'+e(t.label)+'</th><td>'+t.a+' / '+t.b+'</td></tr>';}).join('')+'</table>';
+    [['BY CATEGORY',countBy(yearD,'category')],['BY SOURCE',countBy(yearD,'source_type',DEV_SOURCES)],['BY DEPARTMENT',countBy(yearD,'dept')],['BY PRIORITY',countBy(yearD,'priority',QMS_PRIORITIES)]].forEach(function(s){
+      h+='<table><tr class="sec"><td colspan="2">'+s[0]+'</td></tr>'+(s[1].length?s[1].map(function(r){return '<tr><th>'+e(r[0])+'</th><td>'+r[1]+'</td></tr>';}).join(''):'<tr><td colspan="2">None</td></tr>')+'</table>';});
+    h+='<table><tr class="sec"><td colspan="5">ALL DEVIATIONS THIS YEAR</td></tr><tr><th>Number</th><th>Title</th><th>Category</th><th>Status</th><th>Root cause</th></tr>'+yearD.map(function(d){return '<tr><td>'+e(d.number)+'</td><td>'+e(d.title)+'</td><td>'+e(d.category)+'</td><td>'+e(QMS_STATUSES[d.status])+'</td><td>'+e(d.root_cause)+'</td></tr>';}).join('')+'</table>';
+    h+='<table><tr><th>Reviewed by (name, signature, date)</th><td style="height:40px"></td></tr></table></div>';
+    printRecords('Deviation and CAPA trend review '+year+' - '+lic.name,[h]);
+  }
+  const selD=sel&&sel.k==='dev'?D.find(function(d){return d.id===sel.id;}):null,selC=sel&&sel.k==='capa'?capas.find(function(c){return c.id===sel.id;}):null;
+  const tabs=[['dashboard','Dashboard'],['deviations','Deviations ('+openD.length+' open)'],['capas','CAPAs ('+openC.length+' open)'],['trends','Trends']];
+  const needs=[].concat(lateD.map(function(d){return ['dev',d,'Deviation overdue (due '+d.due_date+')'];}),lateC.map(function(c){return ['capa',c,'CAPA overdue (due '+c.due_date+')'];}),
+    canF?awaitingRca.map(function(d){return ['dev',d,'Root cause analysis decision needed'];}):[],openC.filter(function(c){return c.effectiveness_rating&&c.effectiveness_rating!=='effective';}).map(function(c){return ['capa',c,'Rated '+CAPA_EFF[c.effectiveness_rating]+' - more action needed'];}));
+  const devCard=function(d){const cs=capOf(d);return el('div',{key:d.id,className:'card',style:{cursor:'pointer',padding:'12px 16px',borderLeft:'3px solid '+(d.priority==='critical'?'var(--red)':d.priority==='major'?'var(--gold)':'#3b82f6')},onClick:function(){setSel({k:'dev',id:d.id});}},
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start',flexWrap:'nowrap'}},
+      el('div',{style:{minWidth:0}},el('div',{className:'row',style:{gap:6,marginBottom:5}},el('b',{style:{color:'var(--gold-hi)',fontSize:12}},d.number),el(QmsBadges,{r:d}),el('span',{className:'badge off'},d.dept),d.source_type!=='manual'&&el('span',{className:'badge off'},DEV_SOURCES[d.source_type])),
+        el('div',{style:{fontWeight:700}},d.title),(d.product_affected||d.lot_number)&&el('div',{className:'muted',style:{fontSize:12}},[d.product_affected&&'Product: '+d.product_affected,d.lot_number&&'Lot: '+d.lot_number].filter(Boolean).join(' \u00b7 '))),
+      el('div',{className:'muted',style:{fontSize:11,textAlign:'right',flex:'0 0 auto'}},el('div',null,String(d.created_at).slice(0,10)),d.due_date&&el('div',{style:{color:qmsLate(d)?'var(--red)':''}},'Due '+d.due_date),cs.length>0&&el('div',null,cs.length+' CAPA'+(cs.length===1?'':'s')))));};
+  const capaCard=function(c){const d=devOf(c);return el('div',{key:c.id,className:'card',style:{cursor:'pointer',padding:'12px 16px',borderLeft:'3px solid '+(c.status==='closed'?'var(--green)':qmsLate(c)?'var(--red)':'var(--gold)')},onClick:function(){setSel({k:'capa',id:c.id});}},
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start',flexWrap:'nowrap'}},
+      el('div',{style:{minWidth:0}},el('div',{className:'row',style:{gap:6,marginBottom:5}},el('b',{style:{color:'var(--gold-hi)',fontSize:12}},c.number),el(QmsBadges,{r:c}),c.effectiveness_rating&&el('span',{className:'badge '+(c.effectiveness_rating==='effective'?'ok':'bad')},CAPA_EFF[c.effectiveness_rating])),
+        el('div',{style:{fontWeight:700}},c.title),el('div',{className:'muted',style:{fontSize:12}},[c.responsible_person_name&&'Responsible: '+c.responsible_person_name,d&&'From '+d.number].filter(Boolean).join(' \u00b7 '))),
+      el('div',{className:'muted',style:{fontSize:11,textAlign:'right',flex:'0 0 auto'}},el('div',null,String(c.created_at).slice(0,10)),c.due_date&&el('div',{style:{color:qmsLate(c)?'var(--red)':''}},'Due '+c.due_date))));};
+  const block=function(l,v){return v?el('div',{key:l,style:{marginBottom:10}},el('div',{className:'k',style:{marginBottom:4}},l),el('div',{style:{background:'var(--panel2)',borderRadius:8,padding:'8px 12px',fontSize:13,lineHeight:1.55,whiteSpace:'pre-wrap'}},v)):null;};
+  const filters=el('div',{className:'row',style:{margin:'0 0 12px'}},el('input',{value:q,placeholder:'Search number, title, lot, owner...',style:{width:260},onChange:function(e){setQ(e.target.value);}}),
+    el('select',{value:sf,onChange:function(e){setSf(e.target.value);}},[['OPEN','Open + in progress'],['LATE','Overdue'],['ALL','Everything'],['open','Open'],['in_progress','In progress'],['closed','Closed'],['cancelled','Cancelled']].map(function(o){return el('option',{key:o[0],value:o[0]},o[1]);})));
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,'Quality ',el('span',{className:'g'},'Management')),el('div',{className:'sub'},'Deviations and CAPA \u00b7 '+lic.name+' \u00b7 every deviation corrected, root cause when needed, every CAPA verified effective (CSQ 1.6)')),
+      el('div',{className:'row'},el('button',{className:'btn',onClick:function(){setModal({t:'dev'});}},'+ Report deviation'),canE&&el('button',{className:'btn ghost',onClick:function(){setModal({t:'capa'});}},'+ New CAPA'))),
+    msg&&el('div',{className:/^(Saved|Reported|Created|Closed|Cancelled|Reopened|Verified|Updated)/.test(msg)?'msg':'msg err'},msg),
+    el('div',{className:'tabs'},tabs.map(function(t){return el('button',{key:t[0],className:tab===t[0]?'on':'',onClick:function(){go(t[0]);}},t[1]);})),
+    devs===null?el('div',{className:'muted'},'Loading...'):
+    tab==='dashboard'?el('div',null,
+      el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',marginBottom:14}},
+        stat('Open deviations',openD.length,openD.length?'var(--red)':'var(--green)'),stat('Open CAPAs',openC.length,openC.length?'var(--gold-hi)':'var(--green)'),
+        stat('Overdue',lateD.length+lateC.length,lateD.length+lateC.length?'var(--red)':'var(--green)','deviations + CAPAs past due'),
+        stat('Closed this year',closedY.length,'var(--text)',avgClose==null?'':'avg '+avgClose+' days to close'),
+        stat('CAPAs effective',effRate==null?'-':effRate+'%',effRate==null?'var(--faint)':effRate>=80?'var(--green)':'var(--gold-hi)','of CAPAs rated')),
+      el('div',{className:'card'},el('h3',null,'Needs action',el('span',{className:'badge '+(needs.length?'bad':'ok'),style:{marginLeft:8}},needs.length?needs.length+' open':'All clear')),
+        !needs.length?el('div',{className:'muted',style:{fontSize:13}},'Nothing overdue and no decisions waiting.'):
+        needs.slice(0,15).map(function(n,i){return el('div',{key:i,className:'row',style:{gap:8,fontSize:13,padding:'4px 0',flexWrap:'nowrap'}},el('span',{style:{width:9,height:9,borderRadius:5,background:'var(--red)',flex:'0 0 auto'}}),
+          el('b',{style:{color:'var(--gold-hi)',minWidth:110}},n[1].number),el('span',{style:{flex:1}},n[1].title+' \u2014 '+n[2]),el('button',{className:'btn ghost sm',onClick:function(){setSel({k:n[0],id:n[1].id});}},'Open'));})),
+      el('div',{className:'card'},el('h3',null,'Last 12 months'),el('div',{className:'row',style:{gap:14,fontSize:12,marginBottom:6}},el('span',null,el('span',{style:{display:'inline-block',width:10,height:10,background:'#d4af37',marginRight:5}}),'Deviations opened'),el('span',null,el('span',{style:{display:'inline-block',width:10,height:10,background:'#5fbf8a',marginRight:5}}),'CAPAs closed')),
+        el(QmsBarChart,{data:trend,two:true,la:'Deviations opened',lb:'CAPAs closed'})),
+      el('div',{className:'card'},el('h3',null,'Recent activity'),D.concat(capas).sort(function(a,b){return String(b.updated_at).localeCompare(String(a.updated_at));}).slice(0,8).map(function(r){const isD=!!r.reported_by_id||r.source_type;
+        return el('div',{key:r.id,className:'row',style:{gap:8,fontSize:13,padding:'5px 0',borderTop:'1px solid var(--line)',cursor:'pointer',flexWrap:'nowrap'},onClick:function(){setSel({k:isD?'dev':'capa',id:r.id});}},
+          el('span',{className:'badge off'},isD?'Deviation':'CAPA'),el('b',{style:{color:'var(--gold-hi)',minWidth:110}},r.number),el('span',{style:{flex:1}},r.title),el('span',{className:'badge '+QMS_STATUS_TONE[r.status]},QMS_STATUSES[r.status]),el('span',{className:'muted',style:{fontSize:11}},String(r.updated_at).slice(0,10)));}),
+        !D.length&&!capas.length&&el('div',{className:'muted',style:{fontSize:13}},'No records yet. Report a deviation, or raise one from a failed log entry, batch or test.'))):
+    tab==='deviations'?el('div',null,filters,filt(D).length?filt(D).map(devCard):el('div',{className:'empty'},D.length?'No deviations match.':'No deviations recorded.')):
+    tab==='capas'?el('div',null,filters,filt(capas).length?filt(capas).map(capaCard):el('div',{className:'empty'},capas.length?'No CAPAs match.':'No CAPAs yet.')):
+    el('div',null,
+      el('div',{className:'row',style:{justifyContent:'space-between',marginBottom:10}},el('div',{className:'muted',style:{fontSize:13}},'Tracking and trending (CSQ 1.6 g). Print the review, discuss it, and sign it at least once a year.'),el('button',{className:'btn',onClick:trendReport},'Print annual trend review')),
+      el('div',{className:'card'},el('h3',null,'By month'),el(QmsBarChart,{data:trend,two:true,la:'Deviations opened',lb:'CAPAs closed'})),
+      el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(320px,1fr))'}},
+        el('div',{className:'card'},el('h3',null,'By category \u00b7 '+year),el(QmsHBars,{rows:countBy(yearD,'category')})),
+        el('div',{className:'card'},el('h3',null,'By source \u00b7 '+year),el(QmsHBars,{rows:countBy(yearD,'source_type',DEV_SOURCES)})),
+        el('div',{className:'card'},el('h3',null,'By department \u00b7 '+year),el(QmsHBars,{rows:countBy(yearD,'dept')})),
+        el('div',{className:'card'},el('h3',null,'By priority \u00b7 '+year),el(QmsHBars,{rows:countBy(yearD,'priority',QMS_PRIORITIES)})))),
+    selD&&!modal&&el(Modal,{title:selD.number+' \u00b7 '+selD.title,wide:true,onClose:function(){setSel(null);}},
+      el('div',{className:'row',style:{gap:6,marginBottom:8}},el(QmsBadges,{r:selD}),el('span',{className:'badge off'},selD.dept),selD.category&&el('span',{className:'badge off'},selD.category)),
+      el('div',{className:'muted',style:{fontSize:12,marginBottom:10}},'Reported by '+selD.reported_by+' \u00b7 '+new Date(selD.created_at).toLocaleString()+(selD.occurred_on?' \u00b7 happened '+selD.occurred_on:'')+(selD.owner_name?' \u00b7 owner '+selD.owner_name:'')+(selD.due_date?' \u00b7 due '+selD.due_date:'')),
+      selD.source_label&&el('div',{className:'msg',style:{marginBottom:10}},'Source: '+DEV_SOURCES[selD.source_type]+' \u00b7 '+selD.source_label,DEV_SOURCE_PAGE[selD.source_type]&&el('button',{className:'btn ghost sm',style:{marginLeft:8},onClick:function(){props.go(DEV_SOURCE_PAGE[selD.source_type]);}},'Open')),
+      (selD.product_affected||selD.lot_number)&&el('div',{className:'card gold',style:{padding:'8px 12px'}},el('span',null,el('span',{className:'k'},'Product '),selD.product_affected||'-'),el('span',{style:{marginLeft:18}},el('span',{className:'k'},'Lot '),selD.lot_number||'-')),
+      block('What happened',selD.description),block('Correction / immediate action',selD.immediate_action),
+      el('div',{style:{fontSize:12,marginBottom:8}},el('b',null,'Root cause analysis: '),selD.rca_required==null?el('span',{className:'badge warn'},'Decision needed'):(selD.rca_required?'Needed':'Not needed')+(selD.rca_decided_by?' (decided by '+selD.rca_decided_by+')':'')),
+      block('Root cause',selD.root_cause),
+      (selD.attachments||[]).length>0&&el('div',{style:{marginBottom:10}},el('div',{className:'k'},'Files'),selD.attachments.map(function(a){return el('div',{key:a.path},el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();openStored(a.path,a.name).catch(function(){});}},'\ud83d\udcce '+a.name));})),
+      selD.status==='closed'&&el('div',{className:'msg'},'Closed by '+selD.closed_by+' \u00b7 '+new Date(selD.closed_at).toLocaleString()+(selD.close_note?' \u00b7 '+selD.close_note:'')),
+      selD.status==='cancelled'&&el('div',{className:'msg err'},'Cancelled: '+selD.cancel_reason),
+      el('div',{className:'card',style:{padding:'8px 12px'}},el('div',{className:'row',style:{justifyContent:'space-between'}},el('b',null,'Linked CAPAs'),canE&&qmsOpen(selD)&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'capa',dev:selD});}},'+ Create CAPA')),
+        capOf(selD).length?capOf(selD).map(function(c){return el('div',{key:c.id,className:'row',style:{gap:6,marginTop:6,cursor:'pointer'},onClick:function(){setSel({k:'capa',id:c.id});}},el('b',{style:{color:'var(--gold-hi)',fontSize:12}},c.number),el('span',{style:{fontSize:13}},c.title),el(QmsBadges,{r:c}));}):el('div',{className:'muted',style:{fontSize:12,marginTop:4}},'None')),
+      el('div',{className:'row',style:{justifyContent:'space-between',marginTop:12}},
+        el('div',{className:'row',style:{gap:6}},
+          el('button',{className:'btn ghost sm',onClick:function(){printRecords(selD.number,[qmsRecHtml('dev',selD,lic,st,capOf(selD).map(function(c){return c.number+' ('+QMS_STATUSES[c.status]+')';}).join(', '))]);}},'Print / PDF'),
+          canE&&qmsOpen(selD)&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'dev',existing:selD});}},'Edit'),
+          canF&&qmsOpen(selD)&&el('button',{className:'btn sm',onClick:function(){setModal({t:'closedev'});}},'Close deviation'),
+          canF&&qmsOpen(selD)&&el('button',{className:'btn danger sm',onClick:function(){setModal({t:'cancel',table:'hx_deviations',rec:selD});}},'Cancel'),
+          canF&&!qmsOpen(selD)&&el('button',{className:'btn ghost sm',onClick:function(){db.update('hx_deviations',selD.id,{status:'open'}).then(function(){done('Reopened '+selD.number);}).catch(function(e){setMsg(qmsErr(e));});}},'Reopen')),
+        el('button',{className:'btn ghost sm',onClick:function(){setSel(null);}},'Close'))),
+    selC&&!modal&&el(Modal,{title:selC.number+' \u00b7 '+selC.title,wide:true,onClose:function(){setSel(null);}},
+      el('div',{className:'row',style:{gap:6,marginBottom:8}},el(QmsBadges,{r:selC}),el('span',{className:'badge off'},selC.dept),selC.effectiveness_rating&&el('span',{className:'badge '+(selC.effectiveness_rating==='effective'?'ok':'bad')},CAPA_EFF[selC.effectiveness_rating])),
+      el('div',{className:'muted',style:{fontSize:12,marginBottom:10}},'Opened by '+selC.created_by+' \u00b7 '+new Date(selC.created_at).toLocaleString()+(selC.responsible_person_name?' \u00b7 responsible '+selC.responsible_person_name:'')+(selC.due_date?' \u00b7 due '+selC.due_date:'')),
+      devOf(selC)&&el('div',{className:'msg',style:{marginBottom:10,cursor:'pointer'},onClick:function(){setSel({k:'dev',id:selC.deviation_id});}},'From deviation '+devOf(selC).number+' \u00b7 '+devOf(selC).title),
+      block('Issue',selC.issue_description),block('Root cause',selC.root_cause),block('Correction (immediate fix)',selC.correction),block('Preventive action (long-term fix)',selC.preventive_action),block('Verification method',selC.verification_method),
+      selC.verification_evidence&&el('div',{className:'card',style:{padding:'8px 12px',borderColor:selC.effectiveness_rating==='effective'?'#23543a':'#5a2a26'}},el('div',{className:'k'},'Verification \u00b7 '+(CAPA_EFF[selC.effectiveness_rating]||'')),el('div',{style:{fontSize:13,whiteSpace:'pre-wrap',margin:'4px 0'}},selC.verification_evidence),
+        selC.verified_by&&el('div',{className:'muted',style:{fontSize:11}},'Verified by '+selC.verified_by+' \u00b7 '+new Date(selC.verified_at).toLocaleString())),
+      selC.status==='closed'&&el('div',{className:'msg'},'Closed by '+selC.closed_by+' \u00b7 '+new Date(selC.closed_at).toLocaleString()),
+      selC.status==='cancelled'&&el('div',{className:'msg err'},'Cancelled: '+selC.cancel_reason),
+      el('div',{className:'row',style:{justifyContent:'space-between',marginTop:12}},
+        el('div',{className:'row',style:{gap:6}},
+          el('button',{className:'btn ghost sm',onClick:function(){printRecords(selC.number,[qmsRecHtml('capa',selC,lic,st,devOf(selC)?devOf(selC).number+' \u00b7 '+devOf(selC).title:'')]);}},'Print / PDF'),
+          canE&&qmsOpen(selC)&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'capa',existing:selC});}},'Edit'),
+          canF&&qmsOpen(selC)&&el('button',{className:'btn sm',onClick:function(){setModal({t:'verify'});}},'Verify effectiveness'),
+          canF&&qmsOpen(selC)&&el('button',{className:'btn danger sm',onClick:function(){setModal({t:'cancel',table:'hx_capas',rec:selC});}},'Cancel'),
+          canF&&!qmsOpen(selC)&&el('button',{className:'btn ghost sm',onClick:function(){db.update('hx_capas',selC.id,{status:'in_progress'}).then(function(){done('Reopened '+selC.number);}).catch(function(e){setMsg(qmsErr(e));});}},'Reopen')),
+        el('button',{className:'btn ghost sm',onClick:function(){setSel(null);}},'Close'))),
+    modal&&modal.t==='dev'&&el(DeviationForm,{state:st,license:lic,existing:modal.existing,onClose:function(){setModal(null);},onDone:function(r){if(r&&!modal.existing){setSel({k:'dev',id:r.id});}done(modal.existing?'Saved.':'Reported: '+(r?r.number:'deviation'));}}),
+    modal&&modal.t==='capa'&&el(CapaForm,{state:st,license:lic,existing:modal.existing,deviation:modal.dev,deviations:D,people:people,onClose:function(){setModal(null);},onDone:function(r){if(r&&!modal.existing)setSel({k:'capa',id:r.id});done(modal.existing?'Saved.':'Created: '+(r?r.number:'CAPA'));}}),
+    modal&&modal.t==='closedev'&&selD&&el(QmsCloseDev,{dev:selD,capas:capOf(selD),onClose:function(){setModal(null);},onDone:function(){done('Closed '+selD.number);}}),
+    modal&&modal.t==='verify'&&selC&&el(QmsVerifyCapa,{capa:selC,onClose:function(){setModal(null);},onDone:function(){done('Verified: '+selC.number);}}),
+    modal&&modal.t==='cancel'&&el(QmsCancel,{table:modal.table,rec:modal.rec,onClose:function(){setModal(null);},onDone:function(){done('Cancelled '+modal.rec.number);}}));
+}
+// "Deviation" button for any record (facility log entry, batch, test): opens the report form prefilled with the source
+function RaiseDeviation(props){
+  const[open,setOpen]=useState(false);const[ok,setOk]=useState('');
+  if(!can('qms',1)||!props.state||!props.license)return null;
+  return el('span',null,el('button',{className:'btn ghost sm',title:'Report a deviation linked to this record',onClick:function(e){e.stopPropagation();setOpen(true);}},ok?'\u2713 '+ok:'Deviation'),
+    open&&el(DeviationForm,{state:props.state,license:props.license,prefill:props.prefill,onClose:function(){setOpen(false);},onDone:function(r){setOpen(false);setOk(r?r.number:'Reported');}}));
+}
+function QmsDashCard(props){
+  const lid=props.license?props.license.id:'';const[d,setD]=useState(null);
+  useEffect(function(){if(!lid||!can('qms',1)){setD(null);return;}let dead=false;
+    Promise.all([db.get('hx_deviations','license_id=eq.'+encodeURIComponent(lid)+'&select=id,status,due_date,license_id'),db.get('hx_capas','license_id=eq.'+encodeURIComponent(lid)+'&select=id,status,due_date,license_id')])
+      .then(function(r){const a=(r[0]||[]).filter(function(x){return x.license_id===lid;}),b=(r[1]||[]).filter(function(x){return x.license_id===lid;});if(!dead)setD({od:a.filter(qmsOpen).length,oc:b.filter(qmsOpen).length,late:a.filter(qmsLate).length+b.filter(qmsLate).length});})
+      .catch(function(){if(!dead)setD(null);});return function(){dead=true;};},[lid]);
+  if(!d)return null;
+  return el('div',{className:'card gold'},el('div',{className:'k'},'Deviations & CAPA'),el('div',{className:'v',style:{color:d.late?'var(--red)':'var(--text)'}},d.od+' open deviation'+(d.od===1?'':'s')),
+    el('div',{className:'muted',style:{margin:'4px 0 8px'}},d.oc+' open CAPA'+(d.oc===1?'':'s')+(d.late?' \u00b7 '+d.late+' overdue':'')),
+    el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go('qms');}},'Open QMS'));
+}
+
+/* ---------- SOPs and document control (Black Fox SOP module + CSQ 1.4 document control) ----------
+   Folders, manual SOPs, AI generator, revise, read-and-sign with signature, PDF - as Black Fox.
+   Hendrix adds: document number, approval by Full access, permanent superseded versions, review dates,
+   who must sign (license, roles or people), signatures per version, printable master list. */
+const SOP_FOLDERS=['General','Production','HR','Compliance','Security','Distribution','Sales'];
+const SOP_CATEGORIES=['Production \u2014 Cart Department','Production \u2014 Pre-Roll Department','Production \u2014 Gummy Department','Production \u2014 Extraction','Production \u2014 Biomass',
+  'Quality Control \u2014 Testing','Quality Control \u2014 Packaging','Quality Control \u2014 Labeling','Compliance \u2014 METRC','Compliance \u2014 Waste Disposal','Compliance \u2014 Inventory',
+  'Facility \u2014 Sanitation & Cleaning','Facility \u2014 Equipment Calibration','Facility \u2014 Security','HR \u2014 Employee Onboarding','HR \u2014 Training',
+  'Distribution \u2014 Transfers','Distribution \u2014 Receiving','Sales & Marketing','Other'];
+const SOP_CAT_FOLDER={'Production':'Production','Quality Control \u2014 Testing':'Compliance','Quality Control \u2014 Packaging':'Production','Quality Control \u2014 Labeling':'Compliance',
+  'Compliance':'Compliance','Facility \u2014 Sanitation & Cleaning':'General','Facility \u2014 Equipment Calibration':'Production','Facility \u2014 Security':'Security','HR':'HR','Distribution':'Distribution','Sales & Marketing':'Sales','Other':'General'};
+const SOP_FOLDER_CODE={General:'GEN',Production:'PRD',HR:'HR',Compliance:'CMP',Security:'SEC',Distribution:'DST',Sales:'SLS'};
+function sopFolderOfCat(c){if(SOP_CAT_FOLDER[c])return SOP_CAT_FOLDER[c];const k=Object.keys(SOP_CAT_FOLDER).find(function(x){return c.indexOf(x)===0;});return k?SOP_CAT_FOLDER[k]:'General';}
+function sopNextVersion(v){const n=parseFloat(v);return isFinite(n)?(n+0.1).toFixed(1):'1.1';}
+function sopSuggestNumber(folder,sops){
+  const code=SOP_FOLDER_CODE[folder]||'GEN',re=new RegExp('^SOP-'+code+'-(\\d+)$','i');let max=0;
+  (sops||[]).forEach(function(s){const m=re.exec(String(s.sop_number||'').trim());if(m)max=Math.max(max,parseInt(m[1],10));});
+  return 'SOP-'+code+'-'+String(max+1).padStart(3,'0');
+}
+function sopGen(s){const g=s&&s.generated_content;if(!g)return null;if(typeof g==='string'){try{return JSON.parse(g);}catch(e){return null;}}return g;}
+function sopStepsOf(s){const g=sopGen(s);if(g&&(g.steps||[]).length)return g.steps.map(function(x,i){return {n:x.step_number||i+1,title:x.title||'',text:x.instruction||'',note:x.regulatory_note||'',critical:!!x.critical};});
+  return (s.steps||[]).map(function(x,i){return {n:i+1,title:'',text:typeof x==='string'?x:(x.text||''),note:'',critical:false};});}
+// who must sign this SOP (approved people on one of its licenses, then by roles or picked people)
+function sopTargets(s,roster){
+  if(!roster)return null;
+  return roster.filter(function(u){
+    const ul=u.license_ids||[];
+    if(ul.length&&!ul.some(function(l){return (s.license_ids||[s.license_id]).indexOf(l)>=0;}))return false;
+    if(s.target_mode==='roles')return (u.role_ids||[]).some(function(r){return (s.target_role_ids||[]).indexOf(r)>=0;});
+    if(s.target_mode==='people')return (s.target_user_ids||[]).indexOf(u.id)>=0;
+    return true;
+  });
+}
+function sopAcksOf(s,acks){return (acks||[]).filter(function(a){return a.sop_id===s.id&&a.version===s.version;});}
+function sopReviewLate(s){return s.status==='published'&&s.next_review&&s.next_review<todayStr();}
+function sopErr(e){const m=String((e&&e.message)||e);return /hx_sop/.test(m)&&/missing|does not exist|schema cache/i.test(m)?'SOPs are not set up yet - run hendrix_step13.sql in the Hendrix Supabase project.':m;}
+const SOP_STATUS_TONE={draft:'warn',published:'ok',archived:'off'};
+function sopStatusLabel(s){return s==='published'?'Published':s==='draft'?'Draft':'Archived';}
+
+function SopForm(props){
+  // mode: 'new' | 'draft' (edit a draft, everything) | 'settings' (published: folder, licenses, signers, review date)
+  const s=props.sop||{},mode=props.mode,st=props.state,lic=props.license;
+  const[f,setF]=useState({title:s.title||'',sop_number:s.sop_number||'',folder:(s.folder&&s.folder!=='Archived')?s.folder:(s.previous_folder||'General'),category:s.category||'',
+    version:s.version||'1.0',status:s.status==='published'?'published':'draft',description:s.description||'',steps:(s.steps&&s.steps.length?s.steps:[{id:'s1',text:''}]).map(function(x,i){return {id:x.id||('s'+i),text:typeof x==='string'?x:(x.text||'')};}),
+    attachments:(s.attachments||[]).slice(),license_ids:(s.license_ids&&s.license_ids.length?s.license_ids:[lic.id]).slice(),target_mode:s.target_mode||'license',
+    target_role_ids:(s.target_role_ids||[]).slice(),target_user_ids:(s.target_user_ids||[]).slice(),effective_date:s.effective_date||'',next_review:s.next_review||''});
+  const[err,setErr]=useState('');const[busy,setBusy]=useState('');
+  const content=mode!=='settings',canF=can('sops',3);
+  const stLics=(props.licenses||[]).filter(function(l){return l.state_id===st.id&&l.active;});
+  function set(k,v){setF(function(p){return {...p,[k]:v};});}
+  function tog(k,id){setF(function(p){const a=p[k].slice(),i=a.indexOf(id);if(i>=0)a.splice(i,1);else a.push(id);return {...p,[k]:a};});}
+  async function upload(file){
+    if(!file)return;setBusy('Uploading...');setErr('');
+    try{const ext=(file.name.split('.').pop()||'pdf').toLowerCase().replace(/[^a-z0-9]/g,'');
+      const path=await storagePut(file,'sops/'+lic.id+'/'+Date.now()+'-'+Math.random().toString(36).slice(2,6)+'.'+ext);
+      setF(function(p){return {...p,attachments:p.attachments.concat([{id:'a'+Date.now(),path:path,name:file.name}])};});}
+    catch(e){setErr(String(e.message||e));}
+    setBusy('');
+  }
+  async function save(){
+    setErr('');
+    if(!f.title.trim()){setErr('Enter the SOP title.');return;}
+    if(!f.license_ids.length){setErr('Select at least one license.');return;}
+    if(f.target_mode==='roles'&&!f.target_role_ids.length){setErr('Pick at least one role, or choose everyone on the license.');return;}
+    if(f.target_mode==='people'&&!f.target_user_ids.length){setErr('Pick at least one person, or choose everyone on the license.');return;}
+    const base={folder:f.folder,license_ids:f.license_ids.indexOf(lic.id)>=0||s.license_id?f.license_ids:[lic.id].concat(f.license_ids),target_mode:f.target_mode,target_role_ids:f.target_mode==='roles'?f.target_role_ids:[],
+      target_user_ids:f.target_mode==='people'?f.target_user_ids:[],next_review:f.next_review||null};
+    const rec=content?{...base,title:f.title.trim(),sop_number:f.sop_number.trim(),category:f.category,version:f.version.trim()||'1.0',status:f.status,description:f.description.trim(),
+      steps:f.steps.filter(function(x){return x.text.trim();}).map(function(x){return {id:x.id,text:x.text.trim()};}),attachments:f.attachments,effective_date:f.effective_date||null}:base;
+    setBusy('Saving...');
+    try{
+      let out;
+      if(mode==='new')out=await db.insert('hx_sops',{...rec,id:newId('sop'),state_id:st.id,license_id:lic.id,created_by:(ACC.profile&&ACC.profile.name)||''});
+      else out=await db.update('hx_sops',s.id,rec);
+      props.onDone(out&&out[0]);
+    }catch(e){setErr(/hx_sops_number/.test(String(e.message))?'Document number '+f.sop_number+' is already used under this license.':sopErr(e));}
+    setBusy('');
+  }
+  const roleList=ACC.roles||[],people=props.roster||[];
+  return el(Modal,{title:mode==='new'?'New SOP':mode==='draft'?'Edit draft SOP':'SOP settings \u00b7 '+s.title,wide:true,onClose:props.onClose},
+    content&&el('div',{className:'grid',style:{gridTemplateColumns:'2fr 1fr',gap:10}},
+      el(Field,{label:'Title *'},el('input',{value:f.title,placeholder:'e.g. Cart Filling Standard Procedure',onChange:function(e){set('title',e.target.value);}})),
+      el(Field,{label:'Document number'},el('div',{className:'row',style:{flexWrap:'nowrap',gap:6}},el('input',{value:f.sop_number,placeholder:'e.g. SOP-PRD-001',onChange:function(e){set('sop_number',e.target.value);}}),
+        el('button',{type:'button',className:'btn ghost sm',onClick:function(){set('sop_number',sopSuggestNumber(f.folder,props.sops));}},'Suggest')))),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:10}},
+      el(Field,{label:'Folder *'},el('select',{value:f.folder,onChange:function(e){set('folder',e.target.value);}},SOP_FOLDERS.map(function(x){return el('option',{key:x,value:x},x);}))),
+      content&&el(Field,{label:'Category'},el('select',{value:f.category,onChange:function(e){const c=e.target.value;setF(function(p){return {...p,category:c,folder:p.folder==='General'&&c?sopFolderOfCat(c):p.folder};});}},el('option',{value:''},'(none)'),SOP_CATEGORIES.map(function(x){return el('option',{key:x,value:x},x);}))),
+      content&&el(Field,{label:'Version'},el('input',{value:f.version,placeholder:'1.0',onChange:function(e){set('version',e.target.value);}})),
+      content&&el(Field,{label:'Status'},el('select',{value:f.status,onChange:function(e){set('status',e.target.value);}},el('option',{value:'draft'},'Draft'),canF&&el('option',{value:'published'},'Published (I approve it)'))),
+      content&&el(Field,{label:'Effective date'},el('input',{type:'date',value:f.effective_date||'',onChange:function(e){set('effective_date',e.target.value);}})),
+      el(Field,{label:'Next review'},el('input',{type:'date',value:f.next_review||'',onChange:function(e){set('next_review',e.target.value);}}))),
+    el('div',{className:'muted',style:{fontSize:11,marginTop:-4,marginBottom:10}},'Publishing needs Full access to SOPs and records you as the approver. Leave dates blank to use today and one year from today.'),
+    el(Field,{label:'Applies to license(s) *',plain:true},el('div',{className:'row',style:{gap:6}},stLics.map(function(l){const on=f.license_ids.indexOf(l.id)>=0,fixed=l.id===(s.license_id||lic.id);
+      return el('label',{key:l.id,className:'ck',style:{border:'1px solid '+(on?'var(--gold)':'var(--line)'),borderRadius:8,padding:'6px 10px'}},el('input',{type:'checkbox',checked:on,disabled:fixed,onChange:function(){tog('license_ids',l.id);}}),el('span',null,l.name+(fixed?' (primary)':'')));}))),
+    el(Field,{label:'Who must read and sign it?',plain:true},
+      el('div',null,
+        el('div',{className:'row',style:{gap:6,marginBottom:8}},[['license','Everyone on the license(s)'],['roles','By role'],['people','Pick people']].map(function(m){return el('button',{key:m[0],type:'button',className:'btn sm'+(f.target_mode===m[0]?'':' ghost'),onClick:function(){set('target_mode',m[0]);}},m[1]);})),
+        f.target_mode==='roles'&&el('div',{className:'row',style:{gap:6}},roleList.length?roleList.map(function(r){return el('label',{key:r.id,className:'ck'},el('input',{type:'checkbox',checked:f.target_role_ids.indexOf(r.id)>=0,onChange:function(){tog('target_role_ids',r.id);}}),el('span',null,r.name));}):el('span',{className:'muted'},'No roles yet - create them on Roles.')),
+        f.target_mode==='people'&&el('div',{style:{maxHeight:200,overflowY:'auto',border:'1px solid var(--line)',borderRadius:8,padding:8}},people.length?people.map(function(u){return el('label',{key:u.id,className:'ck',style:{display:'flex'}},el('input',{type:'checkbox',checked:f.target_user_ids.indexOf(u.id)>=0,onChange:function(){tog('target_user_ids',u.id);}}),el('span',null,u.name));}):el('span',{className:'muted'},'The team list is not available to you.')))),
+    content&&el(Field,{label:'Description / purpose'},el('textarea',{rows:3,value:f.description,placeholder:'What is this SOP for?',onChange:function(e){set('description',e.target.value);}})),
+    content&&el('div',null,
+      el('div',{className:'k',style:{margin:'6px 0'}},'Procedure steps'),
+      f.steps.map(function(x,i){return el('div',{key:x.id,className:'row',style:{flexWrap:'nowrap',alignItems:'flex-start',marginBottom:6}},
+        el('span',{className:'badge',style:{marginTop:10}},String(i+1)),
+        el('textarea',{rows:2,value:x.text,placeholder:'Step '+(i+1)+'...',style:{flex:1},onChange:function(e){const v=e.target.value;setF(function(p){return {...p,steps:p.steps.map(function(y){return y.id===x.id?{...y,text:v}:y;})};});}}),
+        f.steps.length>1&&el('button',{type:'button',className:'btn ghost sm',onClick:function(){setF(function(p){return {...p,steps:p.steps.filter(function(y){return y.id!==x.id;})};});}},'\u00d7'));}),
+      el('button',{type:'button',className:'btn ghost sm',onClick:function(){setF(function(p){return {...p,steps:p.steps.concat([{id:'s'+Date.now(),text:''}])};});}},'+ Add step'),
+      el('div',{className:'k',style:{margin:'12px 0 6px'}},'Attachments'),
+      f.attachments.map(function(a){return el('div',{key:a.id||a.path,className:'row',style:{fontSize:12,marginBottom:4}},el('span',null,'\ud83d\udcce '+a.name),el('button',{type:'button',className:'btn ghost sm',onClick:function(){setF(function(p){return {...p,attachments:p.attachments.filter(function(y){return y!==a;})};});}},'Remove'));}),
+      el('label',{className:'btn ghost sm',style:{display:'inline-block'}},busy==='Uploading...'?'Uploading...':'+ Attach file',el('input',{type:'file',style:{display:'none'},onChange:function(e){upload(e.target.files[0]);e.target.value='';}}))),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),
+      el('button',{className:'btn',disabled:!!busy,onClick:save},busy==='Saving...'?'Saving...':mode==='new'?'Create SOP':'Save')));
+}
+
+function sopAiJson(t){
+  let c=String(t||'').replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+  const a=c.indexOf('{');if(a>0)c=c.slice(a);
+  try{return JSON.parse(c);}catch(e){
+    const lb=c.lastIndexOf('}');if(lb<0)throw new Error('The AI did not return a readable SOP. Try again.');
+    let r=c.slice(0,lb+1),d=0;for(const ch of r){if(ch==='{')d++;else if(ch==='}')d--;}while(d>0){r+='}';d--;}
+    return JSON.parse(r);
+  }
+}
+async function sopAi(prompt,maxTok,doc){
+  const content=doc?[{type:'document',source:{type:'base64',media_type:'application/pdf',data:doc}},{type:'text',text:prompt}]:prompt;
+  let j;
+  try{j=await aiCall({module:'sops',max_tokens:maxTok,messages:[{role:'user',content:content}]});}
+  catch(e){if(String(e.message)==='AI_NOT_SETUP')throw new Error('AI is not set up yet - deploy the hendrix-ai function (see hendrix-ai.ts).');throw e;}
+  return ((j.content||[])[0]||{}).text||'';
+}
+async function sopRegContext(st){
+  let rules=[];try{rules=(await db.get('hx_rules','state_id=eq.'+encodeURIComponent(st.id)+'&select=category,citation,title&limit=40'))||[];}catch(e){rules=[];}
+  return {agency:st.agency||'the state regulator',code:st.code||'',rules:rules.map(function(r){return (r.citation?r.citation+' ':'')+r.title;}).slice(0,12)};
+}
+function SopGenerator(props){
+  const st=props.state,lic=props.license;
+  const[step,setStep]=useState(1);
+  const[title,setTitle]=useState('');
+  const[category,setCategory]=useState(SOP_CATEGORIES[0]);
+  const[refText,setRefText]=useState('');const[refName,setRefName]=useState('');
+  const[custom,setCustom]=useState('');
+  const[gen,setGen]=useState(null);
+  const[err,setErr]=useState('');const[busy,setBusy]=useState('');
+  async function onFile(file){
+    if(!file)return;setRefName(file.name);
+    if(/\.pdf$/i.test(file.name)){setRefText('__PDF__:'+(await fileB64(file)));}
+    else{try{setRefText((await file.text()).slice(0,5000));}catch(e){setRefText('');}}
+  }
+  async function onImport(file){
+    if(!file)return;setErr('');
+    try{const p=JSON.parse(await file.text());if(!p||!p.title)throw new Error('This file does not look like an SOP export.');setTitle(p.title);setGen(p);setStep(3);}
+    catch(e){setErr('Import failed: '+e.message);}
+  }
+  async function generate(){
+    if(!title.trim()){setErr('Please enter an SOP title.');return;}
+    setErr('');setStep(2);
+    try{
+      const reg=await sopRegContext(st),today=todayStr();
+      let ref=refText;
+      if(ref.indexOf('__PDF__:')===0){setBusy('Reading the reference PDF...');
+        ref=(await sopAi('Summarize the key procedural and regulatory content of this document relevant to "'+title+'" in under 600 words, plain text, no markdown. Focus on facts useful for writing an SOP.',1000,ref.slice(8))).slice(0,3000);}
+      const ci=custom.trim()?'\nIMPORTANT - follow these instructions from the facility, they take priority over your own judgment:\n'+custom.trim()+'\n':'';
+      setBusy('Writing purpose, scope and responsibilities...');
+      const meta=sopAiJson(await sopAi('You are a cannabis compliance officer writing an SOP for '+st.name+' (license: '+lic.name+(lic.license_type?', '+lic.license_type:'')+').\nRegulatory agency: '+reg.agency+(reg.code?' - '+reg.code:'')+'\n'+
+        (reg.rules.length?'Key regulations from the facility rulebook: '+reg.rules.join('; ')+'\n':'')+'\nSOP Title: '+title+'\nCategory: '+category+'\n'+(ref?'Reference material: '+ref+'\n':'')+ci+
+        '\nThe facility follows the CSQ Standard for Manufacturing (cGMP). Respond with ONLY this JSON (no markdown, be concise):\n{"sop_number":"SOP-[DEPT]-[3digit]","title":"'+title.replace(/"/g,"'")+'","revision":"1.0","effective_date":"'+today+'","review_frequency":"Annual","department":"...","purpose":"2-3 sentences","scope":"1-2 sentences","regulatory_references":["3-5 specific citations"],"responsibilities":[{"role":"...","responsibility":"..."}],"definitions":[{"term":"...","definition":"..."}],"required_materials":["..."],"deviation_procedure":"1-2 sentences","training_requirements":"1-2 sentences"}',1500));
+      setBusy('Writing the procedure steps...');
+      const steps=sopAiJson(await sopAi('You are writing the procedure steps for this cannabis SOP:\nTitle: '+title+'\nPurpose: '+(meta.purpose||'')+'\nDepartment: '+(meta.department||'')+'\n'+(ref?'Reference material: '+ref+'\n':'')+ci+
+        '\nWrite 6-10 clear procedure steps. Keep each instruction to 1-2 sentences. Flag CRITICAL steps where a regulatory violation or product risk exists.\n\nRespond with ONLY this JSON (no markdown, keep instructions short so it is not truncated):\n{"steps":[{"step_number":1,"title":"short title","instruction":"1-2 sentences","regulatory_note":"optional, brief","critical":false}],"quality_checks":["5-8 short checkpoints"],"documentation_required":["3-6 short items"]}',3000));
+      setGen({...meta,license_name:lic.name,state:st.name,steps:steps.steps||[],quality_checks:steps.quality_checks||[],documentation_required:steps.documentation_required||[],definitions:meta.definitions||[],
+        revision_history:[{revision:'1.0',date:today,description:'Initial release',approved_by:''}]});
+      setStep(3);
+    }catch(e){setErr('Generation failed: '+e.message);setStep(1);}
+    setBusy('');
+  }
+  async function save(){
+    setErr('');setBusy('Saving...');
+    const folder=sopFolderOfCat(category),num=String(gen.sop_number||'').indexOf('[')>=0?'':(gen.sop_number||'');
+    try{
+      const out=await db.insert('hx_sops',{id:newId('sop'),state_id:st.id,license_id:lic.id,license_ids:[lic.id],title:gen.title||title,sop_number:num,folder:folder,category:category,description:gen.purpose||'',
+        steps:(gen.steps||[]).map(function(x,i){return {id:'s'+i,text:typeof x==='string'?x:'['+(x.step_number||i+1)+'] '+(x.title||'')+': '+(x.instruction||'')};}),
+        generated_content:gen,regulatory_references:gen.regulatory_references||[],version:gen.revision||'1.0',status:'draft',created_by:(ACC.profile&&ACC.profile.name)||''});
+      props.onDone(out&&out[0]);
+    }catch(e){setErr(/hx_sops_number/.test(String(e.message))?'Document number '+num+' is already used - change it below.':sopErr(e));}
+    setBusy('');
+  }
+  function upd(k,v){setGen(function(p){return {...p,[k]:v};});}
+  return el(Modal,{title:'AI SOP Generator \u00b7 '+lic.name,wide:true,onClose:props.onClose},
+    el('div',{className:'row',style:{gap:14,marginBottom:12}},[[1,'Setup'],[2,'Generating'],[3,'Review & Save']].map(function(x){return el('span',{key:x[0],className:'badge'+(step>=x[0]?'':' off')},x[0]+'. '+x[1]);})),
+    step===1&&el('div',null,
+      el('div',{className:'card',style:{padding:'10px 12px'}},el('div',{className:'k'},'License & jurisdiction'),el('div',{style:{marginTop:4}},lic.name+' \u00b7 '+st.name+(st.agency?' \u00b7 '+st.agency:'')),
+        el('div',{className:'muted',style:{fontSize:12,marginTop:4}},'The AI uses this state\'s Rulebook entries and writes to cGMP / CSQ.')),
+      el(Field,{label:'SOP title *'},el('input',{value:title,placeholder:'e.g. Cart Filling and Capping',onChange:function(e){setTitle(e.target.value);}})),
+      el(Field,{label:'Category / department'},el('select',{value:category,onChange:function(e){setCategory(e.target.value);}},SOP_CATEGORIES.map(function(c){return el('option',{key:c,value:c},c);}))),
+      el(Field,{label:'Reference document (optional: .pdf, .txt, .md)',plain:true},el('div',null,el('input',{type:'file',accept:'.pdf,.txt,.md,.doc,.docx',onChange:function(e){onFile(e.target.files[0]);}}),refName&&el('div',{className:'muted',style:{fontSize:12}},'AI will incorporate '+refName))),
+      el(Field,{label:'Instructions for the AI (optional)'},el('textarea',{rows:3,value:custom,placeholder:'e.g. Use our 3-person sign-off; include METRC steps; keep to 8 steps',onChange:function(e){setCustom(e.target.value);}})),
+      el(Field,{label:'Or import an SOP exported as JSON (jumps straight to Review & Save)',plain:true},el('input',{type:'file',accept:'.json',onChange:function(e){onImport(e.target.files[0]);}})),
+      err&&el('div',{className:'msg err'},err),
+      el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',onClick:generate},'Generate SOP with AI'))),
+    step===2&&el('div',{className:'empty'},busy||'Working...'),
+    step===3&&gen&&el('div',null,
+      el('div',{className:'grid',style:{gridTemplateColumns:'2fr 1fr',gap:10}},
+        el(Field,{label:'Title'},el('input',{value:gen.title||'',onChange:function(e){upd('title',e.target.value);}})),
+        el(Field,{label:'Document number'},el('input',{value:gen.sop_number||'',onChange:function(e){upd('sop_number',e.target.value);}}))),
+      el(Field,{label:'Purpose'},el('textarea',{rows:3,value:gen.purpose||'',onChange:function(e){upd('purpose',e.target.value);}})),
+      el(Field,{label:'Scope'},el('textarea',{rows:2,value:gen.scope||'',onChange:function(e){upd('scope',e.target.value);}})),
+      el('div',{className:'k',style:{margin:'6px 0'}},'Procedure'),
+      (gen.steps||[]).map(function(x,i){return el('div',{key:i,style:{marginBottom:8}},
+        el('div',{className:'row',style:{gap:6,marginBottom:4}},el('span',{className:'badge'},String(x.step_number||i+1)),el('b',null,x.title||''),x.critical&&el('span',{className:'badge bad'},'Critical')),
+        el('textarea',{rows:2,value:x.instruction||'',onChange:function(e){const v=e.target.value;setGen(function(p){return {...p,steps:p.steps.map(function(y,j){return j===i?{...y,instruction:v}:y;})};});}}),
+        x.regulatory_note&&el('div',{className:'muted',style:{fontSize:12}},'\u2696 '+x.regulatory_note));}),
+      [['regulatory_references','Regulatory references'],['quality_checks','Quality checks'],['documentation_required','Documentation required'],['required_materials','Required materials / PPE']].map(function(k){return (gen[k[0]]||[]).length>0&&el('div',{key:k[0],style:{marginBottom:6}},el('div',{className:'k'},k[1]),(gen[k[0]]||[]).map(function(t,i){return el('div',{key:i,style:{fontSize:13}},'\u2022 '+t);}));}),
+      (gen.responsibilities||[]).length>0&&el('div',{style:{marginBottom:6}},el('div',{className:'k'},'Responsibilities'),gen.responsibilities.map(function(r,i){return el('div',{key:i,style:{fontSize:13}},el('b',null,(r.role||'')+': '),r.responsibility||'');})),
+      gen.deviation_procedure&&el('div',{style:{fontSize:13,marginBottom:6}},el('b',null,'Deviation procedure: '),gen.deviation_procedure),
+      gen.training_requirements&&el('div',{style:{fontSize:13,marginBottom:6}},el('b',null,'Training requirements: '),gen.training_requirements),
+      el('div',{className:'muted',style:{fontSize:12,margin:'8px 0'}},'Saved as a DRAFT. Someone with Full access reviews and publishes (approves) it.'),
+      err&&el('div',{className:'msg err'},err),
+      el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:function(){setStep(1);}},'Back'),el('button',{className:'btn',disabled:!!busy,onClick:save},busy||'Save as draft'))));
+}
+
+function SopRevise(props){
+  const s=props.sop,st=props.state,lic=props.license,gen0=sopGen(s);
+  const[mode,setMode]=useState('manual');
+  const[version,setVersion]=useState(sopNextVersion(s.version));
+  const[note,setNote]=useState('');
+  const[desc,setDesc]=useState(s.description||'');
+  const[steps,setSteps]=useState(sopStepsOf(s).map(function(x,i){return {...x,id:'r'+i};}));
+  const[ask,setAsk]=useState('');
+  const[aiGen,setAiGen]=useState(null);
+  const[err,setErr]=useState('');const[busy,setBusy]=useState('');
+  async function runAi(){
+    if(!ask.trim()){setErr('Describe what needs to change.');return;}
+    setErr('');setBusy('AI is revising the SOP...');
+    try{
+      const reg=await sopRegContext(st),orig=gen0||{title:s.title,purpose:s.description,steps:sopStepsOf(s).map(function(x){return {step_number:x.n,title:x.title,instruction:x.text};})};
+      const r=sopAiJson(await sopAi('You are revising an existing cannabis SOP. Current SOP (JSON): '+JSON.stringify(orig)+'\n\nLICENSE: '+lic.name+' ('+st.name+')\nREGULATORY CONTEXT: '+reg.agency+(reg.code?' - '+reg.code:'')+'\n\nREQUESTED CHANGES: '+ask+
+        '\n\nReturn a REVISED version as JSON only (no markdown). Set revision to "'+version+'". Add an entry to revision_history dated '+todayStr()+'. Keep all unchanged fields identical. Fields: sop_number, title, revision, effective_date, review_frequency, department, license_name, state, regulatory_references, purpose, scope, responsibilities, definitions, required_materials, steps, quality_checks, documentation_required, deviation_procedure, training_requirements, revision_history',6000));
+      setAiGen(r);setDesc(r.purpose||desc);setSteps((r.steps||[]).map(function(x,i){return {id:'r'+i,n:x.step_number||i+1,title:x.title||'',text:x.instruction||'',note:x.regulatory_note||'',critical:!!x.critical};}));
+      if(!note.trim())setNote(ask.trim());
+    }catch(e){setErr('Revision failed: '+e.message);}
+    setBusy('');
+  }
+  async function save(){
+    setErr('');
+    if(!version.trim()||version.trim()===s.version){setErr('Give the revision a new version number.');return;}
+    if(!note.trim()){setErr('Write the reason for the revision.');return;}
+    const st2=steps.filter(function(x){return x.text.trim();});
+    const g=aiGen||gen0;
+    let newGen=null;
+    if(g){newGen={...g,revision:version.trim(),purpose:desc,steps:st2.map(function(x,i){return {step_number:i+1,title:x.title,instruction:x.text,regulatory_note:x.note,critical:x.critical};})};
+      if(!aiGen)newGen.revision_history=(g.revision_history||[]).concat([{revision:version.trim(),date:todayStr(),description:note.trim(),approved_by:(ACC.profile&&ACC.profile.name)||''}]);}
+    setBusy('Saving...');
+    try{
+      const out=await db.update('hx_sops',s.id,{version:version.trim(),revision_note:note.trim(),description:desc.trim(),
+        steps:st2.map(function(x,i){return {id:'s'+i,text:x.title?'['+(i+1)+'] '+x.title+': '+x.text:x.text};}),generated_content:newGen,
+        regulatory_references:newGen?(newGen.regulatory_references||s.regulatory_references||[]):(s.regulatory_references||[])});
+      props.onDone(out&&out[0]);
+    }catch(e){setErr(sopErr(e));}
+    setBusy('');
+  }
+  return el(Modal,{title:'Revise SOP \u00b7 '+s.title+' (v'+s.version+')',wide:true,onClose:props.onClose},
+    el('div',{className:'muted',style:{fontSize:12,marginBottom:10}},'A revision keeps v'+s.version+' permanently in the version history, publishes the new version with you as approver, and everyone must sign it again.'),
+    el('div',{className:'row',style:{gap:6,marginBottom:10}},el('button',{className:'btn sm'+(mode==='manual'?'':' ghost'),onClick:function(){setMode('manual');}},'Edit it myself'),el('button',{className:'btn sm'+(mode==='ai'?'':' ghost'),onClick:function(){setMode('ai');}},'Revise with AI')),
+    mode==='ai'&&el('div',{className:'card',style:{padding:'10px 12px'}},el(Field,{label:'What needs to change?'},el('textarea',{rows:3,value:ask,placeholder:'e.g. Add a second-person verification after filling; update the citation for the new rule',onChange:function(e){setAsk(e.target.value);}})),
+      el('button',{className:'btn sm',disabled:!!busy,onClick:runAi},busy&&busy.indexOf('AI')===0?busy:aiGen?'Run AI again':'Revise with AI'),aiGen&&el('span',{className:'muted',style:{fontSize:12,marginLeft:8}},'Review the result below, then approve.')),
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 3fr',gap:10}},
+      el(Field,{label:'New version *'},el('input',{value:version,onChange:function(e){setVersion(e.target.value);}})),
+      el(Field,{label:'Reason for revision *'},el('input',{value:note,placeholder:'What changed and why',onChange:function(e){setNote(e.target.value);}}))),
+    el(Field,{label:'Purpose / description'},el('textarea',{rows:3,value:desc,onChange:function(e){setDesc(e.target.value);}})),
+    el('div',{className:'k',style:{margin:'6px 0'}},'Procedure'),
+    steps.map(function(x,i){return el('div',{key:x.id,className:'row',style:{flexWrap:'nowrap',alignItems:'flex-start',marginBottom:6}},
+      el('span',{className:'badge',style:{marginTop:10}},String(i+1)),
+      el('div',{style:{flex:1}},x.title&&el('div',{style:{fontSize:12,fontWeight:700}},x.title,x.critical&&el('span',{className:'badge bad',style:{marginLeft:6}},'Critical')),
+        el('textarea',{rows:2,value:x.text,onChange:function(e){const v=e.target.value;setSteps(function(p){return p.map(function(y){return y.id===x.id?{...y,text:v}:y;});});}})),
+      el('button',{className:'btn ghost sm',onClick:function(){setSteps(function(p){return p.filter(function(y){return y.id!==x.id;});});}},'\u00d7'));}),
+    el('button',{className:'btn ghost sm',onClick:function(){setSteps(function(p){return p.concat([{id:'r'+Date.now(),n:p.length+1,title:'',text:'',note:'',critical:false}]);});}},'+ Add step'),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:!!busy,onClick:save},busy==='Saving...'?'Saving...':'Approve and publish v'+(version||'?'))));
+}
+
+function SopSign(props){
+  const s=props.sop;
+  const[sig,setSig]=useState('');const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  async function sign(){
+    if(!sig){setErr('Draw your signature first.');return;}
+    setBusy(true);setErr('');
+    try{await db.insert('hx_sop_acks',{id:newId('ack'),sop_id:s.id,state_id:s.state_id,license_id:props.license.id,version:s.version,user_id:ACC.profile.id,name:ACC.profile.name||ACC.profile.email||'',signature:sig});props.onDone();}
+    catch(e){setErr(/hx_sop_acks_one/.test(String(e.message))?'You already signed this version.':sopErr(e));}
+    setBusy(false);
+  }
+  return el(Modal,{title:'Sign & acknowledge SOP',onClose:props.onClose},
+    el('div',{className:'card gold',style:{padding:'10px 12px'}},el('div',{className:'k'},'SOP being acknowledged'),el('div',{style:{fontWeight:700,marginTop:4}},s.title),el('div',{className:'muted',style:{fontSize:12}},'Version '+s.version+(s.sop_number?' \u00b7 '+s.sop_number:''))),
+    el('div',{className:'muted',style:{fontSize:13,margin:'10px 0',lineHeight:1.6}},'By signing below, you confirm that you have READ, UNDERSTOOD, and will COMPLY with this Standard Operating Procedure. This signature is permanently recorded.'),
+    el(Field,{label:'Draw your signature *',plain:true},el(SignaturePad,{onChange:function(v){setSig(v||'');}})),
+    el('div',{className:'muted',style:{fontSize:11,marginTop:4}},'Signing as: '+((ACC.profile&&(ACC.profile.name||ACC.profile.email))||'')+' \u00b7 '+todayStr()),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy||!sig,onClick:sign},busy?'Saving...':'\u2713 Sign & acknowledge')));
+}
+
+function SopHistory(props){
+  const s=props.sop;
+  const[rows,setRows]=useState(null);const[open,setOpen]=useState(null);
+  useEffect(function(){db.get('hx_sop_versions','sop_id=eq.'+encodeURIComponent(s.id)+'&select=*&order=superseded_at.desc').then(function(r){setRows((r||[]).filter(function(x){return x.sop_id===s.id;}));}).catch(function(e){setRows([]);});},[s.id]);
+  return el(Modal,{title:'Version history \u00b7 '+s.title,wide:true,onClose:props.onClose},
+    el('div',{className:'card gold',style:{padding:'8px 12px'}},el('b',null,'v'+s.version+' \u00b7 current'),el('span',{className:'muted',style:{marginLeft:8,fontSize:12}},(s.approved_by?'approved by '+s.approved_by:'')+(s.approved_at?' on '+new Date(s.approved_at).toLocaleDateString():'')+(s.revision_note?' \u00b7 '+s.revision_note:''))),
+    rows===null?el('div',{className:'muted'},'Loading...'):!rows.length?el('div',{className:'muted'},'No earlier versions. Revisions keep every earlier version here, unchanged.'):
+    rows.map(function(v){const snap=v.snapshot||{},isOpen=open===v.id;
+      return el('div',{key:v.id,className:'card',style:{padding:'8px 12px'}},
+        el('div',{className:'row',style:{justifyContent:'space-between',cursor:'pointer'},onClick:function(){setOpen(isOpen?null:v.id);}},
+          el('div',null,el('b',null,'v'+v.version),el('span',{className:'muted',style:{marginLeft:8,fontSize:12}},'superseded '+new Date(v.superseded_at).toLocaleString()+(v.superseded_by?' by '+v.superseded_by:''))),
+          el('span',{className:'muted',style:{fontSize:12}},'Replaced because: '+(v.revision_note||'-'))),
+        isOpen&&el('div',{style:{marginTop:8,fontSize:13}},el('div',{style:{fontWeight:700}},snap.title),snap.description&&el('div',{className:'muted',style:{margin:'4px 0'}},snap.description),
+          sopStepsOf(snap).map(function(x){return el('div',{key:x.n},x.n+'. '+(x.title?x.title+': ':'')+x.text);}),
+          el('div',{className:'muted',style:{fontSize:11,marginTop:6}},'Approved by '+(snap.approved_by||'-')+(snap.approved_at?' on '+new Date(snap.approved_at).toLocaleDateString():''))));
+    }));
+}
+
+async function exportSopPdfHx(s,licName,acks){
+  if(!window.jspdf){window.alert('The PDF library did not load.');return;}
+  const doc=pdfSafeDoc(new window.jspdf.jsPDF({unit:'pt',format:'letter'}));
+  const W=612,H=792,margin=48;let y=0;
+  const INK=[10,10,10],GOLD=[190,150,40],TEXT=[15,15,15],SUB=[50,55,60],MUTED=[95,100,105],LIGHT=[248,245,236],BORDER=[210,205,190];
+  const gen=sopGen(s);
+  function header(){doc.setFillColor(...INK);doc.rect(0,0,W,78,'F');doc.setFillColor(...GOLD);doc.rect(0,76,W,3,'F');
+    doc.setTextColor(241,213,122);doc.setFont('helvetica','bold');doc.setFontSize(18);doc.text('HENDRIX QMS',margin,30);
+    doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(210,200,170);doc.text('Standard Operating Procedure \u00b7 Controlled Document',margin,50);
+    doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(12);doc.text(s.sop_number||'SOP',W-margin,32,{align:'right'});
+    doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(210,200,170);doc.text('Rev '+(s.version||'1.0')+' \u00b7 '+sopStatusLabel(s.status).toUpperCase(),W-margin,50,{align:'right'});y=100;}
+  function footer(n,tot){doc.setDrawColor(...BORDER);doc.setLineWidth(.5);doc.line(margin,H-46,W-margin,H-46);doc.setTextColor(...MUTED);doc.setFont('helvetica','normal');doc.setFontSize(8);
+    doc.text(licName+' \u2014 Printed copies are uncontrolled. The current version is kept in Hendrix QMS. Printed '+todayStr(),margin,H-30);doc.text('Page '+n+' of '+tot,W-margin,H-30,{align:'right'});}
+  function brk(need){if(y+need>H-62){doc.addPage();header();}}
+  function section(t){brk(42);y+=4;doc.setFillColor(...LIGHT);doc.rect(margin,y,W-margin*2,28,'F');doc.setFillColor(...GOLD);doc.rect(margin,y,4,28,'F');doc.setTextColor(...INK);doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text(t.toUpperCase(),margin+12,y+19);y+=36;}
+  function body(t,o){o=o||{};if(!t||!String(t).trim())return;const sz=o.size||11,lh=sz*1.6,ind=o.indent||0;doc.setTextColor(...(o.color||TEXT));doc.setFont('helvetica',o.bold?'bold':'normal');doc.setFontSize(sz);
+    const lines=doc.splitTextToSize(String(t),W-margin*2-ind);brk(lines.length*lh+10);lines.forEach(function(l){doc.text(l,margin+ind,y);y+=lh;});y+=o.after!==undefined?o.after:8;}
+  function row(l,v){if(!v||!String(v).trim())return;brk(22);doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(...SUB);doc.text(l.toUpperCase(),margin,y);doc.setFont('helvetica','normal');doc.setFontSize(11);doc.setTextColor(...TEXT);
+    const vl=doc.splitTextToSize(String(v),W-margin-170);vl.forEach(function(x,i){doc.text(x,margin+155,y+i*14);});y+=Math.max(20,vl.length*14+4);}
+  header();
+  doc.setTextColor(...TEXT);doc.setFont('helvetica','bold');doc.setFontSize(20);doc.splitTextToSize((gen&&gen.title)||s.title,W-margin*2).forEach(function(l){doc.text(l,margin,y);y+=26;});y+=6;
+  doc.setDrawColor(...BORDER);doc.setLineWidth(.5);doc.line(margin,y,W-margin,y);y+=12;
+  row('Document Number',s.sop_number);row('Revision',s.version);row('Status',sopStatusLabel(s.status));row('Effective Date',s.effective_date||'');row('Next Review',s.next_review||'');
+  row('Folder / Category',s.folder+(s.category?' \u00b7 '+s.category:''));row('License / Facility',licName);row('Prepared By',s.created_by);
+  row('Approved By',s.approved_by?s.approved_by+(s.approved_at?' on '+new Date(s.approved_at).toLocaleDateString():''):'Not approved (draft)');
+  if(s.revision_note)row('Last Revision',s.revision_note);
+  y+=4;doc.line(margin,y,W-margin,y);y+=18;
+  const refs=(gen&&gen.regulatory_references)||s.regulatory_references||[];
+  if(refs.length){section('Regulatory References');refs.forEach(function(r){body('\u2022 '+r,{size:10,color:SUB,after:4});});y+=4;}
+  if((gen&&gen.purpose)||s.description){section('Purpose');body((gen&&gen.purpose)||s.description);}
+  if(gen&&gen.scope){section('Scope');body(gen.scope);}
+  if(gen&&(gen.responsibilities||[]).length){section('Responsibilities');gen.responsibilities.forEach(function(r){brk(30);doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...TEXT);doc.text((r.role||'')+':',margin,y);y+=16;body(r.responsibility||'',{indent:16,after:6});});}
+  if(gen&&(gen.definitions||[]).length){section('Definitions');gen.definitions.forEach(function(d){body((d.term||'')+' \u2014 '+(d.definition||''),{size:10,after:4});});}
+  if(gen&&(gen.required_materials||[]).length){section('Required Materials / PPE');gen.required_materials.forEach(function(m){body('\u2022 '+m,{after:4});});y+=4;}
+  const steps=sopStepsOf(s);
+  if(steps.length){section('Procedure ('+steps.length+' Steps)');steps.forEach(function(x){
+    const tl=x.title?doc.splitTextToSize(x.title,W-margin*2-28):[],il=doc.splitTextToSize(x.text,W-margin*2-28);brk((tl.length+il.length)*16+28);
+    doc.setFillColor(...INK);doc.circle(margin+10,y+5,10,'F');doc.setTextColor(241,213,122);doc.setFont('helvetica','bold');doc.setFontSize(9);doc.text(String(x.n),margin+10,y+8,{align:'center'});
+    const sx=margin+28;
+    if(x.title){doc.setTextColor(...TEXT);doc.setFont('helvetica','bold');doc.setFontSize(11);tl.forEach(function(l,i){doc.text(l,sx,y+4+i*15);});y+=tl.length*15+4;}
+    doc.setTextColor(...TEXT);doc.setFont('helvetica','normal');doc.setFontSize(11);il.forEach(function(l,i){doc.text(l,sx,y+(x.title?0:4)+i*16);});y+=il.length*16+(x.title?2:6);
+    if(x.note){doc.setFont('helvetica','italic');doc.setFontSize(9);doc.setTextColor(...SUB);const rl=doc.splitTextToSize('Regulation: '+x.note,W-margin*2-28);brk(rl.length*13+4);rl.forEach(function(l){doc.text(l,sx,y);y+=13;});y+=2;}
+    if(x.critical){doc.setFillColor(200,40,40);doc.rect(sx,y,W-margin*2-28,16,'F');doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(9);doc.text('CRITICAL STEP \u2014 Verify and document before proceeding',sx+6,y+11);y+=22;}
+    y+=10;});}
+  if(gen&&(gen.quality_checks||[]).length){section('Quality Checks');gen.quality_checks.forEach(function(q){body('\u2713 '+q,{after:5});});}
+  if(gen&&(gen.documentation_required||[]).length){section('Documentation Required');gen.documentation_required.forEach(function(d){body('\u2022 '+d,{after:5});});}
+  if(gen&&gen.deviation_procedure){section('Deviation Procedure');body(gen.deviation_procedure);}
+  if(gen&&gen.training_requirements){section('Training Requirements');body(gen.training_requirements);}
+  if(gen&&(gen.revision_history||[]).length){section('Revision History');gen.revision_history.forEach(function(r){body('Rev '+r.revision+' \u2014 '+r.date+' \u2014 '+r.description+(r.approved_by?' (Approved: '+r.approved_by+')':''),{size:10,color:SUB,after:5});});}
+  if(acks&&acks.length){
+    section('Acknowledgement Records \u2014 Rev '+s.version);body('The following people have read, understood, and signed this revision:',{color:SUB});y+=6;
+    acks.forEach(function(a,i){brk(70);doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...TEXT);doc.text((i+1)+'. '+a.name,margin,y);doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...SUB);
+      doc.text((a.role_names||'')+(a.role_names?' \u00b7 ':'')+'Signed: '+new Date(a.at).toLocaleString(),margin,y+14);y+=22;
+      if(a.signature){try{doc.addImage(a.signature,'PNG',margin,y,110,30);doc.setDrawColor(...BORDER);doc.line(margin,y+32,margin+120,y+32);y+=40;}catch(e){y+=4;}}
+      y+=8;});
+    doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(22,130,60);doc.text('Electronically signed in Hendrix QMS \u2014 signatures are permanent and every change is kept in the audit trail.',margin,y);y+=10;
+  }else{brk(70);section('Acknowledgement');body('I have read, understood, and agree to follow this Standard Operating Procedure in full.');y+=10;doc.setDrawColor(...BORDER);doc.line(margin,y,margin+210,y);doc.line(margin+270,y,margin+380,y);y+=12;doc.setFontSize(8);doc.setTextColor(...SUB);doc.text('Employee Signature',margin,y);doc.text('Date',margin+270,y);}
+  const n=doc.internal.getNumberOfPages();for(let i=1;i<=n;i++){doc.setPage(i);footer(i,n);}
+  doc.save(String(s.sop_number||s.title||'SOP').replace(/[^a-z0-9]/gi,'_')+'_v'+(s.version||'1.0')+'.pdf');
+}
+function sopMasterHtml(lic,st,list,acks,roster){
+  const e=esc3;
+  let h='<div class="hxrec"><h2>SOP master list \u2014 controlled documents</h2><div class="m">'+e(lic.name)+(lic.license_number?' ('+e(lic.license_number)+')':'')+' \u00b7 '+e(st.name)+' \u00b7 printed '+e(new Date().toLocaleString())+'</div>'+
+    '<table><tr><th style="width:11%">Number</th><th style="width:27%">Title</th><th>Folder</th><th>Rev</th><th>Status</th><th>Effective</th><th>Next review</th><th>Approved by</th><th>Signed</th></tr>';
+  list.forEach(function(s){const t=sopTargets(s,roster),a=sopAcksOf(s,acks).length,late=sopReviewLate(s);
+    h+='<tr><td>'+e(s.sop_number||'-')+'</td><td>'+e(s.title)+'</td><td>'+e(s.folder)+'</td><td>'+e(s.version)+'</td><td>'+e(sopStatusLabel(s.status))+'</td><td>'+e(s.effective_date||'-')+'</td><td class="'+(late?'bad':'')+'">'+e(s.next_review||'-')+(late?' (overdue)':'')+'</td><td>'+e(s.approved_by||'-')+'</td><td>'+(s.status==='published'?(t?a+' / '+t.length:a):'-')+'</td></tr>';});
+  return h+'</table><div class="m">Every revision keeps the earlier version unchanged in Hendrix QMS. Printed copies are uncontrolled.</div></div>';
+}
+function SopsPage(props){
+  const st=props.state,lic=props.license,lid=lic?lic.id:'';
+  const[sops,setSops]=useState(null);
+  const[acks,setAcks]=useState([]);
+  const[roster,setRoster]=useState(null);
+  const[msg,setMsg]=useState('');
+  const[q,setQ]=useState('');
+  const[folder,setFolder]=useState('All');
+  const[selId,setSelId]=useState(null);
+  const[modal,setModal]=useState(null);
+  const load=useCallback(function(){
+    if(!lid){setSops([]);return;}
+    db.get('hx_sops','license_ids=cs.%7B'+encodeURIComponent(lid)+'%7D&select=*&order=title').then(async function(r){
+      const list=(r||[]).filter(function(s){return (s.license_ids||[s.license_id]).indexOf(lid)>=0;});setSops(list);
+      if(list.length){try{const a=await db.get('hx_sop_acks','sop_id=in.('+list.map(function(s){return encodeURIComponent(s.id);}).join(',')+')&select=id,sop_id,version,user_id,name,role_names,at');setAcks(a||[]);}catch(e){setAcks([]);}}else setAcks([]);
+    }).catch(function(e){setMsg(sopErr(e));setSops([]);});
+    if(can('sops',2))sb('rpc/hx_sop_roster',{method:'POST',body:{p_lic:lid}}).then(function(r){setRoster(r||[]);}).catch(function(){setRoster(null);});
+  },[lid]);
+  useEffect(load,[load]);
+  if(!st||!lic)return el('div',null,el('h1',null,el('span',{className:'g'},'SOPs')),el('div',{className:'empty'},'Pick a state and a license at the top first.'));
+  const canE=can('sops',2),canF=can('sops',3),me=ACC.profile&&ACC.profile.id;
+  const all=sops||[];
+  const visible=all.filter(function(s){return s.status!=='archived'||canF;});
+  const mineSigned=function(s){return acks.some(function(a){return a.sop_id===s.id&&a.version===s.version&&a.user_id===me;});};
+  const iMustSign=function(s){if(s.status!=='published')return false;const t=sopTargets(s,roster);if(t)return t.some(function(u){return u.id===me;});
+    const p=ACC.profile||{};if(s.target_mode==='people')return (s.target_user_ids||[]).indexOf(me)>=0;if(s.target_mode==='roles')return (p.role_ids||[]).some(function(r){return (s.target_role_ids||[]).indexOf(r)>=0;});return true;};
+  const needs=visible.filter(function(s){return iMustSign(s)&&!mineSigned(s);});
+  const late=visible.filter(sopReviewLate);
+  const pub=visible.filter(function(s){return s.status==='published';});
+  let reqTot=0,reqDone=0;if(roster)pub.forEach(function(s){const t=sopTargets(s,roster)||[];reqTot+=t.length;const signed=sopAcksOf(s,acks);reqDone+=t.filter(function(u){return signed.some(function(a){return a.user_id===u.id;});}).length;});
+  const shown=visible.filter(function(s){
+    if(folder==='Archived'){if(s.status!=='archived')return false;}else{if(s.status==='archived')return false;if(folder!=='All'&&s.folder!==folder)return false;}
+    if(q&&(s.title+' '+s.sop_number+' '+s.folder+' '+s.category+' '+s.description).toLowerCase().indexOf(q.toLowerCase())<0)return false;return true;});
+  const sel=all.find(function(s){return s.id===selId;})||null;
+  function done(rec,text){setModal(null);if(rec&&rec.id)setSelId(rec.id);if(text)setMsg(text);load();}
+  async function act(s,patch,text){setMsg('');try{await db.update('hx_sops',s.id,patch);setMsg(text);load();}catch(e){setMsg(sopErr(e));}}
+  async function del(s){if(!window.confirm('Delete the draft "'+s.title+'"? Drafts can be deleted; published SOPs can only be archived.'))return;try{await db.remove('hx_sops',s.id);setSelId(null);load();}catch(e){setMsg(sopErr(e));}}
+  async function pdf(s){
+    setMsg('');
+    try{let a=[];if(s.status!=='draft'){a=(await db.get('hx_sop_acks','sop_id=eq.'+encodeURIComponent(s.id)+'&version=eq.'+encodeURIComponent(s.version)+'&select=*&order=at'))||[];a=a.filter(function(x){return x.sop_id===s.id&&x.version===s.version;});}
+      await exportSopPdfHx(s,lic.name+(lic.license_number?' ('+lic.license_number+')':''),a);}catch(e){setMsg(sopErr(e));}
+  }
+  const tabs=['All'].concat(SOP_FOLDERS).concat(canF?['Archived']:[]);
+  const stat=function(l,v,tone){return el('div',{key:l,className:'card gold',style:{marginBottom:0}},el('div',{className:'k'},l),el('div',{className:'v',style:{fontSize:26,color:tone||'var(--text)'}},v));};
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,el('span',{className:'g'},'SOPs')),el('div',{className:'sub'},'Standard Operating Procedures \u00b7 '+lic.name+'. Controlled documents: numbered, versioned, approved, signed. (CSQ 1.4, 2A.12.1)')),
+      el('div',{className:'row'},
+        el('input',{value:q,placeholder:'Search SOPs...',style:{width:200},onChange:function(e){setQ(e.target.value);}}),
+        el('button',{className:'btn ghost',onClick:function(){printRecords('SOP master list - '+lic.name,[sopMasterHtml(lic,st,visible.filter(function(s){return s.status!=='draft';}).concat(canE?visible.filter(function(s){return s.status==='draft';}):[]),acks,roster)]);}},'Master list'),
+        canE&&el('button',{className:'btn ghost',onClick:function(){setModal({t:'gen'});}},'\ud83e\udd16 AI Generate SOP'),
+        canE&&el('button',{className:'btn',onClick:function(){setModal({t:'form',mode:'new'});}},'+ Manual SOP'))),
+    msg&&el('div',{className:/^(Published|Archived|Restored|Saved|Signed|Revised|Created)/.test(msg)?'msg':'msg err'},msg),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',marginBottom:14}},
+      stat('Total SOPs',visible.filter(function(s){return s.status!=='archived';}).length),stat('Published',pub.length,'var(--green)'),
+      stat('Needs my signature',needs.length,needs.length?'var(--red)':'var(--faint)'),stat("I've signed",pub.filter(mineSigned).length,'var(--gold-hi)'),
+      canE&&stat('Review overdue',late.length,late.length?'var(--red)':'var(--faint)'),
+      canE&&roster&&stat('Signatures complete',reqTot?Math.round(reqDone*100/reqTot)+'%':'-',reqTot&&reqDone<reqTot?'var(--gold-hi)':'var(--green)')),
+    needs.length>0&&el('div',{className:'msg err',style:{marginBottom:12}},el('b',null,'Action required: '),'you have '+needs.length+' SOP'+(needs.length===1?'':'s')+' waiting for your signature.'),
+    el('div',{className:'tabs'},tabs.map(function(t){return el('button',{key:t,className:folder===t?'on':'',onClick:function(){setFolder(t);}},t);})),
+    sops===null?el('div',{className:'muted'},'Loading...'):!shown.length?el('div',{className:'empty'},all.length?'No SOPs here.':'No SOPs yet for '+lic.name+'. Click "+ Manual SOP" or "AI Generate SOP".'):
+    shown.map(function(s){const signed=mineSigned(s),must=iMustSign(s),t=sopTargets(s,roster),n=sopAcksOf(s,acks).length,pct=t&&t.length?Math.round(t.filter(function(u){return sopAcksOf(s,acks).some(function(a){return a.user_id===u.id;});}).length*100/t.length):null;
+      return el('div',{key:s.id,className:'card',style:{cursor:'pointer',borderLeft:'3px solid '+(s.status==='published'?'var(--green)':s.status==='draft'?'var(--gold)':'var(--line)'),padding:'12px 16px'},onClick:function(){setSelId(s.id);}},
+        el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start',flexWrap:'nowrap'}},
+          el('div',{style:{minWidth:0}},
+            el('div',{className:'row',style:{gap:6,marginBottom:6}},el('span',{className:'badge '+SOP_STATUS_TONE[s.status]},sopStatusLabel(s.status)),el('span',{className:'badge off'},s.folder),el('span',{className:'badge off'},'v'+s.version),
+              s.sop_number&&el('span',{className:'muted',style:{fontSize:12}},s.sop_number),
+              s.status==='published'&&must&&!signed&&el('span',{className:'badge bad'},'Needs my signature'),signed&&el('span',{className:'badge ok'},'\u2713 Signed'),sopReviewLate(s)&&el('span',{className:'badge bad'},'Review overdue')),
+            el('div',{style:{fontWeight:700,fontSize:15}},s.title),
+            s.description&&el('div',{className:'muted',style:{fontSize:12,marginTop:3}},s.description.slice(0,140)+(s.description.length>140?'...':''))),
+          el('div',{style:{textAlign:'right',flex:'0 0 auto',fontSize:11},className:'muted'},
+            el('div',null,sopStepsOf(s).length+' steps'),
+            s.status==='published'&&el('div',{style:{marginTop:4}},(t?n+'/'+t.length:n)+' signed'),
+            s.status==='published'&&pct!=null&&el('div',{style:{width:90,height:5,background:'#222',borderRadius:4,marginTop:3,overflow:'hidden'}},el('div',{style:{width:pct+'%',height:'100%',background:'var(--green)'}})),
+            el('div',{style:{marginTop:4}},s.created_by))));}),
+    sel&&!modal&&el(SopDetail,{sop:sel,state:st,license:lic,acks:acks,roster:roster,canE:canE,canF:canF,signed:mineSigned(sel),must:iMustSign(sel),onClose:function(){setSelId(null);},
+      onModal:setModal,onPdf:function(){pdf(sel);},onDelete:function(){del(sel);},
+      onPublish:function(){act(sel,{status:'published'},'Published: '+sel.title+' v'+sel.version+' approved by you.');},
+      onArchive:function(){if(window.confirm('Archive this SOP? It moves to Archived, visible only with Full access, and stays on file.'))act(sel,{status:'archived'},'Archived: '+sel.title);},
+      onRestore:function(){act(sel,{status:'published'},'Restored: '+sel.title);}}),
+    modal&&modal.t==='form'&&el(SopForm,{mode:modal.mode,sop:modal.mode==='new'?null:sel,state:st,license:lic,licenses:props.licenses,sops:all,roster:roster,onClose:function(){setModal(null);},onDone:function(r){done(r,modal.mode==='new'?'Created: '+(r?r.title:'SOP'):'Saved.');}}),
+    modal&&modal.t==='gen'&&el(SopGenerator,{state:st,license:lic,onClose:function(){setModal(null);},onDone:function(r){done(r,'Created: '+(r?r.title:'SOP')+' (draft)');}}),
+    modal&&modal.t==='revise'&&sel&&el(SopRevise,{sop:sel,state:st,license:lic,onClose:function(){setModal(null);},onDone:function(r){done(r,'Revised: '+sel.title+' is now v'+(r?r.version:'')+'. Everyone must sign the new version.');}}),
+    modal&&modal.t==='sign'&&sel&&el(SopSign,{sop:sel,license:lic,onClose:function(){setModal(null);},onDone:function(){done(null,'Signed: '+sel.title+' v'+sel.version);}}),
+    modal&&modal.t==='history'&&sel&&el(SopHistory,{sop:sel,onClose:function(){setModal(null);}}));
+}
+function SopDetail(props){
+  const s=props.sop,gen=sopGen(s),steps=sopStepsOf(s),t=sopTargets(s,props.roster),signedList=sopAcksOf(s,props.acks);
+  const pending=t?t.filter(function(u){return !signedList.some(function(a){return a.user_id===u.id;});}):null;
+  const pct=t&&t.length?Math.round((t.length-pending.length)*100/t.length):null;
+  const lics=(props.licenses||[]);
+  const dc=function(l,v,bad){return el('div',{key:l},el('div',{className:'k'},l),el('div',{style:{fontSize:13,color:bad?'var(--red)':'var(--text)'}},v||'-'));};
+  return el(Modal,{title:s.title,wide:true,onClose:props.onClose},
+    el('div',{className:'row',style:{gap:6,marginBottom:10}},el('span',{className:'badge '+SOP_STATUS_TONE[s.status]},sopStatusLabel(s.status)),el('span',{className:'badge off'},s.folder),el('span',{className:'badge off'},'v'+s.version),s.category&&el('span',{className:'muted',style:{fontSize:12}},s.category)),
+    el('div',{className:'card gold',style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:10,padding:'10px 14px'}},
+      dc('Document number',s.sop_number),dc('Version',s.version),dc('Effective',s.effective_date),dc('Next review',s.next_review+(sopReviewLate(s)?' (overdue)':''),sopReviewLate(s)),
+      dc('Approved by',s.approved_by?s.approved_by+(s.approved_at?' \u00b7 '+new Date(s.approved_at).toLocaleDateString():''):'Not approved'),
+      dc('Who signs',s.target_mode==='roles'?'Roles: '+(ACC.roles||[]).filter(function(r){return (s.target_role_ids||[]).indexOf(r.id)>=0;}).map(function(r){return r.name;}).join(', '):s.target_mode==='people'?(s.target_user_ids||[]).length+' selected people':'Everyone on the license(s)')),
+    (gen&&gen.purpose||s.description)&&el('div',{className:'card',style:{padding:'10px 14px',fontSize:13,lineHeight:1.6}},el('div',{className:'k'},'Purpose'),(gen&&gen.purpose)||s.description),
+    gen&&gen.scope&&el('div',{style:{fontSize:13,margin:'0 0 10px'}},el('b',null,'Scope: '),gen.scope),
+    gen&&(gen.responsibilities||[]).length>0&&el('div',{style:{marginBottom:10}},el('div',{className:'k'},'Responsibilities'),gen.responsibilities.map(function(r,i){return el('div',{key:i,style:{fontSize:13}},el('b',null,(r.role||'')+': '),r.responsibility||'');})),
+    gen&&(gen.required_materials||[]).length>0&&el('div',{style:{marginBottom:10}},el('div',{className:'k'},'Required materials / PPE'),el('div',{style:{fontSize:13}},gen.required_materials.join(' \u00b7 '))),
+    steps.length>0&&el('div',{style:{marginBottom:12}},el('div',{className:'k',style:{marginBottom:6}},'Procedure'),
+      steps.map(function(x){return el('div',{key:x.n,className:'row',style:{flexWrap:'nowrap',alignItems:'flex-start',gap:10,marginBottom:8}},
+        el('span',{style:{width:26,height:26,borderRadius:13,background:'var(--gold-grad)',color:'#000',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:12,flex:'0 0 auto'}},String(x.n)),
+        el('div',{style:{flex:1,background:'var(--panel2)',borderRadius:8,padding:'8px 12px',fontSize:13,lineHeight:1.55}},x.title&&el('div',{style:{fontWeight:700}},x.title),x.text,
+          x.note&&el('div',{className:'muted',style:{fontSize:11,marginTop:4}},'\u2696 '+x.note),x.critical&&el('div',{className:'badge bad',style:{marginTop:6}},'Critical step - verify and document')));})),
+    gen&&(gen.quality_checks||[]).length>0&&el('div',{style:{marginBottom:10}},el('div',{className:'k'},'Quality checks'),gen.quality_checks.map(function(x,i){return el('div',{key:i,style:{fontSize:13}},'\u2713 '+x);})),
+    gen&&(gen.documentation_required||[]).length>0&&el('div',{style:{marginBottom:10}},el('div',{className:'k'},'Documentation required'),gen.documentation_required.map(function(x,i){return el('div',{key:i,style:{fontSize:13}},'\u2022 '+x);})),
+    gen&&gen.deviation_procedure&&el('div',{style:{fontSize:13,marginBottom:6}},el('b',null,'Deviation procedure: '),gen.deviation_procedure),
+    gen&&gen.training_requirements&&el('div',{style:{fontSize:13,marginBottom:10}},el('b',null,'Training requirements: '),gen.training_requirements),
+    (s.attachments||[]).length>0&&el('div',{style:{marginBottom:10}},el('div',{className:'k'},'Attachments'),s.attachments.map(function(a){return el('div',{key:a.path},el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();openStored(a.path,a.name).catch(function(){});}},'\ud83d\udcce '+a.name));})),
+    s.status!=='draft'&&el('div',{className:'card',style:{padding:'10px 14px'}},
+      el('div',{className:'row',style:{justifyContent:'space-between'}},el('div',{style:{fontWeight:700}},'Signatures \u00b7 v'+s.version),el('span',{className:'muted',style:{fontSize:12}},t?(t.length-pending.length)+' of '+t.length+' people':signedList.length+' signed')),
+      pct!=null&&el('div',{style:{height:6,background:'#222',borderRadius:4,margin:'8px 0',overflow:'hidden'}},el('div',{style:{width:pct+'%',height:'100%',background:'var(--green)'}})),
+      t&&el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr',gap:10}},
+        el('div',null,el('div',{className:'k',style:{color:'var(--green)'}},'\u2713 Signed'),signedList.length?signedList.map(function(a){return el('div',{key:a.id,style:{fontSize:12}},a.name,el('span',{className:'muted'},' \u00b7 '+new Date(a.at).toLocaleDateString()));}):el('div',{className:'muted',style:{fontSize:12}},'None yet')),
+        el('div',null,el('div',{className:'k',style:{color:'var(--red)'}},'\u2717 Pending'),pending.length?pending.map(function(u){return el('div',{key:u.id,className:'muted',style:{fontSize:12}},u.name);}):el('div',{style:{fontSize:12,color:'var(--green)'}},'Everyone signed \u2713'))),
+      s.status==='published'&&(props.signed?el('div',{className:'msg',style:{textAlign:'center',marginTop:8}},'\u2713 You signed this version'):
+        props.must?el('button',{className:'btn',style:{width:'100%',marginTop:8,padding:12},onClick:function(){props.onModal({t:'sign'});}},'\ud83d\udc4d I have read and understood this SOP'):null)),
+    el('div',{className:'muted',style:{fontSize:11,margin:'8px 0'}},'Created by '+(s.created_by||'-')+' \u00b7 '+(s.created_at||'').slice(0,10)+(s.updated_by?' \u00b7 updated by '+s.updated_by+' '+(s.updated_at||'').slice(0,10):'')+(s.revision_note?' \u00b7 last revision: '+s.revision_note:'')),
+    el('div',{className:'row',style:{justifyContent:'space-between'}},
+      el('div',{className:'row',style:{gap:6}},
+        el('button',{className:'btn ghost sm',onClick:props.onPdf},'\ud83d\udcc4 Download PDF'),
+        el('button',{className:'btn ghost sm',onClick:function(){props.onModal({t:'history'});}},'Version history'),
+        props.canE&&s.status==='draft'&&el('button',{className:'btn ghost sm',onClick:function(){props.onModal({t:'form',mode:'draft'});}},'Edit draft'),
+        props.canF&&s.status!=='draft'&&el('button',{className:'btn ghost sm',onClick:function(){props.onModal({t:'form',mode:'settings'});}},'Settings'),
+        props.canF&&s.status==='draft'&&el('button',{className:'btn sm',onClick:props.onPublish},'\u2713 Approve & publish'),
+        props.canF&&s.status==='published'&&el('button',{className:'btn sm',onClick:function(){props.onModal({t:'revise'});}},'\ud83d\udd04 Revise SOP'),
+        props.canF&&s.status==='published'&&el('button',{className:'btn ghost sm',onClick:props.onArchive},'Archive'),
+        props.canF&&s.status==='archived'&&el('button',{className:'btn ghost sm',onClick:props.onRestore},'Restore'),
+        props.canF&&s.status==='draft'&&el('button',{className:'btn danger sm',onClick:props.onDelete},'Delete draft')),
+      el('button',{className:'btn ghost sm',onClick:props.onClose},'Close')));
+}
+function SopDashCard(props){
+  const lid=props.license?props.license.id:'';
+  const[d,setD]=useState(null);
+  useEffect(function(){
+    if(!lid||!can('sops',1)){setD(null);return;}let dead=false;
+    (async function(){try{
+      const s=((await db.get('hx_sops','license_ids=cs.%7B'+encodeURIComponent(lid)+'%7D&status=eq.published&select=id,version,target_mode,target_role_ids,target_user_ids,license_ids,next_review,status'))||[]).filter(function(x){return x.status==='published'&&(x.license_ids||[]).indexOf(lid)>=0;});
+      const me=ACC.profile.id;let a=[];if(s.length){a=(await db.get('hx_sop_acks','user_id=eq.'+me+'&select=sop_id,version'))||[];}
+      const p=ACC.profile||{};
+      const must=s.filter(function(x){if(x.target_mode==='people')return (x.target_user_ids||[]).indexOf(me)>=0;if(x.target_mode==='roles')return (p.role_ids||[]).some(function(r){return (x.target_role_ids||[]).indexOf(r)>=0;});return true;});
+      const need=must.filter(function(x){return !a.some(function(k){return k.sop_id===x.id&&k.version===x.version;});}).length;
+      if(!dead)setD({n:s.length,need:need,late:s.filter(sopReviewLate).length});
+    }catch(e){if(!dead)setD(null);}})();
+    return function(){dead=true;};
+  },[lid]);
+  if(!d)return null;
+  return el('div',{className:'card gold'},el('div',{className:'k'},'SOPs'),el('div',{className:'v',style:{color:d.need?'var(--red)':'var(--text)'}},d.need?d.need+' need your signature':'All signed'),
+    el('div',{className:'muted',style:{margin:'4px 0 8px'}},d.n+' published'+(can('sops',2)&&d.late?' \u00b7 '+d.late+' overdue for review':'')),
+    el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go('sops');}},'Open SOPs'));
+}
+
+/* ---------- Standards: CSQ Standard for Manufacturing v2.0 (October 2025) ----------
+   Clause numbers and titles follow the published standard. Summaries are short paraphrases for day-to-day use;
+   the full text is the licensed standard document (upload it on the Standards page). */
+const CSQ_MFG={code:'CSQ-MFG',name:'CSQ Standards (Manufacturing, Extraction, Cultivation)',publisher:'Cannabis Safety & Quality (ASI Global Standards, LLC)',version:'2.0',issued:'October 2025',
+  scope:'The CSQ Standard for Manufacturing, the CSQ Standard for Extraction and the CSQ Standard for Cultivation share Modules 1, 2A, 4A and 5 word for word; only Module 3 differs. Hendrix keeps them as one library so shared clauses are assessed once: Module 3A Cultivation applies only to cultivation (CUL) licenses; Modules 3B Extraction and 3C Manufacturing apply to manufacturing licenses.',
+  levels:[{level:1,name:'Level 1 - cGMP',modules:['1','2A','3'],audit:'Announced. At least 1 day onsite, 0.5 day report.'},
+    {level:2,name:'Level 2 - cGMP + HACCP',modules:['1','2A','3','4A'],audit:'Announced. At least 1.5 days onsite, 1 day report.'},
+    {level:3,name:'Level 3 - cGMP + HACCP + QMS',modules:['1','2A','3','4A','5'],audit:'UNANNOUNCED. At least 2 days onsite, 1 day report.'}],
+  modules:{'1':'Requirements for All Licensed Operations','2A':'Current Good Manufacturing Practices','3A':'Cultivation: cannabis plants and herbal material (CSQ Standard for Cultivation)','3B':'Extraction: cannabinoid substances (CSQ Standard for Extraction)','3C':'Manufacturing: cannabinoid products (CSQ Standard for Manufacturing)','4A':'Hazard Analysis Critical Control Points (HACCP)','5':'Advanced Safety and Quality Management Systems'},
+  notes:['Every initial certification audit adds a 1-day offsite documentation review.','A mock recall must be done every year and finish in under 2 hours; the auditor also runs a traceability exercise during the audit.','Pest program effectiveness: no evidence of pests inside the facility at the audit.','Cultivation licenses also train staff on current Good Agricultural and Collection Practices (cGACP): cGACP in the field, cGMP once plants are indoors.']};
+// Module 3 parts: which CSQ standard each is, and which license operation it is for
+const CSQ_PARTS={'3A':{name:'CSQ Standard for Cultivation',op:'cultivation'},'3B':{name:'CSQ Standard for Extraction',op:'manufacturing'},'3C':{name:'CSQ Standard for Manufacturing',op:'manufacturing'}};
+const LIC_OPS={manufacturing:'Manufacturing (processing, extraction, infusion)',cultivation:'Cultivation (CUL)',other:'Other (dispensary, lab, transport...)'};
+function licOp(l){if(!l)return 'other';if(l.operation)return l.operation;const n=String(l.license_number||''),t=String(l.license_type||'');
+  if(/^\s*CUL/i.test(n)||/cultiv|grow|nursery/i.test(t))return 'cultivation';if(/^\s*MAN/i.test(n)||/manufact|process|extract|infus/i.test(t))return 'manufacturing';return 'other';}
+function csqDefaultScopes(op){return op==='cultivation'?['3A']:op==='manufacturing'?['3C','3B']:[];}
+function csqScopes(adopt,lic){const s=adopt&&adopt.scopes;return s&&s.length?s:csqDefaultScopes(licOp(lic));}
+function csqAllowed(lic){const op=licOp(lic);return Object.keys(CSQ_PARTS).filter(function(k){return CSQ_PARTS[k].op===op;});}
+function stdModOk(m,scopes){return !/^3/.test(m)||scopes.indexOf(m)>=0;}
+function csqPartNames(scopes){return ['3C','3B','3A'].filter(function(k){return scopes.indexOf(k)>=0;}).map(function(k){return CSQ_PARTS[k].name;});}
+// [clause, module, title, summary, hendrix pages, what Hendrix already holds, planned Hendrix modules, applies to]
+const CSQ_MFG_CLAUSES=[
+ ['1.1','1','Safety and quality management system','Keep a documented safety and quality system (paper or electronic) that covers the CSQ requirements, names the people and backups who maintain it, holds every SOP, program, form, log, diagram and training material plus local regulations, is available to staff, sets the rules for using the CSQ logo, and is kept up to date.',['sops','rulebook','logs','team'],'Hendrix is the electronic system; Rulebook holds each state\'s regulations; logs and records. SOP library: every SOP, numbered, versioned, approved and signed.',[]],
+ ['1.2','1','Management commitment','Have a written safety, quality and compliance policy with measurable objectives, shared with staff, backed by resources, that keeps staff informed of new science and regulation and is reviewed regularly.',['sops'],'Write the safety, quality and compliance policy as an SOP; everyone signs it.',['KPIs']],
+ ['1.3','1','Regulatory compliance','Procedures that keep all operations and products compliant where they are made and sold, with compliance staff trained and current on regulations.',['rulebook','locations','training'],'Rulebook per state; licenses per state. Regulatory training tracked per person.',[]],
+ ['1.4','1','Documentation and recordkeeping','Control documents and records: a master list, document type and current version, approved changes and replacement of old versions, legible and available records, secure storage for at least 1 year past the date on the label (or longer if required), ink only and no white-out on paper.',['sops','audit'],'Audit trail: every change kept with who, when and why; records are voided, never deleted. SOP library: master list, document numbers, versions, approval by Full access, every earlier version kept unchanged, review dates; audit trail on every record.',[]],
+ ['1.5','1','Internal audits','Audit every applicable CSQ requirement at least once a year with competent auditors who do not audit their own work; record findings and corrective actions, share results, and close findings through CAPA.',['intaudits'],'Internal Audits: annual program of every CSQ clause in scope with coverage shown per clause, auditor named with qualification and confirmed independent, checklist results with evidence, a finding for every nonconformity, findings closed through deviations / CAPA with verification, results shared with staff before closing.',[]],
+ ['1.6','1','Corrective and preventive actions (CAPA)','Document every deviation and nonconformance clearly with root cause (when an authorized person decides one is needed), owner, immediate correction, timescale, effectiveness check, and review the trend at least once a year.',['qms'],'QMS: numbered deviations with correction, authorized root-cause decision, owner and due date; CAPAs closed only when verified effective; monthly trends and a printable annual review.',[]],
+ ['1.7','1','Complaint management','Name who investigates and resolves complaints, track and analyze complaint data, and record the corrective actions taken to stop them happening again.',['complaints'],'Complaints: numbered, named investigator and due date, investigation, root cause, resolution, corrective action and linked deviation / CAPA, response to the complainant, adverse events reported to the regulator, trends by month, category, lot and customer.',[]],
+ ['1.8','1','Product recalls and withdrawals','Recall and withdrawal procedures that meet regulation: a recall team with roles, an up-to-date contact list (team, emergency services, customers, suppliers, regulators, certification body), a communication plan, recovery or disposal of product, and a yearly mock recall completed in under 2 hours.',['batches','testing','shipping','holds','recall'],'Batch numbers and final package tags. Shipments show which customers received each batch; recalled product goes on hold. Traceability and Recall: recall team with roles and backups, contact list (emergency, regulators, certification body, customers, suppliers, lab) verified yearly, timed mock recalls (server clock, pass only if every step is done within 2 hours), real recalls and withdrawals that put affected product on hold and record who was notified and when.',[]],
+ ['1.9','1','Product defense','Protect against theft, bioterrorism and intentional adulteration: threat assessment, access to sensitive areas limited to authorized people, cannabis materials, waste and product secured, secure transport, training for security and transport staff, and a yearly review and test.',['sops','visitors','logs','roles','training'],'Visitor Log and kiosk; security malfunction and security inspection logs; role-based access in Hendrix. Product defense training tracked per person.',[]],
+ ['1.10','1','Fraud prevention','Assess vulnerability to mislabeling, substitution, dilution and counterfeiting, control what is found, verify label claims (strain, cannabinoid content and similar), and review and test yearly.',['sops','stickers','testing'],'Sticker potency is taken from the COA; COA tag mismatches are flagged.',[]],
+ ['1.11','1','Crisis management','Crisis procedures with the people responsible and their contacts, emergency contacts, response to foreseeable disasters, how affected product is found, isolated and released, how authorities and customers are told, and a yearly review and test.',['sops','recall'],'Crisis plan kept as an SOP. Recall team and emergency contacts; affected product found with the trace and isolated with holds.',[]],
+ ['2A.1.1','2A','Facility construction and design','Buildings, grounds and utilities suit their purpose and prevent cross-contamination: cleanable surfaces in good repair, enough and protected lighting, shatterproof or protected glass, ventilation, sealed and screened openings, handwash stations at production entries (potable warm water, hands-free soap, paper towels), plumbing and wastewater that work, restrooms, changing and break areas sized for the shift, required signage, and clear aisles.',['sops'],'QR signs for posted signage.',[]],
+ ['2A.1.2','2A','Facility and infrastructure maintenance','Keep buildings, grounds and amenities in good repair and clean: no debris, standing water or excessive dust, vegetation managed against pests, restrooms and break areas stocked and sanitary, roadways and docks clear.',['logs'],'Sanitation Log (weekly and monthly areas); Equipment Maintenance Log.',[]],
+ ['2A.2.1','2A','Equipment','Equipment and utensils suit their purpose, are installed to regulation, cleanable and kept in repair, stored safely, have approved controls, hoses on racks off the floor, and measuring instruments that are accurate and maintained.',[],'',['Equipment register']],
+ ['2A.2.2','2A','Maintenance','Maintenance procedures with a master preventive maintenance schedule (including manufacturer requirements), records of unplanned work, a way for staff to report repairs that threaten product, no contamination left after maintenance, and control of temporary repairs so they do not become permanent.',['logs','qms'],'Equipment Maintenance Log records work done. Repairs that threaten product are reported as deviations from the maintenance log.',['Equipment register']],
+ ['2A.2.3','2A','Calibration','Every instrument that affects safety or quality is listed and identified with a valid calibration certificate and due date, calibrated on time by recognized methods, with weights traceable to a reference standard (NIST, ASTM), and protected from damage or adjustment.',['logs'],'Scale Calibration Log.',['Equipment register']],
+ ['2A.3','2A','Cleaning and sanitation','Cleaning procedures say what is cleaned, how and with which chemicals, how often (by risk), who cleans and who verifies; tools are color-coded or labeled, clean and dirty tools are stored apart, and cleaning never puts product at risk.',['logs'],'Sanitation Log: daily, weekly and monthly areas, equipment, chemical and concentration, and a second person who verifies the cleaning (visual, ATP swab or checklist).',[]],
+ ['2A.4','2A','Waste management','Identify, separate and dispose of every waste type to regulation: waste areas and containers labeled, cleaned, emptied regularly, closed, restricted when required, and wastewater treated when required.',['logs'],'Waste Destruction Log: categories, 4 camera angles, rendering and disposal locations, methods.',[]],
+ ['2A.4.1','2A','Cannabinoid waste','Cannabinoid waste is never mixed with other waste streams.',['sops','logs'],'Waste Destruction Log. Waste SOP.',[]],
+ ['2A.4.2','2A','Non-cannabinoid waste','Each non-cannabinoid waste stream (municipal, hazardous, recyclables) is kept separate.',['sops'],'Waste SOP.',[]],
+ ['2A.5.1','2A','Integrated pest management program','Risk-based pest program reviewed yearly: responsibilities, an accurate trap and bait station map, stations placed safely, approved pesticides with SDS, monitoring frequency, sightings recorded and trended, contractor recommendations acted on, rules for touching trap contents, pesticide use and storage to label and law, and cleanup of exposed areas and product.',['logs','qms'],'Pest Control Log: numbered trap and bait stations checked on every visit, stations with activity, sightings counted, treatments and vendor license. Attach the station map here. Pest sightings can be raised as deviations from the log.',['Chemical register']],
+ ['2A.5.2','2A','Integrated pest management personnel','Pest control staff and contractors are trained, licensed when required, use only approved products, and leave a written report of findings and products used.',['suppliers'],'Pest control contractor approved in Suppliers with applicator license on file.',[]],
+ ['2A.6','2A','Facility air safety and quality','Air entering production areas is filtered and monitored by risk, tested at least yearly by an ISO/IEC 17025 lab, and air handling controls contaminants, fumes and odors.',['logs'],'Temp / Humidity Log.',['Facility tests']],
+ ['2A.7','2A','Facility water safety and quality','Water is potable, filtered and monitored by risk, tested at least yearly by an ISO/IEC 17025 lab, tempered for washing, treated water meets spec, backflow devices are fitted and tested yearly, and the water system is monitored.',[],'',['Facility tests','Equipment register']],
+ ['2A.8','2A','Environmental monitoring','Environmental monitoring program: who runs it and their competence, a risk assessment of hazards per area, sampling methods, frequency and limits, recording and trending, and a yearly review.',['logs'],'Environmental Monitoring Log.',[]],
+ ['2A.9.1','2A','Dry goods storage','Dry goods stored in identified, suitable areas, off the floor and away from walls, and not mixed.',['sops'],'Storage SOP.',[]],
+ ['2A.9.2','2A','Chemical controls and storage','Chemical approval process and approved list, SDS on file for every chemical, storage to SDS and label, food-grade kept apart from non-food-grade, original or labeled containers, ventilated and restricted storage with PPE, first aid, spill kits and a chemical list, and disposal to regulation.',[],'',['Chemical register']],
+ ['2A.9.3','2A','Temperature and atmosphere controlled storage','Goods needing temperature or atmosphere control have defined specs; storage areas are identified, clean, working and fitted with monitoring devices; cold and frozen units have thermometers; goods off the floor and not mixed; condensation drains away from product.',['logs','qms'],'Temp / Humidity Log: min and max per room; out-of-range readings are marked automatically and need a corrective action. Out-of-range readings can be raised as deviations from the log.',[]],
+ ['2A.9.4','2A','Shipping and receiving','Loading and unloading limit damage: inspection before loading or unloading, minimal exposure, no cross-contamination, goods secured from tampering, and cannabis shipped and received to regulation.',['receiving','shipping'],'Receiving inspection (vehicle, packaging, seals) and pre-load inspection that must pass before shipping.',[]],
+ ['2A.10.1','2A','Identification and traceability','Every inventory item is identified through the process, finished product is traceable one step forward to the customer, materials and supplies one step back to the supplier, traceability is kept through rework, and it is tested at least yearly in a mock recall.',['batches','testing','receiving','shipping','recall'],'Batch numbers, final package tags, state tracking system (METRC). Lots numbered on receipt and linked to the batches that use them (one step back); shipments list batches and package tags per customer (one step forward). Trace any lot, batch or package tag one step back and one step forward; traceability tested by the yearly mock recall.',[]],
+ ['2A.10.2','2A','Acceptance and release','Incoming materials meet specs, are inspected for damage, arrive with a COA or certificate of conformance, are sampled and tested when needed, have their documents reviewed before approval or rejection, and rejected goods are returned or held apart.',['suppliers','receiving'],'Approved supplier list and COA expiry in Suppliers. Receiving: lots only from approved suppliers, inspected on arrival, COA required, quarantined until accepted or rejected by Full access; rejected lots held apart automatically.',[]],
+ ['2A.10.3','2A','Stock management','FIFO (or similar) rotation for finished product, WIP, rework and supplies; nothing used past its date; overflow storage monitored; labels, packaging, devices and excise stamps counted in an inventory system and protected from theft.',['receiving'],'Inventory by lot: quantity left, expiry, oldest-first (FIFO) prompt; expired or held lots cannot be used.',[]],
+ ['2A.10.4','2A','Hold and release (quarantine)','Nonconforming and returned goods are clearly marked, quarantined so they cannot be released by accident, decided on only by qualified authorized people, and released, moved or destroyed to regulation.',['testing','qms','holds'],'Testing status (Pending, Failed, Retest); final results changed only with Full access and a reason. Nonconforming product recorded as a deviation (from a failed test or batch) with the decision documented. Hold and Release: lots, batches, package tags and customer returns put on hold by anyone with Edit; only Full access decides (release, destroy, return, rework) with a reason; held items cannot be used or shipped.',[]],
+ ['2A.11','2A','Supplier approval and vendor qualification','Name each supplier and vendor type and the specs they must meet, verify them, select, approve and monitor them, keep an approved list, name who approves, allow emergency suppliers with checks, require ethical sourcing, audit contract manufacturers, and review all suppliers yearly.',['suppliers'],'Approved supplier list per license: supplier type, specs, credentials with expiry, who approved and on what basis, emergency suppliers with verification, ethical sourcing, contract manufacturer audits, yearly reviews (6 months for high risk), suspend and disqualify with reasons.',[]],
+ ['2A.12.1','2A','Standard operating procedures','Documented SOPs for producing and processing cannabinoid materials and products that conform to CSQ and regulation.',['sops','batches'],'Batch Tracker records follow each process. SOP library for every production process; Batch Tracker records follow them.',[]],
+ ['2A.12.2','2A','Process flow and segregation','Document how people and product move through the facility to keep segregation, with a map of area designations and their risks.',['sops'],'Process flow and area map attached to an SOP.',[]],
+ ['2A.12.3','2A','Pre-operational inspections (line clearance)','Before production, record a check that areas and equipment are clean, within maintenance and calibration dates and ready, with any problem and correction noted.',[],'',['Line clearance']],
+ ['2A.12.4','2A','Materials and supplies','Every material and supply has specs and is identified by type, use and hazard; meets regulation and is approved for use; is fit for purpose; has a yearly risk assessment; label information is kept on file; and is stored and used to label instructions.',['products','suppliers','receiving'],'Products: ingredient price library and formulations. Material specs required of each supplier; only approved suppliers used. Materials received with specs, COA and inspection; used only after acceptance.',[]],
+ ['2A.12.5','2A','Rework','Rework is identified and dated for traceability, each batch inspected and analyzed before use, used before it would expire in the finished product, safe, and like-to-like.',[],'',['Rework']],
+ ['2A.12.6','2A','Cross-contamination controls','Keep foreign matter out: exclude contamination sources, no loose objects overhead, inspection of facility and tools, a list of sources that cannot be removed with protective measures, control of blades, glass and brittle items, dust and chemicals, cleanup and release of contaminated areas, decisions on affected product, detection and removal methods, investigation, and calibrated detection equipment.',['sops','qms'],'Contamination incidents reported as deviations with correction and root cause.',[]],
+ ['2A.12.7','2A','Allergen management','Allergen labeling meets the law, allergen labels are verified, allergens from materials, suppliers, staff and visitors are risk-assessed, and cleaning, changeover and storage prevent cross-contact.',['stickers','products'],'Label templates carry an allergen declaration that prints on every sticker.',[]],
+ ['2A.12.8','2A','Product labeling and packaging','Label specs that meet CSQ and regulation; label content (potency, ingredients, allergens, warnings, claims, batch) verified against the batch; labels reviewed when materials, processes or rules change; only the labels and packaging a batch needs are issued, then reconciled; no mislabeled or damaged product; correct, inspected, clean packaging materials and tools.',['stickers','testing'],'Sticker templates per SKU and flavor with approval number; potency printed from the COA; every sticker print logged (batch, tag, count, who); template changes in the audit trail.',[]],
+ ['2A.12.9','2A','Product sampling and testing','Finished product meets spec and regulation before release; samples are representative; samplers are competent; methods, frequency and limits are defined and results trended; held product is released after review; recognized methods; compliance labs accredited to ISO/IEC 17025; internal labs separated; retention samples kept when required.',['testing','batches','suppliers','holds'],'Testing: per final package tag, lab and lab license, COA stored privately, COA read by AI with tag check, retention samples (quantity, location, keep-until). Testing labs approved in Suppliers with ISO/IEC 17025 accreditation; labs used in Testing are checked against the approved list. Batches with a failed test and no passing retest cannot be released from hold or shipped.',[]],
+ ['2A.13.1','2A','Personnel roles and responsibilities','Everyone in the facility is classified by role; each role has defined duties and requirements (certifications, education, experience, training).',['roles','team','training'],'Roles with duties, requirements (certifications, training, experience) and access per person. Each role\'s required training in the training matrix.',[]],
+ ['2A.13.2','2A','Personnel training','Train everyone, including temps and contractors, before they work: minimum training for all, training per role, a training matrix, yearly refreshers, regular assessments, legal, cGMP (cultivation also current Good Agricultural and Collection Practices, cGACP), cannabis safety, hygiene, product defense and job training; at least one person with CSQ program overview training; qualified trainers; training in a language staff understand; records kept at least for the length of employment.',['sops','roles','training'],'Roles (the training matrix will hang off them). SOP signatures per person are part of the training record. Training matrix: required courses by role, refreshers, qualified trainers, assessments, certificates, SOP signatures; CSQ Program Overview holders counted.',[]],
+ ['2A.13.3','2A','Personnel health (illness and injuries)','Staff know the symptoms that keep them off product and how to report them; no handling product with open wounds; minor cuts covered with bandage and glove; bodily fluid spills quarantined, cleaned and released by authorized people.',['sops'],'Health SOP signed by everyone.',[]],
+ ['2A.13.4','2A','Personnel hygiene and cleanliness','Staff come to work clean; no false nails, nail polish or false eyelashes; no heavy perfume; eating, drinking and smoking only in permitted areas; protect product from sweat and skin medicines; smokers wash hands on return; hair can be contained.',['sops','training'],'GMP hygiene SOP signed by everyone. Hygiene training tracked per person.',[]],
+ ['2A.13.5','2A','Clothing, jewelry and personal belongings','No jewelry except a plain band or medical bracelet; jewelry that cannot come off is covered; suitable outer garments; loose items removed and long hair tied back; storage for personal items.',['sops','training'],'GMP clothing and jewelry SOP signed by everyone. Hygiene training tracked per person.',[]],
+ ['2A.13.6','2A','Personal protective equipment (PPE)','PPE defined by risk assessment for each task and available to staff and visitors, replaced and cleaned as needed, clean and dirty PPE kept apart, and hair nets, beard nets and gloves worn wherever product is exposed.',['sops','training'],'PPE SOP signed by everyone. PPE training tracked per person.',[]],
+ ['2A.13.7','2A','Handwashing','Staff are trained and wash at the right times (after contamination risks, when soiled, when changing gloves, after breaks, eating, smoking or the restroom); stations are accessible with handwash signs in a language staff understand.',['sops','training'],'QR sign printing for posted signs. Handwashing SOP signed by everyone. Handwashing training tracked per person.',[]],
+ ['2A.13.8','2A','Contractors, service providers and visitors','Visitors and contractors stay out of production when ill, acknowledge the facility\'s cGMP rules, wear suitable clothing and PPE, remove jewelry and loose items, and follow hygiene and handwashing rules.',['visitors'],'Visitor Log and QR kiosk: every visitor reads and accepts the GMP rules and answers an illness question before entering; anyone ill is marked to stay out of production.',[]],
+ ['3A.1.1','3A','Indoor cultivation','Indoor grows follow cGACP and protect plants from disease, pests, foreign matter and microbes: areas identified with signage; air quality specs; air conditioned, filtered, treated and monitored; air handling checked; airflow, humidity and temperature with min and max limits and no stagnant air.',['logs'],'Temp / Humidity Log with min and max per room.',['Cultivation records','Facility tests'],'Indoor grows'],
+ ['3A.1.2','3A','Outdoor cultivation','Outdoor sites are documented (area, intended use) and registered; the site and neighboring land are risk-assessed (land use history, topography, controls) and re-evaluated yearly; animals kept out of fields and water; handwashing and toilets (or other hygiene means) provided.',['sops','locations'],'',['Cultivation records','Risk register'],'Outdoor grows'],
+ ['3A.1.3','3A','Glasshouse and greenhouse cultivation','Greenhouses apply the indoor and outdoor cultivation requirements that fit them.',['sops'],'',['Cultivation records'],'Greenhouses'],
+ ['3A.1.4','3A','Cultivation equipment','Cultivation equipment and utensils are easy to clean and repair, identified for their use (color coded or labeled), stored apart from materials and product, hoses emptied and on racks off the floor, and field and transport vehicles clean and in good repair.',['logs'],'Equipment Maintenance Log.',['Equipment register'],'All cultivation'],
+ ['3A.1.5','3A','Cultivation inputs and controls','Every cultivation input is declared with safety and quality specs, and its use is controlled, recorded and tracked.',['suppliers','receiving'],'Inputs from approved suppliers received as numbered lots with COA.',['Cultivation records'],'All cultivation'],
+ ['3A.1.6','3A','Air, CO2 and other process gases','Gases used in the grow and in processing suit their use and their levels are monitored: filtered, dry and oil-free; at least 99.5% pure unless specified; CO2 beverage grade or better (never medical grade).',['suppliers','receiving'],'Gas suppliers approved with specs; gases received with COA.',[],'CO2 enrichment, processing gases'],
+ ['3A.1.7','3A','Growth additives, fertilizers, nutrients and soil amendments','An integrated nutrient management plan: approved list and who approves, inputs identified and stored away from water, use guided by sample analysis, organic where possible, organic and inorganic stored apart, no untreated manure, untreated amendments treated and verified.',['suppliers','receiving','sops'],'Approved nutrient suppliers and received lots; the nutrient plan as an SOP.',['Cultivation records'],'All cultivation'],
+ ['3A.1.8','3A','Grow media','Grow media are evaluated for hazards, never used untreated, and reused media are treated and verified against specs.',['receiving','sops'],'Grow media received as lots with specs.',['Cultivation records'],'Media-based grows'],
+ ['3A.1.9','3A','Soil safety and quality','Soil meets food crop requirements: characteristics known and evaluated as a contamination source, sampled and tested on a continuing basis, informed by past tests and land use, with erosion monitored.',[],'',['Facility tests'],'Soil grows'],
+ ['3A.1.10','3A','Water used during cultivation','Irrigation water meets food crop requirements, is evaluated as a contamination source, tested on a continuing basis, informed by past tests and land use, with wastewater monitored.',[],'',['Facility tests'],'All cultivation'],
+ ['3A.1.11','3A','Water ice and dry ice','Ice meets the water specs; ice machines installed to regulation with storage and production parts emptied and cleaned at least weekly; dry ice used sparingly, only for temperature, never touching product.',['sops','logs'],'',[],'Processes using ice or dry ice'],
+ ['3A.1.12','3A','Fertigation and irrigation systems','Water sources and system type identified; systems designed and installed safely with no lead pipes or fittings; tested for contaminants at a set frequency; maintained to avoid waste and wet media that grows mold; applied to plant needs without runoff; water use measured with reduction, retention and reclamation where possible.',['logs'],'Equipment Maintenance Log.',['Facility tests','Cultivation records'],'All cultivation'],
+ ['3A.1.13','3A','Cuttings, clones, seeds and propagation materials','Propagation material comes from licensed or approved sources (with specs and acceptance) or own plants, is kept healthy and from becoming a contamination source, is labeled with name, source, date and other details, and retention samples are kept when required.',['suppliers','receiving'],'Clone and seed suppliers approved; propagation material received as lots.',['Cultivation records'],'All cultivation'],
+ ['3A.1.14','3A','Crop maintenance and protection','Crop maintenance and protection follow each plant\'s growth and the plant part to be used.',['logs','sops'],'Pest Control Log.',['Cultivation records'],'All cultivation'],
+ ['3A.1.15','3A','Harvesting','Harvest protects fresh material from foreign matter and microbes: cGACP in the field, cGMP once indoors.',['sops'],'',['Cultivation records'],'All cultivation'],
+ ['3A.1.16','3A','Drying, curing and post-harvest','Drying, curing and other post-harvest work follow cGMP and protect material from foreign matter and microbes.',['logs','sops'],'Temp / Humidity Log for dry and cure rooms.',['Cultivation records'],'All cultivation'],
+ ['3A.1.17','3A','Grinding and milling','Grinding and milling follow cGMP; areas are monitored for dust and have dust handling and PPE.',['sops','logs'],'',[],'Trim and milling'],
+ ['3A.1.18','3A','Tissue culture','Tissue culture follows cGMP and protects cultures from foreign matter and microbes.',['sops'],'',[],'Tissue culture labs'],
+ ['3A.1.19','3A','Blending and mixing','Defined procedures and equipment; materials measured and added at the right step; parameters documented to spec; homogeneous batches; rework approved by qualified staff; equipment sized for the batch.',['batches'],'',[],'Blended herbal material'],
+ ['3A.2.1','3A','Live cannabis products','Live products such as seeds are protected from foreign matter, chemical and microbial contamination.',['sops'],'',[],'Seeds, clones for sale'],
+ ['3A.2.2','3A','Cannabinoid herbal material products','Dried or fresh frozen flower is protected from foreign matter, chemical and microbial contamination, kept frozen when required, and handled with airflow, ventilation and dust control.',['testing','logs'],'Lab results per batch in Testing; storage conditions in the Temp / Humidity Log.',[],'Flower and trim'],
+ ['3A.2.3','3A','Cannabinoid pre-roll products','Pre-rolls are protected from foreign matter, chemical and microbial contamination, with airflow, ventilation and dust control where they are made.',['batches','sops'],'',[],'Pre-rolls made at a cultivation license'],
+ ['3B.1.1','3B','Extraction and refinement activities','Extraction and refinement follow cGMP and protect product from adulterants, foreign matter and residual solvents: areas identified with signage, simultaneous activities segregated, spill kits next to every extraction area, closed-loop systems where applicable built to the safety standards for their use, equipment cleanable in place, and solvent and chemical levels in the final product within regulation and spec.',['batches','testing','sops'],'Ethanol and BHO extraction batch records; residual solvent results on COAs.',['Equipment register'],'All extraction'],
+ ['3B.1.2','3B','Solvent-based extraction and refinement','Solvent extraction is done by trained, competent staff: fire and life safety systems working and within maintenance and calibration before use; areas and equipment designed for the solvent used; cleaning suited to the solvent and its residues.',['batches','logs','training'],'Ethanol and BHO batch records; Equipment Maintenance Log; training per person.',['Equipment register','Line clearance'],'Hydrocarbon, ethanol and CO2 extraction'],
+ ['3B.1.3','3B','Solvent-free extraction and refinement','Solventless work (ice water, dry sift, rosin) is done by trained staff in separate areas: enough drainage, process water at least potable and to spec before use, water removed from the product to spec and from waste before disposal, equipment fit to carry that water, defined environmental conditions (walk-in coolers and freezers included).',['sops','logs'],'Temp / Humidity Log for the rooms used.',['Facility tests','Equipment register'],'Solventless (ice water, dry sift, rosin)'],
+ ['3B.1.4','3B','Extraction inputs and controls','Every extraction and refinement input is declared with safety and quality specs, and its use is controlled, recorded and tracked.',['receiving','suppliers','batches'],'Inputs from approved suppliers, received as numbered lots with COA and recorded against the extraction batches that use them.',[],'All extraction'],
+ ['3B.1.5','3B','Air, CO2, LPG and other process gases','Process gases (air, CO2, butane, propane, nitrogen...) suit their use and their levels are monitored in the area, on the person, in the process and in the product: filtered, dry and oil-free; at least 99.5% pure unless specified; CO2 beverage grade or better (never medical grade).',['suppliers','receiving'],'Gas suppliers approved with specs (purity, beverage grade CO2); gases received with COA / certificate of conformance.',['Facility tests'],'Processes using gases'],
+ ['3B.1.6','3B','Ethanol and other liquid organic solvents','Solvents suit their use and their levels are monitored: at least 99.5% pure; ethanol food grade and not denatured (approved denaturants reduced to legal levels if used); only ethanol may be an ingredient, and then it must be food grade and not denatured.',['batches','receiving','suppliers'],'Ethanol batch records track solvent use; solvents from approved suppliers received with COA.',[],'Processes using solvents'],
+ ['3B.1.7','3B','Water used during extraction and refinement','Process water is potable and at least 99.5% pure, evaluated as a contamination source, tested on a continuing basis, informed by past tests and land use, with wastewater monitored.',[],'',['Facility tests'],'Processes using water'],
+ ['3B.1.8','3B','Water ice and dry ice','Ice meets the water specs; ice machines installed to regulation with storage and production parts emptied and cleaned at least weekly; dry ice used sparingly, only for temperature, and never touching product.',['sops','logs'],'',[],'Ice water extraction, cold traps'],
+ ['3B.1.9','3B','Other solid and liquid processing inputs','Media, chemicals, catalysts and reactants are at least 99.5% pure and food grade, or justified by a toxicological risk assessment; non-food-grade inputs are declared and reduced to safe levels in the final product.',['suppliers','receiving'],'Processing input suppliers approved with specs; inputs received with COA.',[],'Filtration media, reagents'],
+ ['3B.1.10','3B','Non-cannabinoid ingredients','Terpenes and other ingredients added to extracts are food grade or justified by a toxicological risk assessment; non-food-grade ingredients are declared and reduced to safe levels.',['products','suppliers','receiving'],'Formulations list ingredients; ingredient suppliers approved with specs; ingredients received with COA.',[],'Formulated extracts'],
+ ['3B.1.11','3B','Indoor air quality, airflow and environment','Extraction and processing areas have air quality specs; air is conditioned, filtered, treated and monitored; air handling is checked; airflow, humidity and temperature have min and max limits and air never stagnates; milling and grinding areas are monitored for dust with dust handling and PPE.',['logs'],'Temp / Humidity Log: min and max per room; out-of-range readings need a corrective action.',['Facility tests'],'All extraction'],
+ ['3B.1.12','3B','Blending, compounding, formulation and mixing','Defined procedures and equipment for blending; every ingredient measured and added at the right step; parameters documented to spec; batches homogeneous before dispensing; rework approved by qualified staff; equipment sized for the batch.',['products','batches'],'Formulations; Batch Tracker calculations; changes to filled values need Full access and a reason.',[],'Blended and formulated extracts'],
+ ['3B.2.1','3B','Cannabinoid herbal materials (extraction input)','Dried or fresh frozen biomass is protected from foreign matter, chemical and microbial contamination, kept frozen until use when required, and handled with airflow, ventilation and dust control.',['receiving','logs'],'Biomass received as numbered lots; storage conditions in the Temp / Humidity Log.',[],'Biomass and fresh frozen'],
+ ['3B.2.2','3B','Cannabinoid substance products','Concentrates and extracts are protected from contamination; residual solvents (also in solventless products) stay within the stricter of regulation or internal spec.',['testing','batches','holds'],'Testing stores residual solvent results from COAs; a failed result puts the batch on hold.',[],'Concentrates, distillate, isolate'],
+ ['3B.2.2.3','3B','Manufactured cannabinoids','Cannabinoids made by conversion, synthesis or modified organisms are declared, have safety and quality specs, and their use is controlled, recorded and tracked.',['batches','products'],'Batch records and formulations record what is made and used.',[],'Converted or synthetic cannabinoids'],
+ ['3B.2.3','3B','Formulated cannabinoid substance products','Formulated substances are protected from contamination, risk-assessed for route of administration and labeled with it, carry allergen declarations when used as ingredients, and use inhalation-grade ingredients when meant for inhalation (food grade or GRAS alone is not enough).',['products','suppliers'],'SKU specs and formulations; inhalable ingredient suppliers approved with an inhalation-grade statement.',[],'Formulated extracts (cartridge oil)'],
+ ['3C.1.1','3C','Manufacturing activities','Manufacturing follows cGMP and protects product from adulterants, foreign matter and residual solvents: areas identified with signage, simultaneous activities segregated, solvent and chemical levels in the final product within regulation and spec.',['batches','testing'],'Batch records; residual solvent results on COAs.',[],'All products'],
+ ['3C.1.2','3C','Manufacturing inputs and controls','Every manufacturing input is declared with safety and quality specs, and its use is controlled, recorded and tracked.',['products','batches','receiving'],'Formulations; batch records capture inputs used. Inputs received as numbered lots and recorded against the batches that use them.',[],'All products'],
+ ['3C.1.3','3C','Air, CO2 and other process gases','Process gases suit their use and are monitored: filtered, dry and oil-free; at least 99.5% pure unless specified; CO2 beverage grade or better (never medical grade).',['suppliers','receiving'],'Gas suppliers approved with specs (purity, beverage grade CO2). Gases received with COA / certificate of conformance.',[],'Processes using gases'],
+ ['3C.1.4','3C','Ethanol and other liquid organic solvents','Solvents suit their use and are monitored: at least 99.5% pure; ethanol food grade and not denatured (approved denaturants reduced to legal levels if used); only ethanol may be an ingredient, and it must be food grade.',['batches','receiving'],'Ethanol and BHO batch records track solvent use. Solvents received with COA / certificate of conformance.',[],'Processes using solvents'],
+ ['3C.1.5','3C','Water used during manufacturing','Water used as an ingredient or in processing is potable, at least 99.5% pure, evaluated as a contamination source, tested on a continuing basis, informed by past tests and land use, with wastewater monitored.',[],'',['Facility tests'],'Products made with water'],
+ ['3C.1.6','3C','Water ice and dry ice','Ice meets water specs; ice machines installed to regulation with storage and production parts emptied and cleaned at least weekly; dry ice used sparingly and never touching product.',['sops','logs'],'',[],'Processes using ice or dry ice'],
+ ['3C.1.7','3C','Other solid and liquid processing inputs','Media, catalysts, reactants and similar inputs are at least 99.5% pure and food grade, or justified by a toxicological risk assessment; non-food-grade inputs are declared and reduced to safe levels in the final product.',['suppliers','receiving'],'Processing input suppliers approved with specs. Processing inputs received with COA.',[],'Processes using media or reagents'],
+ ['3C.1.8','3C','Non-cannabinoid ingredients','Terpenes and other ingredients are food grade or justified by a toxicological risk assessment; non-food-grade ingredients are declared and reduced to safe levels.',['products','suppliers','receiving'],'Formulations list ingredients. Ingredient suppliers approved with specs (food grade, COA). Ingredients received with COA and inspection.',[],'Formulated products'],
+ ['3C.1.9','3C','Indoor air quality, airflow and environment','Production areas have air quality specs; air is conditioned, filtered, treated and monitored; air handling is checked; airflow, humidity and temperature have min and max limits and air never stagnates; milling and grinding areas are monitored for dust with dust handling and PPE.',['logs'],'Temp / Humidity Log: min and max per room; out-of-range readings are marked automatically and need a corrective action.',[],'All products'],
+ ['3C.1.10','3C','Blending, compounding, formulation and mixing','Defined procedures and equipment for blending; every ingredient measured and added at the right step; parameters documented to spec; batches homogeneous before dispensing; rework approved by qualified staff; equipment sized for the batch.',['products','batches'],'Formulations; Batch Tracker calculations; changes to filled values need Full access and a reason.',[],'Blended and formulated products'],
+ ['3C.2.1','3C','Cannabinoid herbal material products','Dried or frozen flower is protected from foreign matter, chemical and microbial contamination, kept frozen when required, and handled with airflow, ventilation and dust control.',['sops','batches'],'Infused flower, moon rocks and snow caps batch records.',[],'Flower products'],
+ ['3C.2.2','3C','Cannabinoid pre-roll products','Pre-rolls are protected from contamination with dust control; ingredients for infused pre-rolls are fit for inhalation (food grade or GRAS alone is not enough).',['batches','products','suppliers'],'Pre-roll batch type with coating (Kief, Diamond). Infusion ingredient suppliers approved with an inhalation-grade statement.',[],'Pre-rolls'],
+ ['3C.2.3','3C','Cannabinoid substance products','Concentrates and extracts are protected from contamination; residual solvents (also in solventless products) stay within the stricter of regulation or internal spec; converted or synthetic cannabinoids are declared, specified and tracked.',['testing','batches'],'Testing stores residual solvent results from COAs.',[],'Concentrates and distillate'],
+ ['3C.2.4','3C','Formulated cannabinoid substance products','Formulated substances are protected from contamination, risk-assessed for route of administration and labeled with it, carry allergen declarations when used as ingredients, and use inhalation-grade ingredients when meant for inhalation.',['products'],'SKU specs and formulations.',[],'Cartridge oil and formulated extracts'],
+ ['3C.2.5','3C','Inhalable cannabinoid products','Inhalable products are protected from contamination, risk-assessed for inhalation, and use only ingredients fit for inhalation (food grade or GRAS alone is not enough).',['products','batches','suppliers'],'Inhalable ingredient suppliers approved with an inhalation-grade statement.',[],'Cartridges and vapes'],
+ ['3C.2.6','3C','Ingestible cannabinoid products','Ingestible products are protected from contamination and every label carries an accurate allergen declaration.',['stickers','batches'],'Sticker templates per SKU with an allergen declaration printed on the label.',[],'Gummies and edibles'],
+ ['3C.2.7','3C','Topical-use cannabinoid products','Topicals are protected from contamination, risk-assessed for skin or mucosal absorption and duration of use, and labeled with fragrance, skin irritant and allergen declarations.',[],'',[],'Topicals'],
+ ['4A.1','4A','HACCP system','Develop, document and run a HACCP system based on the 12 Codex Alimentarius steps as part of the quality system.',[],'',['HACCP']],
+ ['4A.2','4A','HACCP team','A documented multidisciplinary HACCP team (quality, sanitation, maintenance, senior management) with one member and one backup certified in an International HACCP Alliance approved course.',['team','training'],'Team members and roles. HACCP certified people (one plus a backup) tracked in Training.',['HACCP']],
+ ['4A.3','4A','Product descriptions and intended use','A description for each finished product: name, safety characteristics (water activity, pH, cannabinoids), ingredients, allergens, packaging, intended use, target market, shelf life, labeling instructions, storage and distribution.',['products','stickers'],'SKU specs, formulations, sticker templates (ingredients, instructions, warning).',['HACCP']],
+ ['4A.4','4A','Flow diagram','A flow diagram for each product and process showing every step, inputs, outsourced steps, rework, waste and by-products, with CCPs marked, reviewed yearly or on change.',['batches'],'Batch Tracker steps per batch type.',['HACCP']],
+ ['4A.5','4A','Hazard analysis','A hazard analysis matching the flow diagram that covers every product, material and packaging, and records each biological, chemical and physical hazard, its cause and its control.',[],'',['HACCP']],
+ ['4A.6','4A','Critical control points','Identify from the hazard analysis the steps that need CCPs, documented so they prevent, remove or reduce each hazard.',[],'',['HACCP']],
+ ['4A.7','4A','Critical limits','Measurable critical limits for each CCP that separate acceptable from unacceptable product.',[],'',['HACCP']],
+ ['4A.8','4A','Monitoring','Documented monitoring that keeps each CCP within its limits.',['batches'],'Batch records capture the process values.',['HACCP']],
+ ['4A.9','4A','Corrective actions','Specific corrective actions for each CCP that bring it back under control and keep affected product from consumers.',['qms'],'Out-of-control CCPs handled as deviations and CAPAs.',['HACCP']],
+ ['4A.10','4A','HACCP validation','Validate control measures and critical limits before use and again after significant product or process changes.',[],'',['HACCP']],
+ ['4A.11','4A','HACCP verification','Ongoing verification that HACCP is followed and works, with a full reanalysis yearly or after significant change.',[],'',['HACCP']],
+ ['5.1.1','5','Quality system personnel and org chart','An organizational chart showing reporting lines and everyone involved in safety, quality and CSQ conformance, with their functions and responsibilities.',['team','roles'],'Team members with roles.',['Org chart']],
+ ['5.1.2','5','Quality policies and objectives','Quality policies and measurable objectives suited to the business, with a process to change, review and keep improving them.',[],'',['KPIs']],
+ ['5.1.3','5','Management review','Senior management reviews the system at least yearly: previous actions, complaints and feedback, internal, external and regulatory audits, risks and corrective actions, resources, CSQ conformance, and changes; minutes kept and shared.',[],'',['Management review']],
+ ['5.1.4','5','Continuous improvement','Measurable improvement goals with KPIs and effectiveness checks, continuing education per role, shared with staff and reviewed at least quarterly.',['training'],'Continued education per role in the training matrix.',['KPIs']],
+ ['5.1.5','5','Change management','A change management plan for people, processes and products: what each change affects, how it is documented and approved, training before use, and who is told (including regulators and the certification body).',['audit'],'Audit trail records every change with a reason.',['Change control']],
+ ['5.1.6','5','Risk management','Risk procedures: the hazard, its root cause, the owner, immediate action, timescale for a permanent fix, verification, and routine surveillance of product safety and quality.',['qms'],'',['Risk register']],
+ ['5.1.7','5','Validation','Validate facilities and equipment with installation, operational and performance qualification (IQ, OQ, PQ), materials through supplier approval, and revalidate yearly and whenever critical limits, cGMPs or CSQ conformance change.',['suppliers'],'Materials validated through supplier approval.',['Equipment register']],
+ ['5.1.8','5','Verification','Verification procedures that list the activities to verify, who does them, how often, and how they are monitored and recorded.',[],'',['Verification schedule']],
+ ['5.2','5','Safety and quality culture','Everyone acknowledges the safety and quality commitments, training covers anyone who affects product, improvements are planned and measured, and the culture policy is reviewed yearly.',['sops','training'],'Quality policy as an SOP; every signature recorded per version. Training per person in the training matrix.',[]],
+ ['5.3','5','Customer satisfaction','Know and meet customer requirements, have a channel for product information, feedback and complaints, and measure whether customers are satisfied.',['complaints'],'Customer feedback logged with a satisfaction rating; complaints and feedback tracked per customer.',[]],
+ ['5.4.1','5','Product and process development','New products and changes are approved by a qualified person, trial runs prove the process when needed, and every product has a full process description and flow diagram kept current.',['products'],'A SKU cannot be switched on without a formulation.',['Change control']],
+ ['5.4.2','5','Product and process specifications','Process specs with limits for every critical parameter, and product specs covering name and form, physical and chemical traits, contaminants, storage, shelf life, serving size, cannabinoid and terpene content, allergens, ingredients, reagents, packaging and devices, excise stamps and label, and customer and legal requirements.',['products','stickers'],'SKU specs, formulations, sticker servings and weight.',[]],
+ ['5.4.3','5','Product and process verification and validation','Verify and validate that products and processes meet spec, with at least three consecutive batches meeting spec unless otherwise required.',['batches','testing'],'Batch and test records per SKU.',[]]];
+const STD_STATUSES=['Not assessed','Conforming','Partial','Not conforming','Not applicable'];
+const STD_TONE={'Not assessed':'off','Conforming':'ok','Partial':'warn','Not conforming':'bad','Not applicable':'off'};
+const STD_COLOR={'Conforming':'#5fbf8a','Partial':'#d4af37','Not conforming':'#e5645a','Not applicable':'#4a473f','Not assessed':'#2a2a2a'};
+const ADOPT_STATUSES=['Following','Audit scheduled','Certified','Suspended','Withdrawn'];
+const HX_PAGE_LABEL={complaints:'Complaints',intaudits:'Internal Audits',recall:'Traceability and Recall',receiving:'Receiving',inventory:'Inventory',holds:'Hold and Release',shipping:'Shipping',suppliers:'Suppliers',training:'Training',qms:'QMS (Deviations, CAPA)',sops:'SOPs',rulebook:'Rulebook',locations:'States and Licenses',audit:'Audit Trail',batches:'Batch Tracker',testing:'Testing',stickers:'Compliance Stickers',
+  products:'Products',logs:'Facility Logs',visitors:'Visitor Log',roles:'Roles',team:'Team and Access'};
+const HX_PAGE_MOD={complaints:'complaints',intaudits:'intaudits',recall:'recall',receiving:'receiving',inventory:'receiving',holds:'holds',shipping:'shipping',suppliers:'suppliers',training:'training',qms:'qms',sops:'sops',rulebook:'rulebook',audit:'audit',batches:'batch',testing:'testing',stickers:'stickers',visitors:'logs_visitor'};
+function stdLevelOf(m){return m==='4A'?2:m==='5'?3:1;}
+function stdErr(e){
+  const m=String((e&&e.message)||e);
+  if(/hx_standard|hx_conformance|hx_license_standards/.test(m)&&/does not exist|schema cache|Could not find/i.test(m))return 'Standards are not set up yet - run hendrix_step11.sql in the Hendrix Supabase project.';
+  if(/violates foreign key|hx_conformance_clause_id_fkey|restrict/i.test(m))return 'This clause or standard already has conformance records, so it cannot be removed.';
+  return accessErr(e);
+}
+function stdCounts(clauses,conf){
+  const c={total:clauses.length};STD_STATUSES.forEach(function(s){c[s]=0;});
+  clauses.forEach(function(x){const r=conf[x.id];c[(r&&r.status)||'Not assessed']++;});
+  c.done=c['Conforming']+c['Not applicable'];c.pct=c.total?Math.round(c.done*100/c.total):0;
+  return c;
+}
+function StdBar(props){
+  const c=props.c;
+  return el('div',{style:{display:'flex',height:props.h||10,borderRadius:6,overflow:'hidden',background:'#1d1d1d',border:'1px solid var(--line)'}},
+    ['Conforming','Not applicable','Partial','Not conforming'].map(function(s){return c[s]?el('div',{key:s,title:s+': '+c[s],style:{width:(c[s]*100/c.total)+'%',background:STD_COLOR[s]}}):null;}));
+}
+async function addStandardLib(existing){
+  let std=existing;
+  if(!std){
+    const rows=await db.insert('hx_standards',{id:newId('std'),code:CSQ_MFG.code,name:CSQ_MFG.name,publisher:CSQ_MFG.publisher,version:CSQ_MFG.version,issued:CSQ_MFG.issued,
+      scope:CSQ_MFG.scope,levels:CSQ_MFG.levels,modules:CSQ_MFG.modules,audit_notes:CSQ_MFG.notes});
+    std=rows&&rows[0];
+  }
+  else if(std.name!==CSQ_MFG.name||std.scope!==CSQ_MFG.scope||JSON.stringify(std.modules)!==JSON.stringify(CSQ_MFG.modules)||JSON.stringify(std.levels)!==JSON.stringify(CSQ_MFG.levels)||JSON.stringify(std.audit_notes||[])!==JSON.stringify(CSQ_MFG.notes)){
+    const r=await db.update('hx_standards',std.id,{name:CSQ_MFG.name,scope:CSQ_MFG.scope,modules:CSQ_MFG.modules,levels:CSQ_MFG.levels,audit_notes:CSQ_MFG.notes});std=(r&&r[0])||{...std,name:CSQ_MFG.name};}
+  const have=await db.get('hx_standard_clauses','standard_id=eq.'+encodeURIComponent(std.id)+'&select=*');
+  const got={};(have||[]).forEach(function(x){got[x.clause]=x;});
+  // clauses already there: bring the Hendrix links up to date as new modules are built (status and evidence are never touched)
+  let refreshed=0;
+  for(const c of CSQ_MFG_CLAUSES){const x=got[c[0]];if(!x||!stdClauseStale(x,c))continue;
+    await db.update('hx_standard_clauses',x.id,{hx_pages:c[4]||[],hx_support:c[5]||'',hx_planned:c[6]||[],applies_to:c[7]||'',summary:c[3],title:c[2]});refreshed++;}
+  const add=CSQ_MFG_CLAUSES.map(function(c,i){return {id:newId('cl'),standard_id:std.id,clause:c[0],module:c[1],title:c[2],summary:c[3],level:stdLevelOf(c[1]),
+    hx_pages:c[4]||[],hx_support:c[5]||'',hx_planned:c[6]||[],applies_to:c[7]||'',sort:i};}).filter(function(c){return !got[c.clause];});
+  for(let i=0;i<add.length;i+=40)await db.insert('hx_standard_clauses',add.slice(i,i+40));
+  return {std:std,added:add.length,refreshed:refreshed};
+}
+function stdClauseStale(x,c){return JSON.stringify(x.hx_pages||[])!==JSON.stringify(c[4]||[])||(x.hx_support||'')!==(c[5]||'')||JSON.stringify(x.hx_planned||[])!==JSON.stringify(c[6]||[])||(x.summary||'')!==c[3]||(x.title||'')!==c[2]||(x.applies_to||'')!==(c[7]||'');}
+function AdoptForm(props){
+  const a=props.adopt||{};
+  const[f,setF]=useState({target_level:a.target_level||1,status:a.status||'Following',cert_body:a.cert_body||'',audit_date:a.audit_date||'',cert_number:a.cert_number||'',cert_expiry:a.cert_expiry||'',notes:a.notes||'',scopes:csqScopes(a,props.license).slice()});
+  const isCsq=props.std.code===CSQ_MFG.code,op=licOp(props.license),allowed=csqAllowed(props.license);
+  const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  const levels=(props.std.levels&&props.std.levels.length?props.std.levels:CSQ_MFG.levels);
+  async function save(){
+    setErr('');setBusy(true);
+    try{
+      if(isCsq&&!allowed.length)throw new Error('CSQ applies to manufacturing and cultivation licenses. Set this license\'s operation under States and Licenses first.');
+      if(isCsq&&!f.scopes.filter(function(x){return allowed.indexOf(x)>=0;}).length)throw new Error('Pick at least one CSQ standard for this license.');
+      const rec={target_level:Number(f.target_level),status:f.status,cert_body:f.cert_body.trim(),audit_date:f.audit_date||null,cert_number:f.cert_number.trim(),cert_expiry:f.cert_expiry||null,notes:f.notes.trim()};
+      if(isCsq)rec.scopes=f.scopes.filter(function(x){return allowed.indexOf(x)>=0;});
+      if(a.id)await db.update('hx_license_standards',a.id,rec);
+      else await db.insert('hx_license_standards',{...rec,id:newId('adopt'),state_id:props.state.id,license_id:props.license.id,standard_id:props.std.id});
+      props.onDone();
+    }catch(e){setErr(stdErr(e));}
+    setBusy(false);
+  }
+  function inp(k,ph,type){return el('input',{type:type||'text',value:f[k]||'',placeholder:ph||'',onChange:function(e){setF({...f,[k]:e.target.value});}});}
+  return el(Modal,{title:(a.id?'Edit adoption':'Adopt '+props.std.name)+' - '+props.license.name,onClose:props.onClose},
+    isCsq&&el('div',{className:'card',style:{padding:'10px 14px',marginBottom:10}},el('div',{className:'k'},'License operation: '+LIC_OPS[op]),
+      !allowed.length?el('div',{className:'msg err',style:{marginTop:6}},'CSQ applies to manufacturing and cultivation licenses. Set this license\'s operation under States and Licenses.'):
+      el('div',{style:{marginTop:6}},el('div',{className:'muted',style:{fontSize:12,marginBottom:4}},'Standards this license follows (Modules 1, 2A, 4A and 5 are shared and assessed once):'),
+        allowed.map(function(k){return el('label',{key:k,className:'ck',style:{display:'flex'}},el('input',{type:'checkbox',checked:f.scopes.indexOf(k)>=0,disabled:op==='cultivation',onChange:function(e){setF(function(p){const a2=p.scopes.filter(function(x){return x!==k;});if(e.target.checked)a2.push(k);return {...p,scopes:a2};});}}),
+          el('span',null,CSQ_PARTS[k].name+' (Module '+k+')'));}),
+        op==='cultivation'&&el('div',{className:'muted',style:{fontSize:12,marginTop:4}},'Cultivation licenses follow the CSQ Standard for Cultivation only.'))),
+    el(Field,{label:'Target level'},el('select',{value:f.target_level,onChange:function(e){setF({...f,target_level:e.target.value});}},
+      levels.map(function(l){return el('option',{key:l.level,value:l.level},l.name+' (Modules '+l.modules.map(function(m){return m==='3'?(isCsq?f.scopes.slice().sort().join(' + ')||'3':'3'):m;}).join(', ')+')');}))),
+    el('div',{className:'muted',style:{fontSize:12,marginTop:-6,marginBottom:12}},(levels.find(function(l){return String(l.level)===String(f.target_level);})||{}).audit||''),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:10}},
+      el(Field,{label:'Status'},el('select',{value:f.status,onChange:function(e){setF({...f,status:e.target.value});}},ADOPT_STATUSES.map(function(s){return el('option',{key:s,value:s},s);}))),
+      el(Field,{label:'Certification body'},inp('cert_body','e.g. Kiwa ASI')),
+      el(Field,{label:'Audit date'},inp('audit_date','','date')),
+      el(Field,{label:'Certificate number'},inp('cert_number')),
+      el(Field,{label:'Certificate expiry'},inp('cert_expiry','','date'))),
+    el(Field,{label:'Notes'},el('textarea',{rows:2,value:f.notes,onChange:function(e){setF({...f,notes:e.target.value});}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:save},busy?'Saving...':a.id?'Save':'Adopt standard')));
+}
+function ConformanceForm(props){
+  const c=props.clause,r=props.rec||{};
+  const[f,setF]=useState({status:r.status||'Not assessed',owner:r.owner||'',due_date:r.due_date||'',doc_ref:r.doc_ref||'',evidence:r.evidence||'',files:(r.files||[]).slice()});
+  const[err,setErr]=useState('');const[busy,setBusy]=useState('');
+  async function upload(file){
+    if(!file)return;setErr('');setBusy('Uploading...');
+    try{
+      const ext=(file.name.split('.').pop()||'pdf').toLowerCase().replace(/[^a-z0-9]/g,'');
+      const path=await storagePut(file,'standards/'+props.license.id+'/'+c.id+'-'+Date.now()+'.'+ext);
+      setF(function(p){return {...p,files:p.files.concat([{path:path,name:file.name,at:new Date().toISOString(),by:(ACC.profile&&(ACC.profile.name||ACC.profile.email))||''}])};});
+    }catch(e){setErr(String(e.message||e));}
+    setBusy('');
+  }
+  async function save(){
+    setErr('');
+    if(f.status==='Not applicable'&&!f.evidence.trim()){setErr('Write why this clause does not apply before marking it Not applicable.');return;}
+    setBusy('Saving...');
+    try{
+      const rec={status:f.status,owner:f.owner.trim(),due_date:f.due_date||null,doc_ref:f.doc_ref.trim(),evidence:f.evidence.trim(),files:f.files};
+      if(r.id)await db.update('hx_conformance',r.id,rec);
+      else await db.insert('hx_conformance',{...rec,id:newId('conf'),state_id:props.state.id,license_id:props.license.id,standard_id:c.standard_id,clause_id:c.id});
+      props.onDone();
+    }catch(e){setErr(stdErr(e));}
+    setBusy('');
+  }
+  return el(Modal,{title:c.clause+'  '+c.title,wide:true,onClose:props.onClose},
+    el('div',{className:'muted',style:{fontSize:13,marginBottom:12,lineHeight:1.5}},c.summary),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:10}},
+      el(Field,{label:'Status'},el('select',{value:f.status,onChange:function(e){setF({...f,status:e.target.value});}},STD_STATUSES.map(function(s){return el('option',{key:s,value:s},s);}))),
+      el(Field,{label:'Owner'},el('input',{value:f.owner,placeholder:'Who is responsible',onChange:function(e){setF({...f,owner:e.target.value});}})),
+      el(Field,{label:'Due date'},el('input',{type:'date',value:f.due_date||'',onChange:function(e){setF({...f,due_date:e.target.value});}}))),
+    el(Field,{label:'SOP / document reference'},el('input',{value:f.doc_ref,placeholder:'e.g. SOP-QA-004 Rev 2',onChange:function(e){setF({...f,doc_ref:e.target.value});}})),
+    el(Field,{label:f.status==='Not applicable'?'Justification (why it does not apply) *':'Evidence - how we meet this clause'},el('textarea',{rows:4,value:f.evidence,placeholder:'Where an auditor finds the proof: records, logs, SOPs, training, photos',onChange:function(e){setF({...f,evidence:e.target.value});}})),
+    el(Field,{label:'Evidence files',plain:true},
+      el('div',null,
+        f.files.length?f.files.map(function(x,i){return el('div',{key:x.path,className:'row',style:{fontSize:12,marginBottom:4}},
+          el('a',{href:'#',style:{color:'var(--gold-hi)'},onClick:function(e){e.preventDefault();openStored(x.path,x.name).catch(function(er){setErr(String(er.message||er));});}},x.name),
+          el('span',{className:'muted'},(x.by?x.by+' \u00b7 ':'')+(x.at?new Date(x.at).toLocaleDateString():'')),
+          !r.id||!(r.files||[]).some(function(o){return o.path===x.path;})?el('button',{className:'btn ghost sm',onClick:function(){setF({...f,files:f.files.filter(function(_,j){return j!==i;})});}},'Remove'):null);}):el('div',{className:'muted',style:{fontSize:12,marginBottom:4}},'No files yet'),
+        el('label',{className:'btn ghost sm',style:{display:'inline-block',marginTop:4}},busy==='Uploading...'?'Uploading...':'+ Attach file',
+          el('input',{type:'file',style:{display:'none'},onChange:function(e){upload(e.target.files[0]);e.target.value='';}})))),
+    el('div',{className:'muted',style:{fontSize:11,marginTop:8}},'Files already saved on a clause stay attached. Every change is kept in the audit trail.'),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:!!busy,onClick:save},busy==='Saving...'?'Saving...':'Save')));
+}
+function stdRegisterHtml(std,lic,st,adopt,clauses,conf,inScope,E){
+  const e=esc3,c=stdCounts(inScope,conf),lv=(std.levels||[]).find(function(l){return l.level===(adopt&&adopt.target_level);});
+  const pn=std.code===CSQ_MFG.code?csqPartNames(csqScopes(adopt,lic)):[],mods=Object.keys(std.modules||{}).filter(function(m){return !pn.length||stdModOk(m,csqScopes(adopt,lic));});
+  let h='<div class="hxrec"><h2>'+e(pn.length?pn.join(' + '):std.name)+' v'+e(std.version)+' - Conformance register</h2><div class="m">'+e(std.publisher)+' &middot; '+e(std.issued)+(pn.length?' &middot; Modules 1, 2A, 4A and 5 are shared by these standards and assessed once':'')+'</div>'+
+    '<table><tr><th>Licensed operation</th><td>'+e(lic.name)+(lic.license_number?' ('+e(lic.license_number)+')':'')+' &middot; '+e(st.name)+'</td></tr>'+
+    '<tr><th>Target level</th><td>'+e(lv?lv.name:'-')+'</td></tr><tr><th>Status</th><td>'+e((adopt&&adopt.status)||'-')+(adopt&&adopt.cert_body?' &middot; '+e(adopt.cert_body):'')+(adopt&&adopt.audit_date?' &middot; audit '+e(adopt.audit_date):'')+'</td></tr>'+
+    '<tr><th>Clauses in scope</th><td>'+c.total+' &middot; Conforming '+c['Conforming']+' &middot; Partial '+c['Partial']+' &middot; Not conforming '+c['Not conforming']+' &middot; Not applicable '+c['Not applicable']+' &middot; Not assessed '+c['Not assessed']+' &middot; <b>'+c.pct+'% complete</b></td></tr>'+
+    '<tr><th>Printed</th><td>'+e(new Date().toLocaleString())+'</td></tr></table>';
+  mods.forEach(function(m){
+    const list=inScope.filter(function(x){return x.module===m;});if(!list.length)return;
+    h+='<table><tr class="sec"><td colspan="5">MODULE '+e(m)+': '+e(std.modules[m]).toUpperCase()+'</td></tr><tr><th style="width:9%">Clause</th><th style="width:25%">Requirement</th><th style="width:13%">Status</th><th style="width:15%">Owner / due</th><th>Evidence and documents</th></tr>';
+    list.forEach(function(x){const r=conf[x.id]||{},s=r.status||'Not assessed';
+      h+='<tr><td>'+e(x.clause)+'</td><td>'+e(x.title)+'</td><td class="'+(s==='Conforming'?'ok':s==='Not conforming'?'bad':'')+'">'+e(s)+'</td><td>'+e(r.owner||'-')+(r.due_date?'<br>Due '+e(r.due_date):'')+'</td><td>'+
+        (r.doc_ref?'<b>'+e(r.doc_ref)+'</b><br>':'')+e(r.evidence||'')+((r.files||[]).length?'<br>Files: '+r.files.map(function(f){return e(f.name);}).join(', '):'')+clauseEvidence(x,E).map(function(v){return '<br><i>'+e(v.label)+': '+e(v.value)+(v.last?' (last '+e(fmtDay(v.last))+')':'')+'</i>'+(v.warn?' <span class="bad">'+e(v.warn)+'</span>':'');}).join('')+'</td></tr>';});
+    h+='</table>';
+  });
+  return h+'</div>';
+}
+/* Live evidence: what Hendrix itself holds for each clause, counted from the real records (last 12 months).
+   Logs that stop being filled are flagged, so CSQ runs on daily records rather than paper. */
+const CSQ_LOG_MAP={'1.9':['security','security_inspection'],'2A.1.2':['sanitation','equipment'],'2A.2.2':['equipment'],'2A.2.3':['scale_calibration'],'2A.3':['sanitation'],
+  '2A.4':['waste'],'2A.4.1':['waste'],'2A.5.1':['pest'],'2A.6':['temperature'],'2A.8':['environmental'],'2A.9.3':['temperature'],'3C.1.6':['sanitation'],'3C.1.9':['temperature']};
+// a log with no entry for longer than this many days is flagged as not being kept up
+const LOG_STALE_DAYS={sanitation:2,temperature:2,waste:31,pest:35,environmental:35,scale_calibration:35,security_inspection:35,equipment:95,security:120};
+async function loadStdEvidence(st,lic){
+  const E={},enc=encodeURIComponent,since=new Date(Date.now()-365*86400000).toISOString(),lid=lic.id,sid=st.id;
+  async function tryGet(k,fn){try{E[k]=await fn();}catch(e){E[k]=null;}}
+  const jobs=[];
+  if(LOG_TYPES.some(function(t){return can(LOG_MOD[t.id],1);}))jobs.push(tryGet('logs',async function(){
+    const r=(await db.get('hx_facility_log','license_id=eq.'+enc(lid)+'&created_at=gte.'+enc(since)+'&select=id,log_type,created_at,voided,license_id,result,data&limit=20000'))||[];
+    const d30=new Date(Date.now()-30*86400000).toISOString(),by={};
+    r.forEach(function(x){if(x.license_id!==lid||x.voided)return;const b=by[x.log_type]||(by[x.log_type]={n:0,last:'',fails:0,unver30:0,sightings:0});b.n++;if(x.created_at>b.last)b.last=x.created_at;
+      if(FLAG_RES.indexOf(x.result)>=0)b.fails++;
+      if(x.log_type==='pest'&&x.result==='Flag')b.sightings++;
+      if(x.log_type==='sanitation'&&x.created_at>=d30&&!String((x.data||{}).verified_by||'').trim())b.unver30++;});
+    return by;}));
+  if(can('logs_visitor',1))jobs.push(tryGet('visitors',async function(){
+    const q='license_id=eq.'+enc(lid)+'&time_in=gte.'+enc(since)+'&limit=20000&select=id,time_in,license_id,voided';let r,tracked=true;
+    try{r=await db.get('hx_visitor_log',q+',gmp_ack,ill');}catch(e){tracked=false;r=await db.get('hx_visitor_log',q);}
+    r=(r||[]).filter(function(x){return x.license_id===lid&&!x.voided;});
+    return {n:r.length,last:r.reduce(function(m,x){return x.time_in>m?x.time_in:m;},''),tracked:tracked,
+      ack:r.filter(function(x){return x.gmp_ack;}).length,ill:r.filter(function(x){return x.ill;}).length};}));
+  if(can('batch',1))jobs.push(tryGet('batches',async function(){
+    const r=((await db.get('hx_batches','license_id=eq.'+enc(lid)+'&select=id,created_at,voided,license_id&limit=20000'))||[]).filter(function(x){return x.license_id===lid&&!x.voided;});
+    return {n:r.length,last:r.reduce(function(m,x){return x.created_at>m?x.created_at:m;},'')};}));
+  if(can('testing',1))jobs.push(tryGet('testing',async function(){
+    const q='license_id=eq.'+enc(lid)+'&limit=20000&select=id,status,created_at,result_at,coa_path,voided,license_id';let r0,tracked=true;
+    try{r0=await db.get('hx_tests',q+',retention_location,retention_qty');}catch(e){tracked=false;r0=await db.get('hx_tests',q);}
+    const r=(r0||[]).filter(function(x){return x.license_id===lid&&!x.voided;});
+    return {n:r.length,passed:r.filter(function(x){return x.status==='Passed';}).length,failed:r.filter(function(x){return x.status==='Failed';}).length,
+      coas:r.filter(function(x){return x.coa_path;}).length,tracked:tracked,retained:r.filter(function(x){return x.retention_location||x.retention_qty;}).length,last:r.reduce(function(m,x){const d=x.result_at||x.created_at||'';return d>m?d:m;},'')};}));
+  if(can('stickers',1))jobs.push(tryGet('stickers',async function(){
+    let r,al=true;try{r=await db.get('hx_label_templates','license_id=eq.'+enc(lid)+'&select=id,license_id,allergens');}catch(e){al=false;r=await db.get('hx_label_templates','license_id=eq.'+enc(lid)+'&select=id,license_id');}
+    r=(r||[]).filter(function(x){return x.license_id===lid;});
+    let pr=null;try{pr=((await db.get('hx_label_prints','license_id=eq.'+enc(lid)+'&created_at=gte.'+enc(since)+'&select=id,count,created_at,license_id&limit=20000'))||[]).filter(function(x){return x.license_id===lid;});}catch(e){pr=null;}
+    return {n:r.length,allergens:al?r.filter(function(x){return String(x.allergens||'').trim();}).length:null,
+      prints:pr?pr.length:null,labels:pr?pr.reduce(function(a,x){return a+(x.count||0);},0):null,lastPrint:pr?pr.reduce(function(m,x){return x.created_at>m?x.created_at:m;},''):''};}));
+  if(can('rulebook',1))jobs.push(tryGet('rulebook',async function(){const r=(await db.get('hx_rules','state_id=eq.'+enc(sid)+'&select=id'))||[];return {n:r.length};}));
+  if(can('products',1)||can('formbank',1))jobs.push(tryGet('products',async function(){
+    const k=((await db.get('hx_skus','state_id=eq.'+enc(sid)+'&select=id,active'))||[]);let f=[];try{f=(await db.get('hx_formulations','state_id=eq.'+enc(sid)+'&select=id'))||[];}catch(e){f=[];}
+    return {n:k.length,active:k.filter(function(x){return x.active;}).length,forms:f.length};}));
+  if(can('audit',1))jobs.push(tryGet('audit',async function(){const r=(await db.get('hx_audit_log','license_id=eq.'+enc(lid)+'&at=gte.'+enc(since)+'&select=id&limit=50000'))||[];return {n:r.length};}));
+  if(can('training',2))jobs.push(tryGet('training',async function(){
+    const c=((await db.get('hx_training_courses','license_ids=cs.%7B'+enc(lid)+'%7D&active=eq.true&select=*'))||[]).filter(function(x){return x.active&&(x.license_ids||[]).indexOf(lid)>=0;});
+    const r=((await db.get('hx_training_records','license_id=eq.'+enc(lid)+'&select=course_id,user_id,completed_on,expires_on,voided,assessment,trainer_name,license_id&limit=50000'))||[]).filter(function(x){return x.license_id===lid;});
+    const ro=(await sb('rpc/hx_training_roster',{method:'POST',body:{p_lic:lid}}))||[];
+    let so=[],ak=[];try{so=((await db.get('hx_sops','license_ids=cs.%7B'+enc(lid)+'%7D&status=eq.published&select=id,version,status,license_ids,target_mode,target_role_ids,target_user_ids'))||[]).filter(function(x){return x.status==='published';});ak=(await sb('rpc/hx_training_sop_acks',{method:'POST',body:{p_lic:lid}}))||[];}catch(e){}
+    const S=trStats(c,ro,r,ak,so);let at=[];try{at=((await db.get('hx_training_attempts','license_id=eq.'+enc(lid)+'&select=passed,finished_at,license_id&limit=50000'))||[]).filter(function(x){return x.license_id===lid&&x.finished_at>=since;});}catch(e){at=[];}
+    return {online:c.filter(trOnline).length,att:at.length,attPass:at.filter(function(x){return x.passed;}).length,courses:c.length,pct:S.pct,bad:S.bad,due:S.due,people:ro.length,recs:r.filter(function(x){return !x.voided;}).length,atLeast:S.atLeast.map(function(a){return {name:a.c.name,have:a.have.length,need:a.c.min_people,topic:a.c.topic};})};}));
+  if(can('qms',1))jobs.push(tryGet('qms',async function(){
+    const d=((await db.get('hx_deviations','license_id=eq.'+enc(lid)+'&select=id,status,due_date,created_at,rca_required,root_cause,immediate_action,license_id&limit=20000'))||[]).filter(function(x){return x.license_id===lid;});
+    const c=((await db.get('hx_capas','license_id=eq.'+enc(lid)+'&select=id,status,due_date,effectiveness_rating,license_id&limit=20000'))||[]).filter(function(x){return x.license_id===lid;});
+    const d12=d.filter(function(x){return x.created_at>=since;});
+    return {n:d12.length,open:d.filter(qmsOpen).length,late:d.filter(qmsLate).length+c.filter(qmsLate).length,capas:c.length,capOpen:c.filter(qmsOpen).length,
+      closedC:c.filter(function(x){return x.status==='closed';}).length,eff:c.filter(function(x){return x.effectiveness_rating==='effective';}).length,noRca:d.filter(function(x){return qmsOpen(x)&&x.rca_required==null;}).length};}));
+  if(can('sops',1))jobs.push(tryGet('sops',async function(){
+    const l=((await db.get('hx_sops','license_ids=cs.%7B'+enc(lid)+'%7D&select=id,status,version,next_review,license_ids,target_mode,target_role_ids,target_user_ids'))||[]).filter(function(x){return (x.license_ids||[]).indexOf(lid)>=0;});
+    const pub=l.filter(function(x){return x.status==='published';});let rate=null;
+    if(pub.length&&can('sops',2)){try{const ro=await sb('rpc/hx_sop_roster',{method:'POST',body:{p_lic:lid}});
+      const ak=(await db.get('hx_sop_acks','sop_id=in.('+pub.map(function(x){return enc(x.id);}).join(',')+')&select=sop_id,version,user_id'))||[];let tot=0,dn=0;
+      pub.forEach(function(x){const t=sopTargets(x,ro||[])||[];tot+=t.length;dn+=t.filter(function(u){return ak.some(function(a){return a.sop_id===x.id&&a.version===x.version&&a.user_id===u.id;});}).length;});rate=tot?Math.round(dn*100/tot):null;}catch(e){rate=null;}}
+    return {pub:pub.length,drafts:l.filter(function(x){return x.status==='draft';}).length,late:pub.filter(sopReviewLate).length,rate:rate};}));
+  if(can('suppliers',1))jobs.push(tryGet('suppliers',async function(){
+    const A=((await db.get('hx_suppliers','license_ids=cs.%7B'+enc(lid)+'%7D&select=id,name,category,status,next_review,last_review,credentials,approved_at,license_id,license_ids'))||[]).filter(function(s){return (s.license_ids||[s.license_id]).indexOf(lid)>=0;});
+    let labs=[];if(can('testing',1)){try{const t=(await db.get('hx_tests','license_id=eq.'+enc(lid)+'&select=lab_name,voided,license_id&limit=20000'))||[];const m={};t.forEach(function(x){if(x.license_id===lid&&!x.voided&&x.lab_name)m[x.lab_name.trim()]=1;});labs=Object.keys(m);}catch(e){labs=[];}}
+    const rev=A.map(function(s){return s.last_review||'';}).sort().pop()||'';
+    return {n:A.length,ok:A.filter(supActive).length,pend:A.filter(function(s){return s.status==='pending';}).length,emer:A.filter(function(s){return s.status==='emergency';}).length,
+      out:A.filter(function(s){return s.status==='suspended'||s.status==='disqualified';}).length,late:A.filter(supReviewLate).length,cred:A.filter(function(s){return s.status!=='disqualified'&&supCredIssues(s).length;}).length,
+      cats:A.filter(supActive).reduce(function(m,s){m[s.category]=(m[s.category]||0)+1;return m;},{}),labGap:supLabCheck(A,labs),labs:A.filter(function(s){return s.category==='Testing Lab'&&supActive(s);}).length,
+      pest:A.filter(function(s){return s.category==='Pest Control'&&supActive(s);}).length,lastRev:rev};}));
+  if(can('receiving',1))jobs.push(tryGet('receiving',async function(){
+    const l=((await db.get('hx_lots','license_id=eq.'+enc(lid)+'&select=id,status,received_on,coa_ok,checks,decided_at,expiry_date,quantity,qty_used,supplier_status,license_id&limit=50000'))||[]).filter(function(x){return x.license_id===lid;});
+    const l12=l.filter(function(x){return x.received_on>=since.slice(0,10);});let uses=0;try{uses=((await db.get('hx_lot_uses','license_id=eq.'+enc(lid)+'&voided=eq.false&select=id,license_id&limit=50000'))||[]).filter(function(x){return x.license_id===lid;}).length;}catch(e){}
+    return {n:l12.length,last:l.map(function(x){return x.received_on;}).sort().pop()||'',acc:l12.filter(function(x){return x.decided_at&&x.status!=='rejected'&&x.status!=='returned'&&x.status!=='destroyed';}).length,
+      rej:l12.filter(function(x){return ['rejected','returned','destroyed'].indexOf(x.status)>=0;}).length,wait:l.filter(function(x){return x.status==='quarantine';}).length,
+      coa:l12.filter(function(x){return x.coa_ok;}).length,insp:l12.filter(function(x){return checksPass(LOT_CHECKS,x.checks);}).length,
+      expired:l.filter(function(x){return x.status==='accepted'&&lotLeft(x)>0&&lotExp(x)==='expired';}).length,stock:l.filter(function(x){return x.status==='accepted'&&lotLeft(x)>0;}).length,uses:uses};}));
+  if(can('holds',1)||can('receiving',1)||can('shipping',1))jobs.push(tryGet('holds',async function(){
+    const h=((await db.get('hx_holds','license_id=eq.'+enc(lid)+'&select=id,status,kind,created_at,decided_at,license_id&limit=50000'))||[]).filter(function(x){return x.license_id===lid;});
+    const op=h.filter(function(x){return x.status==='open';});
+    return {open:op.length,oldest:op.map(function(x){return daysAgo(x.created_at);}).sort(function(a,b){return b-a;})[0]||0,n:h.filter(function(x){return x.created_at>=since;}).length,
+      decided:h.filter(function(x){return x.status!=='open'&&x.decided_at>=since;}).length,returns:h.filter(function(x){return x.kind==='return'&&x.created_at>=since;}).length,last:h.map(function(x){return x.created_at;}).sort().pop()||''};}));
+  if(can('shipping',1))jobs.push(tryGet('shipping',async function(){
+    const s=((await db.get('hx_shipments','license_id=eq.'+enc(lid)+'&select=id,status,ship_date,manifest_number,checks_ok,items,customer,license_id&limit=50000'))||[]).filter(function(x){return x.license_id===lid&&x.status!=='cancelled';});
+    const s12=s.filter(function(x){return x.ship_date>=since.slice(0,10);});
+    return {n:s12.length,last:s.map(function(x){return x.ship_date;}).sort().pop()||'',man:s12.filter(function(x){return x.manifest_number;}).length,chk:s12.filter(function(x){return x.checks_ok;}).length,
+      cust:Object.keys(s12.reduce(function(m,x){m[x.customer.trim().toLowerCase()]=1;return m;},{})).length,lines:s12.reduce(function(n,x){return n+(x.items||[]).length;},0),traced:s12.reduce(function(n,x){return n+(x.items||[]).filter(function(i){return i.batch_id;}).length;},0)};}));
+  if(can('recall',1))jobs.push(tryGet('recall',async function(){
+    const r=((await db.get('hx_recalls','license_id=eq.'+enc(lid)+'&select=id,kind,status,started_at,ended_at,duration_minutes,result,license_id&order=started_at.desc'))||[]).filter(function(x){return x.license_id===lid;});
+    const c=((await db.get('hx_recall_contacts','license_id=eq.'+enc(lid)+'&select=id,kind,active,verified_on,license_id'))||[]).filter(function(x){return x.license_id===lid&&x.active;});
+    let tr=null;try{const T=await rcTrace(lid);const y=since.slice(0,10),sb2={};T.ships.filter(function(s){return s.ship_date>=y;}).forEach(function(s){(s.items||[]).forEach(function(i){if(i.batch_id)sb2[i.batch_id]=1;});});
+      const ids=Object.keys(sb2);tr={shipped:ids.length,back:ids.filter(function(b){return T.uses.some(function(u){return u.batch_id===b;});}).length};}catch(e){tr=null;}
+    const m=r.filter(function(x){return x.kind==='mock'&&x.status==='closed';})[0];
+    return {last:m?m.ended_at:'',dur:m?m.duration_minutes:null,result:m?m.result:'',mocks:r.filter(function(x){return x.kind==='mock'&&x.status==='closed'&&x.ended_at>=since;}).length,real:r.filter(function(x){return x.kind!=='mock';}).length,openReal:r.filter(function(x){return x.kind!=='mock'&&x.status==='open';}).length,
+      contacts:c.length,team:c.filter(function(x){return x.kind==='team';}).length,missing:RC_REQUIRED.filter(function(k){return !c.some(function(x){return x.kind===k;});}),stale:c.filter(function(x){return !x.verified_on||x.verified_on<trAddMonths(todayStr(),-12);}).length,tr:tr};}));
+  if(can('complaints',1))jobs.push(tryGet('complaints',async function(){
+    const r=((await db.get('hx_complaints','license_id=eq.'+enc(lid)+'&select=id,type,status,received_on,closed_at,due_date,rating,investigator,deviation_id,corrective_action,license_id&limit=20000'))||[]).filter(function(x){return x.license_id===lid&&x.status!=='cancelled';});
+    const y=since.slice(0,10),c=r.filter(function(x){return x.type!=='feedback'&&x.received_on>=y;}),fb=r.filter(function(x){return x.type==='feedback'&&x.received_on>=y&&x.rating;});
+    return {n:c.length,open:c.filter(cmpOpen).length,late:r.filter(cmpLate).length,closed:c.filter(function(x){return x.status==='closed';}).length,ca:c.filter(function(x){return x.deviation_id||String(x.corrective_action||'').trim();}).length,
+      ae:c.filter(function(x){return x.type==='adverse_event';}).length,fb:fb.length,avg:fb.length?Math.round(fb.reduce(function(n,x){return n+x.rating;},0)*10/fb.length)/10:null,last:r.map(function(x){return x.received_on;}).sort().pop()||''};}));
+  if(can('intaudits',1))jobs.push(tryGet('intaudits',async function(){
+    const a=((await db.get('hx_audits','license_id=eq.'+enc(lid)+'&select=id,status,audit_date,clauses,independent,shared_on,license_id'))||[]).filter(function(x){return x.license_id===lid;});
+    const f=((await db.get('hx_audit_findings','license_id=eq.'+enc(lid)+'&select=id,status,due_date,deviation_id,license_id'))||[]).filter(function(x){return x.license_id===lid;});
+    let lvl=1,ls0=null;try{ls0=((await db.get('hx_license_standards','license_id=eq.'+enc(lid)+'&select=target_level,status,scopes,license_id'))||[]).filter(function(x){return x.license_id===lid&&x.status!=='Withdrawn';})[0];if(ls0)lvl=ls0.target_level;}catch(e){}
+    const cov=iaCoverage(a,lvl,csqScopes(ls0,lic)),done=a.filter(function(x){return (x.status==='completed'||x.status==='closed')&&x.audit_date>=since.slice(0,10);});
+    return {pct:cov.all.length?Math.round(cov.done*100/cov.all.length):0,done:cov.done,total:cov.all.length,audits:done.length,find:f.length,open:f.filter(function(x){return x.status==='open';}).length,late:f.filter(function(x){return x.status==='open'&&x.due_date&&x.due_date<todayStr();}).length,
+      viaDev:f.filter(function(x){return x.deviation_id;}).length,shared:done.filter(function(x){return x.shared_on;}).length,last:done.map(function(x){return x.audit_date;}).sort().pop()||''};}));
+  jobs.push(tryGet('roles',async function(){const rs=ACC.roles||[];return {n:rs.length,noReq:rs.filter(function(r){return !String(r.requirements||'').trim()||!String(r.description||'').trim();}).length};}));
+  await Promise.all(jobs);
+  return E;
+}
+function daysAgo(iso){if(!iso)return null;return Math.floor((Date.now()-new Date(iso).getTime())/86400000);}
+function fmtDay(iso){return iso?new Date(iso).toLocaleDateString():'';}
+// rows of live evidence for one clause: {label, value, last, warn, page}
+function clauseEvidence(x,E){
+  if(!E)return [];
+  const out=[],pages=x.hx_pages||[];
+  pages.forEach(function(p){
+    if(p==='logs'&&E.logs){
+      const types=CSQ_LOG_MAP[x.clause]||[];
+      (types.length?types:Object.keys(E.logs)).forEach(function(t){
+        const def=LOG_TYPES.find(function(d){return d.id===t;});if(!def)return;
+        const b=E.logs[t]||{n:0,last:''},d=daysAgo(b.last),lim=LOG_STALE_DAYS[t];
+        let v=b.n+' entr'+(b.n===1?'y':'ies');
+        if(t==='pest')v+=' \u00b7 '+(b.sightings||0)+' pest sighting'+(b.sightings===1?'':'s');
+        else if(b.fails)v+=' \u00b7 '+b.fails+' failed / flagged (each with corrective action)';
+        out.push({label:def.name,value:v,last:b.last,page:'logs',
+          warn:!b.n?'No entries in 12 months':(lim&&d>lim?'No entry for '+d+' days':(t==='sanitation'&&b.unver30?b.unver30+' not verified (last 30 days)':''))});
+      });
+    }
+    else if(p==='visitors'&&E.visitors){const V=E.visitors,noAck=V.tracked?V.n-V.ack:0;
+      out.push({label:'Visitor Log',value:V.n+' sign-in'+(V.n===1?'':'s')+(V.tracked?' \u00b7 '+V.ack+' accepted the GMP rules \u00b7 '+V.ill+' declared illness (kept out of production)':''),last:V.last,page:'visitors',
+        warn:!V.n?'No visitors recorded':(noAck?noAck+' without GMP acknowledgement':'')});}
+    else if(p==='batches'&&E.batches)out.push({label:'Batch records',value:E.batches.n+' batch'+(E.batches.n===1?'':'es'),last:E.batches.last,page:'batches',warn:E.batches.n?'':'No batch records yet'});
+    else if(p==='testing'&&E.testing)out.push({label:'Lab tests',value:E.testing.n+' tests \u00b7 '+E.testing.passed+' passed \u00b7 '+E.testing.failed+' failed \u00b7 '+E.testing.coas+' COAs on file'+(E.testing.tracked&&x.clause==='2A.12.9'?' \u00b7 '+E.testing.retained+' with a retention sample':''),last:E.testing.last,page:'testing',warn:E.testing.n?'':'No test records yet'});
+    else if(p==='stickers'&&E.stickers){const S=E.stickers,alg=['2A.12.7','3C.2.6','3C.2.4'].indexOf(x.clause)>=0;
+      out.push({label:'Label templates',value:S.n+' approved template'+(S.n===1?'':'s')+(alg&&S.allergens!=null?' \u00b7 '+S.allergens+' with an allergen declaration':''),page:'stickers',warn:S.n?'':'No label templates yet'});
+      if(x.clause==='2A.12.8'&&S.prints!=null)out.push({label:'Sticker print log',value:S.prints+' print'+(S.prints===1?'':'s')+' \u00b7 '+S.labels+' labels, each tied to a batch and tag',last:S.lastPrint,page:'testing'});}
+    else if(p==='rulebook'&&E.rulebook)out.push({label:'State rulebook',value:E.rulebook.n+' regulation'+(E.rulebook.n===1?'':'s')+' on file',page:'rulebook',warn:E.rulebook.n?'':'No regulations entered'});
+    else if(p==='products'&&E.products)out.push({label:'Products',value:E.products.n+' SKUs ('+E.products.active+' active) \u00b7 '+E.products.forms+' formulations',page:'products',warn:E.products.n?'':'No SKUs yet'});
+    else if(p==='audit'&&E.audit)out.push({label:'Audit trail',value:E.audit.n+' recorded change'+(E.audit.n===1?'':'s')+' (who, when, why)',page:'audit'});
+    else if(p==='training'&&E.training){const T=E.training,al=T.atLeast.filter(function(a){return x.clause==='4A.2'?a.topic==='HACCP':x.clause==='2A.13.2'?a.topic==='CSQ program':false;});
+      out.push({label:'Training matrix',value:T.courses?(T.pct==null?'-':T.pct+'%')+' of required training current for '+T.people+' people \u00b7 '+T.courses+' courses \u00b7 '+T.recs+' records with trainer and date'+(T.online?' \u00b7 '+T.online+' online course'+(T.online===1?'':'s')+', '+T.att+' quiz attempt'+(T.att===1?'':'s')+' ('+T.attPass+' passed)':'')+(T.due?' \u00b7 '+T.due+' due in 30 days':''):'No courses set up',page:'training',
+        warn:!T.courses?'Training program not set up':(T.bad?T.bad+' expired or missing':'')});
+      al.forEach(function(a){out.push({label:a.name,value:a.have+' of at least '+a.need+' people certified',page:'training',warn:a.have<a.need?'needs '+(a.need-a.have)+' more':''});});}
+    else if(p==='qms'&&E.qms){const Q=E.qms;
+      out.push({label:'Deviations and CAPA',value:Q.n+' deviation'+(Q.n===1?'':'s')+' in 12 months \u00b7 '+Q.open+' open \u00b7 '+Q.capas+' CAPA'+(Q.capas===1?'':'s')+' ('+Q.capOpen+' open, '+Q.closedC+' closed after verifying effective)',page:'qms',
+        warn:Q.late?Q.late+' overdue':(Q.noRca?Q.noRca+' awaiting a root cause decision':'')});}
+    else if(p==='sops'&&E.sops){const O=E.sops;
+      out.push({label:'SOP library',value:O.pub+' published, numbered and approved SOP'+(O.pub===1?'':'s')+' \u00b7 '+O.drafts+' draft'+(O.drafts===1?'':'s')+(O.rate!=null?' \u00b7 '+O.rate+'% of required signatures done':'')+(O.late?' \u00b7 '+O.late+' overdue for review':''),page:'sops',
+        warn:!O.pub?'No published SOPs yet':(O.late?O.late+' SOP'+(O.late===1?'':'s')+' overdue for review':(O.rate!=null&&O.rate<100?(100-O.rate)+'% of signatures missing':''))});}
+    else if(p==='suppliers'&&E.suppliers){const U=E.suppliers,cl=x.clause;
+      out.push({label:'Approved supplier list',value:U.ok+' approved \u00b7 '+U.pend+' pending \u00b7 '+U.emer+' emergency \u00b7 '+U.out+' suspended or disqualified'+(U.cred?' \u00b7 '+U.cred+' with credentials expired or expiring':''),last:U.lastRev,page:'suppliers',
+        warn:!U.n?'No suppliers on file':(U.late?U.late+' supplier review'+(U.late===1?'':'s')+' overdue':(U.cred?U.cred+' with expiring credentials':''))});
+      if(cl==='2A.12.9')out.push({label:'Testing labs',value:U.labs+' approved lab'+(U.labs===1?'':'s')+' with ISO/IEC 17025'+(U.labGap.length?' \u00b7 not approved: '+U.labGap.join(', '):' \u00b7 every lab used in Testing is approved'),page:'suppliers',warn:U.labGap.length?U.labGap.length+' lab'+(U.labGap.length===1?'':'s')+' not approved':(!U.labs?'No approved lab':'')});
+      if(cl==='2A.5.2')out.push({label:'Pest control contractor',value:U.pest?U.pest+' approved pest control supplier'+(U.pest===1?'':'s')+' with licenses on file':'No approved pest control supplier',page:'suppliers',warn:U.pest?'':'Add the pest control contractor'});}
+    else if(p==='receiving'&&E.receiving){const R=E.receiving,cl=x.clause;
+      out.push({label:'Receiving log',value:R.n+' lot'+(R.n===1?'':'s')+' received \u00b7 '+R.coa+' with COA \u00b7 '+R.insp+' passed inspection \u00b7 '+R.acc+' accepted, '+R.rej+' rejected \u00b7 '+R.wait+' in quarantine',last:R.last,page:'receiving',
+        warn:!R.n?'Nothing received in 12 months':(R.n-R.coa?(R.n-R.coa)+' without a COA':'')});
+      if(cl==='2A.10.3'||cl==='2A.10.1')out.push({label:'Inventory by lot',value:R.stock+' lot'+(R.stock===1?'':'s')+' in stock \u00b7 '+R.uses+' use'+(R.uses===1?'':'s')+' recorded against batches \u00b7 oldest first (FIFO)',page:'inventory',warn:R.expired?R.expired+' expired lot'+(R.expired===1?'':'s')+' still in stock':''});}
+    else if(p==='holds'&&E.holds){const H=E.holds;
+      out.push({label:'Hold and release',value:H.n+' hold'+(H.n===1?'':'s')+' in 12 months \u00b7 '+H.open+' open \u00b7 '+H.decided+' decided by an authorized person \u00b7 '+H.returns+' customer return'+(H.returns===1?'':'s'),last:H.last,page:'holds',
+        warn:H.open&&H.oldest>30?'Oldest open hold '+H.oldest+' days':''});}
+    else if(p==='shipping'&&E.shipping){const S=E.shipping;
+      out.push({label:'Shipping log',value:S.n+' shipment'+(S.n===1?'':'s')+' to '+S.cust+' customer'+(S.cust===1?'':'s')+' \u00b7 '+S.chk+' with a passed pre-load inspection \u00b7 '+S.man+' with a state manifest \u00b7 '+S.traced+' of '+S.lines+' lines traced to a batch',last:S.last,page:'shipping',
+        warn:!S.n?'No shipments in 12 months':(S.n-S.man?(S.n-S.man)+' without a manifest number':'')});}
+    else if(p==='recall'&&E.recall){const C=E.recall,cl=x.clause;
+      out.push({label:'Mock recall',value:C.last?'Last '+String(C.last).slice(0,10)+' \u00b7 '+C.dur+' min (limit 120) \u00b7 '+C.result+' \u00b7 '+C.mocks+' in 12 months':'No mock recall yet',last:C.last,page:'recall',
+        warn:!C.last?'Mock recall required yearly':(C.result==='Fail'?'Last mock recall failed':(daysAgo(C.last)>365?'Overdue (more than 12 months)':''))});
+      if(cl==='1.8'||cl==='1.11')out.push({label:'Recall team and contacts',value:C.team+' team member'+(C.team===1?'':'s')+' \u00b7 '+C.contacts+' contacts \u00b7 '+(C.real?C.real+' real recall'+(C.real===1?'':'s')+'/withdrawal'+(C.real===1?'':'s'):'no real recalls'),page:'recall',
+        warn:C.missing.length?'Missing: '+C.missing.map(function(k){return RC_KINDS[k];}).join(', '):(C.stale?C.stale+' contact'+(C.stale===1?'':'s')+' not verified in 12 months':(C.openReal?C.openReal+' recall open':''))});
+      if(cl==='2A.10.1'&&C.tr)out.push({label:'Traceability coverage',value:C.tr.back+' of '+C.tr.shipped+' shipped batch'+(C.tr.shipped===1?'':'es')+' (12 months) traced back to received lots',page:'recall',warn:C.tr.shipped&&C.tr.back<C.tr.shipped?(C.tr.shipped-C.tr.back)+' shipped without input lots recorded':''});}
+    else if(p==='complaints'&&E.complaints){const K=E.complaints,cl=x.clause;
+      if(cl==='5.3')out.push({label:'Customer feedback',value:K.fb+' feedback record'+(K.fb===1?'':'s')+' in 12 months'+(K.avg!=null?' \u00b7 average satisfaction '+K.avg+' / 5':''),last:K.last,page:'complaints',warn:K.fb?'':'No customer feedback recorded'});
+      out.push({label:'Complaints',value:K.n+' complaint'+(K.n===1?'':'s')+' in 12 months \u00b7 '+K.closed+' closed with investigator, investigation and resolution \u00b7 '+K.ca+' with corrective action / CAPA \u00b7 '+K.ae+' adverse event'+(K.ae===1?'':'s')+' \u00b7 trends by category, lot and customer',last:K.last,page:'complaints',
+        warn:K.late?K.late+' overdue':''});}
+    else if(p==='intaudits'&&E.intaudits){const I=E.intaudits;
+      out.push({label:'Internal audits',value:I.done+' of '+I.total+' CSQ clauses audited in 12 months ('+I.pct+'%) \u00b7 '+I.audits+' audit'+(I.audits===1?'':'s')+' by independent auditors \u00b7 '+I.find+' finding'+(I.find===1?'':'s')+' ('+I.open+' open, '+I.viaDev+' through CAPA) \u00b7 results shared for '+I.shared,last:I.last,page:'intaudits',
+        warn:!I.audits?'No internal audit in 12 months':(I.pct<100?(I.total-I.done)+' clauses not audited in 12 months':(I.late?I.late+' finding'+(I.late===1?'':'s')+' overdue':''))});}
+    else if(p==='roles'&&E.roles)out.push({label:'Roles',value:E.roles.n+' defined role'+(E.roles.n===1?'':'s')+(x.clause==='2A.13.1'?' \u00b7 '+(E.roles.n-E.roles.noReq)+' with duties and requirements':''),page:'roles',
+      warn:!E.roles.n?'No roles defined':(x.clause==='2A.13.1'&&E.roles.noReq?E.roles.noReq+' role'+(E.roles.noReq===1?'':'s')+' missing duties or requirements':'')});
+  });
+  return out;
+}
+function EvidenceList(props){
+  const rows=props.rows;if(!rows.length)return null;
+  return el('div',{style:{margin:'6px 0'}},el('div',{className:'muted',style:{fontSize:11,letterSpacing:'.1em',textTransform:'uppercase',marginBottom:4}},'Live records in Hendrix (last 12 months)'),
+    rows.map(function(r,i){return el('div',{key:i,className:'row',style:{gap:8,fontSize:12,padding:'4px 0',borderBottom:'1px dashed var(--line)',flexWrap:'nowrap'}},
+      el('span',{style:{width:9,height:9,borderRadius:5,flex:'0 0 auto',background:r.warn?'var(--red)':'var(--green)'}}),
+      el('b',{style:{minWidth:150}},r.label),el('span',{style:{flex:1}},r.value+(r.last?' \u00b7 last '+fmtDay(r.last):'')),
+      r.warn&&el('span',{className:'badge bad'},r.warn),
+      props.go&&el('button',{className:'btn ghost sm',onClick:function(e){e.stopPropagation();props.go(r.page);}},'Open'));}));
+}
+function StdAlerts(props){
+  const E=props.ev,items=[];
+  if(E&&E.logs)LOG_TYPES.forEach(function(t){const lim=LOG_STALE_DAYS[t.id];if(!lim||!can(LOG_MOD[t.id],1))return;const b=E.logs[t.id],d=b?daysAgo(b.last):null;
+    if(!b||!b.n)items.push({tone:'bad',text:t.name+': no entries in the last 12 months',page:'logs'});else if(d>lim)items.push({tone:'bad',text:t.name+': last entry '+d+' days ago (expected every '+lim+' days or sooner)',page:'logs'});});
+  const late=props.inScope.filter(function(x){const r=props.conf[x.id];return r&&r.due_date&&r.due_date<props.today&&r.status!=='Conforming'&&r.status!=='Not applicable';}).length;
+  const nc=props.inScope.filter(function(x){const r=props.conf[x.id];return r&&r.status==='Not conforming';}).length;
+  const na=props.inScope.filter(function(x){return !props.conf[x.id];}).length;
+  if(nc)items.push({tone:'bad',text:nc+' clause'+(nc===1?' is':'s are')+' not conforming',filter:'Not conforming'});
+  if(late)items.push({tone:'bad',text:late+' clause'+(late===1?' is':'s are')+' past the due date',filter:'OPEN'});
+  if(na)items.push({tone:'warn',text:na+' clause'+(na===1?' has':'s have')+' not been assessed yet',filter:'Not assessed'});
+  return el('div',{className:'card'},el('h3',null,'Operational alerts',el('span',{className:'badge '+(items.length?'bad':'ok'),style:{marginLeft:8}},items.length?items.length+' open':'All clear')),
+    !E?el('div',{className:'muted',style:{fontSize:12}},'Checking live records...'):
+    !items.length?el('div',{className:'muted',style:{fontSize:12}},'Every log is current and every clause in scope is assessed and on time.'):
+    items.map(function(it,i){return el('div',{key:i,className:'row',style:{gap:8,fontSize:13,padding:'4px 0',flexWrap:'nowrap'}},
+      el('span',{style:{width:9,height:9,borderRadius:5,flex:'0 0 auto',background:it.tone==='bad'?'var(--red)':'var(--gold)'}}),el('span',{style:{flex:1}},it.text),
+      el('button',{className:'btn ghost sm',onClick:function(){if(it.page)props.go(it.page);else props.onFilter(it.filter);}},it.page?'Open':'Show'));}));
+}
+function StandardsPage(props){
+  const st=props.state,lic=props.license,lid=lic?lic.id:'';
+  const[stds,setStds]=useState(null);
+  const[sel,setSel]=useState('');
+  const[clauses,setClauses]=useState(null);
+  const[adopt,setAdopt]=useState(null);
+  const[conf,setConf]=useState({});
+  const[msg,setMsg]=useState('');
+  const[busy,setBusy]=useState('');
+  const[mf,setMf]=useState('ALL');
+  const[sf,setSf]=useState('ALL');
+  const[scope,setScope]=useState('target');
+  const[q,setQ]=useState('');
+  const[open,setOpen]=useState({});
+  const[modal,setModal]=useState(null);
+  const[ev,setEv]=useState(null);
+  const[insp,setInsp]=useState(false);
+  const loadStds=useCallback(function(){
+    db.get('hx_standards','select=*&order=name').then(function(r){setStds(r||[]);setSel(function(s){return (r||[]).some(function(x){return x.id===s;})?s:((r||[])[0]?r[0].id:'');});})
+      .catch(function(e){setMsg(stdErr(e));setStds([]);});
+  },[]);
+  useEffect(loadStds,[loadStds]);
+  const loadStd=useCallback(function(){
+    if(!sel){setClauses(null);return;}
+    const enc=encodeURIComponent;
+    Promise.all([db.get('hx_standard_clauses','standard_id=eq.'+enc(sel)+'&select=*&order=sort'),
+      lid?db.get('hx_license_standards','license_id=eq.'+enc(lid)+'&standard_id=eq.'+enc(sel)+'&select=*'):Promise.resolve([]),
+      lid?db.get('hx_conformance','license_id=eq.'+enc(lid)+'&standard_id=eq.'+enc(sel)+'&select=*'):Promise.resolve([])])
+      .then(function(r){setClauses(r[0]||[]);setAdopt(((r[1]||[]).filter(function(x){return x.license_id===lid;}))[0]||null);
+        const m={};(r[2]||[]).forEach(function(x){if(x.license_id===lid)m[x.clause_id]=x;});setConf(m);})
+      .catch(function(e){setMsg(stdErr(e));setClauses([]);});
+  },[sel,lid]);
+  useEffect(loadStd,[loadStd]);
+  useEffect(function(){
+    if(!st||!lic){setEv(null);return;}let dead=false;
+    loadStdEvidence(st,lic).then(function(E){if(!dead)setEv(E);}).catch(function(){if(!dead)setEv({});});
+    return function(){dead=true;};
+  },[st&&st.id,lid]);
+  const canE=can('standards',2)&&!insp,canF=can('standards',3)&&!insp;
+  const std=(stds||[]).find(function(x){return x.id===sel;})||null;
+  async function addLib(){
+    setMsg('');setBusy('Adding standard...');
+    try{const ex=(stds||[]).find(function(x){return x.code===CSQ_MFG.code;})||null;const r=await addStandardLib(ex);setSel(r.std.id);setMsg(ex?'Updated: '+r.added+' clause'+(r.added===1?'':'s')+' added, '+r.refreshed+' refreshed with the latest Hendrix links.':'Added '+CSQ_MFG.name+' v'+CSQ_MFG.version+' with '+r.added+' clauses.');loadStds();loadStd();}
+    catch(e){setMsg(stdErr(e));}
+    setBusy('');
+  }
+  async function uploadDoc(file,part){
+    if(!file||!std)return;setMsg('');setBusy('Uploading the standard...');
+    try{const ext=(file.name.split('.').pop()||'pdf').toLowerCase().replace(/[^a-z0-9]/g,'');
+      const path=await storagePut(file,'standards/library/'+std.id+'-'+(part||'doc')+'-'+Date.now()+'.'+ext);
+      if(part){const docs=(std.docs||[]).filter(function(d){return d.part!==part;}).concat([{part:part,path:path,name:file.name}]);
+        await dbSave('hx_standards',std.id,part==='3C'?{docs:docs,file_path:path,file_name:file.name}:{docs:docs});}
+      else await db.update('hx_standards',std.id,{file_path:path,file_name:file.name});
+      setMsg('Standard document saved.');loadStds();}
+    catch(e){setMsg(stdErr(e));}
+    setBusy('');
+  }
+  const head=el('div',null,el('h1',null,el('span',{className:'g'},'Standards')),
+    el('div',{className:'sub'},'The published standards this company follows, clause by clause. The standard is the same for every state; conformance is kept per license.'));
+  if(stds===null)return el('div',null,head,el('div',{className:'muted'},'Loading...'));
+  if(!stds.length)return el('div',null,head,msg&&el('div',{className:'msg err'},msg),
+    el('div',{className:'empty'},
+      el('div',{style:{fontSize:16,color:'var(--text)',marginBottom:6}},'No standard added yet'),
+      el('div',{style:{marginBottom:14,maxWidth:620,marginLeft:'auto',marginRight:'auto'}},CSQ_MFG.name+' v'+CSQ_MFG.version+' ('+CSQ_MFG.issued+') by '+CSQ_MFG.publisher+': '+CSQ_MFG_CLAUSES.length+' clauses in 5 modules, with each clause linked to the Hendrix records that prove it.'),
+      canF?el('button',{className:'btn',disabled:!!busy,onClick:addLib},busy||'Add '+CSQ_MFG.name+' v'+CSQ_MFG.version):el('div',null,'Ask someone with Full access to Standards to add it.')));
+  if(!std||clauses===null)return el('div',null,head,el('div',{className:'muted'},'Loading...'));
+  const levels=std.levels||[],target=adopt&&adopt.status!=='Withdrawn'?adopt.target_level:null;
+  const lv=levels.find(function(l){return l.level===target;});
+  const isCsq=std.code===CSQ_MFG.code,scopes=isCsq?(adopt?csqScopes(adopt,lic):csqAllowed(lic)):null;
+  const mine=isCsq&&lic?clauses.filter(function(x){return stdModOk(x.module,scopes);}):clauses;
+  const inScope=mine.filter(function(x){return target?x.level<=target:true;});
+  const base=scope==='target'&&target?inScope:mine;
+  const ql=q.trim().toLowerCase();
+  const shown=base.filter(function(x){const r=conf[x.id],s=(r&&r.status)||'Not assessed';
+    if(mf!=='ALL'&&x.module!==mf)return false;
+    if(sf==='OPEN'){if(s==='Conforming'||s==='Not applicable')return false;}else if(sf!=='ALL'&&s!==sf)return false;
+    if(ql&&(x.clause+' '+x.title+' '+x.summary+' '+((r&&(r.owner+' '+r.evidence+' '+r.doc_ref))||'')).toLowerCase().indexOf(ql)<0)return false;return true;});
+  const c=stdCounts(target?inScope:mine,conf),today=new Date().toISOString().slice(0,10);
+  const parts=isCsq&&scopes?csqPartNames(scopes):[];
+  const libMap={};CSQ_MFG_CLAUSES.forEach(function(c){libMap[c[0]]=c;});
+  const nMissing=CSQ_MFG.code===std.code?CSQ_MFG_CLAUSES.filter(function(c){return !clauses.some(function(x){return x.clause===c[0];});}).length:0;
+  const nStale=CSQ_MFG.code===std.code?clauses.filter(function(x){return libMap[x.clause]&&stdClauseStale(x,libMap[x.clause]);}).length:0;
+  const missing=nMissing>0||nStale>0;
+  const mods=Object.keys(std.modules||{}).filter(function(m){return !isCsq||!lic||stdModOk(m,scopes);});
+  function go(p){if(props.go)props.go(p);}
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},head,
+      el('div',{className:'row'},
+        stds.length>1&&el('select',{value:sel,onChange:function(e){setSel(e.target.value);}},stds.map(function(s){return el('option',{key:s.id,value:s.id},s.name+' v'+s.version);})),
+        std.code===CSQ_MFG.code?(lic?csqAllowed(lic):Object.keys(CSQ_PARTS)).map(function(k){const d=(std.docs||[]).find(function(x){return x.part===k;})||(k==='3C'&&std.file_path?{path:std.file_path,name:std.file_name}:null),nm=CSQ_PARTS[k].name.replace('CSQ Standard for ','');
+          return el('span',{key:k,className:'row',style:{gap:4}},d&&el('button',{className:'btn ghost sm',onClick:function(){openStored(d.path,d.name).catch(function(e){setMsg(String(e.message||e));});}},nm+' (PDF)'),
+            canF&&el('label',{className:'btn ghost sm',style:{display:'inline-block'},title:'Upload the licensed CSQ Standard for '+nm+' PDF'},d?'Replace':'Upload '+nm+' PDF',el('input',{type:'file',accept:'application/pdf',style:{display:'none'},onChange:function(e){uploadDoc(e.target.files[0],k);e.target.value='';}})));}):[
+        std.file_path?el('button',{key:'o',className:'btn ghost sm',onClick:function(){openStored(std.file_path,std.file_name).catch(function(e){setMsg(String(e.message||e));});}},'Open standard (PDF)'):null,
+        canF&&el('label',{key:'u',className:'btn ghost sm',style:{display:'inline-block'}},std.file_path?'Replace PDF':'Upload licensed PDF',el('input',{type:'file',accept:'application/pdf',style:{display:'none'},onChange:function(e){uploadDoc(e.target.files[0]);e.target.value='';}}))],
+        lic&&target&&el('button',{className:insp?'btn sm':'btn ghost sm',onClick:function(){setInsp(!insp);}},insp?'Exit inspector view':'Inspector view'),
+        lic&&target&&el('button',{className:'btn ghost sm',onClick:function(){printRecords((parts.length?parts.join(' + '):std.name)+' conformance - '+lic.name,[stdRegisterHtml(std,lic,st,adopt,clauses,conf,inScope,ev)]);}},'Print register'))),
+    msg&&el('div',{className:/^Added|^Updated|saved/.test(msg)?'msg':'msg err'},msg),
+    insp&&adopt&&el('div',{className:'card gold',style:{borderWidth:2}},
+      el('div',{className:'k'},'Inspector view \u00b7 read only'),
+      el('div',{className:'v',style:{fontSize:20}},lic.name+(lic.license_number?' ('+lic.license_number+')':'')+' \u00b7 '+st.name),
+      el('div',{style:{marginTop:6,fontSize:14}},'Follows '+(parts.length?parts.join(' + '):std.name)+' v'+std.version+' ('+std.publisher+') \u00b7 '+(lv?lv.name:'Level '+target)+' \u00b7 '+adopt.status+(adopt.cert_body?' \u00b7 '+adopt.cert_body:'')+(adopt.cert_number?' \u00b7 Certificate '+adopt.cert_number:'')+(adopt.cert_expiry?' (expires '+adopt.cert_expiry+')':'')),
+      el('div',{className:'muted',style:{marginTop:6,fontSize:12}},'Every clause below shows the requirement, how this facility meets it, the documents and files, and the live Hendrix records behind it. Green dot = records are current; red = attention needed. All records are tamper-evident: changes keep who, when and why in the audit trail.')),
+    target&&!insp&&el(StdAlerts,{ev:ev,inScope:inScope,conf:conf,today:today,go:go,onFilter:function(v){setSf(v);}}),
+    missing&&canF&&el('div',{className:'msg'},(nMissing?nMissing+' clause'+(nMissing===1?' is':'s are')+' missing. ':'')+(nStale?'Hendrix has new records for '+nStale+' clause'+(nStale===1?'':'s')+'. ':''),el('button',{className:'btn sm',disabled:!!busy,onClick:addLib},busy||'Update the standard')),
+    el('div',{className:'grid'},
+      el('div',{className:'card gold'},el('div',{className:'k'},'Standard'),el('div',{className:'v'},std.name),
+        el('div',{className:'muted',style:{marginTop:4}},'Version '+std.version+(std.issued?' \u00b7 '+std.issued:'')),
+        el('div',{className:'muted',style:{marginTop:4,fontSize:12}},std.publisher),
+        std.scope&&el('div',{className:'muted',style:{marginTop:8,fontSize:12,lineHeight:1.5}},std.scope)),
+      el('div',{className:'card gold'},el('div',{className:'k'},lic?lic.name:'License'),
+        lic&&isCsq&&el('div',{style:{fontSize:12,margin:'2px 0 6px',color:'var(--gold-hi)'}},LIC_OPS[licOp(lic)]+(parts.length?' \u00b7 '+parts.join(' + '):'')),
+        !lic?el('div',{className:'muted'},'Pick a license at the top to see its conformance.'):
+        adopt?el('div',null,el('div',{className:'v'},lv?lv.name:'Level '+adopt.target_level),
+          el('div',{style:{marginTop:6}},el('span',{className:'badge '+(adopt.status==='Certified'?'ok':adopt.status==='Suspended'||adopt.status==='Withdrawn'?'bad':'')},adopt.status)),
+          el('div',{className:'muted',style:{marginTop:8,fontSize:12,lineHeight:1.6}},[adopt.cert_body&&('Certification body: '+adopt.cert_body),adopt.audit_date&&('Audit: '+adopt.audit_date),adopt.cert_number&&('Certificate: '+adopt.cert_number),adopt.cert_expiry&&('Expires: '+adopt.cert_expiry)].filter(Boolean).map(function(t){return el('div',{key:t},t);})),
+          lv&&el('div',{className:'muted',style:{fontSize:12,marginTop:4}},lv.audit),
+          canF&&el('button',{className:'btn ghost sm',style:{marginTop:10},onClick:function(){setModal({t:'adopt'});}},'Edit level and certification')):
+        el('div',null,el('div',{className:'muted',style:{margin:'4px 0 10px'}},'This license has not adopted '+(parts.length?parts.join(' + '):std.name)+' yet.'),
+          canF?el('button',{className:'btn sm',onClick:function(){setModal({t:'adopt'});}},'Adopt for this license'):el('div',{className:'muted',style:{fontSize:12}},'Someone with Full access to Standards adopts it.'))),
+      el('div',{className:'card gold'},el('div',{className:'k'},target?'Conformance (Level '+target+' scope)':'Clauses'),
+        el('div',{className:'v'},target?c.pct+'% complete':clauses.length+' clauses'),
+        target&&el('div',{style:{margin:'8px 0'}},el(StdBar,{c:c})),
+        target&&el('div',{className:'muted',style:{fontSize:12,lineHeight:1.6}},['Conforming','Partial','Not conforming','Not applicable','Not assessed'].map(function(s){return el('div',{key:s,className:'row',style:{gap:6}},el('span',{style:{display:'inline-block',width:9,height:9,borderRadius:2,background:STD_COLOR[s],border:'1px solid #444'}}),s+': '+c[s]);})))),
+    !insp&&(std.audit_notes||[]).length>0&&el('div',{className:'card'},el('h3',null,'Audit essentials'),(std.audit_notes||[]).map(function(n){return el('div',{key:n,className:'muted',style:{fontSize:13,marginBottom:4}},'\u2022 '+n);})),
+    target&&el('div',{className:'card'},el('h3',null,'By module'),mods.map(function(m){
+      const list=inScope.filter(function(x){return x.module===m;});if(!list.length)return null;const mc=stdCounts(list,conf);
+      return el('div',{key:m,className:'barrow',style:{cursor:'pointer'},onClick:function(){setMf(m);}},
+        el('div',{style:{width:250,flex:'0 0 auto'}},el('b',{style:{color:'var(--gold-hi)'}},'Module '+m),' '+std.modules[m]),
+        el('div',{style:{flex:1}},el(StdBar,{c:mc,h:8})),el('div',{style:{width:110,textAlign:'right'},className:'muted'},mc.done+' / '+mc.total+' ('+mc.pct+'%)'));
+    })),
+    el('div',{className:'row',style:{margin:'4px 0 12px'}},
+      el('input',{value:q,placeholder:'Search clauses, owners, evidence',style:{minWidth:240},onChange:function(e){setQ(e.target.value);}}),
+      el('select',{value:mf,onChange:function(e){setMf(e.target.value);}},el('option',{value:'ALL'},'All modules'),mods.map(function(m){return el('option',{key:m,value:m},'Module '+m+' - '+std.modules[m]);})),
+      el('select',{value:sf,onChange:function(e){setSf(e.target.value);}},el('option',{value:'ALL'},'Every status'),el('option',{value:'OPEN'},'Open (still to do)'),STD_STATUSES.map(function(s){return el('option',{key:s,value:s},s);})),
+      target&&el('select',{value:scope,onChange:function(e){setScope(e.target.value);}},el('option',{value:'target'},'My target level only'),el('option',{value:'all'},'All levels')),
+      el('span',{className:'muted',style:{fontSize:12}},shown.length+' clause'+(shown.length===1?'':'s'))),
+    !shown.length?el('div',{className:'empty'},'No clauses match.'):
+    mods.map(function(m){
+      const list=shown.filter(function(x){return x.module===m;});if(!list.length)return null;
+      return el('div',{key:m,className:'card'},
+        el('h3',null,'Module '+m+': '+std.modules[m],el('span',{className:'badge off',style:{marginLeft:8}},'Level '+stdLevelOf(m)+'+')),
+        list.map(function(x){
+          const r=conf[x.id],s=(r&&r.status)||'Not assessed',isOpen=insp||!!open[x.id],evr=clauseEvidence(x,ev),evWarn=evr.some(function(v){return v.warn;}),late=r&&r.due_date&&r.due_date<today&&s!=='Conforming'&&s!=='Not applicable';
+          return el('div',{key:x.id,style:{borderTop:'1px solid var(--line)',padding:'10px 0'}},
+            el('div',{className:'row',style:{justifyContent:'space-between',flexWrap:'nowrap',alignItems:'flex-start',cursor:'pointer'},onClick:function(){setOpen(function(p){return {...p,[x.id]:!p[x.id]};});}},
+              el('div',{style:{minWidth:0}},el('span',{style:{color:'var(--gold-hi)',fontWeight:700,marginRight:8}},x.clause),el('span',{style:{fontWeight:600}},x.title),
+                x.applies_to&&el('span',{className:'muted',style:{fontSize:11,marginLeft:8}},x.applies_to),
+                !isOpen&&el('div',{className:'muted',style:{fontSize:12,marginTop:3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},x.summary)),
+              el('div',{className:'row',style:{flex:'0 0 auto',gap:6}},
+                r&&r.owner&&el('span',{className:'muted',style:{fontSize:11}},r.owner),
+                evr.length>0&&el('span',{title:evWarn?'Some live records need attention':'Live records are current',style:{width:9,height:9,borderRadius:5,display:'inline-block',background:evWarn?'var(--red)':'var(--green)'}}),
+                r&&r.due_date&&el('span',{className:late?'badge bad':'badge off'},(late?'Overdue ':'Due ')+r.due_date),
+                el('span',{className:'badge '+STD_TONE[s]},s))),
+            isOpen&&el('div',{style:{marginTop:8,fontSize:13}},
+              el('div',{style:{lineHeight:1.55,marginBottom:8}},insp&&el('b',{style:{color:'var(--gold-hi)'}},'Requirement: '),x.summary),
+              el(EvidenceList,{rows:evr,go:go}),
+              !insp&&(x.hx_pages||[]).length>0&&el('div',{className:'row',style:{marginBottom:6,gap:6}},el('span',{className:'muted',style:{fontSize:12}},'Proof in Hendrix:'),
+                x.hx_pages.map(function(p){const ok=!HX_PAGE_MOD[p]||can(HX_PAGE_MOD[p],1);return el('button',{key:p,className:'btn ghost sm',disabled:!ok,onClick:function(e){e.stopPropagation();go(p);}},HX_PAGE_LABEL[p]||p);})),
+              !insp&&x.hx_support&&el('div',{className:'muted',style:{fontSize:12,marginBottom:6}},'Already in Hendrix: '+x.hx_support),
+              !insp&&(x.hx_planned||[]).length>0&&el('div',{className:'row',style:{marginBottom:6,gap:6}},el('span',{className:'muted',style:{fontSize:12}},'Hendrix module planned:'),x.hx_planned.map(function(p){return el('span',{key:p,className:'badge off'},p);})),
+              r&&el('div',{style:{background:'var(--panel2)',border:'1px solid var(--line)',borderRadius:8,padding:'8px 10px',margin:'6px 0',fontSize:12,lineHeight:1.6}},
+                r.doc_ref&&el('div',null,el('b',null,'Document: '),r.doc_ref),
+                r.evidence&&el('div',{style:{whiteSpace:'pre-wrap'}},el('b',null,s==='Not applicable'?'Justification: ':'How we meet it: '),r.evidence),
+                r.owner&&el('div',null,el('b',null,'Responsible: '),r.owner),
+                (r.files||[]).length>0&&el('div',null,el('b',null,'Files: '),r.files.map(function(f,i){return el('a',{key:f.path,href:'#',style:{color:'var(--gold-hi)',marginRight:10},onClick:function(e){e.preventDefault();openStored(f.path,f.name).catch(function(er){setMsg(String(er.message||er));});}},f.name);})),
+                r.reviewed_at&&el('div',{className:'muted'},'Last updated '+new Date(r.reviewed_at).toLocaleString())),
+              insp&&!r&&el('div',{className:'badge bad'},'Not assessed yet'),
+              lic&&!insp&&(adopt&&adopt.status!=='Withdrawn'?(canE&&el('button',{className:'btn sm',style:{marginTop:4},onClick:function(){setModal({t:'conf',clause:x});}},r?'Update conformance':'Record conformance')):
+                el('div',{className:'muted',style:{fontSize:12}},'Adopt the standard for this license to record conformance.'))));
+        }));
+    }),
+    modal&&modal.t==='adopt'&&el(AdoptForm,{std:std,adopt:adopt,state:st,license:lic,onClose:function(){setModal(null);},onDone:function(){setModal(null);loadStd();}}),
+    modal&&modal.t==='conf'&&el(ConformanceForm,{clause:modal.clause,rec:conf[modal.clause.id],state:st,license:lic,onClose:function(){setModal(null);},onDone:function(){setModal(null);loadStd();}}));
+}
+function StdDashCard(props){
+  const lid=props.license?props.license.id:'';
+  const[d,setD]=useState(null);
+  useEffect(function(){
+    if(!lid||!can('standards',1)){setD(null);return;}
+    let dead=false;
+    (async function(){
+      try{
+        const ad=((await db.get('hx_license_standards','license_id=eq.'+encodeURIComponent(lid)+'&select=*'))||[]).filter(function(a){return a.license_id===lid&&a.status!=='Withdrawn';});
+        if(!ad.length){if(!dead)setD({none:true});return;}
+        const a=ad[0],s=((await db.get('hx_standards','id=eq.'+encodeURIComponent(a.standard_id)+'&select=*'))||[])[0];
+        const cl=(await db.get('hx_standard_clauses','standard_id=eq.'+encodeURIComponent(a.standard_id)+'&select=id,level,module'))||[];
+        const cf=(await db.get('hx_conformance','license_id=eq.'+encodeURIComponent(lid)+'&standard_id=eq.'+encodeURIComponent(a.standard_id)+'&select=clause_id,status'))||[];
+        const m={};cf.forEach(function(x){m[x.clause_id]=x;});
+        const sc=s&&s.code===CSQ_MFG.code?csqScopes(a,props.license):null;
+        if(!dead)setD({a:a,s:s,parts:sc?csqPartNames(sc):[],c:stdCounts(cl.filter(function(x){return x.level<=a.target_level&&(!sc||stdModOk(x.module,sc));}),m)});
+      }catch(e){if(!dead)setD(null);}
+    })();
+    return function(){dead=true;};
+  },[lid]);
+  if(!d)return null;
+  const link=el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go('standards');}},'Open standards');
+  if(d.none)return el('div',{className:'card gold'},el('div',{className:'k'},'Quality standard'),el('div',{className:'v'},'Not adopted'),el('div',{className:'muted',style:{margin:'4px 0 8px'}},'This license does not follow a published standard yet.'),link);
+  const lv=((d.s&&d.s.levels)||[]).find(function(l){return l.level===d.a.target_level;});
+  return el('div',{className:'card gold'},el('div',{className:'k'},'Quality standard'),el('div',{className:'v'},d.s?((d.parts&&d.parts.length?d.parts.join(' + '):d.s.name)+' v'+d.s.version):'Standard'),
+    el('div',{className:'muted',style:{margin:'4px 0'}},(lv?lv.name:'Level '+d.a.target_level)+' \u00b7 '+d.a.status),
+    el('div',{style:{margin:'8px 0 4px'}},el(StdBar,{c:d.c})),
+    el('div',{className:'muted',style:{fontSize:12,marginBottom:6}},d.c.pct+'% complete \u00b7 '+(d.c.total-d.c.done)+' clause'+(d.c.total-d.c.done===1?'':'s')+' still open'),link);
+}
+
+/* ---------- Testing: lab submissions, results and COAs (Black Fox Testing module) ---------- */
+const TEST_STATUSES=['Pending','Submitted','Passed','Failed','Retest'];
+const TEST_TONE={Pending:'off',Submitted:'',Passed:'ok',Failed:'bad',Retest:'warn'};
+// only the FINAL package tag goes to mandatory testing (never crude / in-progress / source tags)
+const TEST_FINAL_TAGS={butane_extraction:[['product_final_metrc','Final'],['thca_final_metrc','THCA Final'],['hte_final_metrc','HTE Final']],
+  ethanol_extraction:[['distillate_metrc_tag','Distillate']],pre_rolls:[['final_packaged_tag','Final Packaged']],infused_flower:[['metrc_tag','Final Packaging']],
+  cartridges:[['cart_packaged_metrc','Cart Packaged']],gummies:[['final_packaged_gummies_metrc','Final Packaged']],moon_rocks:[['metrc_tag','Final']],snow_caps:[['metrc_tag','Final']]};
+function testFinalTags(b){const d=(b&&b.data)||{};return (TEST_FINAL_TAGS[b.batch_type]||[]).map(function(x){return {tag:String(d[x[0]]||'').trim(),label:x[1]};}).filter(function(x){return x.tag;});}
+const TEST_CATS={'CONCENTRATES':['bho','ethanol','distillate','extract','rosin','wax','shatter','live_resin','concentrate','butane'],'FLOWER/TRIM':['flower','trim'],
+  'PRE ROLLS':['pre_roll','preroll','joint'],'EDIBLES':['edible','gummy','gummies','chocolate','beverage','tincture','capsule'],'VAPES':['cartridge','cart','aio','pod']};
+function testCats(r){const h=((r.batch_type||'')+' '+(r.sku||'')).toLowerCase().replace(/[^a-z0-9]+/g,'_');return Object.keys(TEST_CATS).filter(function(c){return TEST_CATS[c].some(function(k){return h.indexOf(k)>=0;});});}
+const COA_LABELS={pesticides:'Pesticides',microbials:'Microbials',mycotoxins:'Mycotoxins',heavy_metals:'Heavy Metals',residual_solvents:'Residual Solvents',foreign_matter:'Foreign Matter',moisture:'Moisture / Water Activity'};
+const COA_PROMPT='You are reading a cannabis laboratory Certificate of Analysis (COA) for a state-licensed cannabis facility. Extract what the document states. Do not invent values. Respond with ONLY valid JSON, no markdown:\n'+
+ '{"lab_name":"","lab_license_number":"","report_date":"","sample_name":"","sample_metrc_tag":"","overall_status":"Pass|Fail|Unknown",'+
+ '"potency":{"unit":"%","total_thc":null,"total_cbd":null,"thca":null,"d9_thc":null,"cbda":null,"cbd":null,"cbn":null,"cbg":null,"thcv":null,"cbdv":null,"d8_thc":null,"total_cannabinoids":null},'+
+ '"categories":{"pesticides":{"status":"Pass|Fail|Not tested","analytes":[{"name":"","result":"","limit":"","unit":"","status":"Pass|Fail|ND"}]},"microbials":{"status":"","analytes":[]},"mycotoxins":{"status":"","analytes":[]},'+
+ '"heavy_metals":{"status":"","analytes":[]},"residual_solvents":{"status":"","analytes":[]},"foreign_matter":{"status":"","analytes":[]},"moisture":{"status":"","analytes":[]}},'+
+ '"terpenes":[{"name":"","value":0}],"total_terpenes":null,"notes":""}\n'+
+ 'Rules: lab_license_number is the testing laboratory\'s state license number exactly as printed (search header, footer, accreditation and signature areas). sample_metrc_tag is the package / source tag the sample was taken from, exactly as printed. '+
+ 'Numbers as numbers where possible. overall_status is Pass only if the COA states the sample passed all required tests, Fail if any required test failed, otherwise Unknown. For analytes below the detection limit use status ND. Only list analytes that are detected or failed, plus the category status.';
+function normTag(t){return String(t||'').toUpperCase().replace(/[^A-Z0-9]/g,'');}
+function coaMismatch(rec,an){
+  const c=normTag(an&&an.sample_metrc_tag);if(!c)return null;
+  const mine=[rec.tag,rec.sample_tag].map(normTag).filter(Boolean);if(!mine.length)return null;
+  const ok=mine.some(function(m){return m===c||(Math.min(m.length,c.length)>=8&&(m.slice(-c.length)===c||c.slice(-m.length)===m));});
+  return ok?null:{coa:an.sample_metrc_tag,mine:[rec.tag,rec.sample_tag].filter(Boolean).join(' / ')};
+}
+function parseJsonLoose(t){const s=String(t||''),a=s.indexOf('{'),b=s.lastIndexOf('}');if(a<0||b<=a)throw new Error('The AI did not return a readable result.');return JSON.parse(s.slice(a,b+1));}
+function fileB64(file){return new Promise(function(res,rej){const r=new FileReader();r.onload=function(){res(String(r.result).split(',')[1]||'');};r.onerror=function(){rej(new Error('Could not read the file'));};r.readAsDataURL(file);});}
+async function storagePut(file,path){
+  const c=cfg(),tok=await freshToken();
+  const r=await fetch(c.url+'/storage/v1/object/hendrix-files/'+path,{method:'POST',headers:{'apikey':c.key,'Authorization':'Bearer '+(tok||c.key),'Content-Type':file.type||'application/octet-stream'},body:file});
+  if(!r.ok){const t=await r.text();throw new Error(/bucket|not found/i.test(t)?'File storage is not set up - run hendrix_step9.sql.':'Upload failed: '+t.slice(0,160));}
+  return path;
+}
+async function storageGet(path){
+  const c=cfg(),tok=await freshToken();
+  const r=await fetch(c.url+'/storage/v1/object/authenticated/hendrix-files/'+path,{headers:{'apikey':c.key,'Authorization':'Bearer '+(tok||c.key)}});
+  if(!r.ok)throw new Error('Could not open the file ('+r.status+').');
+  return await r.blob();
+}
+async function openStored(path,name){
+  const w=window.open('','_blank');
+  try{const b=await storageGet(path);const u=URL.createObjectURL(b);if(w)w.location.href=u;else{const a=document.createElement('a');a.href=u;a.download=name||'file';a.click();}}
+  catch(e){if(w)w.close();throw e;}
+}
+async function aiCall(body){
+  const c=cfg(),tok=await freshToken();
+  const url=c.url+'/functions/v1/hendrix-ai',hdr={'apikey':c.key,'Authorization':'Bearer '+(tok||c.key),'Content-Type':'application/json'};
+  const t0=Date.now();let r;
+  try{r=await fetch(url,{method:'POST',headers:hdr,body:JSON.stringify(body)});}
+  catch(e){throw new Error(await aiDiagnose(url,hdr,Date.now()-t0));}
+  if(r.status===404)throw new Error('AI_NOT_SETUP');
+  if(r.status===401){const j1=await r.json().catch(function(){return {};});const m1=(j1.error&&j1.error.message)||j1.message||j1.msg||'';
+    if(/x-api-key|authentication_error|api key/i.test(m1))throw new Error('Anthropic refused the ANTHROPIC_API_KEY saved in Supabase (Edge Functions > Secrets). Create a new key at console.anthropic.com > API Keys, paste it there and retry.');
+    throw new Error(/hendrix/i.test(m1)?m1:'Supabase refused the sign-in before the AI function ran'+(m1?' ('+m1+')':'')+'. Open the hendrix-ai function in Supabase > Settings, turn "Verify JWT with legacy secret" OFF and save, then retry.');}
+  if(r.status===502||r.status===503||r.status===504||r.status===546)throw new Error('The AI took too long and Supabase stopped the request ('+r.status+'). Try again; if it keeps happening, the request is too large.');
+  const j=await r.json().catch(function(){return {};});
+  if(!r.ok||j.error)throw new Error((j.error&&j.error.message)||('AI request failed ('+r.status+')'));
+  return j;
+}
+// "Failed to fetch": the browser never got an answer. A quick request that does not call the AI tells which problem it is.
+async function aiDiagnose(url,hdr,ms){
+  try{
+    const ctl=window.AbortController?new AbortController():null;const tm=ctl?setTimeout(function(){ctl.abort();},15000):null;
+    const r=await fetch(url,{method:'POST',headers:hdr,body:JSON.stringify({module:'testing',probe:true}),signal:ctl?ctl.signal:undefined});
+    if(tm)clearTimeout(tm);
+    if(r.status===404)return 'AI is not set up yet - the hendrix-ai function is not deployed in Supabase (Edge Functions). Deploy hendrix-ai.ts with the name hendrix-ai.';
+    return 'The AI function is set up, but the connection closed after '+Math.round(ms/1000)+' seconds before the answer came back (the AI took too long or the internet connection dropped). Try again.';
+  }catch(e){
+    if(!navigator.onLine)return 'No internet connection. Reconnect and try again.';
+    return 'Hendrix cannot reach the AI. The hendrix-ai function is not deployed in Supabase (Edge Functions > Deploy a new function > Via Editor, name it exactly hendrix-ai, paste hendrix-ai.ts, turn Verify JWT off in its Settings, and add the ANTHROPIC_API_KEY secret), or a browser extension / firewall is blocking supabase.co.';
+  }
+}
+async function readCoa(file){
+  const data=await fileB64(file),pdf=/pdf/i.test(file.type)||/\.pdf$/i.test(file.name||'');
+  const block=pdf?{type:'document',source:{type:'base64',media_type:'application/pdf',data:data}}:{type:'image',source:{type:'base64',media_type:file.type||'image/png',data:data}};
+  const j=await aiCall({max_tokens:6000,system:'You output ONLY valid, parseable JSON. Never include prose, explanation, or markdown fences.',messages:[{role:'user',content:[block,{type:'text',text:COA_PROMPT}]}]});
+  return parseJsonLoose((j.content&&j.content[0]&&j.content[0].text)||'');
+}
+function TestBadge(props){const s=TEST_STATUSES.indexOf(props.s)>=0?props.s:'Pending';return el('span',{className:'badge '+(TEST_TONE[s]||''),style:props.style},(props.prefix||'')+s);}
+function Bars(props){
+  const rows=(props.rows||[]).filter(function(r){return r&&isFinite(parseFloat(r[1]));}).map(function(r){return [r[0],parseFloat(r[1])];});
+  if(!rows.length)return null;
+  const mx=Math.max.apply(null,rows.map(function(r){return r[1];}))||1;
+  return el('div',null,rows.map(function(r,i){return el('div',{key:i,className:'barrow'},el('span',{className:'bl'},r[0]),
+    el('span',{className:'bt'},el('span',{className:'bf'+(props.alt?' alt':''),style:{width:Math.max(2,r[1]/mx*100)+'%'}})),el('span',{className:'bv'},r[1]+(props.unit||'')));}));
+}
+function CoaPanel(props){
+  const rec=props.rec,an=rec.coa_analysis;if(!an||typeof an!=='object')return null;
+  const mm=coaMismatch(rec,an),pot=an.potency||{},cats=an.categories&&typeof an.categories==='object'?an.categories:{};
+  const potRows=[['Total THC',pot.total_thc],['Total CBD',pot.total_cbd],['THCA',pot.thca],['\u03949-THC',pot.d9_thc],['CBDA',pot.cbda],['CBD',pot.cbd],['CBN',pot.cbn],['CBG',pot.cbg],['Total cannabinoids',pot.total_cannabinoids]].filter(function(r){return r[1]!==null&&r[1]!==undefined&&r[1]!=='';});
+  const sb=function(s){return el('span',{className:'badge '+(/pass|nd/i.test(s||'')?'ok':/fail/i.test(s||'')?'bad':'off')},s||'\u2014');};
+  const ov=an.overall_status;
+  return el('div',{style:{marginTop:10}},
+    mm&&el('div',{className:'msg err'},el('b',null,'Tag mismatch \u2014 '),'the COA lists '+mm.coa+' but this record is '+mm.mine+'. Confirm this is the right COA before accepting the result.'),
+    el('div',{className:'row',style:{marginBottom:8}},el('span',{className:'badge '+(ov==='Pass'?'ok':ov==='Fail'?'bad':'off')},'COA overall: '+(ov||'Unknown')),
+      [an.lab_name,an.lab_license_number,an.report_date,an.sample_metrc_tag&&'COA tag: '+an.sample_metrc_tag].filter(Boolean).map(function(x,i){return el('span',{key:i,className:'muted',style:{fontSize:12}},x);})),
+    potRows.length>0&&el('div',{className:'card',style:{padding:10}},el('div',{className:'k',style:{marginBottom:6}},'Potency ('+(pot.unit||'%')+')'),el(Bars,{rows:potRows,unit:' '+(pot.unit||'%')})),
+    Object.keys(cats).map(function(k){
+      const c=cats[k]||{},list=Array.isArray(c.analytes)?c.analytes:[];if(!list.length&&!c.status)return null;
+      return el('div',{key:k,className:'card',style:{padding:10}},el('div',{className:'row',style:{justifyContent:'space-between'}},el('span',{className:'k'},COA_LABELS[k]||k),sb(c.status)),
+        list.length>0&&el('table',{style:{marginTop:6}},el('thead',null,el('tr',null,['Analyte','Result','Limit','Status'].map(function(h){return el('th',{key:h},h);}))),
+          el('tbody',null,list.map(function(a,i){return el('tr',{key:i},el('td',null,a.name),el('td',null,String(a.result==null?'':a.result)+(a.unit?' '+a.unit:'')),el('td',null,String(a.limit==null?'':a.limit)),el('td',null,sb(a.status)));}))));
+    }),
+    Array.isArray(an.terpenes)&&an.terpenes.length>0&&el('div',{className:'card',style:{padding:10}},el('div',{className:'k',style:{marginBottom:6}},'Terpenes'+(an.total_terpenes!=null?' \u2014 total '+an.total_terpenes:'')),
+      el(Bars,{alt:1,rows:an.terpenes.slice(0,12).map(function(t){return [t.name,t.value];})})),
+    an.notes&&el('div',{className:'muted',style:{fontSize:12}},an.notes));
+}
+function TestNew(props){
+  const[batches,setBatches]=useState(null);
+  const[f,setF]=useState({batch_id:'',tag:'',tag_label:'',batch_number:'',batch_type:'',sku:'',flavor:'',sample_tag:'',lab_name:'',status:'Pending',notes:''});
+  const[err,setErr]=useState('');
+  useEffect(function(){
+    db.get('hx_batches','license_id=eq.'+encodeURIComponent(props.lic.id)+'&voided=eq.false&select=id,batch_number,batch_type,sku,flavor,data&order=created_at.desc&limit=300')
+      .then(function(r){setBatches(r||[]);}).catch(function(){setBatches([]);});
+  },[]);
+  const b=(batches||[]).find(function(x){return x.id===f.batch_id;});
+  const tags=b?testFinalTags(b):[];
+  async function save(){
+    setErr('');
+    if(!f.batch_id&&!f.batch_number.trim()){setErr('Pick a batch, or type the batch number.');return;}
+    if(!f.tag.trim()){setErr('Enter the package tag being tested.');return;}
+    try{
+      await db.insert('hx_tests',{id:newId('test'),state_id:props.st.id,license_id:props.lic.id,batch_id:f.batch_id||null,batch_number:f.batch_number.trim(),batch_type:f.batch_type,sku:f.sku.trim(),flavor:f.flavor.trim(),
+        tag:f.tag.trim(),tag_label:f.tag_label,sample_tag:f.sample_tag.trim(),lab_name:f.lab_name.trim(),status:f.status,notes:f.notes.trim(),performed_by:props.name});
+      props.onDone();
+    }catch(e){setErr(/hx_tests_batch_tag/.test(String(e.message))?'That batch and tag already has a test record.':String(e.message||e));}
+  }
+  return el(Modal,{title:'New test record - '+props.lic.name,wide:true,onClose:props.onClose},
+    el(Field,{label:'Batch'},el('select',{style:{width:'100%'},value:f.batch_id,onChange:function(e){const nb=(batches||[]).find(function(x){return x.id===e.target.value;});const t=nb?testFinalTags(nb):[];
+      setF({...f,batch_id:e.target.value,tag:t[0]?t[0].tag:'',tag_label:t[0]?t[0].label:''});}},
+      el('option',{value:''},batches===null?'Loading...':'No batch (type the details)'),(batches||[]).map(function(x){return el('option',{key:x.id,value:x.id},x.batch_number+'  \u00b7  '+(x.sku||ptName(x.batch_type))+(x.flavor?' \u00b7 '+x.flavor:''));}))),
+    !f.batch_id&&el('div',{className:'grid',style:{gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:10}},
+      el(Field,{label:'Batch number'},el('input',{value:f.batch_number,onChange:function(e){setF({...f,batch_number:e.target.value});}})),
+      el(Field,{label:'Product type'},el('select',{style:{width:'100%'},value:f.batch_type,onChange:function(e){setF({...f,batch_type:e.target.value});}},el('option',{value:''},'Other'),PRODUCT_TYPES.map(function(t){return el('option',{key:t.id,value:t.id},t.name);}))),
+      el(Field,{label:'SKU'},el('input',{value:f.sku,onChange:function(e){setF({...f,sku:e.target.value});}})),
+      el(Field,{label:'Flavor'},el('input',{value:f.flavor,onChange:function(e){setF({...f,flavor:e.target.value});}}))),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:10}},
+      el(Field,{label:'Package tag tested *'},tags.length>1?el('select',{style:{width:'100%'},value:f.tag,onChange:function(e){const t=tags.find(function(x){return x.tag===e.target.value;});setF({...f,tag:e.target.value,tag_label:t?t.label:''});}},tags.map(function(t){return el('option',{key:t.tag,value:t.tag},t.label+': '+t.tag);}))
+        :el('input',{value:f.tag,placeholder:b&&!tags.length?'This batch has no final package tag yet':'',onChange:function(e){setF({...f,tag:e.target.value});}})),
+      el(Field,{label:'Sample tag'},el('input',{value:f.sample_tag,onChange:function(e){setF({...f,sample_tag:e.target.value});}})),
+      el(Field,{label:'Lab'},el('input',{value:f.lab_name,onChange:function(e){setF({...f,lab_name:e.target.value});}})),
+      el(Field,{label:'Status'},el('select',{style:{width:'100%'},value:f.status,onChange:function(e){setF({...f,status:e.target.value});}},['Pending','Submitted'].map(function(s){return el('option',{key:s,value:s},s);})))),
+    el(Field,{label:'Notes'},el('textarea',{value:f.notes,style:{minHeight:50},onChange:function(e){setF({...f,notes:e.target.value});}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',onClick:save},'Create')));
+}
+function TestUpdate(props){
+  const r=props.rec,final=r.status==='Passed'||r.status==='Failed';
+  const[f,setF]=useState({status:r.status,lab_name:r.lab_name||'',lab_license:r.lab_license||'',tag:r.tag||'',sample_tag:r.sample_tag||'',result_thc:r.result_thc||'',result_cbd:r.result_cbd||'',result_notes:r.result_notes||'',notes:r.notes||'',
+    retention_qty:r.retention_qty||'',retention_location:r.retention_location||'',retention_until:r.retention_until||''});
+  const[reason,setReason]=useState('');
+  const[err,setErr]=useState('');
+  const changingFinal=final&&f.status!==r.status;
+  async function save(){
+    setErr('');
+    if(changingFinal&&!reason.trim()){setErr('Changing a final result needs a reason.');return;}
+    try{await dbSave('hx_tests',r.id,{...f,retention_until:f.retention_until||null,edit_reason:reason.trim()||null});props.onDone();}catch(e){setErr(String(e.message||e));}
+  }
+  function inp(k,l,ph){return el(Field,{key:k,label:l},el('input',{value:f[k],placeholder:ph||'',onChange:function(e){setF({...f,[k]:e.target.value});}}));}
+  const opts=final&&!props.full?[r.status]:TEST_STATUSES;
+  return el(Modal,{title:'Update test \u00b7 '+(r.batch_number||'')+' \u00b7 '+(r.tag||''),wide:true,onClose:props.onClose},
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:10}},
+      el(Field,{label:'Status'},el('select',{style:{width:'100%'},value:f.status,onChange:function(e){setF({...f,status:e.target.value});}},opts.map(function(s){return el('option',{key:s,value:s},s);}))),
+      inp('lab_name','Lab'),inp('lab_license','Lab license #'),inp('tag','Package tag'),inp('sample_tag','Sample tag'),inp('result_thc','Result THC %'),inp('result_cbd','Result CBD %')),
+    final&&!props.full&&el('div',{className:'muted',style:{fontSize:12,marginBottom:10}},'This result is final ('+r.status+'). Changing it needs Full access to Testing.'),
+    inp('result_notes','Result notes'),
+    el('div',{className:'k',style:{margin:'4px 0 6px'}},'Retention (reserve) sample \u00b7 CSQ 2A.12.9'),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:10}},
+      inp('retention_qty','Quantity kept','e.g. 2 units / 5 g'),inp('retention_location','Where it is kept','e.g. Retention cabinet B'),
+      el(Field,{label:'Keep until'},el('input',{type:'date',value:f.retention_until||'',onChange:function(e){setF({...f,retention_until:e.target.value});}}))),
+    el(Field,{label:'Notes'},el('textarea',{value:f.notes,style:{minHeight:50},onChange:function(e){setF({...f,notes:e.target.value});}})),
+    changingFinal&&el(Field,{label:'Reason for changing a final result *'},el('textarea',{value:reason,style:{minHeight:50},onChange:function(e){setReason(e.target.value);}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',onClick:save},'Save')));
+}
+function TestingPage(props){
+  const st=props.state,lic=props.license,sid=st?st.id:'',lid=lic?lic.id:'';
+  const[rows,setRows]=useState(null);
+  const[q,setQ]=useState('');
+  const[sf,setSf]=useState('ALL');
+  const[cat,setCat]=useState('ALL');
+  const[msg,setMsg]=useState('');
+  const[busy,setBusy]=useState({});
+  const[open,setOpen]=useState({});
+  const[modal,setModal]=useState(null);
+  const load=useCallback(function(){
+    if(!lid){setRows([]);return;}
+    db.get('hx_tests','license_id=eq.'+encodeURIComponent(lid)+'&state_id=eq.'+encodeURIComponent(sid)+'&select=*&order=created_at.desc&limit=1000')
+      .then(function(r){setRows((r||[]).filter(function(x){return x.license_id===lid;}));})
+      .catch(function(e){setMsg(/hx_tests/.test(String(e.message))?'Testing is not set up yet - run hendrix_step9.sql in the Hendrix Supabase project.':String(e.message||e));setRows([]);});
+  },[lid,sid]);
+  useEffect(load,[load]);
+  if(!st||!lic)return el('div',null,el('h1',null,el('span',{className:'g'},'Testing')),el('div',{className:'empty'},'Pick a state and a license at the top first.'));
+  const canE=can('testing',2),canF=can('testing',3),ts=st.tracking_system||'METRC';
+  function setB(id,v){setBusy(function(p){return {...p,[id]:v};});}
+  async function runCoa(r,file){
+    setMsg('');setB(r.id,file?'Uploading...':'Reading COA...');
+    try{
+      const patch={};let f=file;
+      if(file){
+        const ext=(file.name.split('.').pop()||'pdf').toLowerCase().replace(/[^a-z0-9]/g,'');
+        patch.coa_path=await storagePut(file,'coa/'+lid+'/'+r.id+'-'+Date.now()+'.'+ext);patch.coa_filename=file.name;
+        await db.update('hx_tests',r.id,patch);
+      }else{const blob=await storageGet(r.coa_path);f=new File([blob],r.coa_filename||'coa.pdf',{type:blob.type||'application/pdf'});}
+      setB(r.id,'Reading COA...');
+      let an;
+      try{an=await readCoa(f);}
+      catch(e){
+        if(String(e.message)==='AI_NOT_SETUP'){setMsg('COA saved. AI reading is not set up yet (deploy the hendrix-ai function). Enter the results with Update.');load();setB(r.id,false);return;}
+        throw e;
+      }
+      const p2={coa_analysis:an},pot=an.potency||{};
+      if(pot.total_thc!=null)p2.result_thc=String(pot.total_thc);
+      if(pot.total_cbd!=null)p2.result_cbd=String(pot.total_cbd);
+      if(an.lab_name&&!r.lab_name)p2.lab_name=an.lab_name;
+      if(an.lab_license_number&&!r.lab_license)p2.lab_license=String(an.lab_license_number);
+      const mm=coaMismatch(r,an),final=r.status==='Passed'||r.status==='Failed';
+      if(an.sample_metrc_tag&&!r.sample_tag&&!mm)p2.sample_tag=an.sample_metrc_tag;
+      let note='';
+      if(mm){p2.result_notes=((r.result_notes||'')+' Tag mismatch: COA '+mm.coa+' vs record '+mm.mine+'.').trim();note='COA read, but the tag does not match \u2014 status left unchanged.';}
+      else if(!final&&an.overall_status==='Pass'){p2.status='Passed';note='COA read \u2014 marked Passed.';}
+      else if(!final&&an.overall_status==='Fail'){p2.status='Failed';note='COA read \u2014 marked Failed.';}
+      else note=final?'COA read. The result was already final, so the status was not changed.':'COA read.';
+      p2.edit_reason='COA read by AI';
+      await db.update('hx_tests',r.id,p2);
+      setMsg(note);setOpen(function(p){return {...p,[r.id]:true};});load();
+    }catch(e){setMsg(String(e.message||e));}
+    setB(r.id,false);
+  }
+  const all=rows||[],counts={};TEST_STATUSES.forEach(function(s){counts[s]=all.filter(function(r){return !r.voided&&r.status===s;}).length;});
+  const ql=q.toLowerCase();
+  const shown=all.filter(function(r){return (sf==='ALL'||(!r.voided&&r.status===sf))&&(cat==='ALL'||testCats(r).indexOf(cat)>=0)&&
+    (!ql||[r.batch_number,r.sku,r.flavor,r.tag,r.sample_tag,r.lab_name,r.notes].join(' ').toLowerCase().indexOf(ql)>=0);});
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,el('span',{className:'g'},'Testing')),el('div',{className:'sub'},st.name+'  \u00b7  '+lic.name+'  \u00b7  Lab submissions, results and COAs  \u00b7  '+all.length+(all.length===1?' record':' records'))),
+      canE&&el('button',{className:'btn',onClick:function(){setModal({nw:1});}},'+ New test record')),
+    el('div',{className:'tabs'},[['ALL','All']].concat(TEST_STATUSES.map(function(s){return [s,s+' ('+counts[s]+')'];})).map(function(x){return el('button',{key:x[0],className:sf===x[0]?'on':'',onClick:function(){setSf(x[0]);}},x[1]);})),
+    el('div',{className:'row',style:{marginBottom:12}},
+      el('input',{style:{maxWidth:320},placeholder:'Search batch, SKU, flavor, tag, lab...',value:q,onChange:function(e){setQ(e.target.value);}}),
+      el('select',{value:cat,onChange:function(e){setCat(e.target.value);}},el('option',{value:'ALL'},'All categories'),Object.keys(TEST_CATS).map(function(c){return el('option',{key:c,value:c},c);})),
+      el('button',{className:'btn ghost sm',onClick:load},'Refresh')),
+    msg&&el('div',{className:'msg '+(/not|fail|could|mismatch|error/i.test(msg)?'err':'ok')},msg),
+    rows===null?el('div',{className:'muted'},'Loading...'):!shown.length?el('div',{className:'empty'},'No testing records match. Submit a batch for testing from the Batch Tracker, or create one here.'):
+    shown.map(function(r){
+      const mm=r.coa_analysis&&coaMismatch(r,r.coa_analysis);
+      return el('div',{key:r.id,className:'card'+(r.voided?' voidcard':''),style:{borderLeft:'3px solid '+(r.voided?'#5a2a26':r.status==='Passed'?'#23543a':r.status==='Failed'?'#5a2a26':'var(--gold-lo)')}},
+        el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+          el('div',{style:{flex:1,minWidth:240}},
+            el('div',{className:'row',style:{gap:8,marginBottom:4}},el('b',{style:{color:'var(--gold-hi)'}},r.batch_number||'(no batch #)'),
+              r.voided?el('span',{className:'badge bad',title:r.void_reason||''},'Void'):el(TestBadge,{s:r.status}),
+              testCats(r).map(function(c){return el('span',{key:c,className:'badge off'},c);}),mm&&el('span',{className:'badge bad'},'Tag mismatch')),
+            el('div',{style:{fontSize:13}},[r.sku,r.flavor].filter(Boolean).join('  \u00b7  ')),
+            el('div',{className:'muted',style:{fontSize:12,marginTop:2}},[r.tag&&(r.tag_label?r.tag_label+' ':'')+ts+' '+r.tag,r.sample_tag&&'Sample '+r.sample_tag,r.lab_name&&'Lab: '+r.lab_name,
+              r.submitted_at&&'Submitted '+new Date(r.submitted_at).toLocaleDateString(),r.result_at&&'Result '+new Date(r.result_at).toLocaleDateString()].filter(Boolean).join('  \u00b7  ')),
+            (r.result_thc||r.result_cbd)&&el('div',{style:{fontSize:13,marginTop:4}},'THC '+(r.result_thc||'\u2014')+'%   CBD '+(r.result_cbd||'\u2014')+'%'),
+            r.result_notes&&el('div',{style:{fontSize:12,color:'#f1d57a',marginTop:2}},r.result_notes),
+            r.notes&&el('div',{className:'muted',style:{fontSize:12,marginTop:2}},r.notes),
+            (r.retention_location||r.retention_qty)&&el('div',{className:'muted',style:{fontSize:12,marginTop:2}},'Retention sample: '+[r.retention_qty,r.retention_location,r.retention_until&&('keep until '+r.retention_until)].filter(Boolean).join(' \u00b7 '))),
+          el('div',{className:'row',style:{gap:6}},
+            r.coa_path&&el('button',{className:'btn ghost sm',onClick:function(){openStored(r.coa_path,r.coa_filename).catch(function(e){setMsg(String(e.message||e));});}},'COA'),
+            r.coa_analysis&&el('button',{className:'btn ghost sm',onClick:function(){setOpen(function(p){return {...p,[r.id]:!p[r.id]};});}},open[r.id]?'Hide analysis':'Show analysis'),
+            canE&&!r.voided&&el('label',{className:'btn ghost sm',style:{cursor:'pointer'}},busy[r.id]||(r.coa_path?'Replace COA':'Upload COA'),
+              el('input',{type:'file',accept:'application/pdf,image/*',style:{display:'none'},disabled:!!busy[r.id],onChange:function(e){const f=e.target.files&&e.target.files[0];e.target.value='';if(f)runCoa(r,f);}})),
+            canE&&!r.voided&&r.coa_path&&el('button',{className:'btn ghost sm',disabled:!!busy[r.id],onClick:function(){runCoa(r,null);}},'Re-read COA'),
+            r.coa_analysis&&!r.voided&&can('stickers',1)&&el('button',{className:'btn sm',onClick:function(){setModal({stick:r});}},'Compliance Sticker'),
+            canE&&!r.voided&&el('button',{className:'btn ghost sm',onClick:function(){setModal({upd:r});}},'Update'),
+            !r.voided&&(r.status==='Failed'||r.status==='Retest')&&el(RaiseDeviation,{state:st,license:lic,prefill:{title:'Lab test '+r.status+': '+(r.batch_number||r.tag),dept:'Compliance',category:'Testing result',priority:r.status==='Failed'?'critical':'major',
+              product_affected:[r.sku,r.flavor].filter(Boolean).join(' \u00b7 '),lot_number:r.batch_number||'',description:'Test of package tag '+(r.tag||'-')+(r.lab_name?' at '+r.lab_name:'')+' returned '+r.status+'.'+(r.result_notes?' '+r.result_notes:''),
+              source_type:'test',source_id:r.id,source_label:'Tag '+(r.tag||'-')+' \u00b7 '+r.status,occurred_on:String(r.result_at||r.created_at||'').slice(0,10)}}),
+            canF&&!r.voided&&el('button',{className:'btn danger sm',onClick:function(){setModal({voidr:r});}},'Void'))),
+        open[r.id]&&el(CoaPanel,{rec:r}));
+    }),
+    modal&&modal.nw&&el(TestNew,{st:st,lic:lic,name:(ACC.profile&&ACC.profile.name)||'',onClose:function(){setModal(null);},onDone:function(){setModal(null);load();}}),
+    modal&&modal.stick&&el(StickerModal,{rec:modal.stick,st:st,lic:lic,onClose:function(){setModal(null);}}),
+    modal&&modal.upd&&el(TestUpdate,{rec:modal.upd,full:canF,onClose:function(){setModal(null);},onDone:function(){setModal(null);load();}}),
+    modal&&modal.voidr&&el(VoidModal,{what:'test record '+(modal.voidr.batch_number||''),onClose:function(){setModal(null);},onVoid:async function(why){await db.update('hx_tests',modal.voidr.id,{voided:true,void_reason:why});setModal(null);load();}}));
+}
+
+/* Label drawing ported from Black Fox (pdfSafe, drawLabel, drawLabelTri, alignment sheet) */
+function pdfSafe(s){
+  if(s==null) return s;
+  if(Array.isArray(s)) return s.map(pdfSafe);
+  return String(s)
+    .replace(/[\u{1F300}-\u{1FAFF}]/gu,'')   // emoji (misc symbols/pictographs, supplemental, transport, etc.)
+    .replace(/[\u2600-\u27BF]/g,'')          // misc symbols & dingbats (checkmarks, warning signs, scales, stars...)
+    .replace(/\uFE0F/g,'')                    // variation selector that often trails emoji
+    .replace(/\u2192/g,'->').replace(/\u2190/g,'<-').replace(/\u2194/g,'<->')
+    .replace(/[\u200B-\u200D]/g,'');          // zero-width joiners/spaces sometimes present in AI output
+}
+
+function pdfSafeDoc(doc){
+  const _text=doc.text.bind(doc);
+  doc.text=(txt,...rest)=>_text(pdfSafe(txt),...rest);
+  const _split=doc.splitTextToSize.bind(doc);
+  doc.splitTextToSize=(txt,...rest)=>_split(pdfSafe(txt),...rest);
+  return doc;
+}
+
+function drawLabelTri(doc,x,y,w,h,d,minK){
+  const pad=LABEL_PAD,gap=4,ih=h-pad*2;
+  const B=(t)=>({t:t,b:true}),N=(t)=>({t:t});
+  const flow=(runs,iw,sz)=>{
+    const lines=[];let cur=[],cw=0;
+    runs.forEach(run=>{
+      doc.setFont('helvetica',run.b?'bold':'normal');doc.setFontSize(sz);
+      run.t.split(/(\s+)/).forEach(tok=>{
+        if(tok==='') return;
+        const tw=doc.getTextWidth(tok);
+        if(cw+tw>iw&&/\S/.test(tok)&&cur.length){lines.push(cur);cur=[];cw=0;}
+        if(!cur.length&&!/\S/.test(tok)) return;
+        cur.push({t:tok,b:run.b,w:tw});cw+=tw;
+      });
+    });
+    if(cur.length) lines.push(cur);
+    return lines;
+  };
+  const LH=1.17;
+  const heightOf=(blocks,sz,iw)=>{
+    let tot=0;
+    for(const b of blocks){
+      if(b.k==='rule') tot+=sz*0.85;
+      else if(b.k==='text') tot+=flow(b.runs,iw,sz).length*sz*LH;
+      else if(b.k==='grid'){
+        for(const row of b.rows) for(const c of row){
+          const l=flow(c,iw/2,sz);
+          if(l.length>1) return Infinity;
+        }
+        tot+=b.rows.length*sz*LH;
+      }
+    }
+    return tot;
+  };
+  const colX=[[x+pad,x+w*0.375-gap],[x+w*0.375+gap,x+w*0.69-gap],[x+w*0.69+gap,x+w-pad]];
+  const info=(l,v)=>({k:'text',runs:[B(l),N(' '+(v||''))]});
+  const canna=d.canna;
+  const rows=[];
+  for(let i=0;i<canna.length;i+=2){
+    const r=[];
+    [canna[i],canna[i+1]].forEach(c=>{if(c) r.push([B(c.name+': '),N(c.mg)]);});
+    rows.push(r);
+  }
+  const cols=[
+    {max:4.6,blocks:[{k:'text',runs:[B('INGREDIENTS:')]},{k:'text',runs:[N(d.ingredients)]}]},
+    {max:4.6,blocks:[info('Servings/Doses:',d.servings),info('Best By:',d.bestBy),info('Produced By:',d.producedBy),info('Tested By:',d.testedBy),info('Tag #:',d.testTag),info('Weight:',d.weight),{k:'rule'},{k:'text',runs:[B(d.resultsHeading||'TEST RESULTS (mg/serving):')]},{k:'grid',rows:rows}]},
+    {max:4.6,blocks:[{k:'text',runs:[B('INSTRUCTIONS FOR USE AND LENGTH OF EFFECT:')]},{k:'text',runs:[N(d.instructions)]},{k:'rule'},{k:'text',runs:[B('PACKAGING APPROVAL #:')]},{k:'text',runs:[N(d.approval)]},{k:'rule'},{k:'text',runs:[B('WARNING:')]},{k:'text',runs:[N(d.warning)]}]},
+  ];
+  let allOk=true,minSz=99;
+  cols.forEach((c,ci)=>{
+    const x0=colX[ci][0],iw=colX[ci][1]-colX[ci][0];
+    let sz=c.max,ok=false;
+    for(;sz>=(minK||2.2);sz-=0.1){if(heightOf(c.blocks,sz,iw)<=ih){ok=true;break;}}
+    if(!ok) allOk=false;
+    if(sz<minSz) minSz=sz;
+    let cy=y+pad;
+    c.blocks.forEach(b=>{
+      if(b.k==='rule'){
+        const ly=cy+sz*0.4;doc.setDrawColor(0,0,0);doc.setLineWidth(0.8);doc.line(x0,ly,x0+iw,ly);cy+=sz*0.85;
+      }else if(b.k==='text'){
+        flow(b.runs,iw,sz).forEach(line=>{
+          cy+=sz*0.92;let cx=x0;
+          line.forEach(r=>{doc.setFont('helvetica',r.b?'bold':'normal');doc.setFontSize(sz);doc.setTextColor(0,0,0);doc.text(r.t,cx,cy);cx+=r.w;});
+          cy+=sz*(LH-0.92);
+        });
+      }else if(b.k==='grid'){
+        b.rows.forEach(row=>{
+          cy+=sz*0.92;
+          row.forEach((cell,i)=>{
+            let cx=x0+(iw/2)*i;
+            cell.forEach(r=>{doc.setFont('helvetica',r.b?'bold':'normal');doc.setFontSize(sz);doc.setTextColor(0,0,0);doc.text(r.t,cx,cy);cx+=doc.getTextWidth(r.t);});
+          });
+          cy+=sz*(LH-0.92);
+        });
+      }
+    });
+  });
+  // thick vertical dividers between columns
+  doc.setDrawColor(0,0,0);doc.setLineWidth(1.4);
+  [0.375,0.69].forEach(f=>doc.line(x+w*f,y+pad,x+w*f,y+h-pad));
+  drawLabel.lastSize=minSz;
+  return allOk;
+}
+
+function drawLabel(doc,x,y,w,h,d,minK){
+  if(d.layout==='tri') return drawLabelTri(doc,x,y,w,h,d,minK);
+  const pad=LABEL_PAD,iw=w-pad*2,ih=h-pad*2;
+  const paras=labelParagraphs(d);
+  const BASE=3.7;
+  let layout=null,fs=BASE,ok=false;
+  for(let sz=BASE;sz>=(minK||2.2);sz-=0.1){
+    const lines=[];
+    paras.forEach(p=>{
+      let cur=[],cw=0;
+      p.forEach(item=>{
+        if(item.chunk){
+          // label + value stay together on one line; wrap only between chunks
+          const toks=[];let tw=0;
+          item.chunk.forEach(run=>{doc.setFont('helvetica',run.b?'bold':'normal');doc.setFontSize(sz);
+            run.t.split(/(\s+)/).forEach(tok=>{if(tok==='')return;const w=doc.getTextWidth(tok);toks.push({t:tok,b:run.b,w:w});tw+=w;});});
+          if(cw+tw>iw&&cur.length){while(cur.length&&!/\S/.test(cur[cur.length-1].t))cur.pop();lines.push(cur);cur=[];cw=0;}
+          toks.forEach(t=>{cur.push(t);cw+=t.w;});
+          return;
+        }
+        const run=item;
+        doc.setFont('helvetica',run.b?'bold':'normal');doc.setFontSize(sz);
+        run.t.split(/(\s+)/).forEach(tok=>{
+          if(tok==='') return;
+          const tw=doc.getTextWidth(tok);
+          if(cw+tw>iw&&/\S/.test(tok)&&cur.length){lines.push(cur);cur=[];cw=0;}
+          if(!cur.length&&!/\S/.test(tok)) return;
+          cur.push({t:tok,b:run.b,w:tw});cw+=tw;
+        });
+      });
+      if(cur.length) lines.push(cur);
+    });
+    const tot=lines.length*sz*1.15;
+    layout=lines;fs=sz;
+    if(tot<=ih){ok=true;break;}
+  }
+  let cy=y+pad;
+  layout.forEach(line=>{
+    cy+=fs*0.92;let cx=x+pad;
+    line.forEach(r=>{doc.setFont('helvetica',r.b?'bold':'normal');doc.setFontSize(fs);doc.setTextColor(0,0,0);doc.text(r.t,cx,cy);cx+=r.w;});
+    cy+=fs*0.23;
+  });
+  drawLabel.lastSize=fs;
+  return ok;
+}
+
+function buildAlignmentSheet(stock,offX,offY){
+  const{jsPDF}=window.jspdf;
+  const doc=pdfSafeDoc(new jsPDF({unit:'pt',format:'letter'}));
+  const per=stock.cols*stock.rows;
+  for(let pos=0;pos<per;pos++){
+    const col=pos%stock.cols,row=Math.floor(pos/stock.cols);
+    const x=(stock.left+col*stock.pitchX+(offX||0))*72,y=(stock.top+row*stock.pitchY+(offY||0))*72,w=stock.w*72,h=stock.h*72;
+    doc.setDrawColor(0);doc.setLineWidth(.6);doc.rect(x,y,w,h);
+    doc.setDrawColor(120);doc.setLineWidth(.3);
+    if(doc.setLineDash)doc.setLineDash([2,2],0);
+    doc.rect(x+LABEL_PAD,y+LABEL_PAD,w-LABEL_PAD*2,h-LABEL_PAD*2);
+    if(doc.setLineDash)doc.setLineDash([],0);
+    doc.line(x+w/2-6,y+h/2,x+w/2+6,y+h/2);doc.line(x+w/2,y+h/2-6,x+w/2,y+h/2+6);
+    doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(0);
+    doc.text('#'+(pos+1)+'  4" x 1"  (dashed = print-safe area)',x+LABEL_PAD+2,y+LABEL_PAD+8);
+  }
+  // Ruler: if this does not measure exactly 7.00 in on paper, the print dialog is scaling the page.
+  doc.setDrawColor(0);doc.setLineWidth(.8);doc.line(54,770,558,770);
+  doc.line(54,764,54,776);doc.line(558,764,558,776);
+  doc.setFont('helvetica','bold');doc.setFontSize(8);
+  doc.text('This line must measure exactly 7.00 in. If not, set the print scale to 100% / Actual size (no "Fit", no margins).',56,761);
+  return doc;
+}
+
+const BF_LABEL_TEMPLATES=[{"name": "2G Infused Pre Roll \u2014 Banana Pie", "sku": "Muha Meds 2G Infused Pre Roll", "flavor": "Banana Pie", "metrc_approval": "M00002721406", "servings": "200", "weight": "2g", "instructions": "Heat Flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of Marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCA Isolate, Cannabis Live Resin, Cannabis Cured Resin, Cannabis Distillate, Cannabis Kief, Alpha-Pinene, Beta-Pinene, Beta-Caryophyllene, Myrcene, Nerolidol, Ocimene, Terpinolene, Valencene, Bisabolol, Camphene, Citronellol, Eugenol, Farnesene, Fenchyl Alcohol, Menthol, Maltol, 3-Hexenol, Isoamyl Acetate, Isoamyl Alcohol, Isoamyl Isovalerate, Butyl Butyrate, Ethyl Butyrate, Ethyl Isovalerate, Ethyl Propionate, Vanillin, Heliotropine, Delta-Decalactone, Gamma-Undecalactone, Delta-Dodecalactone, Gamma-Dodecalactone, Acetoin, Anise Alcohol, Anisaldehyde, P-Anisyl Acetate, D-Limonene, Sabinene, Delta-3-Carene, Alpha-Phellandrene, Beta-Phellandrene, Trans-Beta-Ocimene, Para-Cymene, Octanal, Cis-1,2-Limonene Oxide, Trans-1,2-Limonene Oxide, Decanal, 1-Octanol, Linalool, Arabic Gum, Rice Paper, Solvent (Butane, Propane, or Ethanol)", "layout": ""}, {"name": "2G Infused Pre Roll \u2014 Desert Gold Chocolate", "sku": "Muha Meds 2G Infused Pre Roll", "flavor": "Desert Gold Chocolate", "metrc_approval": "M00002721221", "servings": "200", "weight": "2g", "instructions": "Heat Flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of Marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCA Isolate, Cannabis Live Resin, Cannabis Cured Resin, Cannabis Distillate, Cannabis Kief, 2,5-Dimethylpyrazine, 5-Methyl-2-Phenyl-2-Hexenal, Anisaldehyde, Benzaldehyde, Beta-Caryophyllene, Beta-Pinene, Butyl Butyrolactate, Butyl Lactate, Dihydrocoumarin, Dimethylhydroxy Furanone, Ethyl Butyrate, Ethyl Lactate, Ethyl Propionate, Gamma-Dodecalactone, Gamma-Nonalactone, Gamma-Octalactone, Gamma-Undecalactone, Heliotropine, Hexyl Butyrate, Isoamyl Phenylacetate, Isopentanal, Maltol, Myrcene, Raspberry Ketone, Vanillin, Acetoin, Delta-Decalactone, Delta-Dodecalactone, Anise Alcohol, P-Anisyl Acetate, Butyric Acid, Caprylic Acid, D-Limonene, Alpha-Pinene, Sabinene, Delta-3-Carene, Alpha-Phellandrene, Beta-Phellandrene, Trans-Beta-Ocimene, Para-Cymene, Octanal, Cis-1,2-Limonene Oxide, Trans-1,2-Limonene Oxide, Decanal, 1-Octanol, Linalool, Arabic Gum, Rice Paper, Solvent (Butane, Propane, or Ethanol)", "layout": ""}, {"name": "2G Infused Pre Roll \u2014 PB Jelly", "sku": "Muha Meds 2G Infused Pre Roll", "flavor": "PB Jelly", "metrc_approval": "M00002721224", "servings": "200", "weight": "2g", "instructions": "Heat Flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of Marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCA Isolate, Cannabis Live Resin, Cannabis Cured Resin, Cannabis Distillate, Cannabis Kief, Beta-Caryophyllene, Beta-Pinene, Myrcene, Delta-3-Carene, Gamma-Undecalactone, Delta-Decalactone, Gamma-Dodecalactone, Delta-Dodecalactone, Vanillin, Heliotropine, Ethyl Butyrate, Ethyl Propionate, Isoamyl Butyrate, Isoamyl Salicylate, Ethyl Phenyl Acetate, Methyl Phenyl Acetate, Methyl Benzoate, Maltol, Cyclotene, Trimethyl Pyrazine, Pyrazine Mixture, Acetoin, Methyl Heptenone, Iso Jasmone, Anise Alcohol, Anisaldehyde, P-Anisyl Acetate, D-Limonene, Sabinene, Alpha-Phellandrene, Beta-Phellandrene, Trans-Beta-Ocimene, Para-Cymene, Octanal, Cis-1,2-Limonene Oxide, Trans-1,2-Limonene Oxide, Decanal, 1-Octanol, Linalool, Alpha-Pinene, Terpinyl Acetate, Eucalyptol, Alpha-Terpineol, Terpinolene, Alpha-Terpinene, Gamma-Terpinene, Citral, Nerol, Geraniol, Citronellol, Camphene, Borneol, Arabic Gum, Rice Paper, Solvent (Butane, Propane, or Ethanol)", "layout": ""}, {"name": "2G Infused Pre Roll \u2014 Cinnamon Cream OG", "sku": "Muha Meds 2G Infused Pre Roll", "flavor": "Cinnamon Cream OG", "metrc_approval": "M00002721329", "servings": "200", "weight": "2g", "instructions": "Heat Flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of Marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCA Isolate, Cannabis Live Resin, Cannabis Cured Resin, Cannabis Distillate, Cannabis Kief, Alpha-Pinene, Beta-Caryophyllene, Beta-Pinene, Myrcene, Linalool, Linalyl Acetate, Alpha-Terpineol, Delta-Decalactone, Gamma-Undecalactone, Delta-Dodecalactone, Gamma-Dodecalactone, Gamma-Octalactone, Vanillin, Heliotropine, Ethyl Propionate, Acetoin, Anise Alcohol, Anisaldehyde, P-Anisyl Acetate, Benzaldehyde, Cinnamyl Alcohol, Dihydrocoumarin, Ethyl 2,4-Decadienoate, Maltol, Trimethyl Pyrazine, Terpinolene, D-Limonene, Sabinene, Delta-3-Carene, Alpha-Phellandrene, Beta-Phellandrene, Trans-Beta-Ocimene, Para-Cymene, Octanal, Cis-1,2-Limonene Oxide, Trans-1,2-Limonene Oxide, Decanal, 1-Octanol, Sabinene, Alpha-Pinene, Beta-Pinene, Myrcene, Limonene, Terpinene, Terpineol, Eugenol, Safrole, Myristicin, Elemicin, Arabic Gum, Rice Paper, Solvent (Butane, Propane, or Ethanol)", "layout": ""}, {"name": "2G Infused Pre Roll \u2014 Lemon Cheesecake", "sku": "Muha Meds 2G Infused Pre Roll", "flavor": "Lemon Cheesecake", "metrc_approval": "M00002721223", "servings": "200", "weight": "2g", "instructions": "Heat Flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of Marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCA Isolate, Cannabis Live Resin, Cannabis Cured Resin, Cannabis Distillate, Cannabis Kief, Beta-Pinene, Myrcene, Linalool, Alpha-Pinene, Decanal, Citral, Allyl Caproate, Eucalyptol, Octanal, Styrallyl Acetate, Nonanal, Fenchol, Maltol, Ethyl 2-Methyl Butyrate, Citronellal, Acetoin, Alpha-Terpinene, Anisaldehyde, Anise Alcohol, Beta-Caryophyllene, Butyl Butyrolactate, Butyl Lactate, Delta-Decalactone, Delta-Dodecalactone, Ethyl Propionate, Gamma-Dodecalactone, Gamma-Undecalactone, Geranyl Acetate, Heliotropine, Pentanedione, Raspberry Ketone, Terpinolene, Vanillin, D-Limonene, Sabinene, Delta-3-Carene, Alpha-Phellandrene, Beta-Phellandrene, Trans-Beta-Ocimene, Para-Cymene, Cis-1,2-Limonene Oxide, Trans-1,2-Limonene Oxide, 1-Octanol, Terpinyl Acetate, Gamma-Terpinene, Camphene, Alpha-Fenchene, 1,4-Cineole, Ocimene Quintoxide, 1-Terpineol, Alpha-Fenchyl Alcohol, Terpinen-4-ol, Alpha-Terpineol, Geranial, Zingiberene, Beta-Sesquiphellandrene, Ar-Curcumene, Bisabolene, Alpha-Zingiberene, Arabic Gum, Rice Paper, Solvent (Butane, Propane, or Ethanol)", "layout": ""}, {"name": "2G Infused Pre Roll \u2014 Midnight Expresso", "sku": "Muha Meds 2G Infused Pre Roll", "flavor": "Midnight Expresso", "metrc_approval": "M00002721330", "servings": "200", "weight": "2g", "instructions": "Heat Flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of Marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCA Isolate, Cannabis Live Resin, Cannabis Cured Resin, Cannabis Distillate, Cannabis Kief, Beta-Caryophyllene, Alpha-Terpineol, Alpha-Pinene, Beta-Pinene, Nerolidol, Gamma-Octalactone, Furfural, Vanillin, Gamma-Undecalactone, Furfuryl Mercaptan, Myrcene, Acetoin, Pyrazine Mixture, Orange Terpenes, Delta-Decalactone, Ethyl Propionate, Delta-Dodecalactone, Gamma-Dodecalactone, Heliotropine, Anise Alcohol, Anisaldehyde, P-Anisyl Acetate, Butyric Acid, Caprylic Acid, Arabic Gum, Rice Paper, Solvent (Butane or Propane or Ethanol).", "layout": ""}, {"name": "2G Infused Pre Roll \u2014 Peaches & Cream", "sku": "Muha Meds 2G Infused Pre Roll", "flavor": "Peaches & Cream", "metrc_approval": "M00002721331", "servings": "200", "weight": "2g", "instructions": "Heat Flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of Marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCA Isolate, Cannabis Live Resin, Cannabis Cured Resin, Cannabis Distillate, Cannabis Kief, Alpha-Pinene, Beta-Pinene, D-Limonene, Ethyl Butyrate, Ethyl Lactate, Linalool, Myrcene, Arabic Gum, Rice Paper, Solvent (Butane or Propane or Ethanol).", "layout": ""}, {"name": "2G Infused Pre Roll \u2014 Pineapple Poison", "sku": "Muha Meds 2G Infused Pre Roll", "flavor": "Pineapple Poison", "metrc_approval": "M00002721332", "servings": "200", "weight": "2g", "instructions": "Heat Flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of Marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCA Isolate, Cannabis Live Resin, Cannabis Cured Resin, Cannabis Distillate, Cannabis Kief, Beta-Pinene, Linalool, Alpha-Pinene, Myrcene, Allyl Caproate, Ethyl Butyrate, Beta-Caryophyllene, Nerolidol, Ethyl Hexanoate, Geraniol, Vanillin, Butyl Butyrolactate, Butyl Lactate, Ethyl Propionate, Gamma-Octalactone, Heliotropine, Fenchyl Alcohol, Gamma-Nonalactone, Delta-Decalactone, Acetoin, Delta-Dodecalactone, Gamma-Undecalactone, Gamma-Dodecalactone, Maltol, Dimethylhydroxy Furanone, Pentanedione, Anisaldehyde, Anise Alcohol, P-Anisyl Acetate, Butyric Acid, D-Limonene, Sabinene, Delta-3-Carene, Alpha-Phellandrene, Beta-Phellandrene, Trans-Beta-Ocimene, Para-Cymene, Octanal, Cis-1,2-Limonene Oxide, Trans-1,2-Limonene Oxide, Decanal, 1-Octanol, Terpinyl Acetate, Eucalyptol, Alpha-Terpineol, Terpinolene, Alpha-Terpinene, Gamma-Terpinene, Citral, Nerol, Citronellol, Camphene, Borneol, Arabic Gum, Rice Paper, Solvent (Butane, Propane, or Ethanol)", "layout": ""}, {"name": "2G Infused Pre Roll \u2014 Strawberry Lava", "sku": "Muha Meds 2G Infused Pre Roll", "flavor": "Strawberry Lava", "metrc_approval": "M00002721333", "servings": "200", "weight": "2g", "instructions": "Heat Flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of Marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCA Isolate, Cannabis Live Resin, Cannabis Cured Resin, Cannabis Distillate, Cannabis Kief, Myrcene, Beta-Caryophyllene, Linalool, Beta-Pinene, Alpha-Terpineol, Alpha-Pinene, Fenchol, Octanal, Alpha-Bisabolol, Nootkatone, Ethyl Butyrate, Camphene, Terpinolene, Citronellal, Thiomenthone, Ethyl Hexanoate, Humulene, Geraniol, Camphor, Cedrene Alpha, Ocimene, Menthol, Sabinene, Borneol, Delta-3-Carene, Alpha-Phellandrene, Alpha-Terpinene, Gamma-Decalactone, Isoamyl Butyrate, Ethyl 2-Methylbutyrate, Ethyl Cinnamate, 3-Hexenol, 2-Methylbutyric Acid, Cis-3-Hexenyl Butyrate, Hexenyl Acetate, Dimethylhydroxy Furanone, Cis-3-Hexenyl Hexanoate, Beta-Ionone, Caproic Acid, Vanillin, Benzaldehyde, S-Methyl Butanethioate, D-Limonene, Beta-Phellandrene, Para-Cymene, Cis-1,2-Limonene Oxide, Trans-1,2-Limonene Oxide, Decanal, 1-Octanol, Terpinyl Acetate, Eucalyptol, Gamma-Terpinene, Citral, Nerol, Citronellol, Nonanal, Decanal, Allyl Caproate, Caprylic Acid, Capric Acid, Lauric Acid, Myristic Acid, Palmitic Acid, Stearic Acid, Oleic Acid, Arabic Gum, Rice Paper, Solvent (Butane, Propane, or Ethanol)", "layout": ""}, {"name": "2G Infused Pre Roll \u2014 Honey Melon", "sku": "Muha Meds 2G Infused Pre Roll", "flavor": "Honey Melon", "metrc_approval": "M00002721335", "servings": "200", "weight": "2g", "instructions": "Heat Flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of Marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCA Isolate, Cannabis Live Resin, Cannabis Cured Resin, Cannabis Distillate, Cannabis Kief, Acetic Acid, Alpha-Bisabolol, Alpha-Cedrene, Alpha-Phellandrene, Alpha-Pinene, Alpha-Terpinene, Alpha-Terpineol, Anisyl Acetate, Beta-Caryophyllene, Beta-Pinene, Borneol, Butyl Butyryl Lactate, Camphene, Caryophyllene Oxide, Cedrene Alpha, Citral, Citronellol, Cis-3-Hexenol, Cis-3-Nonenol, Cis-6-Nonenol, D-Camphor, D-Limonene, Delta-3-Carene, Diethyl Succinate, Ethyl 2-Methyl Butyrate, Ethyl Butyrate, Ethyl Furanone, Ethyl Isovalerate, Ethyl Maltol, Ethyl Propionate, Farnesene, Fenchol, Fenchyl Alcohol, Furfural, Gamma-Decalactone, Gamma-Octalactone, Gamma-Terpinene, Geraniol, Geranyl Acetate, Guaiol, Hexanal, Hexyl Acetate, Hexyl Butyrate, Hexyl Caproate, Hexanoic Acid, Humulene, Isoborneol, Isobutyl Acetate, Isobutyric Acid, Isopulegol Acetate, L-Menthol, Linalool, Linalool Oxide, Maltol, Melonal, Methyl Anthranilate, Methyl Heptenone, Methyl Thiobutyrate, Methyl-2-Nonenoate, Myrcene, Nerol, Nerolidol, Ocimene, Raspberry Ketone, Sabinene, Strawberry Furanone, Terpineol, Terpinolene, Triacetin, Trans-2-Hexen-1-Ol, Trans-2-Cis-6-Nonadienol, Valencene, Vanillin, Para-Cymene, Cis-1,2-Limonene Oxide, Trans-1,2-Limonene Oxide, Octanal, Decanal, 1-Octanol, Terpinyl Acetate, Eucalyptol, Camphor, Alpha-Fenchene, 1,4-Cineole, Ocimene Quintoxide, 1-Terpineol, Alpha-Fenchyl Alcohol, Terpinen-4-ol, Geranial, Beta-Phellandrene, Trans-Beta-Ocimene, Nonanal, Allyl Caproate, Alpha-Thujene, Safrole, Myristicin, Elemicin, Sabinene Hydrate, Sinensal, Nootkatone, Valencene, Benzyl Benzoate, Benzyl Cinnamate, Cinnamic Acid, Cinnamyl Alcohol, Eugenol, Nerolidol, Arabic Gum, Rice Paper, Solvent (Butane, Propane, or Ethanol)", "layout": ""}, {"name": "2G Infused Pre Roll \u2014 Blue Slushie", "sku": "Muha Meds 2G Infused Pre Roll", "flavor": "Blue Slushie", "metrc_approval": "M00002721407", "servings": "200", "weight": "2g", "instructions": "Heat Flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of Marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCA Isolate, Cannabis Live Resin, Cannabis Cured Resin, Cannabis Distillate, Cannabis Kief, Alpha-Pinene, Beta-Pinene, Beta-Caryophyllene, Myrcene, Linalool, Alpha-Terpineol, Terpinolene, Geraniol, Camphene, Alpha-Bisabolol, Nootkatone, Citronellal, Thiomenthone, Ethyl Butyrate, Ethyl Caproate, Humulene, Camphor, Cedrene Alpha, Ocimene, Menthol, Sabinene, Borneol, Delta-3-Carene, Alpha-Phellandrene, Alpha-Terpinene, Acetic Acid, Acetoin, Alpha-Ionone, Amyl Cinnamal, Anisaldehyde, Anise Alcohol, Benzaldehyde, Butyl Butyrolactate, Butyl Lactate, Butyric Acid, Caprylic Acid, Cis-3-Hexenyl Butyrate, Delta-Decalactone, Delta-Dodecalactone, Gamma-Dodecalactone, Gamma-Undecalactone, Ethyl Isovalerate, Ethyl Propionate, Geranyl Acetate, Heliotropine, Isoamyl Acetate, Isoamyl Butyrate, Isoamyl Isovalerate, Maltol, Methyl Anthranilate, Pentanedione, Raspberry Ketone, Vanillin, D-Limonene, Beta-Phellandrene, Trans-Beta-Ocimene, Para-Cymene, Octanal, Cis-1,2-Limonene Oxide, Trans-1,2-Limonene Oxide, Decanal, 1-Octanol, Terpinyl Acetate, Eucalyptol, Gamma-Terpinene, Citral, Nerol, Citronellol, Arabic Gum, Rice Paper, Solvent (Butane, Propane, or Ethanol)", "layout": ""}, {"name": "2G Infused Pre Roll \u2014 Grape Stomper", "sku": "Muha Meds 2G Infused Pre Roll", "flavor": "Grape Stomper", "metrc_approval": "M00002721408", "servings": "200", "weight": "2g", "instructions": "Heat Flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of Marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCA Isolate, Cannabis Live Resin, Cannabis Cured Resin, Cannabis Distillate, Cannabis Kief, Methyl Anthranilate, Beta-Caryophyllene, Ethyl Butyrate, Myrcene, Linalool, Alpha-Pinene, Alpha-Bisabolol, Beta-Pinene, Nerolidol, Methyl Isobutyrate, Cinnamyl Alcohol, Humulene, D-Limonene, Sabinene, Delta-3-Carene, Alpha-Phellandrene, Beta-Phellandrene, Trans-Beta-Ocimene, Para-Cymene, Octanal, Cis-1,2-Limonene Oxide, Trans-1,2-Limonene Oxide, Decanal, 1-Octanol, Arabic Gum, Rice Paper, Solvent (Butane, Propane, or Ethanol)", "layout": ""}, {"name": "2G Infused Pre Roll \u2014 Matcha Gold", "sku": "Muha Meds 2G Infused Pre Roll", "flavor": "Matcha Gold", "metrc_approval": "M00002721409", "servings": "200", "weight": "2g", "instructions": "Heat Flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of Marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCA Isolate, Cannabis Live Resin, Cannabis Cured Resin, Cannabis Distillate, Cannabis Kief, Alpha-Pinene, Beta-Pinene, Myrcene, Linalool, Beta-Caryophyllene, Linalyl Acetate, Geraniol, Beta-Ionone, 3-Hexenol, Vanillin, Cis-3-Hexenyl Hexanoate, Hexenyl Acetate, Fenchyl Alcohol, Cis-3-Hexenyl Isobutyrate, Eugenol, Nerolidol, Delta-Decalactone, Gamma-Undecalactone, Ethyl Propionate, Acetoin, Delta-Dodecalactone, Gamma-Dodecalactone, Anise Alcohol, Anisaldehyde, P-Anisyl Acetate, D-Limonene, Sabinene, Delta-3-Carene, Alpha-Phellandrene, Beta-Phellandrene, Trans-Beta-Ocimene, Para-Cymene, Octanal, Cis-1,2-Limonene Oxide, Trans-1,2-Limonene Oxide, Decanal, 1-Octanol, Terpinyl Acetate, Eucalyptol, Alpha-Terpineol, Terpinolene, Alpha-Terpinene, Gamma-Terpinene, Citral, Nerol, Citronellol, Camphene, Borneol, Caryophyllene Oxide, Vetiverol, Khusimol, Alpha-Vetivone, Beta-Vetivone, Sclareol, Linalyl Formate, Geranyl Acetate, Arabic Gum, Rice Paper, Solvent (Butane, Propane, or Ethanol)", "layout": ""}, {"name": "2G Infused Pre Roll \u2014 Pumpkin Bliss", "sku": "Muha Meds 2G Infused Pre Roll", "flavor": "Pumpkin Bliss", "metrc_approval": "M00002721410", "servings": "200", "weight": "2g", "instructions": "Heat Flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of Marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCA Isolate, Cannabis Live Resin, Cannabis Cured Resin, Cannabis Distillate, Cannabis Kief, Myrcene, Beta-Caryophyllene, Linalool, Beta-Pinene, Alpha-Terpineol, Alpha-Pinene, Fenchol, Octanal, Alpha-Bisabolol, Nootkatone, Ethyl Butyrate, Camphene, Terpinolene, Citronellal, Thiomenthone, Ethyl Caproate, Humulene, Geraniol, Camphor, Cedrene Alpha, Ocimene, Menthol, Sabinene, Borneol, Delta-3-Carene, Alpha-Phellandrene, Alpha-Terpinene, Eugenol, Phenethyl Alcohol, Vanillin, Gamma-Decalactone, Delta-Decalactone, Gamma-Dodecalactone, Delta-Dodecalactone, Gamma-Undecalactone, Cinnamyl Alcohol, Methylcyclopentenolone, Acetoin, Butyl Lactate, Butyl Butyrolactate, Maltol, Butyric Acid, Caprylic Acid, Benzaldehyde, D-Limonene, Beta-Phellandrene, Para-Cymene, Cis-1,2-Limonene Oxide, Trans-1,2-Limonene Oxide, Decanal, 1-Octanol, Terpinyl Acetate, Eucalyptol, Gamma-Terpinene, Citral, Nerol, Citronellol, Terpinen-4-ol, Alpha-Thujene, Safrole, Myristicin, Elemicin, Sabinene Hydrate, Arabic Gum, Rice Paper, Solvent (Butane, Propane, or Ethanol)", "layout": ""}, {"name": "2G Infused Pre Roll \u2014 Watermelon Punch", "sku": "Muha Meds 2G Infused Pre Roll", "flavor": "Watermelon Punch", "metrc_approval": "M00002721411", "servings": "200", "weight": "2g", "instructions": "Heat Flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of Marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCA Isolate, Cannabis Live Resin, Cannabis Cured Resin, Cannabis Distillate, Cannabis Kief, D-Limonene, Linalool, Alpha-Terpineol, Ethyl Butyrate, Valencene, Geraniol, Alpha-Pinene, Beta-Pinene, Melonal, Cis-3-Hexenol, Strawberry Furanone, Myrcene, Beta-Caryophyllene, Fenchol, Octanal, Alpha-Bisabolol, Nootkatone, Camphene, Terpinolene, Citronellal, Thiomenthone, Ethyl Caproate, Humulene, Camphor, Cedrene Alpha, Ocimene, Menthol, Sabinene, Borneol, Delta-3-Carene, Alpha-Phellandrene, Alpha-Terpinene, Beta-Phellandrene, Para-Cymene, Cis-1,2-Limonene Oxide, Trans-1,2-Limonene Oxide, Decanal, 1-Octanol, Terpinyl Acetate, Eucalyptol, Gamma-Terpinene, Citral, Nerol, Citronellol, Arabic Gum, Rice Paper, Solvent (Butane, Propane, or Ethanol)", "layout": ""}, {"name": "1G Plain Pre Roll", "sku": "Muha Meds 1G Plain Pre Roll", "flavor": "", "metrc_approval": "M00002674611", "servings": "100", "weight": "1g", "instructions": "Heat Flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of Marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, Rice Paper, Arabic Gum", "layout": ""}, {"name": "Bodega Boyz Shorties \u2014 Banana Honey", "sku": "Bodega Boyz - Shorties", "flavor": "Banana Honey", "metrc_approval": "M00002448282", "servings": "280", "weight": "2.8g", "instructions": "Heat flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCa Isolate, Cannabis Distillate, THCa Diamonds, Isoamyl Acetate, d-Limonene, Isoamyl Isovalerate, Valencene, Ethyl Butyrate, beta-Caryophyllene, Myrcene, L-Menthol, Ethyl Maltol, Isoamyl Isobutyrate, Isoamyl Propionate, Humulene, Isoamyl Alcohol, beta-Pinene, alpha-Pinene, Isoamyl 2-Methyl Butyrate 53049, Fenchyl Alcohol, alpha-Bisabolol, Terpineol, Linalool, Farnesene, Ocimene, Ethyl Isovalerate, Guaiene, Nerolidol, Camphene, Butyl Butyrate, Terpinolene, Isoborneol, Cis-3 Hexenol, Eugenol, alpha-Phellandrene, Trans-2 Hexenol, Caryophyllene Oxide, Ethyl Propionate, Citronellol, Nerol, Cedrene Alpha, D-Camphor, Geraniol, P-Cymene, Delta-3-Carene, alpha-Terpinene, Rice Paper, Arabic Gum, Solvent (Ethanol or Butane)", "layout": "tri"}, {"name": "Bodega Boyz Shorties \u2014 Sour Apple", "sku": "Bodega Boyz - Shorties", "flavor": "Sour Apple", "metrc_approval": "M00002448284", "servings": "280", "weight": "2.8g", "instructions": "Heat flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCa Isolate, Cannabis Distillate, THCa Diamonds, Ethyl 2-Methyl Butyrate, Isobutyl Acetate, alpha-Pinene, beta-Caryophyllene, Hexyl Acetate, d-Limonene, Myrcene, Ethyl Maltol, beta-Pinene, Linalool, Geranyl Acetate, Humulene, Trans-2-Hexenal, Valencene, alpha-Bisabolol, Terpineol, Fenchyl Alcohol, Isobutyl Caproate, Farnesene, Gamma-Terpinene, Ethyl Isovalerate, Hexyl Butyrate, Propyl Caproate, Camphene, Terpinolene, Allyl Caproate, p-Cymene, alpha-Phellandrene, Delta-3-Carene, Cedrene Alpha, Caryophyllene Oxide, Geraniol, alpha-Terpinene, Hexenyl Cis 3 Acetate, Nerol, Ocimene, Nerolidol, Ylang-Ylang Oil, Isoborneol, D-camphor, Citronellol, L-Menthol, Sabinene, Eugenol, Guaiene, Citral Diethylacetal, Rice Paper, Arabic Gum, Solvent (Ethanol or Butane)", "layout": "tri"}, {"name": "Bodega Boyz Shorties \u2014 Watermelon Zkittlez", "sku": "Bodega Boyz - Shorties", "flavor": "Watermelon Zkittlez", "metrc_approval": "M00002448285", "servings": "280", "weight": "2.8g", "instructions": "Heat flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCa Isolate, Cannabis Distillate, THCa Diamonds, Ethyl Butyrate, Hexanol, d-Limonene, Ethyl Maltol, Myrcene, beta-Caryophyllene, Ethyl Isovalerate, Methyl-3-Nonenoate, Benzyl Acetate, Hexenyl Cis 3 Acetate, Hexyl Acetate, Melonal, Gamma Decalactone, Orange Oil, Linalool, Ethyl Caproate, 2-Methyl Butyl Acetate, Peru Balsam Oil, Hexyl Caproate, beta-Pinene, Fenchyl Alcohol, alpha-Bisabolol, alpha-Pinene, Terpineol, Triacetin, Ethyl Furanone, Cis-5-Octen-1-Ol, Dihydro beta-Ionone, Camphene, Humulene, Terpinolene, Nerol, Geraniol, Ocimene, D-camphor, Cedrene Alpha, Citral, Citronellol, Trans-2 Cis-6 Nonadienal, Cis 6 Nonenol, Isoborneol, L-Menthol, Sabinene, Rice Paper, Arabic Gum, Solvent (Ethanol or Butane)", "layout": "tri"}, {"name": "Bodega Boyz Shorties \u2014 Guava Zkittlez", "sku": "Bodega Boyz - Shorties", "flavor": "Guava Zkittlez", "metrc_approval": "M00002448286", "servings": "280", "weight": "2.8g", "instructions": "Heat flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCa Isolate, Cannabis Distillate, THCa Diamonds, Ethyl Aceto Acetate, d-Limonene, Myrcene, beta-Caryophyllene, Ethyl Butyrate, Cis-3 Hexenol (Leaf Alcohol), Triacetin, Ethyl Cinnamate 500625, Ethyl Maltol N&A, Methyl Cinnamate, Linalool, Hexyl Butyrate, Cinnamic Alcohol, Orange Oil, beta-Pinene, Carrot Seed Oil, Citral, Gamma Decalactone, Terpineol, Ethyl Furanone, Hexyl Acetate, Hexyl Caproate, Methyl Cis-5 Octenoate, Oil Buchu South African, Strawberry Furanone, alpha-Pinene, Fenchyl Alcohol, alpha-Bisabolol, Benzyl Acetate, Blackcurrant Buds Absolute, Butyric Acid, Cinnamyl Acetate, Hexenyl Cis 3 Acetate, Peru Balsam Oil, Coriander Seed Oil, Methyl Anthranilate, Methyl-3-Nonenoate, Camphene, Terpinolene, 2-Methyl Butyric Acid, 2-Methyl-4-Propyl-1,3-Oxathiane, Humulene, Geraniol, D-camphor, Cedrene Alpha, Ocimene, L-Menthol, 3-Mercapto, Hexanol, Sabinene, Trans-2 Cis-6 Nonadienal, alpha-Phellandrene, alpha-Terpinene, Delta-3-Carene, Isoborneol, Cis 6 Nonenol, Passifloran, Methional, Rice Paper, Arabic Gum, Solvent (Ethanol or Butane)", "layout": "tri"}, {"name": "Bodega Boyz Shorties \u2014 OJ Hi-C", "sku": "Bodega Boyz - Shorties", "flavor": "OJ Hi-C", "metrc_approval": "M00002448349", "servings": "280", "weight": "2.8g", "instructions": "Heat flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCa Isolate, Cannabis Distillate, THCa Diamonds, Orange Oil Organic, Organic Mandarin Oil, Lemon Oil Organic, d-Limonene, Octyl Alcohol, Myrcene, beta-Caryophyllene, Ethyl Butyrate, Linalool, beta-Pinene, Strawberry Furanone, Fenchyl Alcohol, alpha-Bisabolol, Ethyl Maltol, alpha-Pinene, Terpineol, Aldehyde C-8, Decanal, Ethyl Vanillin, Peru Balsam Oil, Nootkatone, Camphene, Humulene, Terpinolene, Citronellal, Nerol, Ethyl Caproate, Geraniol, Vanillin, Maltol, Ocimene, D-camphor, Cedrene Alpha, Citral, Citronellol, Isoborneol, L-Menthol, Sabinene, 1-P-Menthene-8-Thiol, Rice Paper, Arabic Gum, Solvent (Ethanol or Butane)", "layout": "tri"}, {"name": "Bodega Boyz Shorties \u2014 Pineapple Kush", "sku": "Bodega Boyz - Shorties", "flavor": "Pineapple Kush", "metrc_approval": "M00002448350", "servings": "280", "weight": "2.8g", "instructions": "Heat flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCa Isolate, Cannabis Distillate, THCa Diamonds, Myrcene, alpha-Pinene, d-Limonene, beta-Pinene, beta-Caryophyllene, Humulene, Terpinolene, Strawberry Furanone, Allyl Caproate, Citral, Ethyl Caproate, Farnesene, gamma-Terpinene, Lime Terpenes, Nerolidol, Linalool, alpha-Bisabolol, Valencene, Vanillin, Ethyl Propionate, Ethyl Butyrate, Fenchyl Alcohol, Terpineol, Camphene, Aldehyde C18, Ocimene, Cedrene Alpha, L-Menthol, Geraniol, Sabinene, D-camphor, Isoborneol, Nerol, 1-P-Menthene-8-Thiol, Rice Paper, Arabic Gum, Solvent (Ethanol or Butane)", "layout": "tri"}, {"name": "Bodega Boyz Shorties \u2014 Peach Kush", "sku": "Bodega Boyz - Shorties", "flavor": "Peach Kush", "metrc_approval": "M00002448352", "servings": "280", "weight": "2.8g", "instructions": "Heat flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCa Isolate, Cannabis Distillate, THCa Diamonds, d-Limonene, Myrcene, beta-Caryophyllene, 2-(3,7-Dimethyl-2,6-Octadienyl)Cyclopentanone, Linalool, Gamma Decalactone, Ethyl Aceto Acetate, beta-Pinene, Hexenyl Cis 3 Acetate, Ethyl Maltol, Terpineol, Geraniol, alpha-Pinene, Fenchyl Alcohol, Gamma Valerolactone, Delta Decalactone, alpha-Bisabolol, Ethyl Butyrate, gamma-Hexalactone, Beta Damascenone, Geranyl Acetate, 2-Isopropyl-4-Methyl Thiazole, Butyl Butyryl Lactate, Ethyl Levulinate, Ethyl Propionate, Ethyl-2 5-Methyl 4-Hydroxy 3(2H)-Furanone, Oil Buchu South African, Raspberry Ketone, Camphene, Terpinolene, Ethyl Cinnamate, Orange Oil Organic, Humulene, Methyl 2 Nonenoate 1-Peak, D-camphor, Blackcurrant Buds Absolute, Peru Balsam Oil, Cedrene Alpha, 1-Octen-3-ol, 2-Methyl-4-Propyl-1,3-Oxathiane, Cis 6 Nonenol Concentrate, Ocimene, Ethyl Salicylate, L-Menthol, Methyl Thiobutyrate, Sabinene, alpha-Phellandrene, alpha-Terpinene, Delta-3-Carene, Isoborneol, Oct-2-En-4-One, Rice Paper, Arabic Gum, Solvent (Ethanol or Butane)", "layout": "tri"}, {"name": "Bodega Boyz Shorties \u2014 Strawberry Haze", "sku": "Bodega Boyz - Shorties", "flavor": "Strawberry Haze", "metrc_approval": "M00002448353", "servings": "280", "weight": "2.8g", "instructions": "Heat flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCa Isolate, Cannabis Distillate, THCa Diamonds, Ethyl Butyrate, Ethyl Caproate, Ethyl 2-Methyl Butyrate, Beta-Caryophyllene, D-Limonene, Strawberry Furanone, Ethyl Isovalerate, Myrcene, Ethyl Aceto Acetate, Isoamyl Acetate, Aldehyde C-16, Cis-3 Hexenol, Ethyl-3-Phenylglycidate, 2-Methyl-2-Pentenoic Acid, Benzyl Acetate, Citral, Linalool, Humulene, Raspberry Ketone, Beta-Pinene, Valencene, Hexenyl Cis 3 Acetate, Undecalactone Gamma, Peru Balsam Oil, 2-Methyl Butyric Acid, Alpha-Pinene, Ylang-Ylang Oil, Alpha-Bisabolol, Benzaldehyde, Fenchyl Alcohol, 4-Acetoxy-2,5-Dimethyl-3-Furanone, Terpineol, Maltol Isobutyrate, Dihydro Beta-Ionone, Gamma Decalactone, Camphene, Terpinolene, Isobutavan, Benzyl Benzoate, Guaiene, Ethyl Maltol, Geraniol, Eugenol, Delta-3-Carene, Ethyl Furanone, Valerian Root Oil, D-Camphor, Ocimene, Phenyl Ethyl Alcohol, L-Menthol, Cedrene Alpha, Farnesene, Nerol, Sabinene, Isoborneol, Alpha-Phellandrene, Alpha-Terpinene, Rice Paper, Arabic Gum, Solvent (Ethanol or Butane)", "layout": "tri"}, {"name": "Bodega Boyz Shorties \u2014 Lemon OG", "sku": "Bodega Boyz - Shorties", "flavor": "Lemon OG", "metrc_approval": "M00002448465", "servings": "280", "weight": "2.8g", "instructions": "Heat flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCa Isolate, Cannabis Distillate, THCa Diamonds, d-Limonene, Beta-Pinene, Gamma-Terpinene, Citral, Terpinolene, Alpha-Terpinene, P-Cymene, Alpha-Pinene, Nonanal, Camphene, Linalool, Citronellal, Geranyl Acetate, Geraniol, Ethyl Maltol, Alpha-Phellandrene, Decanal, Butyl Butyrate, Fenchyl Alcohol, Citronellyl Formate, Ethyl Butyrate, Rice Paper, Arabic Gum, Solvent (Ethanol or Butane)", "layout": "tri"}, {"name": "Bodega Boyz Shorties \u2014 Mango Gelato", "sku": "Bodega Boyz - Shorties", "flavor": "Mango Gelato", "metrc_approval": "M00002448467", "servings": "280", "weight": "2.8g", "instructions": "Heat flower, inhale smoke. Effects may last up to 4 hours.", "warning": "Cognitive and physical impairment may result from the use of marijuana. Keep out of reach of children.", "ingredients": "Cannabis Flower, THCa Isolate, Cannabis Distillate, THCa Diamonds, Myrcene, Gamma Decalactone, Ethyl Maltol, Benzyl Acetate, Ethyl Furanone, alpha-Pinene, Hexyl Acetate, Ethyl Propionate, beta-Caryophyllene, Strawberry Furanone, Strawberry Furanone Butyrate 2,5-Dimethyl-3-Oxo-(2H)-Fur-4-Yl Butyrate, beta-Pinene, Methyl-2-Nonenoate, Octanoic Acid, Cis-3 Hexenol, Allyl Caproate, Ethyl Levulinate, d-Limonene, Methyl-3-Nonenoate, Octalactone Gamma, Trans-2 Hexenol, Coriander Seed Oil, Ethyl Butyrate, Raspberry Ketone, Humulene, Heliotropine, Hops Essential Oil, Farnesene, Oil Buchu South African, Linalool, Orange Oil, alpha-Bisabolol, Beta Ionone, Dimethyl Sulfide, Cis 6 Nonenol Concentrate, Peru Balsam Oil, Methyl Thiobutyrate, Anethole, Valencene, Beta Damascenone Concentrate, beta-Damascone, Vanillin, Fenchyl Alcohol, Terpineol, Camphene, Cedrene Alpha, 2-Methyl-4-Propyl-1,3-Oxathiane, L-Menthol, Geraniol, Sabinene, D-camphor, Isoborneol, Terpinolene, Nerol, Rice Paper, Arabic Gum, Solvent (Ethanol or Butane)", "layout": "tri"}];
+/* ---------- Compliance Stickers (Black Fox label engine, Avery sheets, jsPDF) ---------- */
+const LABEL_STOCKS={'avery-94202':{name:'Avery 94202 \u2014 1" x 4", 20 per sheet',w:4,h:1,cols:2,rows:10,left:0.15625,top:0.5,pitchX:4.1875,pitchY:1}};
+const LABEL_PAD=6;
+const LABEL_CANNABINOIDS=[['d9_thc','Delta-9-THC'],['thca','Delta-9-THCa'],['cbd','CBD'],['cbda','CBDa'],['cbn','CBN'],['thcv','THCV'],['cbdv','CBDV'],['d8_thc','Delta-8-THC']];
+function fmtUsDate(d){if(!(d instanceof Date)||isNaN(d.getTime()))return '';return String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0')+'/'+d.getFullYear();}
+// Best-by = one year after the test result date
+function labelDates(rec,an){
+  let d=null;const raw=(an&&an.report_date)||rec.result_at||'';
+  if(raw){const t=new Date(/^\d{4}-\d{2}-\d{2}$/.test(raw)?raw+'T00:00:00':raw);if(!isNaN(t.getTime()))d=t;}
+  if(!d)d=new Date();
+  const best=new Date(d.getTime());best.setFullYear(best.getFullYear()+1);
+  return {tested:fmtUsDate(d),bestBy:fmtUsDate(best)};
+}
+function labelData(rec,tpl,licNumber){
+  const an=(rec.coa_analysis&&typeof rec.coa_analysis==='object')?rec.coa_analysis:{},pot=an.potency||{},dts=labelDates(rec,an);
+  const servings=parseFloat(tpl.servings)||0,wt=parseFloat(String(tpl.weight||'').replace(/[^0-9.]/g,''))||0;
+  const canna=LABEL_CANNABINOIDS.map(function(x){const p=parseFloat(pot[x[0]]);
+    return {name:x[1],mg:(isFinite(p)&&p>0&&servings>0&&wt>0)?(p/100*wt*1000/servings).toFixed(2):'ND'};});   // % of package weight -> mg per serving
+  return {resultsHeading:tpl.results_heading||'TEST RESULTS (mg/serving):',infoHeading:tpl.info_heading||'MARIJUANA PRODUCT INFORMATION',approvalLabel:tpl.approval_label||'MARIJUANA PRODUCT APPROVAL NUMBER',
+    layout:tpl.layout||'',approval:tpl.approval_number||'',servings:tpl.servings||'',weight:tpl.weight||'',bestBy:dts.bestBy,producedBy:licNumber||'',
+    testedBy:an.lab_license_number||rec.lab_license||'',testTag:rec.sample_tag||'',canna:canna,ingredients:(tpl.ingredients||'')+(String(tpl.allergens||'').trim()?'  ALLERGENS: '+String(tpl.allergens).trim():''),instructions:tpl.instructions||'',
+    warning:tpl.warning||'',pkgTag:rec.tag||'',lab:an.lab_name||rec.lab_name||'',tested:dts.tested};
+}
+// Paragraphs of {t,b} runs, flowed word by word so bold labels and plain values share a line.
+function labelParagraphs(d){
+  const L=function(t){return {t:t,b:true};},V=function(t){return {t:t};};
+  const pairs=[['Servings/Doses Per Package: ',d.servings],['Best If Used By: ',d.bestBy],['Produced By: ',d.producedBy],['Tested By: ',d.testedBy],['Testing Tag#: ',d.testTag],['Weight: ',d.weight]];
+  const SEP=V('     '),info=[];pairs.forEach(function(p,i){if(i)info.push(SEP);info.push({chunk:[L(p[0]),V(String(p[1]||''))]});});
+  const prof=[L('CANNABINOID PROFILE: ')];
+  d.canna.forEach(function(c,i){if(i)prof.push(V('   '));prof.push({chunk:[L(c.name+': '),V(c.mg+' mg/serving-dose')]});});
+  return [[L('Active and Other Ingredients: '),V(d.ingredients)],[L(d.infoHeading+':')],info,prof,
+    [L('INSTRUCTION AND LENGTH OF EFFECT: '),V(d.instructions)],[L(d.approvalLabel+': '),V(d.approval)],[L('WARNING: '),L(d.warning)]];
+}
+function buildLabelSheet(d,stock,count,startPos,offX,offY,outline){
+  const doc=pdfSafeDoc(new window.jspdf.jsPDF({unit:'pt',format:'letter'}));
+  const per=stock.cols*stock.rows;let fit=true;
+  for(let n=0;n<count;n++){
+    const idx=(startPos-1)+n,page=Math.floor(idx/per),pos=idx%per;
+    while(doc.getNumberOfPages()<=page)doc.addPage();
+    doc.setPage(page+1);
+    const col=pos%stock.cols,row=Math.floor(pos/stock.cols);
+    const x=(stock.left+col*stock.pitchX+(offX||0))*72,y=(stock.top+row*stock.pitchY+(offY||0))*72;
+    if(outline){doc.setDrawColor(190,190,190);doc.setLineWidth(.3);doc.rect(x,y,stock.w*72,stock.h*72);}
+    if(!drawLabel(doc,x,y,stock.w*72,stock.h*72,d))fit=false;
+  }
+  return {doc:doc,fit:fit};
+}
+const SAMPLE_COA={batch_number:'SAMPLE',tag:'1A4000000000000000000000',sample_tag:'1A4000000000000000000001',lab_license:'TES000000',result_at:new Date().toISOString(),
+  coa_analysis:{lab_name:'Sample Lab',potency:{d9_thc:1.2,thca:85.0,cbd:0.1,cbn:0.3}}};
+function tplMatch(list,skuName,flavorName,names){
+  const same=function(a,b){return String(a||'').trim().toLowerCase()===String(b||'').trim().toLowerCase();};
+  return list.find(function(t){return same(names.sku(t.sku_id),skuName)&&t.flavor_id&&same(names.flavor(t.flavor_id),flavorName);})
+    ||list.find(function(t){return same(names.sku(t.sku_id),skuName)&&!t.flavor_id;})||null;
+}
+function useLabelCatalog(st,lic){
+  const[cat,setCat]=useState(null);
+  const sid=st?st.id:'',lid=lic?lic.id:'';
+  const load=useCallback(function(){
+    if(!sid||!lid){setCat({tpls:[],skus:[],flavors:[],err:''});return;}
+    Promise.all([db.get('hx_label_templates','license_id=eq.'+encodeURIComponent(lid)+'&select=*&order=name'),db.get('hx_skus','state_id=eq.'+encodeURIComponent(sid)+'&select=id,name,product_type,active&order=name'),
+      db.get('hx_flavors','state_id=eq.'+encodeURIComponent(sid)+'&select=id,name,sku_id,active&order=name')])
+      .then(function(r){setCat({tpls:(r[0]||[]).filter(function(t){return t.license_id===lid;}),skus:r[1]||[],flavors:r[2]||[],err:''});})
+      .catch(function(e){setCat({tpls:[],skus:[],flavors:[],err:/hx_label_templates/.test(String(e.message))?'Compliance Stickers are not set up yet - run hendrix_step10.sql.':String(e.message||e)});});
+  },[sid,lid]);
+  useEffect(load,[load]);
+  const names={sku:function(id){const k=cat&&cat.skus.find(function(x){return x.id===id;});return k?k.name:'';},flavor:function(id){const f=cat&&cat.flavors.find(function(x){return x.id===id;});return f?f.name:'';}};
+  return {cat:cat,reload:load,names:names};
+}
+function PdfPreview(props){
+  const[url,setUrl]=useState('');
+  useEffect(function(){
+    let u='';
+    try{u=props.make();setUrl(u||'');}catch(e){setUrl('');}
+    return function(){if(u)try{URL.revokeObjectURL(u);}catch(e){}};
+  },[props.dep]);
+  return url?el('iframe',{src:url,title:'Label preview',style:{width:'100%',height:props.h||'60vh',border:'1px solid var(--line)',borderRadius:8,background:'#fff'}}):el('div',{className:'muted'},'Preview unavailable.');
+}
+function StickerModal(props){
+  const rec=props.rec,lic=props.lic;
+  const L=useLabelCatalog(props.st,lic);
+  const[tplId,setTplId]=useState('');
+  const[count,setCount]=useState(20);
+  const[start,setStart]=useState(1);
+  const[offX,setOffXr]=useState(function(){return parseFloat(lsGet('hx_lbl_offX'))||0;});
+  const[offY,setOffYr]=useState(function(){return parseFloat(lsGet('hx_lbl_offY'))||0;});
+  const[outline,setOutline]=useState(true);
+  function setOffX(v){setOffXr(v);lsSet('hx_lbl_offX',String(v));}
+  function setOffY(v){setOffYr(v);lsSet('hx_lbl_offY',String(v));}
+  const[prints,setPrints]=useState(null);
+  const[pmsg,setPmsg]=useState('');
+  const loadPrints=useCallback(function(){
+    db.get('hx_label_prints','test_id=eq.'+encodeURIComponent(rec.id)+'&select=*&order=created_at.desc').then(function(r){setPrints((r||[]).filter(function(x){return x.test_id===rec.id;}));}).catch(function(){setPrints(false);});
+  },[rec.id]);
+  useEffect(loadPrints,[loadPrints]);
+  const list=(L.cat&&L.cat.tpls)||[];
+  const tpl=list.find(function(t){return t.id===tplId;})||tplMatch(list,rec.sku,rec.flavor,L.names);
+  const stock=tpl?(LABEL_STOCKS[tpl.stock]||LABEL_STOCKS['avery-94202']):null,per=stock?stock.cols*stock.rows:20;
+  const d=tpl?labelData(rec,tpl,lic.license_number):null;
+  const res=useMemo(function(){
+    if(!d||!window.jspdf)return null;
+    try{return buildLabelSheet(d,stock,Math.max(1,count),Math.min(Math.max(1,start),per),offX,offY,outline);}catch(e){return null;}
+  },[tpl&&tpl.id,count,start,offX,offY,outline,L.cat]);
+  function download(){
+    const r=buildLabelSheet(d,stock,Math.max(1,count),Math.min(Math.max(1,start),per),offX,offY,false);
+    r.doc.save('Compliance_Labels_'+String(rec.batch_number||rec.id).replace(/[^A-Za-z0-9_-]+/g,'_')+'.pdf');
+    setPmsg('');
+    db.insert('hx_label_prints',{id:newId('lp'),state_id:lic.state_id,license_id:lic.id,test_id:rec.id,template_id:tpl.id,batch_number:rec.batch_number||'',tag:rec.tag||'',sku:rec.sku||'',flavor:rec.flavor||'',
+      count:Math.max(1,count),start_pos:Math.min(Math.max(1,start),per),printed_by:(ACC.profile&&(ACC.profile.name||ACC.profile.email))||''})
+      .then(loadPrints).catch(function(e){setPmsg(/hx_label_prints/.test(String(e.message))?'Labels downloaded. The print log is not set up yet - run hendrix_step12.sql.':'Labels downloaded, but the print was not logged: '+String(e.message||e));});
+  }
+  const printedTotal=(prints||[]).reduce(function(a,x){return a+(x.count||0);},0);
+  const missing=d?[!d.approval&&'approval number (edit the label template)',!d.ingredients&&'ingredients',!d.testTag&&'sample testing tag (add it on the testing record)',
+    !d.testedBy&&'Tested By (lab license # not found \u2014 Re-read COA, or type it in Update)',d.canna.every(function(c){return c.mg==='ND';})&&'cannabinoid results'].filter(Boolean):[];
+  const num=function(v,set,step,w){return el('input',{type:'number',step:step||1,value:v,style:{width:w||90},onChange:function(e){set(step?parseFloat(e.target.value)||0:parseInt(e.target.value,10)||1);}});};
+  return el(Modal,{title:'Compliance stickers \u00b7 '+(rec.batch_number||'')+' \u00b7 '+(rec.sku||''),wide:true,onClose:props.onClose},
+    !window.jspdf&&el('div',{className:'msg err'},'The PDF library did not load. Check the internet connection and reload.'),
+    !L.cat?el('div',{className:'muted'},'Loading templates...'):L.cat.err?el('div',{className:'msg err'},L.cat.err):
+    !tpl?el('div',null,el('div',{style:{marginBottom:8}},'There is no label template for "'+(rec.sku||'this product')+(rec.flavor?' \u00b7 '+rec.flavor:'')+'" under '+lic.name+' yet. Pick one, or add one on the Compliance Stickers page.'),
+      el('select',{value:tplId,onChange:function(e){setTplId(e.target.value);}},el('option',{value:''},'Choose template...'),list.map(function(t){return el('option',{key:t.id,value:t.id},t.name);}))):
+    el('div',null,
+      el('div',{className:'row',style:{alignItems:'flex-end',marginBottom:10}},
+        el(Field,{label:'Template'},el('select',{value:tpl.id,onChange:function(e){setTplId(e.target.value);}},list.map(function(t){return el('option',{key:t.id,value:t.id},t.name);}))),
+        el(Field,{label:'Labels to print'},num(count,setCount)),
+        el(Field,{label:'Start at position (1-'+per+')'},num(start,setStart)),
+        el(Field,{label:'Shift right (in)'},num(offX,setOffX,0.01)),
+        el(Field,{label:'Shift down (in)'},num(offY,setOffY,0.01)),
+        el('label',{className:'ck',style:{marginBottom:12}},el('input',{type:'checkbox',checked:outline,onChange:function(e){setOutline(e.target.checked);}}),el('span',null,'Outlines in preview'))),
+      el('div',{className:'row',style:{marginBottom:8}},
+        el('button',{className:'btn ghost',onClick:function(){buildAlignmentSheet(stock,offX,offY).save('Label_Alignment_Test.pdf');}},'Alignment test sheet'),
+        el('button',{className:'btn',onClick:download},'Download PDF')),
+      el('div',{className:'muted',style:{fontSize:12,marginBottom:8}},stock.name+'. Print at 100% / "Actual size" on US Letter, never "Fit to page". First print the alignment sheet on plain paper and hold it over a label sheet against the light; use Shift right / down until the boxes sit inside the labels (remembered on this computer). Start position lets you use a partly used sheet.'),
+      pmsg&&el('div',{className:'msg err'},pmsg),
+      prints&&prints.length>0&&el('div',{className:'card',style:{padding:'8px 12px',marginBottom:8}},
+        el('div',{className:'k',style:{marginBottom:4}},'Print log for this tag (CSQ 2A.12.8): '+printedTotal+' label'+(printedTotal===1?'':'s')+' in '+prints.length+' print'+(prints.length===1?'':'s')),
+        prints.slice(0,5).map(function(x){return el('div',{key:x.id,className:'muted',style:{fontSize:12}},new Date(x.created_at).toLocaleString()+' \u00b7 '+x.count+' labels \u00b7 '+(x.printed_by||'-'));})),
+      missing.length>0&&el('div',{className:'msg err'},'Missing on this label: '+missing.join(', ')+'.'),
+      res&&!res.fit&&el('div',{className:'msg err'},'The text is too long to fit a 1" label even at the smallest size \u2014 shorten the ingredients or warning in the template.'),
+      res&&el(PdfPreview,{dep:[tpl.id,count,start,offX,offY,outline].join('|'),make:function(){return res.doc.output('bloburl');}})));
+}
+function TemplateEditor(props){
+  const t=props.tpl||{},cat=props.cat;
+  const[f,setF]=useState({name:t.name||'',sku_id:t.sku_id||'',flavor_id:t.flavor_id||'',stock:t.stock||'avery-94202',layout:t.layout||'',approval_number:t.approval_number||'',servings:t.servings||'',weight:t.weight||'',
+    instructions:t.instructions||'',ingredients:t.ingredients||'',allergens:t.allergens||'',warning:t.warning||'',info_heading:t.info_heading||'MARIJUANA PRODUCT INFORMATION',approval_label:t.approval_label||'MARIJUANA PRODUCT APPROVAL NUMBER',results_heading:t.results_heading||'TEST RESULTS (mg/serving):'});
+  const[err,setErr]=useState('');
+  const[adv,setAdv]=useState(false);
+  const fl=cat.flavors.filter(function(x){return x.sku_id===f.sku_id;});
+  function set(k,v){setF(function(p){const n={...p,[k]:v};if(k==='sku_id')n.flavor_id='';return n;});}
+  async function save(){
+    setErr('');
+    if(!f.sku_id){setErr('Choose the SKU.');return;}
+    const sk=cat.skus.find(function(k){return k.id===f.sku_id;}),fv=cat.flavors.find(function(x){return x.id===f.flavor_id;});
+    const rec={...f,flavor_id:f.flavor_id||null,name:f.name.trim()||((sk?sk.name:'')+(fv?' \u2014 '+fv.name:''))};
+    try{
+      if(t.id)await dbSave('hx_label_templates',t.id,rec);
+      else await dbSave('hx_label_templates',null,{...rec,id:newId('lbl'),state_id:props.st.id,license_id:props.lic.id});
+      props.onDone();
+    }catch(e){setErr(/hx_label_templates_one/.test(String(e.message))?'This SKU / flavor already has a template under this license.':String(e.message||e));}
+  }
+  const inp=function(k,l,ph){return el(Field,{key:k,label:l},el('input',{value:f[k],placeholder:ph||'',onChange:function(e){set(k,e.target.value);}}));};
+  const area=function(k,l,ph){return el(Field,{key:k,label:l},el('textarea',{value:f[k],placeholder:ph||'',style:{minHeight:70},onChange:function(e){set(k,e.target.value);}}));};
+  const prev=window.jspdf&&f.sku_id?(function(){try{return buildLabelSheet(labelData(SAMPLE_COA,f,props.lic.license_number),LABEL_STOCKS[f.stock]||LABEL_STOCKS['avery-94202'],1,1,0,0,true);}catch(e){return null;}})():null;
+  return el(Modal,{title:(t.id?'Edit':'New')+' label template \u00b7 '+props.lic.name,wide:true,onClose:props.onClose},
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}},
+      el(Field,{label:'SKU *'},el('select',{style:{width:'100%'},value:f.sku_id,onChange:function(e){set('sku_id',e.target.value);}},el('option',{value:''},'Select...'),cat.skus.map(function(k){return el('option',{key:k.id,value:k.id},k.name+' ('+ptName(k.product_type)+')');}))),
+      el(Field,{label:'Flavor'},el('select',{style:{width:'100%'},value:f.flavor_id,onChange:function(e){set('flavor_id',e.target.value);}},el('option',{value:''},'Any flavor'),fl.map(function(x){return el('option',{key:x.id,value:x.id},x.name);}))),
+      inp('name','Template name','Auto-fills from SKU + flavor'),
+      el(Field,{label:'Label sheet'},el('select',{style:{width:'100%'},value:f.stock,onChange:function(e){set('stock',e.target.value);}},Object.keys(LABEL_STOCKS).map(function(k){return el('option',{key:k,value:k},LABEL_STOCKS[k].name);}))),
+      el(Field,{label:'Layout'},el('select',{style:{width:'100%'},value:f.layout,onChange:function(e){set('layout',e.target.value);}},el('option',{value:''},'Standard (paragraphs)'),el('option',{value:'tri'},'Three columns'))),
+      inp('approval_number','Product approval number','e.g. M00002721406'),inp('servings','Servings / doses per package','e.g. 200'),inp('weight','Weight','e.g. 2g')),
+    area('instructions','Instruction and length of effect'),area('ingredients','Active and other ingredients','Exactly as it should print'),area('allergens','Allergen declaration (CSQ 2A.12.7)','e.g. Contains: milk, soy, tree nuts (coconut). Leave blank if none; printed after the ingredients'),area('warning','Warning','Required warning text'),
+    el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();setAdv(!adv);}},adv?'Hide heading wording':'Change heading wording (for other states)'),
+    adv&&el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))',gap:10,marginTop:8}},inp('info_heading','Product information heading'),inp('approval_label','Approval number label'),inp('results_heading','Test results heading (three-column)')),
+    prev&&el('div',{style:{marginTop:12}},el('div',{className:'k',style:{marginBottom:6}},'Preview with sample results'),!prev.fit&&el('div',{className:'msg err'},'Too much text for a 1" label \u2014 shorten the ingredients or warning.'),
+      el(PdfPreview,{h:'34vh',dep:JSON.stringify(f),make:function(){return prev.doc.output('bloburl');}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end',marginTop:10}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',onClick:save},'Save template')));
+}
+function StickersPage(props){
+  const st=props.state,lic=props.license;
+  const L=useLabelCatalog(st,lic);
+  const[modal,setModal]=useState(null);
+  const[msg,setMsg]=useState('');
+  const[q,setQ]=useState('');
+  if(!st||!lic)return el('div',null,el('h1',null,'Compliance ',el('span',{className:'g'},'Stickers')),el('div',{className:'empty'},'Pick a state and a license at the top first.'));
+  const canE=can('stickers',2),canF=can('stickers',3),cat=L.cat;
+  async function importBF(){
+    setMsg('');
+    const same=function(a,b){return String(a||'').trim().toLowerCase()===String(b||'').trim().toLowerCase();};
+    const add=[],skipped={};
+    BF_LABEL_TEMPLATES.forEach(function(b){
+      const k=cat.skus.find(function(x){return same(x.name,b.sku);});
+      if(!k){skipped['SKU "'+b.sku+'" not in Products']=1;return;}
+      let fid=null;
+      if(b.flavor){const fv=cat.flavors.find(function(x){return x.sku_id===k.id&&same(x.name,b.flavor);});if(!fv){skipped['flavor "'+b.flavor+'" not on '+k.name]=1;return;}fid=fv.id;}
+      if(cat.tpls.some(function(t){return t.sku_id===k.id&&(t.flavor_id||null)===fid;})||add.some(function(t){return t.sku_id===k.id&&t.flavor_id===fid;}))return;
+      add.push({id:newId('lbl'),state_id:st.id,license_id:lic.id,sku_id:k.id,flavor_id:fid,name:b.name,stock:'avery-94202',layout:b.layout||'',approval_number:b.metrc_approval||'',
+        servings:b.servings||'',weight:b.weight||'',instructions:b.instructions||'',ingredients:b.ingredients||'',warning:b.warning||''});
+    });
+    try{
+      if(add.length)await db.insert('hx_label_templates',add);
+      const sk=Object.keys(skipped);
+      setMsg('Imported '+add.length+' Black Fox template'+(add.length===1?'':'s')+'.'+(sk.length?' Skipped: '+sk.slice(0,6).join('; ')+(sk.length>6?' and '+(sk.length-6)+' more':'')+'.':''));
+      L.reload();
+    }catch(e){setMsg(String(e.message||e));}
+  }
+  async function del(t){if(!window.confirm('Delete template "'+t.name+'"?'))return;try{await db.remove('hx_label_templates',t.id);L.reload();}catch(e){setMsg(String(e.message||e));}}
+  const tpls=cat?cat.tpls.filter(function(t){return !q||(t.name+' '+L.names.sku(t.sku_id)+' '+t.approval_number).toLowerCase().indexOf(q.toLowerCase())>=0;}):[];
+  const bySku={};tpls.forEach(function(t){(bySku[t.sku_id]=bySku[t.sku_id]||[]).push(t);});
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,'Compliance ',el('span',{className:'g'},'Stickers')),el('div',{className:'sub'},st.name+'  \u00b7  '+lic.name+'  \u00b7  Label templates for this license. Print stickers from a Testing record that has a COA.')),
+      canE&&el('div',{className:'row'},el('button',{className:'btn ghost',disabled:!cat||!!cat.err,onClick:importBF},'Import Black Fox templates'),el('button',{className:'btn',disabled:!cat||!!cat.err,onClick:function(){setModal({edit:{}});}},'+ New template'))),
+    msg&&el('div',{className:'msg '+(/Imported/.test(msg)?'ok':'err')},msg),
+    !cat?el('div',{className:'muted'},'Loading...'):cat.err?el('div',{className:'msg err'},cat.err):
+    el('div',null,
+      el('div',{className:'row',style:{marginBottom:12}},el('input',{style:{maxWidth:300},placeholder:'Search templates...',value:q,onChange:function(e){setQ(e.target.value);}}),el('span',{className:'muted'},tpls.length+' template'+(tpls.length===1?'':'s'))),
+      !tpls.length?el('div',{className:'empty'},'No label templates for '+lic.name+' yet.'+(canE?' Click "+ New template", or "Import Black Fox templates" to bring in the 26 Black Fox templates for SKUs and flavors that exist in Products.':'')):
+      Object.keys(bySku).map(function(sid2){return el('div',{key:sid2,style:{marginBottom:16}},el('div',{className:'secth'},L.names.sku(sid2)||'Unknown SKU'),
+        el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))'}},bySku[sid2].map(function(t){
+          return el('div',{key:t.id,className:'card',style:{marginBottom:0}},
+            el('div',{style:{fontWeight:700}},t.name),
+            el('div',{className:'muted',style:{fontSize:12}},(t.flavor_id?L.names.flavor(t.flavor_id):'Any flavor')+'  \u00b7  '+(t.layout==='tri'?'Three columns':'Standard')),
+            el('div',{style:{fontSize:12,marginTop:6}},'Approval # '+(t.approval_number||'\u2014')+'  \u00b7  '+(t.servings||'?')+' servings  \u00b7  '+(t.weight||'?')),
+            !t.ingredients&&el('div',{className:'badge bad',style:{marginTop:6}},'No ingredients'),
+            el('div',{className:'row',style:{marginTop:10}},canE&&el('button',{className:'btn ghost sm',onClick:function(){setModal({edit:t});}},'Edit'),
+              canF&&el('button',{className:'btn danger sm',onClick:function(){del(t);}},'Delete')));
+        })));})),
+    modal&&modal.edit&&el(TemplateEditor,{tpl:modal.edit.id?modal.edit:null,cat:cat,st:st,lic:lic,onClose:function(){setModal(null);},onDone:function(){setModal(null);L.reload();}}));
+}
+
+/* ---------- App shell ---------- */
+function App(){
+  const[,force]=useState(0);
+  const rerender=function(){force(function(n){return n+1;});};
+  const[phase,setPhase]=useState('boot'); // boot | connect | login | pending | ready
+  const[profile,setProfile]=useState(null);
+  const[states,setStates]=useState([]);
+  const[licenses,setLicenses]=useState([]);
+  const[page,setPage]=useState('home');
+  const[stateId,setStateId]=useState(lsGet('hx_state')||'');
+  const[licId,setLicId]=useState(lsGet('hx_lic')||'');
+  const[loadErr,setLoadErr]=useState('');
+  const[ruleCount,setRuleCount]=useState(null);
+  useEffect(function(){
+    if(phase!=='ready'||!stateId){setRuleCount(null);return;}
+    let dead=false;setRuleCount(null);
+    db.get('hx_rules','state_id=eq.'+encodeURIComponent(stateId)+'&select=id').then(function(r){if(!dead)setRuleCount((r||[]).length);}).catch(function(){if(!dead)setRuleCount(null);});
+    return function(){dead=true;};
+  },[phase,stateId]);
+
+  const loadData=useCallback(async function(){
+    const s=await db.get('hx_states','select=*&order=name');
+    const l=await db.get('hx_licenses','select=*&order=name');
+    setStates(s||[]);setLicenses(l||[]);
+  },[]);
+
+  const boot=useCallback(async function(){
+    setLoadErr('');
+    if(!cfg().ok){setPhase('connect');return;}
+    if(!SESSION||!(await freshToken())){setPhase('login');return;}
+    try{
+      const p=await db.get('hx_profiles','id=eq.'+SESSION.user.id+'&select=*');
+      if(!p||!p[0]){setLoadErr('Your profile was not found. Make sure hendrix_setup.sql was run in this Supabase project.');setPhase('login');saveSession(null);return;}
+      setProfile(p[0]);ACC.profile=p[0];
+      if(!p[0].approved){setPhase('pending');return;}
+      try{ACC.roles=(await db.get('hx_roles','select=*&order=sort,name'))||[];}catch(x){ACC.roles=[];}
+      await loadData();setPhase('ready');
+    }catch(e){setLoadErr(String(e.message||e));setPhase('login');}
+  },[loadData]);
+  useEffect(function(){boot();},[boot]);
+
+  // keep the selected state/license valid; licenses always belong to the selected state
+  useEffect(function(){
+    if(phase!=='ready')return;
+    let sid=stateId;
+    if(!states.some(function(s){return s.id===sid;}))sid=states[0]?states[0].id:'';
+    const ls=licenses.filter(function(l){return l.state_id===sid&&l.active&&licOk(l.id);});
+    let lid=licId;
+    if(!ls.some(function(l){return l.id===lid;}))lid=ls[0]?ls[0].id:'';
+    if(sid!==stateId){setStateId(sid);lsSet('hx_state',sid);}
+    if(lid!==licId){setLicId(lid);lsSet('hx_lic',lid);}
+  },[phase,states,licenses,stateId,licId]);
+
+  if(phase==='boot')return el('div',{className:'auth'},el(Brand));
+  if(phase==='connect')return el(ConnectScreen,{onDone:boot});
+  if(phase==='login')return el('div',null,loadErr&&el('div',{className:'msg err',style:{margin:12}},loadErr),
+    el(LoginScreen,{onAuthed:boot,onReconnect:function(){setPhase('connect');rerender();}}));
+  if(phase==='pending')return el('div',{className:'auth'},el('div',{className:'box'},el(Brand),
+    el('h2',{style:{marginTop:18}},'Waiting for approval'),
+    el('p',{className:'muted'},'Your account was created. An admin needs to approve it before you can enter.'),
+    el('div',{className:'row'},el('button',{className:'btn',onClick:boot},'Check again'),
+      el('button',{className:'btn ghost',onClick:function(){saveSession(null);setProfile(null);ACC.profile=null;ACC.roles=[];setPhase('login');}},'Sign out'))));
+
+  const st=states.find(function(s){return s.id===stateId;})||null;
+  const stLics=licenses.filter(function(l){return st&&l.state_id===st.id&&l.active&&licOk(l.id);});
+  const lic=stLics.find(function(l){return l.id===licId;})||null;
+  const isAdmin=profile.role==='admin';
+  function pickState(id){
+    setStateId(id);lsSet('hx_state',id);
+    const first=licenses.filter(function(l){return l.state_id===id&&l.active&&licOk(l.id);})[0];
+    const lid=first?first.id:'';setLicId(lid);lsSet('hx_lic',lid);
+  }
+  function pickLic(id){setLicId(id);lsSet('hx_lic',id);}
+
+  const nav=[{id:'home',label:'Dashboard'},{id:'locations',label:'States and Licenses'}];
+  if(can('rulebook',1))nav.push({id:'rulebook',label:(st?st.name+' ':'')+'Rulebook'});
+  if(can('standards',1))nav.push({id:'standards',label:'Standards (CSQ)'});
+  if(isAdmin)nav.push({id:'team',label:'Team and Access'},{id:'roles',label:'Roles'});
+  if(can('audit',1))nav.push({id:'audit',label:'Audit Trail'});
+  const anyLog=LOG_TYPES.some(function(t){return can(LOG_MOD[t.id],1);});
+  const mods=[can('qms',1)&&['qms','QMS'],can('complaints',1)&&['complaints','Complaints'],can('intaudits',1)&&['intaudits','Internal Audits'],can('training',1)&&['training','Training'],can('sops',1)&&['sops','SOPs'],can('suppliers',1)&&['suppliers','Suppliers'],can('receiving',1)&&['receiving','Receiving'],can('holds',1)&&['holds','Hold and Release'],can('shipping',1)&&['shipping','Shipping'],can('recall',1)&&['recall','Traceability and Recall'],can('logs_visitor',1)&&['visitors','Visitor Log'],anyLog&&['logs','Facility Logs'],(can('products',1)||can('formbank',1)||can('cogs',1))&&['products','Products'],can('batch',1)&&['batches','Batch Tracker'],can('testing',1)&&['testing','Testing'],can('stickers',1)&&['stickers','Compliance Stickers']].filter(Boolean);
+  let body;
+  if(page==='locations')body=el(Locations,{profile:profile,states:states,licenses:licenses,reload:loadData,openRulebook:function(id){pickState(id);setPage('rulebook');}});
+  else if(page==='visitors'&&can('logs_visitor',1))body=el(VisitorLog,{key:licId,state:st,license:lic});
+  else if(page==='stickers'&&can('stickers',1))body=el(StickersPage,{key:licId,state:st,license:lic});
+  else if(page==='testing'&&can('testing',1))body=el(TestingPage,{key:licId,state:st,license:lic,profile:profile});
+  else if(page==='batches'&&can('batch',1))body=el(BatchTracker,{key:licId,state:st,license:lic,profile:profile});
+  else if(page==='products')body=el(Products,{key:stateId,state:st,licenses:licenses,profile:profile});
+  else if(page==='logs')body=el(FacilityLogs,{key:licId,state:st,license:lic,profile:profile});
+  else if(page==='rulebook'&&can('rulebook',1))body=el(Rulebook,{key:stateId,profile:profile,state:st,onCount:setRuleCount});
+  else if(page==='team'&&isAdmin)body=el(Team,{profile:profile,states:states,licenses:licenses,onSelfChange:boot});
+  else if(page==='roles'&&isAdmin)body=el(Roles);
+  else if(page==='audit'&&can('audit',1))body=el(AuditTrail,{state:st});
+  else if((page==='receiving'&&can('receiving',1))||(page==='inventory'&&can('receiving',1))||(page==='holds'&&can('holds',1))||(page==='shipping'&&can('shipping',1)))body=el(MatPage,{key:licId,state:st,license:lic,tab:page,go:setPage});
+  else if(page==='complaints'&&can('complaints',1))body=el(ComplaintsPage,{key:licId,state:st,license:lic,go:setPage});
+  else if(page==='intaudits'&&can('intaudits',1))body=el(AuditsPage,{key:licId,state:st,license:lic,go:setPage});
+  else if(page==='recall'&&can('recall',1))body=el(RecallPage,{key:licId,state:st,license:lic,go:setPage});
+  else if(page==='suppliers'&&can('suppliers',1))body=el(SuppliersPage,{key:licId,state:st,license:lic,licenses:licenses,go:setPage});
+  else if(page==='training'&&can('training',1))body=el(TrainingPage,{key:licId,state:st,license:lic,go:setPage});
+  else if(page==='qms'&&can('qms',1))body=el(QmsPage,{key:licId,state:st,license:lic,go:setPage});
+  else if(page==='sops'&&can('sops',1))body=el(SopsPage,{key:licId,state:st,license:lic,licenses:licenses});
+  else if(page==='standards'&&can('standards',1))body=el(StandardsPage,{key:licId,state:st,license:lic,go:setPage});
+  else body=el(Dashboard,{profile:profile,states:states,licenses:licenses,state:st,license:lic,go:setPage,ruleCount:ruleCount});
+
+  return el('div',{className:'shell'},
+    el('div',{className:'top'},
+      el(Brand),
+      el('div',{className:'sp'}),
+      el('div',{className:'ctx'},
+        el('label',null,'State'),
+        el('select',{value:stateId,onChange:function(e){pickState(e.target.value);},disabled:!states.length},
+          !states.length&&el('option',{value:''},'No states yet'),
+          states.map(function(s){return el('option',{key:s.id,value:s.id},s.name);})),
+        el('label',null,'License'),
+        el('select',{value:licId,onChange:function(e){pickLic(e.target.value);},disabled:!stLics.length},
+          !stLics.length&&el('option',{value:''},'No licenses'),
+          stLics.map(function(l){return el('option',{key:l.id,value:l.id},l.name+(l.license_number?' ('+l.license_number+')':''));}))),
+      el('div',{className:'row'},
+        el('span',{className:'muted',style:{fontSize:12}},profile.name||profile.email),
+        el('button',{className:'btn ghost sm',onClick:function(){saveSession(null);setProfile(null);ACC.profile=null;ACC.roles=[];setPhase('login');}},'Sign out'))),
+    el('div',{className:'side'},el('div',{className:'nav'},
+      el('div',{className:'grp'},'Hendrix'),
+      nav.map(function(n){return el('button',{key:n.id,className:page===n.id?'on':'',onClick:function(){setPage(n.id);}},n.label);}),
+      el('div',{className:'grp'},'Modules'),
+      mods.map(function(m){return el('button',{key:m[0],className:page===m[0]?'on':'',onClick:function(){setPage(m[0]);}},m[1]);}))),
+    el('div',{className:'main'},body));
+}
+
+{
+  const kq=new URLSearchParams(window.location.search).get('kiosk');
+  ReactDOM.createRoot(document.getElementById('root')).render(el(kq==='visitor'?KioskVisitor:kq==='log'?KioskLog:App));
+}
+})();
+</script>
+</body>
+</html>
