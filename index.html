@@ -170,7 +170,7 @@ async function sb(path,opt){
   if(!r.ok){
     const m=(j&&(j.message||j.hint||j.details))||txt||('Error '+r.status);
     if(/schema cache|Could not find the table|relation .* does not exist/i.test(m)&&!/Could not find the '[A-Za-z0-9_]+' column/.test(m)){
-      const step=/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
+      const step=/hx_lots|hx_lot_uses|hx_holds|hx_shipments/.test(m)?'hendrix_step17.sql':/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
       throw new Error('Database tables are missing - run '+step+' in the Hendrix Supabase project.');
     }
     if(/row-level security|permission denied/i.test(m))throw new Error('Not allowed - your access level does not allow this here. Ask a system admin.');
@@ -279,7 +279,7 @@ function LoginScreen(props){
 }
 
 /* ---------- Dashboard ---------- */
-const MODULES_SOON=['Receiving and Recall','Internal Audits','HACCP','Time Clock and Badges','Production Planner'];
+const MODULES_SOON=['Traceability and Recall','Internal Audits','HACCP','Time Clock and Badges','Production Planner'];
 function Dashboard(props){
   const st=props.state,lic=props.license;
   const isAdmin=props.profile.role==='admin';
@@ -306,6 +306,7 @@ function Dashboard(props){
       el(TrainingDashCard,{license:lic,go:props.go}),
       el(SopDashCard,{license:lic,go:props.go}),
       el(SupplierDashCard,{license:lic,go:props.go}),
+      el(MatDashCard,{license:lic,go:props.go}),
       el(StdDashCard,{license:lic,go:props.go})),
     !lic&&isAdmin&&el('div',{className:'empty',style:{marginBottom:14}},'This state has no license yet. ',el('a',{href:'#',style:{color:'var(--gold-hi)'},onClick:function(e){e.preventDefault();props.go('locations');}},'Add one')),
     el('div',{className:'card'},el('h3',null,'Coming next'),
@@ -1934,7 +1935,7 @@ function Products(props){
 /* ---------- Audit trail: history, void, admin page ----------
    The database writes every change to hx_audit_log (append-only). Records are never deleted:
    they are voided with a reason. Every change to a record needs a reason for change. */
-const AUDIT_AREAS={hx_suppliers:'Supplier',hx_supplier_reviews:'Supplier review',hx_training_courses:'Training course',hx_training_records:'Training record',hx_deviations:'Deviation',hx_capas:'CAPA',hx_sops:'SOP',hx_sop_acks:'SOP signature',hx_label_prints:'Sticker print',hx_standards:'Standards',hx_standard_clauses:'Standard clauses',hx_license_standards:'Standard adoption',hx_conformance:'Standard conformance',hx_label_templates:'Label templates',hx_tests:'Testing record',hx_roles:'Roles',hx_batches:'Batch record',hx_facility_log:'Facility log entry',hx_visitor_log:'Visitor log',hx_log_lists:'Facility log lists',hx_rules:'Rulebook',
+const AUDIT_AREAS={hx_lots:'Received lot',hx_lot_uses:'Lot use',hx_holds:'Hold',hx_shipments:'Shipment',hx_suppliers:'Supplier',hx_supplier_reviews:'Supplier review',hx_training_courses:'Training course',hx_training_records:'Training record',hx_deviations:'Deviation',hx_capas:'CAPA',hx_sops:'SOP',hx_sop_acks:'SOP signature',hx_label_prints:'Sticker print',hx_standards:'Standards',hx_standard_clauses:'Standard clauses',hx_license_standards:'Standard adoption',hx_conformance:'Standard conformance',hx_label_templates:'Label templates',hx_tests:'Testing record',hx_roles:'Roles',hx_batches:'Batch record',hx_facility_log:'Facility log entry',hx_visitor_log:'Visitor log',hx_log_lists:'Facility log lists',hx_rules:'Rulebook',
   hx_states:'States',hx_licenses:'Licenses',hx_profiles:'Team and access',hx_skus:'SKUs',hx_flavors:'Flavors',hx_formulations:'Formulations',hx_cost_library:'Ingredient prices'};
 const AUDIT_SKIP=['voided_by','voided_at','updated_at','edit_reason'];
 function auditVal(v){
@@ -2598,6 +2599,9 @@ const ACCESS_MODULES=[
   {id:'sops',label:'SOPs',grp:'General',help:'View = read and sign SOPs / Edit = write drafts (manual or AI) / Full = approve and publish, revise, archive, delete drafts'},
   {id:'standards',label:'Standards (CSQ)',grp:'General',help:'View the standard and conformance / update conformance, evidence and files / add the standard, adopt it for a license, set the target level'},
   {id:'suppliers',label:'Suppliers',grp:'Production',help:'View the approved supplier list / add and edit suppliers and credentials / approve, review, suspend, disqualify, delete never-approved'},
+  {id:'receiving',label:'Receiving and Inventory',grp:'Production',help:'View lots and stock / receive lots, record use in batches / accept or reject lots, void use records'},
+  {id:'holds',label:'Hold and Release',grp:'Production',help:'View holds / put a lot, batch, package or return on hold / decide holds (release, destroy, return, rework)'},
+  {id:'shipping',label:'Shipping',grp:'Production',help:'View shipments / record shipments and deliveries / cancel shipments'},
   {id:'batch',label:'Batch Tracker',grp:'Production',help:'View / create and continue (fill blanks) / change filled values with a reason and void'},
   {id:'products',label:'Products (SKUs and flavors)',grp:'Production',help:'View / add and edit / delete'},
   {id:'formbank',label:'Formulation Bank (recipes)',grp:'Production',help:'View / add and edit / delete'},
@@ -2759,18 +2763,18 @@ function Team(props){
 const LOGS_PROD=['logs_sanitation','logs_waste','logs_scale','logs_equipment','logs_temp','logs_env'];
 function pm(o,list,lv){const x={...o};(list||[]).forEach(function(k){x[k]=lv;});return x;}
 const STARTER_ROLES=[
-  ['General Manager','Leadership. Edit everywhere; Full on batches and every log; sees recipes, prices and the audit trail.',{training:'admin',qms:'admin',sops:'admin',suppliers:'admin',rulebook:'editor',standards:'editor',audit:'read',batch:'admin',testing:'admin',stickers:'admin',products:'editor',formbank:'read',cogs:'read',logs:'admin'}],
-  ['Assistant of General Manager','Leadership support. Edit on batches, products and every log; sees recipes and the audit trail.',{training:'editor',qms:'editor',sops:'editor',suppliers:'editor',rulebook:'editor',standards:'read',audit:'read',batch:'editor',testing:'editor',products:'editor',formbank:'read',logs:'editor'}],
-  ['Compliance Officer','Full on every log, the rulebook and standards (CSQ); sees batches, products and the audit trail.',{training:'admin',qms:'admin',sops:'admin',suppliers:'admin',rulebook:'admin',standards:'admin',audit:'read',logs:'admin',batch:'read',testing:'admin',stickers:'admin',products:'read'}],
+  ['General Manager','Leadership. Edit everywhere; Full on batches and every log; sees recipes, prices and the audit trail.',{training:'admin',qms:'admin',sops:'admin',suppliers:'admin',receiving:'admin',holds:'admin',shipping:'admin',rulebook:'editor',standards:'editor',audit:'read',batch:'admin',testing:'admin',stickers:'admin',products:'editor',formbank:'read',cogs:'read',logs:'admin'}],
+  ['Assistant of General Manager','Leadership support. Edit on batches, products and every log; sees recipes and the audit trail.',{training:'editor',qms:'editor',sops:'editor',suppliers:'editor',receiving:'editor',holds:'editor',shipping:'editor',rulebook:'editor',standards:'read',audit:'read',batch:'editor',testing:'editor',products:'editor',formbank:'read',logs:'editor'}],
+  ['Compliance Officer','Full on every log, the rulebook and standards (CSQ); sees batches, products and the audit trail.',{training:'admin',qms:'admin',sops:'admin',suppliers:'admin',receiving:'admin',holds:'admin',shipping:'read',rulebook:'admin',standards:'admin',audit:'read',logs:'admin',batch:'read',testing:'admin',stickers:'admin',products:'read'}],
   ['Security Manager','Full on the security and visitor logs.',{training:'editor',qms:'editor',sops:'read',rulebook:'read',logs_security:'admin',logs_visitor:'admin'}],
   ['Security Officer','Fills the security and visitor logs.',{training:'read',qms:'read',sops:'read',rulebook:'read',logs_security:'editor',logs_visitor:'editor'}],
   ['Sanitation','Fills the sanitation, waste and pest control logs.',{training:'read',qms:'read',sops:'read',logs_sanitation:'editor',logs_waste:'editor',logs_pest:'editor'}],
-  ['Team Member','Continues batches; fills the sanitation and temp / humidity logs.',{training:'read',qms:'read',sops:'read',batch:'editor',products:'read',logs_temp:'editor',logs_sanitation:'editor'}],
-  ['Inventory Manager','Sees products and batches; fills the waste log.',{training:'editor',qms:'editor',sops:'read',suppliers:'editor',products:'read',batch:'read',logs_waste:'editor'}],
-  ['Extraction Manager','Full on batches; fills the scale, equipment and temp / humidity logs.',{training:'editor',qms:'editor',sops:'editor',suppliers:'read',batch:'admin',testing:'editor',products:'read',formbank:'read',logs_scale:'editor',logs_equipment:'editor',logs_temp:'editor'}],
-  ['Production Manager','Full on batches; edits products; fills the production logs.',pm({batch:'admin',testing:'editor',stickers:'editor',products:'editor',formbank:'read',rulebook:'read',standards:'editor',sops:'editor',qms:'editor',training:'editor',suppliers:'editor'},LOGS_PROD,'editor')],
-  ['Sales Manager','Sees products.',{training:'read',qms:'read',sops:'read',products:'read'}],
-  ['Production Lead','Creates and continues batches; fills the production logs.',pm({batch:'editor',testing:'read',stickers:'read',products:'read',sops:'read',qms:'editor',training:'read'},['logs_sanitation','logs_scale','logs_equipment','logs_temp'],'editor')]];
+  ['Team Member','Continues batches; fills the sanitation and temp / humidity logs.',{training:'read',qms:'read',sops:'read',holds:'editor',receiving:'read',batch:'editor',products:'read',logs_temp:'editor',logs_sanitation:'editor'}],
+  ['Inventory Manager','Sees products and batches; fills the waste log.',{training:'editor',qms:'editor',sops:'read',suppliers:'editor',receiving:'admin',holds:'editor',shipping:'admin',products:'read',batch:'read',logs_waste:'editor'}],
+  ['Extraction Manager','Full on batches; fills the scale, equipment and temp / humidity logs.',{training:'editor',qms:'editor',sops:'editor',suppliers:'read',receiving:'editor',holds:'editor',batch:'admin',testing:'editor',products:'read',formbank:'read',logs_scale:'editor',logs_equipment:'editor',logs_temp:'editor'}],
+  ['Production Manager','Full on batches; edits products; fills the production logs.',pm({batch:'admin',testing:'editor',stickers:'editor',products:'editor',formbank:'read',rulebook:'read',standards:'editor',sops:'editor',qms:'editor',training:'editor',suppliers:'editor',receiving:'editor',holds:'editor',shipping:'read'},LOGS_PROD,'editor')],
+  ['Sales Manager','Sees products; records shipments.',{training:'read',qms:'read',sops:'read',products:'read',shipping:'editor',holds:'read'}],
+  ['Production Lead','Creates and continues batches; fills the production logs.',pm({batch:'editor',testing:'read',stickers:'read',products:'read',sops:'read',qms:'editor',training:'read',receiving:'read',holds:'editor'},['logs_sanitation','logs_scale','logs_equipment','logs_temp'],'editor')]];
 function accessSummary(perms){
   const p=perms||{},out=[];
   ACCESS_MODULES.forEach(function(m){if(has(p,m.id)&&lvRank(p[m.id]))out.push(m.label.replace(/ \(.*\)$/,'')+': '+LV_NAME[p[m.id]]);});
@@ -3033,6 +3037,378 @@ function SupplierDashCard(props){
   const bad=d.late+d.cred;
   return el('div',{className:'card gold'},el('div',{className:'k'},'Suppliers'),el('div',{className:'v',style:{color:!d.n?'var(--text)':bad?'var(--red)':'var(--green)'}},d.n?d.ok+' approved':'None yet'),
     el('div',{className:'muted',style:{margin:'4px 0 8px'}},d.n?d.pend+' pending \u00b7 '+d.late+' review'+(d.late===1?'':'s')+' overdue \u00b7 '+d.cred+' with expiring credentials':'Build the approved supplier list.'),link);
+}
+
+/* ---------- Receiving, Inventory, Hold and Release, Shipping (CSQ 2A.9.4, 2A.10) ---------- */
+const LOT_CATS=['Packaging','Labels','Hardware (cartridges, batteries)','Cones / pre-roll supplies','Ingredients','Terpenes','Distillate / extract','Cannabis (flower, trim, biomass)','Chemicals / sanitation','Gases','Solvents','Other'];
+const LOT_UNITS=['each','g','kg','mL','L','lb','oz','case','roll','box'];
+const LOT_CHECKS=[['docs','Matches the order, invoice or manifest'],['intact','Packaging intact: no damage, leaks or wet cartons'],['clean','Clean: no pests, dirt, odors or foreign matter'],['sealed','Seals / tamper evidence intact'],['labeled','Labeled with item, lot and expiry'],['condition','Temperature and condition OK on arrival'],['vehicle','Delivery vehicle clean and secure']];
+const SHIP_CHECKS=[['vehicle_clean','Vehicle clean, dry and free of pests'],['secure','Vehicle secure and locked; product out of sight'],['temp','Temperature suitable for the product'],['sealed','Packages sealed and tamper evident'],['match','Products and quantities match the manifest'],['labels','Labels and package tags correct'],['released','Every batch is released: tests passed, nothing on hold'],['separate','No damage while loading; kept apart from chemicals and non-cannabis goods']];
+const HOLD_SOURCES=['Receiving inspection','Failed test','Deviation','Customer return','Complaint','Recall','Storage / expiry','Other'];
+const HOLD_KINDS={lot:'Received lot',batch:'Batch',product:'Package tag',return:'Customer return',other:'Other'};
+const HOLD_DEC={released:'Release (approved for use)',destroyed:'Destroy',returned:'Return to supplier',reworked:'Rework'};
+const LOT_STATUS={quarantine:'Quarantine',accepted:'Accepted',rejected:'Rejected',on_hold:'On hold',returned:'Returned',destroyed:'Destroyed'};
+const LOT_TONE={quarantine:'warn',accepted:'ok',rejected:'bad',on_hold:'bad',returned:'off',destroyed:'off'};
+function matErr(e){const m=String((e&&e.message)||e);return /hx_lots|hx_holds|hx_shipments|hx_lot_uses/.test(m)&&/missing|does not exist|schema cache/i.test(m)?'Receiving is not set up yet - run hendrix_step17.sql in the Hendrix Supabase project.':m;}
+function lotLeft(l){return Math.round((Number(l.quantity)-Number(l.qty_used||0))*1000)/1000;}
+function lotExp(l){if(!l.expiry_date)return 'none';const t=todayStr();if(l.expiry_date<t)return 'expired';if(l.expiry_date<=trAddMonths(t,1))return 'soon';return 'ok';}
+function checksPass(items,c){return items.every(function(i){return c&&c[i[0]]===true;});}
+function normTag(t){return String(t||'').toUpperCase().replace(/[^A-Z0-9]/g,'');}
+// test state of a batch: failed = a failed test with no passing retest after it
+function batchTest(bid,tests){const t=tests.filter(function(x){return x.batch_id===bid&&!x.voided;});if(!t.length)return 'none';
+  const lf=t.filter(function(x){return x.status==='Failed';}).map(function(x){return x.created_at;}).sort().pop();
+  if(lf&&!t.some(function(x){return x.status==='Passed'&&x.created_at>lf;}))return 'failed';return t.some(function(x){return x.status==='Passed';})?'passed':'pending';}
+function batchHeld(bid,tag,holds){return holds.find(function(h){return h.status==='open'&&((bid&&h.batch_id===bid)||(tag&&h.tag&&normTag(h.tag)===normTag(tag)));});}
+function batchName(b){return b?b.batch_number+(b.sku?' \u00b7 '+b.sku:'')+(b.flavor?' \u00b7 '+b.flavor:''):'';}
+function CheckBoxes(props){
+  return el('div',{style:{margin:'4px 0 10px'}},props.items.map(function(i){const on=!!(props.value||{})[i[0]];
+    return el('label',{key:i[0],className:'ck',style:{display:'flex',marginBottom:4}},el('input',{type:'checkbox',checked:on,disabled:props.disabled,onChange:function(e){props.onChange({...(props.value||{}),[i[0]]:e.target.checked});}}),
+      el('span',{style:{color:on?'':'var(--muted)'}},i[1]));}));
+}
+function FileList(props){
+  const[busy,setBusy]=useState(false);const files=props.files||[];
+  async function up(file){if(!file)return;setBusy(true);try{const ext=(file.name.split('.').pop()||'pdf').toLowerCase().replace(/[^a-z0-9]/g,'');
+    const path=await storagePut(file,props.folder+'/'+Date.now()+'-'+Math.random().toString(36).slice(2,6)+'.'+ext);props.onChange(files.concat([{path:path,name:file.name}]));}catch(e){if(props.onErr)props.onErr(String(e.message||e));}setBusy(false);}
+  return el('div',{className:'row',style:{gap:6,margin:'4px 0 10px'}},files.map(function(f,i){return el('span',{key:i,className:'badge off',style:{textTransform:'none',letterSpacing:0}},
+      el('a',{href:'#',style:{color:'var(--gold-hi)'},onClick:function(e){e.preventDefault();openStored(f.path,f.name).catch(function(){});}},'\ud83d\udcce '+f.name),
+      props.onChange&&!props.fixed&&el('button',{className:'btn ghost sm',style:{padding:'0 6px',marginLeft:4},onClick:function(){props.onChange(files.filter(function(_,j){return j!==i;}));}},'\u00d7'));}),
+    props.onChange&&el('label',{className:'btn ghost sm'},busy?'Uploading...':(props.label||'+ File'),el('input',{type:'file',style:{display:'none'},onChange:function(e){up(e.target.files[0]);e.target.value='';}})));
+}
+function LotForm(props){
+  const x=props.lot||{},lic=props.license,st=props.state,locked=x.id&&x.status!=='quarantine';
+  const sups=(props.suppliers||[]).filter(function(s){return ['approved','conditional','emergency'].indexOf(s.status)>=0;});
+  const[f,setF]=useState({supplier_id:x.supplier_id||'',item:x.item||'',category:x.category||'Packaging',supplier_lot:x.supplier_lot||'',metrc_tag:x.metrc_tag||'',quantity:x.quantity!=null?String(x.quantity):'',unit:x.unit||'each',
+    expiry_date:x.expiry_date||'',po_number:x.po_number||'',location:x.location||'',received_on:x.received_on||todayStr(),coa_ok:!!x.coa_ok,checks:x.checks||{},inspection_notes:x.inspection_notes||'',files:(x.files||[]).slice()});
+  const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  function set(k,v){setF(function(p){return {...p,[k]:v};});}
+  const sup=sups.find(function(s){return s.id===f.supplier_id;})||(props.suppliers||[]).find(function(s){return s.id===f.supplier_id;});
+  async function save(){
+    setErr('');
+    if(!locked){if(!f.supplier_id){setErr('Pick the supplier.');return;}if(!f.item.trim()){setErr('Enter what was received.');return;}if(!(Number(f.quantity)>0)){setErr('Enter the quantity received.');return;}}
+    const rec=locked?{location:f.location.trim(),files:f.files,inspection_notes:f.inspection_notes.trim()}:
+      {item:f.item.trim(),category:f.category,supplier_lot:f.supplier_lot.trim(),metrc_tag:f.metrc_tag.trim(),quantity:Number(f.quantity),unit:f.unit,expiry_date:f.expiry_date||null,po_number:f.po_number.trim(),
+       location:f.location.trim(),received_on:f.received_on,coa_ok:f.coa_ok,checks:LOT_CHECKS.reduce(function(m,i){m[i[0]]=!!f.checks[i[0]];return m;},{}),inspection_notes:f.inspection_notes.trim(),files:f.files};
+    setBusy(true);
+    try{const out=x.id?await db.update('hx_lots',x.id,rec):await db.insert('hx_lots',{...rec,id:newId('lot'),state_id:st.id,license_id:lic.id,supplier_id:f.supplier_id,status:'quarantine'});props.onDone(out&&out[0]);}
+    catch(e){setErr(matErr(e));}
+    setBusy(false);
+  }
+  const inp=function(k,l,ph,type,dis){return el(Field,{label:l},el('input',{type:type||'text',value:f[k]||'',placeholder:ph||'',disabled:dis||locked,max:type==='date'&&k==='received_on'?todayStr():undefined,onChange:function(e){set(k,e.target.value);}}));};
+  return el(Modal,{title:x.id?(locked?'Lot '+x.number+' (storage, files, notes)':'Edit lot '+x.number):'Receive a lot \u00b7 '+lic.name,wide:true,onClose:props.onClose},
+    !x.id&&!sups.length&&el('div',{className:'msg err'},'No approved suppliers for '+lic.name+'. Approve the supplier under Suppliers first (CSQ 2A.11).'),
+    el('div',{className:'grid',style:{gridTemplateColumns:'2fr 1fr',gap:10}},
+      el(Field,{label:'Supplier * (approved only)'},el('select',{value:f.supplier_id,disabled:!!x.id,onChange:function(e){set('supplier_id',e.target.value);}},el('option',{value:''},'(pick)'),
+        (x.id&&sup&&sups.indexOf(sup)<0?[sup]:[]).concat(sups).map(function(s){return el('option',{key:s.id,value:s.id},s.name+' \u00b7 '+s.category+(s.status!=='approved'?' ('+SUP_STATUS[s.status]+')':''));}))),
+      inp('received_on','Received on','','date',!!x.id)),
+    sup&&sup.status==='emergency'&&el('div',{className:'msg'},'Emergency supplier: '+sup.emergency_verification),
+    sup&&sup.specs&&el('div',{className:'muted',style:{fontSize:12,marginBottom:8}},'Specs this supplier must meet: '+sup.specs),
+    el('div',{className:'grid',style:{gridTemplateColumns:'2fr 1fr',gap:10}},inp('item','Item received *','e.g. 98mm pre-roll cones'),
+      el(Field,{label:'Category'},el('select',{value:f.category,disabled:locked,onChange:function(e){set('category',e.target.value);}},LOT_CATS.map(function(c){return el('option',{key:c,value:c},c);})))),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:10}},
+      inp('quantity','Quantity *','','number'),el(Field,{label:'Unit'},el('select',{value:f.unit,disabled:locked,onChange:function(e){set('unit',e.target.value);}},LOT_UNITS.map(function(u){return el('option',{key:u,value:u},u);}))),
+      inp('supplier_lot','Supplier lot #',''),inp('expiry_date','Expiry / best before','','date')),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:10}},inp('metrc_tag','METRC tag (cannabis)',''),inp('po_number','PO / invoice #',''),
+      el(Field,{label:'Storage location'},el('input',{value:f.location,placeholder:'e.g. Quarantine shelf Q1',onChange:function(e){set('location',e.target.value);}}))),
+    el('div',{className:'k',style:{margin:'8px 0 4px'}},'Receiving inspection (tick each check that passed)'),
+    el(CheckBoxes,{items:LOT_CHECKS,value:f.checks,disabled:locked,onChange:function(v){set('checks',v);}}),
+    el('label',{className:'ck',style:{margin:'4px 0 8px'}},el('input',{type:'checkbox',checked:f.coa_ok,disabled:locked,onChange:function(e){set('coa_ok',e.target.checked);}}),el('span',null,'COA or certificate of conformance received and reviewed against the specs')),
+    el('div',{className:'k'},'Documents (COA, invoice, manifest, photos)'),
+    el(FileList,{files:f.files,folder:'receiving/'+lic.id,label:'+ Upload document',onErr:setErr,onChange:function(v){set('files',v);}}),
+    el(Field,{label:'Inspection notes'},el('textarea',{rows:2,value:f.inspection_notes,onChange:function(e){set('inspection_notes',e.target.value);}})),
+    !locked&&!x.id&&el('div',{className:'muted',style:{fontSize:12}},'The lot goes to QUARANTINE. It cannot be used until someone with Full access accepts it.'),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy||(!x.id&&!sups.length),onClick:save},busy?'Saving...':x.id?'Save':'Receive into quarantine')));
+}
+function LotDecide(props){
+  const l=props.lot,acc=props.to==='accepted';const[notes,setNotes]=useState('');const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  const ok=checksPass(LOT_CHECKS,l.checks),needNote=!acc||!ok||l.supplier_status==='emergency';
+  async function go(){setErr('');if(needNote&&!notes.trim()){setErr(acc?'Write why the lot is accepted (failed check or emergency supplier).':'Write why the lot is rejected.');return;}setBusy(true);
+    try{await db.update('hx_lots',l.id,{status:props.to,decision_notes:notes.trim()});props.onDone();}catch(e){setErr(matErr(e));}setBusy(false);}
+  return el(Modal,{title:(acc?'Accept ':'Reject ')+l.number+' \u00b7 '+l.item,onClose:props.onClose},
+    acc&&!l.coa_ok&&el('div',{className:'msg err'},'No COA or certificate of conformance recorded. Edit the lot and add it before accepting.'),
+    acc&&!ok&&el('div',{className:'msg err'},'Not every receiving check passed: '+LOT_CHECKS.filter(function(i){return !(l.checks||{})[i[0]];}).map(function(i){return i[1];}).join('; ')),
+    acc&&l.supplier_status==='emergency'&&el('div',{className:'msg'},'Emergency supplier: write how this lot was verified before use.'),
+    !acc&&el('div',{className:'muted',style:{fontSize:12,marginBottom:8}},'A rejected lot is put on hold automatically and kept apart until it is returned to the supplier or destroyed.'),
+    el(Field,{label:(acc?'Decision notes':'Reason for rejection')+(needNote?' *':'')},el('textarea',{rows:3,value:notes,onChange:function(e){setNotes(e.target.value);}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:acc?'btn':'btn danger',disabled:busy||(acc&&!l.coa_ok),onClick:go},acc?'Accept lot':'Reject lot')));
+}
+function UseForm(props){
+  const lic=props.license;const avail=(props.lots||[]).filter(function(l){return l.status==='accepted'&&lotLeft(l)>0&&lotExp(l)!=='expired';}).sort(function(a,b){return a.received_on<b.received_on?-1:a.received_on>b.received_on?1:a.number<b.number?-1:1;});
+  const[f,setF]=useState({lot_id:props.lotId||'',batch_id:'',quantity:'',used_on:todayStr(),notes:''});const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  const l=avail.find(function(x){return x.id===f.lot_id;});const first=l&&avail.find(function(x){return x.item.trim().toLowerCase()===l.item.trim().toLowerCase();});
+  async function go(){setErr('');if(!l){setErr('Pick the lot.');return;}if(!(Number(f.quantity)>0)){setErr('Enter the quantity used.');return;}if(Number(f.quantity)>lotLeft(l)){setErr('Only '+lotLeft(l)+' '+l.unit+' left in '+l.number+'.');return;}
+    setBusy(true);try{await db.insert('hx_lot_uses',{id:newId('use'),state_id:l.state_id,license_id:l.license_id,lot_id:l.id,batch_id:f.batch_id||null,quantity:Number(f.quantity),used_on:f.used_on,notes:f.notes.trim()});props.onDone();}catch(e){setErr(matErr(e));}setBusy(false);}
+  return el(Modal,{title:'Record use from a lot \u00b7 '+lic.name,onClose:props.onClose},
+    el(Field,{label:'Lot * (oldest first)'},el('select',{value:f.lot_id,onChange:function(e){setF({...f,lot_id:e.target.value});}},el('option',{value:''},'(pick)'),
+      avail.map(function(x){return el('option',{key:x.id,value:x.id},x.number+' \u00b7 '+x.item+' \u00b7 '+lotLeft(x)+' '+x.unit+' left \u00b7 rec. '+x.received_on+(x.expiry_date?' \u00b7 exp '+x.expiry_date:''));}))),
+    l&&first&&first.id!==l.id&&el('div',{className:'msg'},'FIFO: '+first.number+' (received '+first.received_on+') is older and should be used first.'),
+    el(Field,{label:'Used in batch'},el('select',{value:f.batch_id,onChange:function(e){setF({...f,batch_id:e.target.value});}},el('option',{value:''},'(not for a batch)'),(props.batches||[]).filter(function(b){return !b.voided;}).map(function(b){return el('option',{key:b.id,value:b.id},batchName(b));}))),
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr',gap:10}},
+      el(Field,{label:'Quantity'+(l?' ('+l.unit+')':'')+' *'},el('input',{type:'number',value:f.quantity,onChange:function(e){setF({...f,quantity:e.target.value});}})),
+      el(Field,{label:'Date'},el('input',{type:'date',value:f.used_on,max:todayStr(),onChange:function(e){setF({...f,used_on:e.target.value});}}))),
+    el(Field,{label:'Notes'},el('input',{value:f.notes,onChange:function(e){setF({...f,notes:e.target.value});}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:go},'Record use')));
+}
+function HoldForm(props){
+  const lic=props.license,st=props.state,pre=props.prefill||{};
+  const[f,setF]=useState({kind:pre.kind||'lot',lot_id:pre.lot_id||'',batch_id:pre.batch_id||'',tag:pre.tag||'',item:pre.item||'',quantity:pre.quantity||'',source:pre.source||(pre.kind==='return'?'Customer return':'Deviation'),reason:pre.reason||'',location:'Quarantine area'});
+  const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  const lots=(props.lots||[]).filter(function(l){return ['quarantine','accepted'].indexOf(l.status)>=0;});
+  async function go(){setErr('');
+    if(f.kind==='lot'&&!f.lot_id){setErr('Pick the lot.');return;}if(f.kind==='batch'&&!f.batch_id){setErr('Pick the batch.');return;}if(f.kind==='product'&&!f.tag.trim()){setErr('Enter the package tag.');return;}
+    if((f.kind==='other'||f.kind==='return')&&!f.item.trim()&&!f.batch_id){setErr('Describe what is held.');return;}if(!f.reason.trim()){setErr('Write why it is held.');return;}
+    setBusy(true);try{const out=await db.insert('hx_holds',{id:newId('hold'),state_id:st.id,license_id:lic.id,kind:f.kind,lot_id:f.kind==='lot'?f.lot_id:null,batch_id:f.kind==='lot'?null:(f.batch_id||null),tag:f.tag.trim(),item:f.item.trim(),
+      quantity:f.quantity.trim(),source:f.source,reason:f.reason.trim(),location:f.location.trim(),shipment_id:pre.shipment_id||null});props.onDone(out&&out[0]);}catch(e){setErr(matErr(e));}setBusy(false);}
+  return el(Modal,{title:'Put on hold \u00b7 '+lic.name,onClose:props.onClose},
+    el('div',{className:'muted',style:{fontSize:12,marginBottom:8}},'Mark the product with a HOLD tag and move it to the quarantine area. It cannot be used or shipped until someone with Full access decides (CSQ 2A.10.4).'),
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr',gap:10}},
+      el(Field,{label:'What is held'},el('select',{value:f.kind,onChange:function(e){setF({...f,kind:e.target.value});}},Object.keys(HOLD_KINDS).map(function(k){return el('option',{key:k,value:k},HOLD_KINDS[k]);}))),
+      el(Field,{label:'Source'},el('select',{value:f.source,onChange:function(e){setF({...f,source:e.target.value});}},HOLD_SOURCES.map(function(s){return el('option',{key:s,value:s},s);})))),
+    f.kind==='lot'&&el(Field,{label:'Lot *'},el('select',{value:f.lot_id,onChange:function(e){setF({...f,lot_id:e.target.value});}},el('option',{value:''},'(pick)'),lots.map(function(l){return el('option',{key:l.id,value:l.id},l.number+' \u00b7 '+l.item+' \u00b7 '+l.supplier_name);}))),
+    f.kind!=='lot'&&el(Field,{label:'Batch'+(f.kind==='batch'?' *':'')},el('select',{value:f.batch_id,onChange:function(e){setF({...f,batch_id:e.target.value});}},el('option',{value:''},'(none)'),(props.batches||[]).filter(function(b){return !b.voided;}).map(function(b){return el('option',{key:b.id,value:b.id},batchName(b));}))),
+    (f.kind==='product'||f.kind==='return'||f.kind==='batch')&&el(Field,{label:'Package tag'+(f.kind==='product'?' *':'')},el('input',{value:f.tag,placeholder:'1A4...',onChange:function(e){setF({...f,tag:e.target.value});}})),
+    (f.kind==='other'||f.kind==='return'||f.kind==='product')&&el(Field,{label:'Description'},el('input',{value:f.item,placeholder:'e.g. 12 cartridges returned by Dispensary A',onChange:function(e){setF({...f,item:e.target.value});}})),
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr',gap:10}},
+      el(Field,{label:'Quantity held'},el('input',{value:f.quantity,placeholder:'e.g. 40 units',onChange:function(e){setF({...f,quantity:e.target.value});}})),
+      el(Field,{label:'Held at (location)'},el('input',{value:f.location,onChange:function(e){setF({...f,location:e.target.value});}}))),
+    el(Field,{label:'Reason *'},el('textarea',{rows:3,value:f.reason,onChange:function(e){setF({...f,reason:e.target.value});}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn danger',disabled:busy,onClick:go},'Put on hold')));
+}
+function HoldDecide(props){
+  const h=props.hold;const opts=Object.keys(HOLD_DEC).filter(function(k){return !(k==='released'&&h.kind==='lot'&&h.prev_status==='rejected')&&!(k==='returned'&&h.kind!=='lot'&&h.kind!=='return');});
+  const[to,setTo]=useState(opts[0]);const[notes,setNotes]=useState('');const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  async function go(){setErr('');if(!notes.trim()){setErr('Write the reason for the decision.');return;}setBusy(true);try{await db.update('hx_holds',h.id,{status:to,decision_notes:notes.trim()});props.onDone(to);}catch(e){setErr(matErr(e));}setBusy(false);}
+  return el(Modal,{title:'Decide '+h.number+' \u00b7 '+h.item,onClose:props.onClose},
+    el('div',{className:'muted',style:{fontSize:12,marginBottom:8}},'Held because: '+h.reason),
+    el(Field,{label:'Decision'},el('select',{value:to,onChange:function(e){setTo(e.target.value);}},opts.map(function(k){return el('option',{key:k,value:k},HOLD_DEC[k]);}))),
+    to==='destroyed'&&el('div',{className:'msg'},'Record the destruction in the Waste Destruction Log (and in METRC for cannabis).'),
+    to==='released'&&h.batch_id&&el('div',{className:'muted',style:{fontSize:12}},'A batch with a failed test and no passing retest cannot be released.'),
+    el(Field,{label:'Reason / evidence for the decision *'},el('textarea',{rows:3,value:notes,onChange:function(e){setNotes(e.target.value);}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:go},'Save decision')));
+}
+function ShipForm(props){
+  const lic=props.license,st=props.state,batches=(props.batches||[]).filter(function(b){return !b.voided;});
+  const trans=(props.suppliers||[]).filter(function(s){return s.category==='Transport / Distribution'&&supActive(s);});
+  const[f,setF]=useState({ship_date:todayStr(),customer:'',customer_license:'',destination:'',manifest_number:'',transporter:'',driver:'',vehicle:'',notes:'',checks:{},files:[],items:[{batch_id:'',tag:'',qty:'',unit:'units'}]});
+  const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  function set(k,v){setF(function(p){return {...p,[k]:v};});}
+  function setIt(i,k,v){setF(function(p){return {...p,items:p.items.map(function(x,j){return j===i?{...x,[k]:v}:x;})};});}
+  const probs=f.items.map(function(it){if(!it.batch_id)return null;const h=batchHeld(it.batch_id,it.tag,props.holds||[]),t=batchTest(it.batch_id,props.tests||[]);
+    return h?{bad:1,t:'On hold ('+h.number+'): cannot ship'}:t==='failed'?{bad:1,t:'Failed test, no passing retest: cannot ship'}:t==='passed'?{t:'Test passed'}:{warn:1,t:t==='pending'?'Test not final yet':'No lab test on file'};});
+  const blocked=probs.some(function(p){return p&&p.bad;}),allOk=checksPass(SHIP_CHECKS,f.checks);
+  async function save(){setErr('');if(!f.customer.trim()){setErr('Enter the customer.');return;}const its=f.items.filter(function(i){return i.batch_id;});if(!its.length){setErr('Add at least one batch.');return;}
+    if(blocked){setErr('Remove the batches that cannot be shipped.');return;}if(!allOk){setErr('Every pre-load check must pass before loading.');return;}
+    setBusy(true);
+    try{const out=await db.insert('hx_shipments',{id:newId('shp'),state_id:st.id,license_id:lic.id,ship_date:f.ship_date,customer:f.customer.trim(),customer_license:f.customer_license.trim(),destination:f.destination.trim(),manifest_number:f.manifest_number.trim(),
+      transporter:f.transporter.trim(),driver:f.driver.trim(),vehicle:f.vehicle.trim(),notes:f.notes.trim(),files:f.files,checks:SHIP_CHECKS.reduce(function(m,i){m[i[0]]=!!f.checks[i[0]];return m;},{}),
+      items:its.map(function(i){const b=batches.find(function(x){return x.id===i.batch_id;});return {batch_id:i.batch_id,batch_number:b?b.batch_number:'',product:b?[b.sku,b.flavor].filter(Boolean).join(' \u00b7 ')||b.batch_type:'',tag:i.tag.trim(),qty:i.qty,unit:i.unit};})});props.onDone(out&&out[0]);}
+    catch(e){setErr(matErr(e));}setBusy(false);}
+  const inp=function(k,l,ph,type){return el(Field,{label:l},el('input',{type:type||'text',value:f[k],placeholder:ph||'',max:type==='date'?todayStr():undefined,onChange:function(e){set(k,e.target.value);}}));};
+  return el(Modal,{title:'New shipment \u00b7 '+lic.name,wide:true,onClose:props.onClose},
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 2fr 1fr',gap:10}},inp('ship_date','Ship date','','date'),inp('customer','Customer *','Dispensary name'),inp('customer_license','Customer license #','')),
+    el('div',{className:'grid',style:{gridTemplateColumns:'2fr 1fr',gap:10}},inp('destination','Destination address',''),inp('manifest_number','State manifest #','METRC manifest')),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:10}},
+      el(Field,{label:'Transporter'},el('input',{list:'hx-trans',value:f.transporter,placeholder:'Own vehicle or approved transporter',onChange:function(e){set('transporter',e.target.value);}}),el('datalist',{id:'hx-trans'},trans.map(function(s){return el('option',{key:s.id,value:s.name});}))),
+      inp('driver','Driver',''),inp('vehicle','Vehicle','Plate / unit')),
+    el('div',{className:'k',style:{margin:'8px 0 6px'}},'Batches and packages'),
+    f.items.map(function(it,i){const p=probs[i];return el('div',{key:i,style:{marginBottom:6}},el('div',{className:'grid',style:{gridTemplateColumns:'2.2fr 1.4fr 0.8fr 0.8fr auto',gap:6,alignItems:'end'}},
+      el('select',{value:it.batch_id,onChange:function(e){setIt(i,'batch_id',e.target.value);}},el('option',{value:''},'(batch)'),batches.map(function(b){return el('option',{key:b.id,value:b.id},batchName(b));})),
+      el('input',{value:it.tag,placeholder:'Package tag',onChange:function(e){setIt(i,'tag',e.target.value);}}),
+      el('input',{value:it.qty,placeholder:'Qty',onChange:function(e){setIt(i,'qty',e.target.value);}}),
+      el('input',{value:it.unit,placeholder:'Unit',onChange:function(e){setIt(i,'unit',e.target.value);}}),
+      el('button',{className:'btn ghost sm',onClick:function(){setF(function(q){return {...q,items:q.items.length>1?q.items.filter(function(_,j){return j!==i;}):q.items};});}},'\u00d7')),
+      p&&el('div',{style:{fontSize:12,marginTop:2,color:p.bad?'var(--red)':p.warn?'var(--gold-hi)':'var(--green)'}},p.t));}),
+    el('button',{className:'btn ghost sm',onClick:function(){setF(function(q){return {...q,items:q.items.concat([{batch_id:'',tag:'',qty:'',unit:'units'}])};});}},'+ Add batch / package'),
+    el('div',{className:'k',style:{margin:'12px 0 4px'}},'Pre-load inspection (all must pass, CSQ 2A.9.4)'),
+    el(CheckBoxes,{items:SHIP_CHECKS,value:f.checks,onChange:function(v){set('checks',v);}}),
+    el('div',{className:'k'},'Documents (manifest, invoice)'),el(FileList,{files:f.files,folder:'shipping/'+lic.id,label:'+ Upload document',onErr:setErr,onChange:function(v){set('files',v);}}),
+    el(Field,{label:'Notes'},el('textarea',{rows:2,value:f.notes,onChange:function(e){set('notes',e.target.value);}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy||blocked||!allOk,onClick:save},'Record shipment')));
+}
+function SimpleReason(props){
+  const[why,setWhy]=useState('');const[err,setErr]=useState('');
+  return el(Modal,{title:props.title,onClose:props.onClose},el(Field,{label:(props.label||'Reason')+' *'},el('textarea',{rows:3,value:why,onChange:function(e){setWhy(e.target.value);}})),err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Back'),el('button',{className:'btn danger',disabled:!why.trim(),onClick:function(){props.onGo(why.trim()).catch(function(e){setErr(matErr(e));});}},props.btn||'Save')));
+}
+function shipHtml(s,lic){const e=esc3;
+  return '<div class="hxrec"><h2>Shipment '+e(s.number)+'</h2><div class="m">'+e(lic.name)+(lic.license_number?' ('+e(lic.license_number)+')':'')+' \u00b7 printed '+e(new Date().toLocaleString())+'</div><table>'+
+    [['Ship date',s.ship_date],['Customer',s.customer+(s.customer_license?' ('+s.customer_license+')':'')],['Destination',s.destination],['State manifest',s.manifest_number],['Transporter / driver / vehicle',[s.transporter,s.driver,s.vehicle].filter(Boolean).join(' / ')],
+     ['Status',s.status+(s.delivered_on?' '+s.delivered_on:'')+(s.cancel_reason?' - '+s.cancel_reason:'')],['Shipped by',s.shipped_by+' \u00b7 '+String(s.created_at).slice(0,16).replace('T',' ')]].map(function(r){return '<tr><th>'+e(r[0])+'</th><td>'+e(r[1]||'-')+'</td></tr>';}).join('')+
+    '</table><table><tr><th>Batch</th><th>Product</th><th>Package tag</th><th>Qty</th></tr>'+(s.items||[]).map(function(i){return '<tr><td>'+e(i.batch_number)+'</td><td>'+e(i.product)+'</td><td>'+e(i.tag)+'</td><td>'+e(i.qty+' '+(i.unit||''))+'</td></tr>';}).join('')+'</table>'+
+    '<table><tr class="sec"><td colspan="2">Pre-load inspection</td></tr>'+SHIP_CHECKS.map(function(c){const ok=(s.checks||{})[c[0]];return '<tr><th>'+e(c[1])+'</th><td class="'+(ok?'ok':'bad')+'">'+(ok?'Pass':'FAIL')+'</td></tr>';}).join('')+'</table>'+(s.notes?'<div>'+e(s.notes)+'</div>':'')+'</div>';}
+function MatPage(props){
+  const st=props.state,lic=props.license,lid=lic?lic.id:'';
+  const tabs=[can('receiving',1)&&['receiving','Receiving'],can('receiving',1)&&['inventory','Inventory'],can('holds',1)&&['holds','Hold and Release'],can('shipping',1)&&['shipping','Shipping']].filter(Boolean);
+  const[tab,setTab]=useState(tabs.some(function(t){return t[0]===props.tab;})?props.tab:(tabs[0]||[''])[0]);
+  useEffect(function(){if(props.tab&&tabs.some(function(t){return t[0]===props.tab;}))setTab(props.tab);},[props.tab]);
+  const[D,setD]=useState(null);const[msg,setMsg]=useState('');const[modal,setModal]=useState(null);const[sel,setSel]=useState(null);const[q,setQ]=useState('');const[sf,setSf]=useState('ALL');
+  const load=useCallback(function(){
+    if(!lid){setD({lots:[],uses:[],holds:[],ships:[],sups:[],batches:[],tests:[]});return;}const enc=encodeURIComponent,L='license_id=eq.'+enc(lid);
+    const g=function(t,qs,ok){return ok?db.get(t,qs).then(function(r){return (r||[]).filter(function(x){return x.license_id===undefined||x.license_id===lid||(x.license_ids||[]).indexOf(lid)>=0;});}):Promise.resolve([]);};
+    const R=can('receiving',1),H=can('holds',1),S=can('shipping',1);
+    Promise.all([g('hx_lots',L+'&select=*&order=received_on.desc,number.desc&limit=5000',R||H),g('hx_lot_uses',L+'&select=*&order=used_on.desc&limit=20000',R),g('hx_holds',L+'&select=*&order=created_at.desc&limit=5000',R||H||S),
+      g('hx_shipments',L+'&select=*&order=ship_date.desc,number.desc&limit=5000',S),
+      can('suppliers',1)||R||S?db.get('hx_suppliers','license_ids=cs.%7B'+enc(lid)+'%7D&select=id,name,category,status,specs,emergency_verification,license_id,license_ids&order=name').then(function(r){return (r||[]).filter(function(s){return (s.license_ids||[s.license_id]).indexOf(lid)>=0;});}).catch(function(){return [];}):Promise.resolve([]),
+      db.get('hx_batches',L+'&select=id,batch_number,batch_type,sku,flavor,voided,license_id,created_at&order=created_at.desc&limit=2000').catch(function(){return [];}),
+      db.get('hx_tests',L+'&select=id,batch_id,status,voided,created_at,license_id&limit=20000').catch(function(){return [];})])
+    .then(function(r){setD({lots:r[0],uses:r[1],holds:r[2],ships:r[3],sups:r[4],batches:(r[5]||[]).filter(function(b){return b.license_id===lid;}),tests:(r[6]||[]).filter(function(t){return t.license_id===lid;})});})
+    .catch(function(e){setMsg(matErr(e));setD({lots:[],uses:[],holds:[],ships:[],sups:[],batches:[],tests:[]});});
+  },[lid]);
+  useEffect(load,[load]);
+  if(!st||!lic)return el('div',null,el('h1',null,el('span',{className:'g'},'Receiving and Shipping')),el('div',{className:'empty'},'Pick a state and a license at the top first.'));
+  if(!D)return el('div',{className:'muted'},'Loading...');
+  function done(t){setModal(null);if(t)setMsg(t);load();}
+  const canRE=can('receiving',2),canRF=can('receiving',3),canHE=can('holds',2),canHF=can('holds',3),canSE=can('shipping',2),canSF=can('shipping',3);
+  const t=todayStr(),d30=new Date(Date.now()-30*864e5).toISOString().slice(0,10),y1=new Date(Date.now()-365*864e5).toISOString().slice(0,10);
+  const stat=function(l,v,tone,sub){return el('div',{key:l,className:'card gold',style:{marginBottom:0}},el('div',{className:'k'},l),el('div',{className:'v',style:{fontSize:26,color:tone||'var(--text)'}},v),sub&&el('div',{className:'muted',style:{fontSize:11,marginTop:2}},sub));};
+  const statRow=function(a){return el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',marginBottom:14}},a);};
+  const openHolds=D.holds.filter(function(h){return h.status==='open';});
+  const lotOf=function(id){return D.lots.find(function(l){return l.id===id;});},batchOf=function(id){return D.batches.find(function(b){return b.id===id;});};
+  const head=el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+    el('div',null,el('h1',null,el('span',{className:'g'},tab==='holds'?'Hold and Release':tab==='shipping'?'Shipping':tab==='inventory'?'Inventory':'Receiving')),
+      el('div',{className:'sub'},lic.name+' \u00b7 '+(tab==='holds'?'quarantine of nonconforming and returned goods (CSQ 2A.10.4)':tab==='shipping'?'pre-load inspection, manifest and one step forward traceability (CSQ 2A.9.4, 2A.10.1)':tab==='inventory'?'stock by lot, oldest first, expiry and use in batches (CSQ 2A.10.1, 2A.10.3)':'incoming inspection, COA review, quarantine and acceptance (CSQ 2A.10.2)'))),
+    el('div',{className:'row'},
+      tab==='receiving'&&el('button',{className:'btn ghost',onClick:function(){printLots();}},'Receiving log'),tab==='receiving'&&canRE&&el('button',{className:'btn',onClick:function(){setModal({t:'lot'});}},'+ Receive lot'),
+      tab==='inventory'&&(canRE||can('batch',2))&&el('button',{className:'btn',onClick:function(){setModal({t:'use'});}},'+ Record use'),
+      tab==='holds'&&canHE&&el('button',{className:'btn danger',onClick:function(){setModal({t:'hold'});}},'+ Put on hold'),
+      tab==='shipping'&&el('button',{className:'btn ghost',onClick:function(){printShips();}},'Shipping log'),tab==='shipping'&&canSE&&el('button',{className:'btn',onClick:function(){setModal({t:'ship'});}},'+ New shipment')));
+  function printLots(){const e=esc3;let h='<div class="hxrec"><h2>Receiving log</h2><div class="m">'+e(lic.name)+' \u00b7 CSQ 2A.10.2 \u00b7 printed '+e(new Date().toLocaleString())+'</div><table><tr><th>Lot</th><th>Received</th><th>Supplier</th><th>Item</th><th>Supplier lot / tag</th><th>Qty</th><th>COA</th><th>Inspection</th><th>Status / decision</th></tr>';
+    D.lots.forEach(function(l){const ok=checksPass(LOT_CHECKS,l.checks);h+='<tr><td>'+e(l.number)+'</td><td>'+e(l.received_on)+'<br>'+e(l.received_by)+'</td><td>'+e(l.supplier_name)+'</td><td>'+e(l.item)+'</td><td>'+e(l.supplier_lot)+(l.metrc_tag?'<br>'+e(l.metrc_tag):'')+'</td><td>'+e(l.quantity+' '+l.unit)+'</td><td class="'+(l.coa_ok?'ok':'bad')+'">'+(l.coa_ok?'Yes':'No')+'</td><td class="'+(ok?'ok':'bad')+'">'+(ok?'Pass':'Failed: '+e(LOT_CHECKS.filter(function(i){return !(l.checks||{})[i[0]];}).map(function(i){return i[1];}).join('; ')))+'</td><td>'+e(LOT_STATUS[l.status])+(l.decided_by?'<br>'+e(l.decided_by+' '+String(l.decided_at).slice(0,10)):'')+(l.decision_notes?'<br>'+e(l.decision_notes):'')+'</td></tr>';});
+    printRecords('Receiving log - '+lic.name,[h+'</table></div>']);}
+  function printShips(){printRecords('Shipping log - '+lic.name,D.ships.map(function(s){return shipHtml(s,lic);}));}
+  let body=null;
+  if(tab==='receiving'){
+    const L=D.lots.filter(function(l){if(sf!=='ALL'&&l.status!==sf)return false;if(q&&(l.number+' '+l.item+' '+l.supplier_name+' '+l.supplier_lot+' '+l.metrc_tag).toLowerCase().indexOf(q.toLowerCase())<0)return false;return true;});
+    const qn=D.lots.filter(function(l){return l.status==='quarantine';});
+    body=el('div',null,statRow([stat('In quarantine',qn.length,qn.length?'var(--gold-hi)':'var(--green)','awaiting accept / reject'),stat('Missing COA',qn.filter(function(l){return !l.coa_ok;}).length,qn.some(function(l){return !l.coa_ok;})?'var(--red)':'var(--green)','in quarantine'),
+        stat('Received (30 days)',D.lots.filter(function(l){return l.received_on>=d30;}).length),stat('Rejected (12 months)',D.lots.filter(function(l){return l.received_on>=y1&&['rejected','returned','destroyed'].indexOf(l.status)>=0&&l.decided_at;}).length),
+        stat('Failed inspection (12 months)',D.lots.filter(function(l){return l.received_on>=y1&&!checksPass(LOT_CHECKS,l.checks);}).length)]),
+      el('div',{className:'row',style:{marginBottom:12}},el('input',{value:q,placeholder:'Search lot, item, supplier, tag',style:{width:260},onChange:function(e){setQ(e.target.value);}}),
+        el('select',{value:sf,onChange:function(e){setSf(e.target.value);}},el('option',{value:'ALL'},'Every status'),Object.keys(LOT_STATUS).map(function(k){return el('option',{key:k,value:k},LOT_STATUS[k]);}))),
+      !L.length?el('div',{className:'empty'},D.lots.length?'No lots match.':'Nothing received yet for '+lic.name+'.'):
+      el('div',{className:'card',style:{padding:0,overflowX:'auto'}},el('table',null,el('thead',null,el('tr',null,['Lot','Received','Item','Supplier','Qty','COA','Inspection','Status'].map(function(h){return el('th',{key:h},h);}))),
+        el('tbody',null,L.map(function(l){const ok=checksPass(LOT_CHECKS,l.checks);return el('tr',{key:l.id,style:{cursor:'pointer'},onClick:function(){setSel({t:'lot',id:l.id});}},
+          el('td',null,el('b',null,l.number)),el('td',null,l.received_on),el('td',null,l.item,el('div',{className:'muted',style:{fontSize:11}},l.category)),el('td',null,l.supplier_name),el('td',null,l.quantity+' '+l.unit),
+          el('td',null,el('span',{className:'badge '+(l.coa_ok?'ok':'bad')},l.coa_ok?'Yes':'No')),el('td',null,el('span',{className:'badge '+(ok?'ok':'bad')},ok?'Pass':'Failed')),el('td',null,el('span',{className:'badge '+LOT_TONE[l.status]},LOT_STATUS[l.status])));})))));
+  }
+  else if(tab==='inventory'){
+    const stock=D.lots.filter(function(l){return (l.status==='accepted'||l.status==='on_hold'||l.status==='quarantine')&&lotLeft(l)>0;}).sort(function(a,b){const x=a.item.toLowerCase(),y=b.item.toLowerCase();return x<y?-1:x>y?1:a.received_on<b.received_on?-1:1;});
+    const firstOf={};stock.forEach(function(l){const k=l.item.trim().toLowerCase();if(l.status==='accepted'&&lotExp(l)!=='expired'&&!firstOf[k])firstOf[k]=l.id;});
+    const S=stock.filter(function(l){return !q||(l.number+' '+l.item+' '+l.supplier_name).toLowerCase().indexOf(q.toLowerCase())>=0;});
+    body=el('div',null,statRow([stat('Lots in stock',stock.filter(function(l){return l.status==='accepted';}).length,'var(--green)','accepted, quantity left'),stat('Expired in stock',stock.filter(function(l){return lotExp(l)==='expired';}).length,stock.some(function(l){return lotExp(l)==='expired';})?'var(--red)':'var(--green)','cannot be used'),
+        stat('Expiring in 30 days',stock.filter(function(l){return lotExp(l)==='soon';}).length,stock.some(function(l){return lotExp(l)==='soon';})?'var(--gold-hi)':'var(--text)'),stat('Uses recorded (30 days)',D.uses.filter(function(u){return !u.voided&&u.used_on>=d30;}).length)]),
+      el('div',{className:'row',style:{marginBottom:12}},el('input',{value:q,placeholder:'Search item, lot, supplier',style:{width:260},onChange:function(e){setQ(e.target.value);}})),
+      !S.length?el('div',{className:'empty'},'No stock on hand.'):
+      el('div',{className:'card',style:{padding:0,overflowX:'auto'}},el('table',null,el('thead',null,el('tr',null,['Item','Lot','Supplier','Received','Expiry','Left','Status',''].map(function(h,i){return el('th',{key:i},h);}))),
+        el('tbody',null,S.map(function(l){const ex=lotExp(l);return el('tr',{key:l.id},el('td',null,el('b',null,l.item)),el('td',null,l.number,firstOf[l.item.trim().toLowerCase()]===l.id&&el('span',{className:'badge ok',style:{marginLeft:6}},'Use first')),el('td',null,l.supplier_name),el('td',null,l.received_on),
+          el('td',null,l.expiry_date?el('span',{className:'badge '+(ex==='expired'?'bad':ex==='soon'?'warn':'off')},(ex==='expired'?'Expired ':'')+l.expiry_date):'-'),el('td',null,lotLeft(l)+' / '+l.quantity+' '+l.unit),
+          el('td',null,el('span',{className:'badge '+LOT_TONE[l.status]},LOT_STATUS[l.status])),el('td',null,el('button',{className:'btn ghost sm',onClick:function(){setSel({t:'lot',id:l.id});}},'Open')));})))),
+      el('h3',{style:{marginTop:18}},'Use records'),
+      !D.uses.length?el('div',{className:'muted'},'No use recorded yet.'):
+      el('div',{className:'card',style:{padding:0,overflowX:'auto'}},el('table',null,el('thead',null,el('tr',null,['Date','Lot','Item','Batch','Qty','By',''].map(function(h,i){return el('th',{key:i},h);}))),
+        el('tbody',null,D.uses.slice(0,300).map(function(u){const l=lotOf(u.lot_id)||{};return el('tr',{key:u.id,style:{opacity:u.voided?.5:1,textDecoration:u.voided?'line-through':''}},el('td',null,u.used_on),el('td',null,l.number||''),el('td',null,l.item||''),el('td',null,u.batch_number||'-'),el('td',null,u.quantity+' '+(l.unit||'')),el('td',null,u.used_by),
+          el('td',null,u.voided?el('span',{className:'badge bad',title:u.void_reason},'Void'):canRF&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'voiduse',use:u});}},'Void')));})))));
+  }
+  else if(tab==='holds'){
+    const H=D.holds.filter(function(h){if(sf==='OPEN'&&h.status!=='open')return false;if(sf!=='ALL'&&sf!=='OPEN'&&h.status!==sf)return false;if(q&&(h.number+' '+h.item+' '+h.tag+' '+h.reason).toLowerCase().indexOf(q.toLowerCase())<0)return false;return true;});
+    const old=openHolds.map(function(h){return daysAgo(h.created_at);}).sort(function(a,b){return b-a;})[0];
+    body=el('div',null,statRow([stat('Open holds',openHolds.length,openHolds.length?'var(--red)':'var(--green)','cannot be used or shipped'),stat('Oldest open',old==null?'-':old+' days',old>30?'var(--red)':'var(--text)'),
+        stat('Customer returns (12 months)',D.holds.filter(function(h){return h.kind==='return'&&h.created_at>=y1;}).length),stat('Decided (12 months)',D.holds.filter(function(h){return h.status!=='open'&&h.decided_at>=y1;}).length)]),
+      el('div',{className:'row',style:{marginBottom:12}},el('input',{value:q,placeholder:'Search holds',style:{width:220},onChange:function(e){setQ(e.target.value);}}),
+        el('select',{value:sf,onChange:function(e){setSf(e.target.value);}},el('option',{value:'ALL'},'All holds'),el('option',{value:'OPEN'},'Open'),Object.keys(HOLD_DEC).map(function(k){return el('option',{key:k,value:k},k.charAt(0).toUpperCase()+k.slice(1));}))),
+      !H.length?el('div',{className:'empty'},D.holds.length?'No holds match.':'Nothing is on hold.'):
+      H.map(function(h){const op=h.status==='open';return el('div',{key:h.id,className:'card',style:{cursor:'pointer',padding:'12px 16px',borderLeft:'3px solid '+(op?'var(--red)':'var(--line)')},onClick:function(){setSel({t:'hold',id:h.id});}},
+        el('div',{className:'row',style:{justifyContent:'space-between',flexWrap:'nowrap'}},
+          el('div',{style:{minWidth:0}},el('div',{className:'row',style:{gap:6,marginBottom:4}},el('span',{className:'badge '+(op?'bad':'off')},op?'ON HOLD':h.status),el('span',{className:'badge off'},HOLD_KINDS[h.kind]),h.source!==HOLD_KINDS[h.kind]&&el('span',{className:'badge off'},h.source),el('b',null,h.number)),
+            el('div',{style:{fontWeight:700}},h.item+(h.tag&&h.item.indexOf(h.tag)<0?' \u00b7 '+h.tag:'')),el('div',{className:'muted',style:{fontSize:12}},h.reason)),
+          el('div',{className:'muted',style:{fontSize:11,textAlign:'right',flex:'0 0 auto'}},fmtDay(h.created_at)+' \u00b7 '+h.placed_by,op&&el('div',{style:{color:'var(--red)'}},daysAgo(h.created_at)+' days'),h.location&&el('div',null,h.location))));}));
+  }
+  else if(tab==='shipping'){
+    const S=D.ships.filter(function(s){if(sf!=='ALL'&&s.status!==sf)return false;if(q&&(s.number+' '+s.customer+' '+s.manifest_number+' '+(s.items||[]).map(function(i){return i.batch_number+' '+i.tag;}).join(' ')).toLowerCase().indexOf(q.toLowerCase())<0)return false;return true;});
+    body=el('div',null,statRow([stat('Shipments (30 days)',D.ships.filter(function(s){return s.ship_date>=d30&&s.status!=='cancelled';}).length),stat('In transit',D.ships.filter(function(s){return s.status==='shipped';}).length,'var(--gold-hi)'),
+        stat('Customers (12 months)',Object.keys(D.ships.filter(function(s){return s.ship_date>=y1&&s.status!=='cancelled';}).reduce(function(m,s){m[s.customer.trim().toLowerCase()]=1;return m;},{})).length),stat('Missing manifest #',D.ships.filter(function(s){return s.status!=='cancelled'&&!s.manifest_number;}).length,D.ships.some(function(s){return s.status!=='cancelled'&&!s.manifest_number;})?'var(--red)':'var(--green)')]),
+      el('div',{className:'row',style:{marginBottom:12}},el('input',{value:q,placeholder:'Search customer, batch, tag, manifest',style:{width:280},onChange:function(e){setQ(e.target.value);}}),
+        el('select',{value:sf,onChange:function(e){setSf(e.target.value);}},el('option',{value:'ALL'},'Every status'),['shipped','delivered','cancelled'].map(function(k){return el('option',{key:k,value:k},k.charAt(0).toUpperCase()+k.slice(1));}))),
+      !S.length?el('div',{className:'empty'},D.ships.length?'No shipments match.':'No shipments yet for '+lic.name+'.'):
+      el('div',{className:'card',style:{padding:0,overflowX:'auto'}},el('table',null,el('thead',null,el('tr',null,['Shipment','Date','Customer','Batches','Manifest','Status'].map(function(h){return el('th',{key:h},h);}))),
+        el('tbody',null,S.map(function(s){return el('tr',{key:s.id,style:{cursor:'pointer',opacity:s.status==='cancelled'?.5:1},onClick:function(){setSel({t:'ship',id:s.id});}},el('td',null,el('b',null,s.number)),el('td',null,s.ship_date),el('td',null,s.customer),
+          el('td',null,(s.items||[]).map(function(i){return i.batch_number;}).filter(Boolean).join(', ')),el('td',null,s.manifest_number||el('span',{className:'badge bad'},'Missing')),el('td',null,el('span',{className:'badge '+(s.status==='delivered'?'ok':s.status==='cancelled'?'off':'warn')},s.status)));})))));
+  }
+  // ----- detail modals -----
+  let detail=null;
+  if(sel&&!modal&&sel.t==='lot'){const l=lotOf(sel.id);if(l){const uses=D.uses.filter(function(u){return u.lot_id===l.id;}),hs=D.holds.filter(function(h){return h.lot_id===l.id;}),ok=checksPass(LOT_CHECKS,l.checks);
+    detail=el(Modal,{title:l.number+' \u00b7 '+l.item,wide:true,onClose:function(){setSel(null);}},
+      el('div',{className:'row',style:{gap:6,marginBottom:10}},el('span',{className:'badge '+LOT_TONE[l.status]},LOT_STATUS[l.status]),el('span',{className:'badge off'},l.category),el('span',{className:'badge '+(l.coa_ok?'ok':'bad')},l.coa_ok?'COA on file':'No COA'),el('span',{className:'badge '+(ok?'ok':'bad')},ok?'Inspection passed':'Inspection failed'),l.supplier_status==='emergency'&&el('span',{className:'badge warn'},'Emergency supplier')),
+      el('div',{className:'card gold',style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:10,padding:'10px 14px'}},
+        [['Supplier',l.supplier_name],['Received',l.received_on+' \u00b7 '+l.received_by],['Quantity',l.quantity+' '+l.unit+' \u00b7 '+lotLeft(l)+' left'],['Supplier lot',l.supplier_lot],['METRC tag',l.metrc_tag],['Expiry',l.expiry_date],['PO / invoice',l.po_number],['Location',l.location],
+         ['Decision',l.decided_by?LOT_STATUS[l.status]+' by '+l.decided_by+' \u00b7 '+String(l.decided_at).slice(0,10):'-']].map(function(p){return el('div',{key:p[0]},el('div',{className:'k'},p[0]),el('div',{style:{fontSize:13}},p[1]||'-'));})),
+      l.decision_notes&&el('div',{style:{fontSize:13,marginBottom:8}},el('b',null,'Decision notes: '),l.decision_notes),
+      el('div',{className:'k',style:{margin:'6px 0'}},'Receiving inspection'),
+      LOT_CHECKS.map(function(c){const v=(l.checks||{})[c[0]];return el('div',{key:c[0],style:{fontSize:13,color:v?'':'var(--red)'}},(v?'\u2713 ':'\u2717 ')+c[1]);}),
+      l.inspection_notes&&el('div',{className:'muted',style:{fontSize:13,margin:'6px 0'}},l.inspection_notes),
+      el('div',{className:'k',style:{margin:'10px 0 4px'}},'Documents'),(l.files||[]).length?el(FileList,{files:l.files}):el('div',{className:'muted',style:{fontSize:12}},'None'),
+      el('div',{className:'k',style:{margin:'10px 0 4px'}},'Used in (one step forward to batches)'),uses.length?uses.map(function(u){return el('div',{key:u.id,style:{fontSize:13,textDecoration:u.voided?'line-through':''}},u.used_on+' \u00b7 '+u.quantity+' '+l.unit+(u.batch_number?' \u00b7 batch '+u.batch_number:'')+' \u00b7 '+u.used_by);}):el('div',{className:'muted',style:{fontSize:12}},'Not used yet'),
+      hs.length>0&&el('div',null,el('div',{className:'k',style:{margin:'10px 0 4px'}},'Holds'),hs.map(function(h){return el('div',{key:h.id,style:{fontSize:13}},h.number+' \u00b7 '+h.status+' \u00b7 '+h.reason+(h.decision_notes?' \u2192 '+h.decision_notes:''));})),
+      el('div',{className:'row',style:{justifyContent:'space-between',marginTop:14}},el('div',{className:'row',style:{gap:6}},
+          canRE&&['quarantine','accepted','on_hold'].indexOf(l.status)>=0&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'lot',lot:l});}},l.status==='quarantine'?'Edit':'Location / files'),
+          canRF&&l.status==='quarantine'&&el('button',{className:'btn sm',onClick:function(){setModal({t:'decide',lot:l,to:'accepted'});}},'Accept'),
+          canRF&&l.status==='quarantine'&&el('button',{className:'btn danger sm',onClick:function(){setModal({t:'decide',lot:l,to:'rejected'});}},'Reject'),
+          (canRE||can('batch',2))&&l.status==='accepted'&&lotLeft(l)>0&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'use',lotId:l.id});}},'Record use'),
+          canHE&&['quarantine','accepted'].indexOf(l.status)>=0&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'hold',prefill:{kind:'lot',lot_id:l.id,source:'Deviation'}});}},'Put on hold'),
+          el(RaiseDeviation,{state:st,license:lic,prefill:{title:'Received lot '+l.number+': '+l.item,dept:'Warehouse',category:'Supplier / material',product_affected:l.item+' ('+l.supplier_name+')',lot_number:l.supplier_lot||l.number}})),
+        el('button',{className:'btn ghost sm',onClick:function(){setSel(null);}},'Close')));}}
+  if(sel&&!modal&&sel.t==='hold'){const h=D.holds.find(function(x){return x.id===sel.id;});if(h){const l=h.lot_id&&lotOf(h.lot_id),b=h.batch_id&&batchOf(h.batch_id);
+    detail=el(Modal,{title:h.number+' \u00b7 '+h.item,onClose:function(){setSel(null);}},
+      el('div',{className:'row',style:{gap:6,marginBottom:10}},el('span',{className:'badge '+(h.status==='open'?'bad':'off')},h.status==='open'?'ON HOLD':h.status),el('span',{className:'badge off'},HOLD_KINDS[h.kind]),h.source!==HOLD_KINDS[h.kind]&&el('span',{className:'badge off'},h.source)),
+      el('div',{className:'card gold',style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:10,padding:'10px 14px'}},
+        [['Held item',h.item],['Lot',l?l.number+' \u00b7 '+l.supplier_name:''],['Batch',b?batchName(b):''],['Package tag',h.tag],['Quantity',h.quantity],['Location',h.location],['Placed',fmtDay(h.created_at)+' \u00b7 '+h.placed_by],
+         ['Decision',h.decided_by?h.status+' by '+h.decided_by+' \u00b7 '+String(h.decided_at).slice(0,10):'Waiting']].filter(function(p){return p[1];}).map(function(p){return el('div',{key:p[0]},el('div',{className:'k'},p[0]),el('div',{style:{fontSize:13}},p[1]));})),
+      el('div',{style:{fontSize:13,marginBottom:8}},el('b',null,'Reason: '),h.reason),h.decision_notes&&el('div',{style:{fontSize:13,marginBottom:8}},el('b',null,'Decision: '),h.decision_notes),
+      el('div',{className:'row',style:{justifyContent:'space-between',marginTop:14}},el('div',{className:'row',style:{gap:6}},
+          canHF&&h.status==='open'&&el('button',{className:'btn sm',onClick:function(){setModal({t:'hdecide',hold:h});}},'Decide'),
+          h.status==='open'&&el(RaiseDeviation,{state:st,license:lic,prefill:{title:'On hold '+h.number+': '+h.item,dept:'Warehouse',category:h.kind==='lot'?'Supplier / material':'Product quality',description:h.reason,product_affected:h.item,lot_number:b?b.batch_number:l?l.number:h.tag}})),
+        el('button',{className:'btn ghost sm',onClick:function(){setSel(null);}},'Close')));}}
+  if(sel&&!modal&&sel.t==='ship'){const s=D.ships.find(function(x){return x.id===sel.id;});if(s){
+    detail=el(Modal,{title:s.number+' \u00b7 '+s.customer,wide:true,onClose:function(){setSel(null);}},
+      el('div',{dangerouslySetInnerHTML:{__html:REC_CSS+shipHtml(s,lic)}}),(s.files||[]).length>0&&el(FileList,{files:s.files}),
+      el('div',{className:'row',style:{justifyContent:'space-between',marginTop:14}},el('div',{className:'row',style:{gap:6}},
+          canSE&&s.status==='shipped'&&el('button',{className:'btn sm',onClick:function(){db.update('hx_shipments',s.id,{status:'delivered',delivered_on:todayStr()}).then(function(){done('Delivered '+s.number);}).catch(function(e){setMsg(matErr(e));});}},'Mark delivered'),
+          canSE&&s.status!=='cancelled'&&!s.manifest_number&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'manifest',ship:s});}},'Add manifest #'),
+          canHE&&s.status!=='cancelled'&&el('button',{className:'btn ghost sm',onClick:function(){const i=(s.items||[])[0]||{};setModal({t:'hold',prefill:{kind:'return',batch_id:i.batch_id||'',tag:i.tag||'',item:'Returned by '+s.customer+' ('+s.number+')',source:'Customer return',shipment_id:s.id}});}},'Record return'),
+          canSF&&s.status!=='cancelled'&&el('button',{className:'btn danger sm',onClick:function(){setModal({t:'cancel',ship:s});}},'Cancel'),
+          el('button',{className:'btn ghost sm',onClick:function(){printRecords('Shipment '+s.number,[shipHtml(s,lic)]);}},'Print')),
+        el('button',{className:'btn ghost sm',onClick:function(){setSel(null);}},'Close')));}}
+  return el('div',null,head,
+    el('div',{className:'tabs',style:{marginBottom:12}},tabs.map(function(x){return el('button',{key:x[0],className:tab===x[0]?'on':'',onClick:function(){setTab(x[0]);setSf('ALL');setQ('');setSel(null);if(props.go)props.go(x[0]);}},x[1]+(x[0]==='holds'&&openHolds.length?' ('+openHolds.length+')':''));})),
+    msg&&el('div',{className:/^(Received|Saved|Accepted|Rejected|Recorded|Put on hold|Decided|Shipment|Delivered|Cancelled|Manifest|Use)/.test(msg)?'msg':'msg err'},msg),
+    openHolds.length>0&&tab!=='holds'&&el('div',{className:'msg err',style:{marginBottom:12}},openHolds.length+' item'+(openHolds.length===1?' is':'s are')+' on hold: ',openHolds.slice(0,4).map(function(h){return h.number+' '+h.item;}).join(', '),openHolds.length>4?'...':''),
+    body,detail,
+    modal&&modal.t==='lot'&&el(LotForm,{lot:modal.lot,state:st,license:lic,suppliers:D.sups,onClose:function(){setModal(null);},onDone:function(r){if(r&&!modal.lot)setSel({t:'lot',id:r.id});done(modal.lot?'Saved.':'Received '+(r?r.number:'lot')+' into quarantine');}}),
+    modal&&modal.t==='decide'&&el(LotDecide,{lot:modal.lot,to:modal.to,onClose:function(){setModal(null);},onDone:function(){done((modal.to==='accepted'?'Accepted ':'Rejected ')+modal.lot.number+(modal.to==='rejected'?' - put on hold until returned or destroyed':''));}}),
+    modal&&modal.t==='use'&&el(UseForm,{license:lic,lots:D.lots,batches:D.batches,lotId:modal.lotId,onClose:function(){setModal(null);},onDone:function(){done('Use recorded.');}}),
+    modal&&modal.t==='voiduse'&&el(VoidModal,{what:'use record',onClose:function(){setModal(null);},onVoid:function(why){return db.update('hx_lot_uses',modal.use.id,{voided:true,void_reason:why}).then(function(){done('Use record voided.');});}}),
+    modal&&modal.t==='hold'&&el(HoldForm,{state:st,license:lic,lots:D.lots,batches:D.batches,prefill:modal.prefill,onClose:function(){setModal(null);},onDone:function(r){setSel(r?{t:'hold',id:r.id}:null);setTab('holds');if(props.go)props.go('holds');done('Put on hold: '+(r?r.number:''));}}),
+    modal&&modal.t==='hdecide'&&el(HoldDecide,{hold:modal.hold,onClose:function(){setModal(null);},onDone:function(to){done('Decided '+modal.hold.number+': '+to);}}),
+    modal&&modal.t==='ship'&&el(ShipForm,{state:st,license:lic,batches:D.batches,tests:D.tests,holds:D.holds,suppliers:D.sups,onClose:function(){setModal(null);},onDone:function(r){if(r)setSel({t:'ship',id:r.id});done('Shipment '+(r?r.number:'')+' recorded');}}),
+    modal&&modal.t==='cancel'&&el(SimpleReason,{title:'Cancel '+modal.ship.number,btn:'Cancel shipment',onClose:function(){setModal(null);},onGo:function(why){return db.update('hx_shipments',modal.ship.id,{status:'cancelled',cancel_reason:why}).then(function(){done('Cancelled '+modal.ship.number);});}}),
+    modal&&modal.t==='manifest'&&el(SimpleReason,{title:'Manifest # for '+modal.ship.number,label:'State manifest number',btn:'Save',onClose:function(){setModal(null);},onGo:function(v){return db.update('hx_shipments',modal.ship.id,{manifest_number:v}).then(function(){done('Manifest saved.');});}}));
+}
+function MatDashCard(props){
+  const lid=props.license?props.license.id:'';const[d,setD]=useState(null);
+  useEffect(function(){if(!lid||!(can('receiving',1)||can('holds',1)||can('shipping',1))){setD(null);return;}let dead=false;const L='license_id=eq.'+encodeURIComponent(lid);
+    Promise.all([can('receiving',1)||can('holds',1)?db.get('hx_lots',L+'&status=eq.quarantine&select=id,license_id'):Promise.resolve([]),db.get('hx_holds',L+'&status=eq.open&select=id,license_id'),
+      can('shipping',1)?db.get('hx_shipments',L+'&status=eq.shipped&select=id,license_id'):Promise.resolve([])])
+    .then(function(r){if(!dead)setD({q:(r[0]||[]).filter(function(x){return x.license_id===lid;}).length,h:(r[1]||[]).filter(function(x){return x.license_id===lid;}).length,s:(r[2]||[]).filter(function(x){return x.license_id===lid;}).length});}).catch(function(){if(!dead)setD(null);});
+    return function(){dead=true;};},[lid]);
+  if(!d)return null;
+  return el('div',{className:'card gold'},el('div',{className:'k'},'Receiving and holds'),el('div',{className:'v',style:{color:d.h?'var(--red)':'var(--green)'}},d.h+' on hold'),
+    el('div',{className:'muted',style:{margin:'4px 0 8px'}},d.q+' lot'+(d.q===1?'':'s')+' in quarantine \u00b7 '+d.s+' shipment'+(d.s===1?'':'s')+' in transit'),
+    el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go(d.h&&can('holds',1)?'holds':can('receiving',1)?'receiving':'shipping');}},'Open'));
 }
 
 /* ---------- Training (Black Fox / Michigan SOP training matrix + CSQ 2A.13.2 training program) ---------- */
@@ -4187,7 +4563,7 @@ const CSQ_MFG_CLAUSES=[
  ['1.5','1','Internal audits','Audit every applicable CSQ requirement at least once a year with competent auditors who do not audit their own work; record findings and corrective actions, share results, and close findings through CAPA.',[],'',['Internal audits']],
  ['1.6','1','Corrective and preventive actions (CAPA)','Document every deviation and nonconformance clearly with root cause (when an authorized person decides one is needed), owner, immediate correction, timescale, effectiveness check, and review the trend at least once a year.',['qms'],'QMS: numbered deviations with correction, authorized root-cause decision, owner and due date; CAPAs closed only when verified effective; monthly trends and a printable annual review.',[]],
  ['1.7','1','Complaint management','Name who investigates and resolves complaints, track and analyze complaint data, and record the corrective actions taken to stop them happening again.',[],'',['Complaints']],
- ['1.8','1','Product recalls and withdrawals','Recall and withdrawal procedures that meet regulation: a recall team with roles, an up-to-date contact list (team, emergency services, customers, suppliers, regulators, certification body), a communication plan, recovery or disposal of product, and a yearly mock recall completed in under 2 hours.',['batches','testing'],'Batch numbers and final package tags.',['Recall','Receiving','Shipping']],
+ ['1.8','1','Product recalls and withdrawals','Recall and withdrawal procedures that meet regulation: a recall team with roles, an up-to-date contact list (team, emergency services, customers, suppliers, regulators, certification body), a communication plan, recovery or disposal of product, and a yearly mock recall completed in under 2 hours.',['batches','testing','shipping','holds'],'Batch numbers and final package tags. Shipments show which customers received each batch; recalled product goes on hold.',['Recall']],
  ['1.9','1','Product defense','Protect against theft, bioterrorism and intentional adulteration: threat assessment, access to sensitive areas limited to authorized people, cannabis materials, waste and product secured, secure transport, training for security and transport staff, and a yearly review and test.',['sops','visitors','logs','roles','training'],'Visitor Log and kiosk; security malfunction and security inspection logs; role-based access in Hendrix. Product defense training tracked per person.',[]],
  ['1.10','1','Fraud prevention','Assess vulnerability to mislabeling, substitution, dilution and counterfeiting, control what is found, verify label claims (strain, cannabinoid content and similar), and review and test yearly.',['sops','stickers','testing'],'Sticker potency is taken from the COA; COA tag mismatches are flagged.',[]],
  ['1.11','1','Crisis management','Crisis procedures with the people responsible and their contacts, emergency contacts, response to foreseeable disasters, how affected product is found, isolated and released, how authorities and customers are told, and a yearly review and test.',['sops'],'Crisis plan kept as an SOP.',['Recall']],
@@ -4208,21 +4584,21 @@ const CSQ_MFG_CLAUSES=[
  ['2A.9.1','2A','Dry goods storage','Dry goods stored in identified, suitable areas, off the floor and away from walls, and not mixed.',['sops'],'Storage SOP.',[]],
  ['2A.9.2','2A','Chemical controls and storage','Chemical approval process and approved list, SDS on file for every chemical, storage to SDS and label, food-grade kept apart from non-food-grade, original or labeled containers, ventilated and restricted storage with PPE, first aid, spill kits and a chemical list, and disposal to regulation.',[],'',['Chemical register']],
  ['2A.9.3','2A','Temperature and atmosphere controlled storage','Goods needing temperature or atmosphere control have defined specs; storage areas are identified, clean, working and fitted with monitoring devices; cold and frozen units have thermometers; goods off the floor and not mixed; condensation drains away from product.',['logs','qms'],'Temp / Humidity Log: min and max per room; out-of-range readings are marked automatically and need a corrective action. Out-of-range readings can be raised as deviations from the log.',[]],
- ['2A.9.4','2A','Shipping and receiving','Loading and unloading limit damage: inspection before loading or unloading, minimal exposure, no cross-contamination, goods secured from tampering, and cannabis shipped and received to regulation.',[],'',['Receiving','Shipping']],
- ['2A.10.1','2A','Identification and traceability','Every inventory item is identified through the process, finished product is traceable one step forward to the customer, materials and supplies one step back to the supplier, traceability is kept through rework, and it is tested at least yearly in a mock recall.',['batches','testing'],'Batch numbers, final package tags, state tracking system (METRC).',['Receiving','Shipping','Recall']],
- ['2A.10.2','2A','Acceptance and release','Incoming materials meet specs, are inspected for damage, arrive with a COA or certificate of conformance, are sampled and tested when needed, have their documents reviewed before approval or rejection, and rejected goods are returned or held apart.',['suppliers'],'Approved supplier list and COA expiry in Suppliers.',['Receiving']],
- ['2A.10.3','2A','Stock management','FIFO (or similar) rotation for finished product, WIP, rework and supplies; nothing used past its date; overflow storage monitored; labels, packaging, devices and excise stamps counted in an inventory system and protected from theft.',[],'',['Inventory']],
- ['2A.10.4','2A','Hold and release (quarantine)','Nonconforming and returned goods are clearly marked, quarantined so they cannot be released by accident, decided on only by qualified authorized people, and released, moved or destroyed to regulation.',['testing','qms'],'Testing status (Pending, Failed, Retest); final results changed only with Full access and a reason. Nonconforming product recorded as a deviation (from a failed test or batch) with the decision documented.',['Hold and release']],
+ ['2A.9.4','2A','Shipping and receiving','Loading and unloading limit damage: inspection before loading or unloading, minimal exposure, no cross-contamination, goods secured from tampering, and cannabis shipped and received to regulation.',['receiving','shipping'],'Receiving inspection (vehicle, packaging, seals) and pre-load inspection that must pass before shipping.',[]],
+ ['2A.10.1','2A','Identification and traceability','Every inventory item is identified through the process, finished product is traceable one step forward to the customer, materials and supplies one step back to the supplier, traceability is kept through rework, and it is tested at least yearly in a mock recall.',['batches','testing','receiving','shipping'],'Batch numbers, final package tags, state tracking system (METRC). Lots numbered on receipt and linked to the batches that use them (one step back); shipments list batches and package tags per customer (one step forward).',['Recall']],
+ ['2A.10.2','2A','Acceptance and release','Incoming materials meet specs, are inspected for damage, arrive with a COA or certificate of conformance, are sampled and tested when needed, have their documents reviewed before approval or rejection, and rejected goods are returned or held apart.',['suppliers','receiving'],'Approved supplier list and COA expiry in Suppliers. Receiving: lots only from approved suppliers, inspected on arrival, COA required, quarantined until accepted or rejected by Full access; rejected lots held apart automatically.',[]],
+ ['2A.10.3','2A','Stock management','FIFO (or similar) rotation for finished product, WIP, rework and supplies; nothing used past its date; overflow storage monitored; labels, packaging, devices and excise stamps counted in an inventory system and protected from theft.',['receiving'],'Inventory by lot: quantity left, expiry, oldest-first (FIFO) prompt; expired or held lots cannot be used.',[]],
+ ['2A.10.4','2A','Hold and release (quarantine)','Nonconforming and returned goods are clearly marked, quarantined so they cannot be released by accident, decided on only by qualified authorized people, and released, moved or destroyed to regulation.',['testing','qms','holds'],'Testing status (Pending, Failed, Retest); final results changed only with Full access and a reason. Nonconforming product recorded as a deviation (from a failed test or batch) with the decision documented. Hold and Release: lots, batches, package tags and customer returns put on hold by anyone with Edit; only Full access decides (release, destroy, return, rework) with a reason; held items cannot be used or shipped.',[]],
  ['2A.11','2A','Supplier approval and vendor qualification','Name each supplier and vendor type and the specs they must meet, verify them, select, approve and monitor them, keep an approved list, name who approves, allow emergency suppliers with checks, require ethical sourcing, audit contract manufacturers, and review all suppliers yearly.',['suppliers'],'Approved supplier list per license: supplier type, specs, credentials with expiry, who approved and on what basis, emergency suppliers with verification, ethical sourcing, contract manufacturer audits, yearly reviews (6 months for high risk), suspend and disqualify with reasons.',[]],
  ['2A.12.1','2A','Standard operating procedures','Documented SOPs for producing and processing cannabinoid materials and products that conform to CSQ and regulation.',['sops','batches'],'Batch Tracker records follow each process. SOP library for every production process; Batch Tracker records follow them.',[]],
  ['2A.12.2','2A','Process flow and segregation','Document how people and product move through the facility to keep segregation, with a map of area designations and their risks.',['sops'],'Process flow and area map attached to an SOP.',[]],
  ['2A.12.3','2A','Pre-operational inspections (line clearance)','Before production, record a check that areas and equipment are clean, within maintenance and calibration dates and ready, with any problem and correction noted.',[],'',['Line clearance']],
- ['2A.12.4','2A','Materials and supplies','Every material and supply has specs and is identified by type, use and hazard; meets regulation and is approved for use; is fit for purpose; has a yearly risk assessment; label information is kept on file; and is stored and used to label instructions.',['products','suppliers'],'Products: ingredient price library and formulations. Material specs required of each supplier; only approved suppliers used.',['Receiving']],
+ ['2A.12.4','2A','Materials and supplies','Every material and supply has specs and is identified by type, use and hazard; meets regulation and is approved for use; is fit for purpose; has a yearly risk assessment; label information is kept on file; and is stored and used to label instructions.',['products','suppliers','receiving'],'Products: ingredient price library and formulations. Material specs required of each supplier; only approved suppliers used. Materials received with specs, COA and inspection; used only after acceptance.',[]],
  ['2A.12.5','2A','Rework','Rework is identified and dated for traceability, each batch inspected and analyzed before use, used before it would expire in the finished product, safe, and like-to-like.',[],'',['Rework']],
  ['2A.12.6','2A','Cross-contamination controls','Keep foreign matter out: exclude contamination sources, no loose objects overhead, inspection of facility and tools, a list of sources that cannot be removed with protective measures, control of blades, glass and brittle items, dust and chemicals, cleanup and release of contaminated areas, decisions on affected product, detection and removal methods, investigation, and calibrated detection equipment.',['sops','qms'],'Contamination incidents reported as deviations with correction and root cause.',[]],
  ['2A.12.7','2A','Allergen management','Allergen labeling meets the law, allergen labels are verified, allergens from materials, suppliers, staff and visitors are risk-assessed, and cleaning, changeover and storage prevent cross-contact.',['stickers','products'],'Label templates carry an allergen declaration that prints on every sticker.',[]],
  ['2A.12.8','2A','Product labeling and packaging','Label specs that meet CSQ and regulation; label content (potency, ingredients, allergens, warnings, claims, batch) verified against the batch; labels reviewed when materials, processes or rules change; only the labels and packaging a batch needs are issued, then reconciled; no mislabeled or damaged product; correct, inspected, clean packaging materials and tools.',['stickers','testing'],'Sticker templates per SKU and flavor with approval number; potency printed from the COA; every sticker print logged (batch, tag, count, who); template changes in the audit trail.',[]],
- ['2A.12.9','2A','Product sampling and testing','Finished product meets spec and regulation before release; samples are representative; samplers are competent; methods, frequency and limits are defined and results trended; held product is released after review; recognized methods; compliance labs accredited to ISO/IEC 17025; internal labs separated; retention samples kept when required.',['testing','batches','suppliers'],'Testing: per final package tag, lab and lab license, COA stored privately, COA read by AI with tag check, retention samples (quantity, location, keep-until). Testing labs approved in Suppliers with ISO/IEC 17025 accreditation; labs used in Testing are checked against the approved list.',[]],
+ ['2A.12.9','2A','Product sampling and testing','Finished product meets spec and regulation before release; samples are representative; samplers are competent; methods, frequency and limits are defined and results trended; held product is released after review; recognized methods; compliance labs accredited to ISO/IEC 17025; internal labs separated; retention samples kept when required.',['testing','batches','suppliers','holds'],'Testing: per final package tag, lab and lab license, COA stored privately, COA read by AI with tag check, retention samples (quantity, location, keep-until). Testing labs approved in Suppliers with ISO/IEC 17025 accreditation; labs used in Testing are checked against the approved list. Batches with a failed test and no passing retest cannot be released from hold or shipped.',[]],
  ['2A.13.1','2A','Personnel roles and responsibilities','Everyone in the facility is classified by role; each role has defined duties and requirements (certifications, education, experience, training).',['roles','team','training'],'Roles with duties, requirements (certifications, training, experience) and access per person. Each role\'s required training in the training matrix.',[]],
  ['2A.13.2','2A','Personnel training','Train everyone, including temps and contractors, before they work: minimum training for all, training per role, a training matrix, yearly refreshers, regular assessments, legal, cGMP, cannabis safety, hygiene, product defense and job training; at least one person with CSQ program overview training; qualified trainers; training in a language staff understand; records kept at least for the length of employment.',['sops','roles','training'],'Roles (the training matrix will hang off them). SOP signatures per person are part of the training record. Training matrix: required courses by role, refreshers, qualified trainers, assessments, certificates, SOP signatures; CSQ Program Overview holders counted.',[]],
  ['2A.13.3','2A','Personnel health (illness and injuries)','Staff know the symptoms that keep them off product and how to report them; no handling product with open wounds; minor cuts covered with bandage and glove; bodily fluid spills quarantined, cleaned and released by authorized people.',['sops'],'Health SOP signed by everyone.',[]],
@@ -4232,13 +4608,13 @@ const CSQ_MFG_CLAUSES=[
  ['2A.13.7','2A','Handwashing','Staff are trained and wash at the right times (after contamination risks, when soiled, when changing gloves, after breaks, eating, smoking or the restroom); stations are accessible with handwash signs in a language staff understand.',['sops','training'],'QR sign printing for posted signs. Handwashing SOP signed by everyone. Handwashing training tracked per person.',[]],
  ['2A.13.8','2A','Contractors, service providers and visitors','Visitors and contractors stay out of production when ill, acknowledge the facility\'s cGMP rules, wear suitable clothing and PPE, remove jewelry and loose items, and follow hygiene and handwashing rules.',['visitors'],'Visitor Log and QR kiosk: every visitor reads and accepts the GMP rules and answers an illness question before entering; anyone ill is marked to stay out of production.',[]],
  ['3C.1.1','3C','Manufacturing activities','Manufacturing follows cGMP and protects product from adulterants, foreign matter and residual solvents: areas identified with signage, simultaneous activities segregated, solvent and chemical levels in the final product within regulation and spec.',['batches','testing'],'Batch records; residual solvent results on COAs.',[],'All products'],
- ['3C.1.2','3C','Manufacturing inputs and controls','Every manufacturing input is declared with safety and quality specs, and its use is controlled, recorded and tracked.',['products','batches'],'Formulations; batch records capture inputs used.',['Receiving'],'All products'],
- ['3C.1.3','3C','Air, CO2 and other process gases','Process gases suit their use and are monitored: filtered, dry and oil-free; at least 99.5% pure unless specified; CO2 beverage grade or better (never medical grade).',['suppliers'],'Gas suppliers approved with specs (purity, beverage grade CO2).',['Receiving'],'Processes using gases'],
- ['3C.1.4','3C','Ethanol and other liquid organic solvents','Solvents suit their use and are monitored: at least 99.5% pure; ethanol food grade and not denatured (approved denaturants reduced to legal levels if used); only ethanol may be an ingredient, and it must be food grade.',['batches'],'Ethanol and BHO batch records track solvent use.',['Receiving'],'Processes using solvents'],
+ ['3C.1.2','3C','Manufacturing inputs and controls','Every manufacturing input is declared with safety and quality specs, and its use is controlled, recorded and tracked.',['products','batches','receiving'],'Formulations; batch records capture inputs used. Inputs received as numbered lots and recorded against the batches that use them.',[],'All products'],
+ ['3C.1.3','3C','Air, CO2 and other process gases','Process gases suit their use and are monitored: filtered, dry and oil-free; at least 99.5% pure unless specified; CO2 beverage grade or better (never medical grade).',['suppliers','receiving'],'Gas suppliers approved with specs (purity, beverage grade CO2). Gases received with COA / certificate of conformance.',[],'Processes using gases'],
+ ['3C.1.4','3C','Ethanol and other liquid organic solvents','Solvents suit their use and are monitored: at least 99.5% pure; ethanol food grade and not denatured (approved denaturants reduced to legal levels if used); only ethanol may be an ingredient, and it must be food grade.',['batches','receiving'],'Ethanol and BHO batch records track solvent use. Solvents received with COA / certificate of conformance.',[],'Processes using solvents'],
  ['3C.1.5','3C','Water used during manufacturing','Water used as an ingredient or in processing is potable, at least 99.5% pure, evaluated as a contamination source, tested on a continuing basis, informed by past tests and land use, with wastewater monitored.',[],'',['Facility tests'],'Products made with water'],
  ['3C.1.6','3C','Water ice and dry ice','Ice meets water specs; ice machines installed to regulation with storage and production parts emptied and cleaned at least weekly; dry ice used sparingly and never touching product.',['sops','logs'],'',[],'Processes using ice or dry ice'],
- ['3C.1.7','3C','Other solid and liquid processing inputs','Media, catalysts, reactants and similar inputs are at least 99.5% pure and food grade, or justified by a toxicological risk assessment; non-food-grade inputs are declared and reduced to safe levels in the final product.',['suppliers'],'Processing input suppliers approved with specs.',['Receiving'],'Processes using media or reagents'],
- ['3C.1.8','3C','Non-cannabinoid ingredients','Terpenes and other ingredients are food grade or justified by a toxicological risk assessment; non-food-grade ingredients are declared and reduced to safe levels.',['products','suppliers'],'Formulations list ingredients. Ingredient suppliers approved with specs (food grade, COA).',['Receiving'],'Formulated products'],
+ ['3C.1.7','3C','Other solid and liquid processing inputs','Media, catalysts, reactants and similar inputs are at least 99.5% pure and food grade, or justified by a toxicological risk assessment; non-food-grade inputs are declared and reduced to safe levels in the final product.',['suppliers','receiving'],'Processing input suppliers approved with specs. Processing inputs received with COA.',[],'Processes using media or reagents'],
+ ['3C.1.8','3C','Non-cannabinoid ingredients','Terpenes and other ingredients are food grade or justified by a toxicological risk assessment; non-food-grade ingredients are declared and reduced to safe levels.',['products','suppliers','receiving'],'Formulations list ingredients. Ingredient suppliers approved with specs (food grade, COA). Ingredients received with COA and inspection.',[],'Formulated products'],
  ['3C.1.9','3C','Indoor air quality, airflow and environment','Production areas have air quality specs; air is conditioned, filtered, treated and monitored; air handling is checked; airflow, humidity and temperature have min and max limits and air never stagnates; milling and grinding areas are monitored for dust with dust handling and PPE.',['logs'],'Temp / Humidity Log: min and max per room; out-of-range readings are marked automatically and need a corrective action.',[],'All products'],
  ['3C.1.10','3C','Blending, compounding, formulation and mixing','Defined procedures and equipment for blending; every ingredient measured and added at the right step; parameters documented to spec; batches homogeneous before dispensing; rework approved by qualified staff; equipment sized for the batch.',['products','batches'],'Formulations; Batch Tracker calculations; changes to filled values need Full access and a reason.',[],'Blended and formulated products'],
  ['3C.2.1','3C','Cannabinoid herbal material products','Dried or frozen flower is protected from foreign matter, chemical and microbial contamination, kept frozen when required, and handled with airflow, ventilation and dust control.',['sops','batches'],'Infused flower, moon rocks and snow caps batch records.',[],'Flower products'],
@@ -4276,9 +4652,9 @@ const STD_STATUSES=['Not assessed','Conforming','Partial','Not conforming','Not 
 const STD_TONE={'Not assessed':'off','Conforming':'ok','Partial':'warn','Not conforming':'bad','Not applicable':'off'};
 const STD_COLOR={'Conforming':'#5fbf8a','Partial':'#d4af37','Not conforming':'#e5645a','Not applicable':'#4a473f','Not assessed':'#2a2a2a'};
 const ADOPT_STATUSES=['Following','Audit scheduled','Certified','Suspended','Withdrawn'];
-const HX_PAGE_LABEL={suppliers:'Suppliers',training:'Training',qms:'QMS (Deviations, CAPA)',sops:'SOPs',rulebook:'Rulebook',locations:'States and Licenses',audit:'Audit Trail',batches:'Batch Tracker',testing:'Testing',stickers:'Compliance Stickers',
+const HX_PAGE_LABEL={receiving:'Receiving',inventory:'Inventory',holds:'Hold and Release',shipping:'Shipping',suppliers:'Suppliers',training:'Training',qms:'QMS (Deviations, CAPA)',sops:'SOPs',rulebook:'Rulebook',locations:'States and Licenses',audit:'Audit Trail',batches:'Batch Tracker',testing:'Testing',stickers:'Compliance Stickers',
   products:'Products',logs:'Facility Logs',visitors:'Visitor Log',roles:'Roles',team:'Team and Access'};
-const HX_PAGE_MOD={suppliers:'suppliers',training:'training',qms:'qms',sops:'sops',rulebook:'rulebook',audit:'audit',batches:'batch',testing:'testing',stickers:'stickers',visitors:'logs_visitor'};
+const HX_PAGE_MOD={receiving:'receiving',inventory:'receiving',holds:'holds',shipping:'shipping',suppliers:'suppliers',training:'training',qms:'qms',sops:'sops',rulebook:'rulebook',audit:'audit',batches:'batch',testing:'testing',stickers:'stickers',visitors:'logs_visitor'};
 function stdLevelOf(m){return m==='4A'?2:m==='5'?3:1;}
 function stdErr(e){
   const m=String((e&&e.message)||e);
@@ -4481,6 +4857,23 @@ async function loadStdEvidence(st,lic){
       out:A.filter(function(s){return s.status==='suspended'||s.status==='disqualified';}).length,late:A.filter(supReviewLate).length,cred:A.filter(function(s){return s.status!=='disqualified'&&supCredIssues(s).length;}).length,
       cats:A.filter(supActive).reduce(function(m,s){m[s.category]=(m[s.category]||0)+1;return m;},{}),labGap:supLabCheck(A,labs),labs:A.filter(function(s){return s.category==='Testing Lab'&&supActive(s);}).length,
       pest:A.filter(function(s){return s.category==='Pest Control'&&supActive(s);}).length,lastRev:rev};}));
+  if(can('receiving',1))jobs.push(tryGet('receiving',async function(){
+    const l=((await db.get('hx_lots','license_id=eq.'+enc(lid)+'&select=id,status,received_on,coa_ok,checks,decided_at,expiry_date,quantity,qty_used,supplier_status,license_id&limit=50000'))||[]).filter(function(x){return x.license_id===lid;});
+    const l12=l.filter(function(x){return x.received_on>=since.slice(0,10);});let uses=0;try{uses=((await db.get('hx_lot_uses','license_id=eq.'+enc(lid)+'&voided=eq.false&select=id,license_id&limit=50000'))||[]).filter(function(x){return x.license_id===lid;}).length;}catch(e){}
+    return {n:l12.length,last:l.map(function(x){return x.received_on;}).sort().pop()||'',acc:l12.filter(function(x){return x.decided_at&&x.status!=='rejected'&&x.status!=='returned'&&x.status!=='destroyed';}).length,
+      rej:l12.filter(function(x){return ['rejected','returned','destroyed'].indexOf(x.status)>=0;}).length,wait:l.filter(function(x){return x.status==='quarantine';}).length,
+      coa:l12.filter(function(x){return x.coa_ok;}).length,insp:l12.filter(function(x){return checksPass(LOT_CHECKS,x.checks);}).length,
+      expired:l.filter(function(x){return x.status==='accepted'&&lotLeft(x)>0&&lotExp(x)==='expired';}).length,stock:l.filter(function(x){return x.status==='accepted'&&lotLeft(x)>0;}).length,uses:uses};}));
+  if(can('holds',1)||can('receiving',1)||can('shipping',1))jobs.push(tryGet('holds',async function(){
+    const h=((await db.get('hx_holds','license_id=eq.'+enc(lid)+'&select=id,status,kind,created_at,decided_at,license_id&limit=50000'))||[]).filter(function(x){return x.license_id===lid;});
+    const op=h.filter(function(x){return x.status==='open';});
+    return {open:op.length,oldest:op.map(function(x){return daysAgo(x.created_at);}).sort(function(a,b){return b-a;})[0]||0,n:h.filter(function(x){return x.created_at>=since;}).length,
+      decided:h.filter(function(x){return x.status!=='open'&&x.decided_at>=since;}).length,returns:h.filter(function(x){return x.kind==='return'&&x.created_at>=since;}).length,last:h.map(function(x){return x.created_at;}).sort().pop()||''};}));
+  if(can('shipping',1))jobs.push(tryGet('shipping',async function(){
+    const s=((await db.get('hx_shipments','license_id=eq.'+enc(lid)+'&select=id,status,ship_date,manifest_number,checks_ok,items,customer,license_id&limit=50000'))||[]).filter(function(x){return x.license_id===lid&&x.status!=='cancelled';});
+    const s12=s.filter(function(x){return x.ship_date>=since.slice(0,10);});
+    return {n:s12.length,last:s.map(function(x){return x.ship_date;}).sort().pop()||'',man:s12.filter(function(x){return x.manifest_number;}).length,chk:s12.filter(function(x){return x.checks_ok;}).length,
+      cust:Object.keys(s12.reduce(function(m,x){m[x.customer.trim().toLowerCase()]=1;return m;},{})).length,lines:s12.reduce(function(n,x){return n+(x.items||[]).length;},0),traced:s12.reduce(function(n,x){return n+(x.items||[]).filter(function(i){return i.batch_id;}).length;},0)};}));
   jobs.push(tryGet('roles',async function(){const rs=ACC.roles||[];return {n:rs.length,noReq:rs.filter(function(r){return !String(r.requirements||'').trim()||!String(r.description||'').trim();}).length};}));
   await Promise.all(jobs);
   return E;
@@ -4530,6 +4923,16 @@ function clauseEvidence(x,E){
         warn:!U.n?'No suppliers on file':(U.late?U.late+' supplier review'+(U.late===1?'':'s')+' overdue':(U.cred?U.cred+' with expiring credentials':''))});
       if(cl==='2A.12.9')out.push({label:'Testing labs',value:U.labs+' approved lab'+(U.labs===1?'':'s')+' with ISO/IEC 17025'+(U.labGap.length?' \u00b7 not approved: '+U.labGap.join(', '):' \u00b7 every lab used in Testing is approved'),page:'suppliers',warn:U.labGap.length?U.labGap.length+' lab'+(U.labGap.length===1?'':'s')+' not approved':(!U.labs?'No approved lab':'')});
       if(cl==='2A.5.2')out.push({label:'Pest control contractor',value:U.pest?U.pest+' approved pest control supplier'+(U.pest===1?'':'s')+' with licenses on file':'No approved pest control supplier',page:'suppliers',warn:U.pest?'':'Add the pest control contractor'});}
+    else if(p==='receiving'&&E.receiving){const R=E.receiving,cl=x.clause;
+      out.push({label:'Receiving log',value:R.n+' lot'+(R.n===1?'':'s')+' received \u00b7 '+R.coa+' with COA \u00b7 '+R.insp+' passed inspection \u00b7 '+R.acc+' accepted, '+R.rej+' rejected \u00b7 '+R.wait+' in quarantine',last:R.last,page:'receiving',
+        warn:!R.n?'Nothing received in 12 months':(R.n-R.coa?(R.n-R.coa)+' without a COA':'')});
+      if(cl==='2A.10.3'||cl==='2A.10.1')out.push({label:'Inventory by lot',value:R.stock+' lot'+(R.stock===1?'':'s')+' in stock \u00b7 '+R.uses+' use'+(R.uses===1?'':'s')+' recorded against batches \u00b7 oldest first (FIFO)',page:'inventory',warn:R.expired?R.expired+' expired lot'+(R.expired===1?'':'s')+' still in stock':''});}
+    else if(p==='holds'&&E.holds){const H=E.holds;
+      out.push({label:'Hold and release',value:H.n+' hold'+(H.n===1?'':'s')+' in 12 months \u00b7 '+H.open+' open \u00b7 '+H.decided+' decided by an authorized person \u00b7 '+H.returns+' customer return'+(H.returns===1?'':'s'),last:H.last,page:'holds',
+        warn:H.open&&H.oldest>30?'Oldest open hold '+H.oldest+' days':''});}
+    else if(p==='shipping'&&E.shipping){const S=E.shipping;
+      out.push({label:'Shipping log',value:S.n+' shipment'+(S.n===1?'':'s')+' to '+S.cust+' customer'+(S.cust===1?'':'s')+' \u00b7 '+S.chk+' with a passed pre-load inspection \u00b7 '+S.man+' with a state manifest \u00b7 '+S.traced+' of '+S.lines+' lines traced to a batch',last:S.last,page:'shipping',
+        warn:!S.n?'No shipments in 12 months':(S.n-S.man?(S.n-S.man)+' without a manifest number':'')});}
     else if(p==='roles'&&E.roles)out.push({label:'Roles',value:E.roles.n+' defined role'+(E.roles.n===1?'':'s')+(x.clause==='2A.13.1'?' \u00b7 '+(E.roles.n-E.roles.noReq)+' with duties and requirements':''),page:'roles',
       warn:!E.roles.n?'No roles defined':(x.clause==='2A.13.1'&&E.roles.noReq?E.roles.noReq+' role'+(E.roles.noReq===1?'':'s')+' missing duties or requirements':'')});
   });
@@ -5500,7 +5903,7 @@ function App(){
   if(isAdmin)nav.push({id:'team',label:'Team and Access'},{id:'roles',label:'Roles'});
   if(can('audit',1))nav.push({id:'audit',label:'Audit Trail'});
   const anyLog=LOG_TYPES.some(function(t){return can(LOG_MOD[t.id],1);});
-  const mods=[can('qms',1)&&['qms','QMS'],can('training',1)&&['training','Training'],can('sops',1)&&['sops','SOPs'],can('suppliers',1)&&['suppliers','Suppliers'],can('logs_visitor',1)&&['visitors','Visitor Log'],anyLog&&['logs','Facility Logs'],(can('products',1)||can('formbank',1)||can('cogs',1))&&['products','Products'],can('batch',1)&&['batches','Batch Tracker'],can('testing',1)&&['testing','Testing'],can('stickers',1)&&['stickers','Compliance Stickers']].filter(Boolean);
+  const mods=[can('qms',1)&&['qms','QMS'],can('training',1)&&['training','Training'],can('sops',1)&&['sops','SOPs'],can('suppliers',1)&&['suppliers','Suppliers'],can('receiving',1)&&['receiving','Receiving'],can('holds',1)&&['holds','Hold and Release'],can('shipping',1)&&['shipping','Shipping'],can('logs_visitor',1)&&['visitors','Visitor Log'],anyLog&&['logs','Facility Logs'],(can('products',1)||can('formbank',1)||can('cogs',1))&&['products','Products'],can('batch',1)&&['batches','Batch Tracker'],can('testing',1)&&['testing','Testing'],can('stickers',1)&&['stickers','Compliance Stickers']].filter(Boolean);
   let body;
   if(page==='locations')body=el(Locations,{profile:profile,states:states,licenses:licenses,reload:loadData,openRulebook:function(id){pickState(id);setPage('rulebook');}});
   else if(page==='visitors'&&can('logs_visitor',1))body=el(VisitorLog,{key:licId,state:st,license:lic});
@@ -5513,6 +5916,7 @@ function App(){
   else if(page==='team'&&isAdmin)body=el(Team,{profile:profile,states:states,licenses:licenses,onSelfChange:boot});
   else if(page==='roles'&&isAdmin)body=el(Roles);
   else if(page==='audit'&&can('audit',1))body=el(AuditTrail,{state:st});
+  else if((page==='receiving'&&can('receiving',1))||(page==='inventory'&&can('receiving',1))||(page==='holds'&&can('holds',1))||(page==='shipping'&&can('shipping',1)))body=el(MatPage,{key:licId,state:st,license:lic,tab:page,go:setPage});
   else if(page==='suppliers'&&can('suppliers',1))body=el(SuppliersPage,{key:licId,state:st,license:lic,licenses:licenses,go:setPage});
   else if(page==='training'&&can('training',1))body=el(TrainingPage,{key:licId,state:st,license:lic,go:setPage});
   else if(page==='qms'&&can('qms',1))body=el(QmsPage,{key:licId,state:st,license:lic,go:setPage});
