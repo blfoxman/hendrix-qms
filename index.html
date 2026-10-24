@@ -4775,14 +4775,23 @@ async function trAiDraftLaw(st,c){
   const rules=(await db.get('hx_rules','state_id=eq.'+encodeURIComponent(st.id)+'&select=category,citation,title,body&order=category'))||[];
   if(!rules.length)throw new Error('The '+st.name+' Rulebook is empty. Add the state rules first; the course is written from them.');
   let txt='';rules.forEach(function(r){const add='['+(r.citation||'')+'] '+r.category+' - '+r.title+': '+String(r.body||'').replace(/\s+/g,' ').slice(0,700)+'\n';if(txt.length+add.length<45000)txt+=add;});
-  const prompt='You write a training course for employees of a licensed cannabis manufacturer in '+st.name+(st.agency?' (regulator: '+st.agency+')':'')+'. Use ONLY the state rules below; do not invent rules, numbers or citations. '+
-    'Cover what a production employee must know and do: licensing and badges, security and access, inventory tracking (METRC), testing, packaging and labeling, waste, recordkeeping, and anything else the rules require of employees. Cite the rule citation in brackets after each requirement.\n'+
-    'Return ONLY JSON: {"lessons":[{"title":"...","body":"plain text, blank line between paragraphs, lines starting with - for bullets"}],"quiz":[{"q":"...","options":["...","...","...","..."],"answer":0,"explain":"one sentence with the citation"}]}. Write 4 to 6 lessons and 10 questions with 4 options each; vary the position of the correct option.\n\nRULES OF '+st.name.toUpperCase()+':\n'+txt;
-  let j;try{j=await aiCall({module:'training',max_tokens:8000,messages:[{role:'user',content:prompt}]});}catch(e){if(String(e.message)==='AI_NOT_SETUP')throw new Error('AI is not set up yet - deploy the hendrix-ai function (see hendrix-ai.ts).');throw e;}
+  const intro='You write a training course for employees of a licensed cannabis manufacturer in '+st.name+(st.agency?' (regulator: '+st.agency+')':'')+'. Use ONLY the state rules below; do not invent rules, numbers or citations. ';
+  const notSet=function(e){if(String(e.message)==='AI_NOT_SETUP')return new Error('AI is not set up yet - deploy the hendrix-ai function (see hendrix-ai.ts).');return e;};
+  if(c&&c.onStep)c.onStep('Writing the lessons (1 of 2)...');
+  const p1=intro+'Cover what a production employee must know and do: licensing and badges, security and access, inventory tracking (METRC), testing, packaging and labeling, waste, recordkeeping, and anything else the rules require of employees. Cite the rule citation in brackets after each requirement.\n'+
+    'Return ONLY JSON: {"lessons":[{"title":"...","body":"plain text, blank line between paragraphs, lines starting with - for bullets"}]}. Write 4 to 6 lessons.\n\nRULES OF '+st.name.toUpperCase()+':\n'+txt;
+  let j;try{j=await aiCall({module:'training',max_tokens:5000,messages:[{role:'user',content:p1}]});}catch(e){throw notSet(e);}
+  const o1=sopAiJson(((j.content||[])[0]||{}).text||'');
+  const lessons=(o1.lessons||[]).filter(function(l){return l&&l.title&&l.body;}).map(function(l){return {title:String(l.title),body:String(l.body)};});
+  if(!lessons.length)throw new Error('The AI did not return usable lessons. Try again.');
+  if(c&&c.onStep)c.onStep('Writing the quiz (2 of 2)...');
+  const p2=intro+'Write a quiz that checks the lessons below. Every question must be answered by the lessons. '+
+    'Return ONLY JSON: {"quiz":[{"q":"...","options":["...","...","...","..."],"answer":0,"explain":"one sentence with the citation"}]}. Write 10 questions with 4 options each; vary the position of the correct option.\n\nLESSONS:\n'+
+    lessons.map(function(l){return '## '+l.title+'\n'+l.body;}).join('\n\n');
+  try{j=await aiCall({module:'training',max_tokens:3500,messages:[{role:'user',content:p2}]});}catch(e){throw notSet(e);}
   const out=sopAiJson(((j.content||[])[0]||{}).text||'');
-  const lessons=(out.lessons||[]).filter(function(l){return l&&l.title&&l.body;}).map(function(l){return {title:String(l.title),body:String(l.body)};});
   const quiz=(out.quiz||[]).filter(function(q){return q&&q.q&&Array.isArray(q.options)&&q.options.length>=2&&q.answer>=0&&q.answer<q.options.length;}).map(function(q){return {q:String(q.q),options:q.options.map(String),answer:Number(q.answer),explain:String(q.explain||'')};});
-  if(!lessons.length||!quiz.length)throw new Error('The AI did not return a usable course. Try again.');
+  if(!quiz.length)throw new Error('The AI did not return a usable quiz. Try again.');
   return {lessons:lessons,quiz:quiz,pass_mark:80,minutes:20,content_source:'AI draft from the '+st.name+' Rulebook ('+rules.length+' rules) - review before publishing'};
 }
 function CourseContentEditor(props){
@@ -4799,7 +4808,7 @@ function CourseContentEditor(props){
     if(pub){if(!f.lessons.length||!f.quiz.length){setErr('Add at least one lesson and one question.');return;}
       if(f.quiz.some(function(q){return !q.q.trim()||q.options.length<2||q.options.some(function(o){return !String(o).trim();});})){setErr('Every question needs text and at least two filled options.');return;}}
     setBusy(pub?'Publishing...':'Saving...');try{await trSaveContent(c,f,pub);props.onDone(pub?'Published '+c.name+' online.':'Draft saved.');}catch(e){setErr(trErr(e));}setBusy('');}
-  async function ai(){setErr('');setBusy('The AI is writing the course from the '+st.name+' Rulebook...');try{const d=await trAiDraftLaw(st,c);setF(d);}catch(e){setErr(String(e.message||e));}setBusy('');}
+  async function ai(){setErr('');setBusy('The AI is writing the course from the '+st.name+' Rulebook...');try{const d=await trAiDraftLaw(st,{...c,onStep:function(m){setBusy(m);}});setF(d);}catch(e){setErr(String(e.message||e));}setBusy('');}
   return el(Modal,{title:'Online course \u00b7 '+c.name,wide:true,onClose:props.onClose},
     el('div',{className:'row',style:{gap:6,marginBottom:10}},el('span',{className:'badge '+(c.content_status==='published'?'ok':c.content_status==='draft'?'warn':'off')},c.content_status==='published'?'Published v'+c.content_version+' by '+c.content_by:c.content_status==='draft'?'Draft':'No content yet'),
       starter&&el('button',{className:'btn ghost sm',onClick:function(){setF(trStarterForm(starter));}},'Load Hendrix starter content'),
@@ -6613,11 +6622,29 @@ async function openStored(path,name){
 }
 async function aiCall(body){
   const c=cfg(),tok=await freshToken();
-  const r=await fetch(c.url+'/functions/v1/hendrix-ai',{method:'POST',headers:{'apikey':c.key,'Authorization':'Bearer '+(tok||c.key),'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const url=c.url+'/functions/v1/hendrix-ai',hdr={'apikey':c.key,'Authorization':'Bearer '+(tok||c.key),'Content-Type':'application/json'};
+  const t0=Date.now();let r;
+  try{r=await fetch(url,{method:'POST',headers:hdr,body:JSON.stringify(body)});}
+  catch(e){throw new Error(await aiDiagnose(url,hdr,Date.now()-t0));}
   if(r.status===404)throw new Error('AI_NOT_SETUP');
+  if(r.status===401)throw new Error('The AI refused the sign-in. Sign out of Hendrix, sign in again and retry.');
+  if(r.status===502||r.status===503||r.status===504||r.status===546)throw new Error('The AI took too long and Supabase stopped the request ('+r.status+'). Try again; if it keeps happening, the request is too large.');
   const j=await r.json().catch(function(){return {};});
   if(!r.ok||j.error)throw new Error((j.error&&j.error.message)||('AI request failed ('+r.status+')'));
   return j;
+}
+// "Failed to fetch": the browser never got an answer. A quick request that does not call the AI tells which problem it is.
+async function aiDiagnose(url,hdr,ms){
+  try{
+    const ctl=window.AbortController?new AbortController():null;const tm=ctl?setTimeout(function(){ctl.abort();},15000):null;
+    const r=await fetch(url,{method:'POST',headers:hdr,body:JSON.stringify({module:'testing',probe:true}),signal:ctl?ctl.signal:undefined});
+    if(tm)clearTimeout(tm);
+    if(r.status===404)return 'AI is not set up yet - the hendrix-ai function is not deployed in Supabase (Edge Functions). Deploy hendrix-ai.ts with the name hendrix-ai.';
+    return 'The AI function is set up, but the connection closed after '+Math.round(ms/1000)+' seconds before the answer came back (the AI took too long or the internet connection dropped). Try again.';
+  }catch(e){
+    if(!navigator.onLine)return 'No internet connection. Reconnect and try again.';
+    return 'Hendrix cannot reach the AI. The hendrix-ai function is not deployed in Supabase (Edge Functions > Deploy a new function > Via Editor, name it exactly hendrix-ai, paste hendrix-ai.ts, keep Verify JWT on, and add the ANTHROPIC_API_KEY secret), or a browser extension / firewall is blocking supabase.co.';
+  }
 }
 async function readCoa(file){
   const data=await fileB64(file),pdf=/pdf/i.test(file.type)||/\.pdf$/i.test(file.name||'');
