@@ -1,9 +1,10 @@
 // Hendrix QMS - Supabase Edge Function "hendrix-ai"
-// Reads lab COAs (and later other documents) with Claude for the Hendrix app.
+// Claude for the Hendrix app: reads lab COAs (Testing) and writes / revises SOPs (SOPs).
 //
-// Security: only a signed-in, approved Hendrix user with at least Edit access to
-// Testing can use it (checked with the user's own login through hx_perm). The
-// Anthropic key stays in Supabase secrets and never reaches the browser.
+// Security: only a signed-in, approved Hendrix user with at least Edit access to the
+// module making the request (Testing or SOPs) can use it, checked with the user's own
+// login through hx_perm. The Anthropic key stays in Supabase secrets and never reaches
+// the browser. After changing this file, deploy it again (same name: hendrix-ai).
 //
 // Deploy (Supabase dashboard, project bqrncllndvzbhmxanitq):
 //   1. Edge Functions > Deploy a new function > Via Editor. Name it exactly: hendrix-ai
@@ -31,14 +32,17 @@ Deno.serve(async (req) => {
     });
     const { data: u } = await sb.auth.getUser();
     if (!u || !u.user) return json({ error: { message: "Sign in to Hendrix first." } }, 401);
-    const { data: lvl, error: perr } = await sb.rpc("hx_perm", { p_mod: "testing" });
+    const body = await req.json();
+    const mod = body.module === "sops" ? "sops" : "testing";
+    const { data: lvl, error: perr } = await sb.rpc("hx_perm", { p_mod: mod });
     if (perr) return json({ error: { message: "Access check failed: " + perr.message } }, 500);
-    if (!lvl || lvl < 2) return json({ error: { message: "You need Edit access to Testing to read COAs." } }, 403);
+    if (!lvl || lvl < 2) {
+      return json({ error: { message: mod === "sops" ? "You need Edit access to SOPs to use the AI SOP tools." : "You need Edit access to Testing to read COAs." } }, 403);
+    }
 
     const key = Deno.env.get("ANTHROPIC_API_KEY");
     if (!key) return json({ error: { message: "ANTHROPIC_API_KEY is not set in Supabase Edge Function secrets." } }, 500);
 
-    const body = await req.json();
     if (!Array.isArray(body.messages)) return json({ error: { message: "messages missing" } }, 400);
     const payload = {
       model: Deno.env.get("HX_AI_MODEL") || "claude-sonnet-4-6",
