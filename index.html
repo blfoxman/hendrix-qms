@@ -170,7 +170,7 @@ async function sb(path,opt){
   if(!r.ok){
     const m=(j&&(j.message||j.hint||j.details))||txt||('Error '+r.status);
     if(/schema cache|Could not find the table|relation .* does not exist/i.test(m)&&!/Could not find the '[A-Za-z0-9_]+' column/.test(m)){
-      const step=/hx_training_keys|hx_training_attempts|hx_course_submit|content_status/.test(m)?'hendrix_step20.sql':/hx_complaints|hx_audits|hx_audit_findings/.test(m)?'hendrix_step19.sql':/hx_recall|hx_trace_data/.test(m)?'hendrix_step18.sql':/hx_lots|hx_lot_uses|hx_holds|hx_shipments/.test(m)?'hendrix_step17.sql':/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
+      const step=/hx_rule_sources/.test(m)?'hendrix_step22.sql':/hx_training_keys|hx_training_attempts|hx_course_submit|content_status/.test(m)?'hendrix_step20.sql':/hx_complaints|hx_audits|hx_audit_findings/.test(m)?'hendrix_step19.sql':/hx_recall|hx_trace_data/.test(m)?'hendrix_step18.sql':/hx_lots|hx_lot_uses|hx_holds|hx_shipments/.test(m)?'hendrix_step17.sql':/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
       throw new Error('Database tables are missing - run '+step+' in the Hendrix Supabase project.');
     }
     if(/row-level security|permission denied/i.test(m))throw new Error('Not allowed - your access level does not allow this here. Ask a system admin.');
@@ -392,7 +392,7 @@ function Locations(props){
 }
 
 /* ---------- Rulebook: every rule row carries its state; only the active state's rules are ever loaded ---------- */
-const RULE_CATS=['Licensing','Labeling','Packaging','Testing','Facility','Security','Recordkeeping','Training','Inventory / Tracking','Other'];
+const RULE_CATS=['General','Licensing','Labeling','Packaging','Testing','Facility','Security','Recordkeeping','Training','Inventory / Tracking','Advertising','Other'];
 function RuleForm(props){
   const[f,setF]=useState(props.initial||{category:'Licensing',citation:'',title:'',body:''});
   return el(Modal,{title:props.initial?'Edit rule':'Add a rule to '+props.stateName,onClose:props.onClose},
@@ -412,17 +412,27 @@ function Rulebook(props){
   const[q,setQ]=useState('');
   const[modal,setModal]=useState(null);
   const[err,setErr]=useState('');
+  const[ok,setOk]=useState('');
+  const[imp,setImp]=useState(null);
+  const[srcs,setSrcs]=useState([]);
+  const[openIds,setOpenIds]=useState({});
   const sid=st?st.id:'';
   const load=useCallback(function(){
     if(!sid){setRules([]);return;}
+    db.get('hx_rule_sources','state_id=eq.'+encodeURIComponent(sid)+'&select=*&order=created_at.desc').then(function(r){setSrcs((r||[]).filter(function(x){return x.state_id===sid;}));}).catch(function(){setSrcs([]);});
     return db.get('hx_rules','state_id=eq.'+encodeURIComponent(sid)+'&select=*&order=category,created_at').then(function(r){
       // defensive: never show a rule that belongs to another state
       const only=(r||[]).filter(function(x){return x.state_id===sid;});
+      // official order from the imported PDF; rules typed by hand follow, oldest first
+      only.sort(function(a,b){const sa=a.sort==null?1e9:a.sort,sb2=b.sort==null?1e9:b.sort;return (sa-sb2)||String(a.created_at||'').localeCompare(String(b.created_at||''));});
       setRules(only);props.onCount(only.length);
     }).catch(function(e){setErr(String(e.message||e));setRules([]);});
   },[sid]);
   useEffect(function(){setRules(null);setErr('');load();},[load]);
-  async function run(fn){setErr('');try{await fn();await load();setModal(null);}catch(e){setErr(String(e.message||e));}}
+  async function run(fn){setErr('');setOk('');try{await fn();await load();setModal(null);}catch(e){setErr(String(e.message||e));}}
+  function pickPdf(e){const f=e.target.files&&e.target.files[0];e.target.value='';if(!f)return;
+    if(!/pdf/i.test(f.type)&&!/\.pdf$/i.test(f.name||'')){setErr('Choose a PDF file.');return;}
+    setErr('');setOk('');setImp(f);}
   if(!st)return el('div',null,el('h1',null,'Rulebook'),el('div',{className:'empty'},'Create a state first, then add its rules here.'));
   const list=(rules||[]).filter(function(r){
     const t=(r.title+' '+r.citation+' '+r.body+' '+r.category).toLowerCase();return !q||t.indexOf(q.toLowerCase())>=0;});
@@ -431,11 +441,19 @@ function Rulebook(props){
     el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
       el('div',null,el('h1',null,el('span',{className:'g'},st.name),' Rulebook'),
         el('div',{className:'sub'},'Only '+st.name+"'s own rules appear here. Switching state loads that state's rules instead, and rules can never be moved between states.")),
-      isAdmin&&el('button',{className:'btn',onClick:function(){setModal({});}},'+ Add rule')),
+      isAdmin&&el('div',{className:'row'},
+        el('label',{className:'btn ghost',title:'Upload the official rules PDF: Hendrix splits it into rules and sorts them by category'},'Upload rules PDF',
+          el('input',{type:'file',accept:'application/pdf,.pdf',style:{display:'none'},onChange:pickPdf})),
+        el('button',{className:'btn',onClick:function(){setModal({});}},'+ Add rule'))),
     err&&el('div',{className:'msg err'},err),
+    ok&&el('div',{className:'msg'},ok),
+    srcs.length>0&&el('div',{className:'card',style:{padding:'10px 14px'}},el('div',{className:'k',style:{marginBottom:6}},'Source PDFs'),
+      srcs.map(function(x,i){return el('div',{key:x.id,className:'row',style:{justifyContent:'space-between',padding:'4px 0',borderTop:i?'1px solid #1d1d1d':'none',fontSize:13}},
+        el('span',null,el('b',null,x.name),' \u00b7 '+String(x.created_at||'').slice(0,10)+(x.created_by_name?' \u00b7 '+x.created_by_name:'')+' \u00b7 '+x.rules_found+' rules found, '+x.added+' added, '+x.updated+' updated'+(x.removed?', '+x.removed+' removed':'')+(i===0?' \u00b7 latest':'')),
+        x.file_path&&el('button',{className:'btn ghost sm',onClick:function(){openStored(x.file_path,x.name).catch(function(e){setErr(String(e.message||e));});}},'Open PDF'));})),
     el('div',{className:'row',style:{marginBottom:14}},el('input',{style:{maxWidth:340},placeholder:'Search '+st.name+' rules...',value:q,onChange:function(e){setQ(e.target.value);}}),
       el('span',{className:'muted'},rules?(list.length+' of '+rules.length+' rules'):'Loading...')),
-    rules&&!rules.length&&el('div',{className:'empty'},'No rules in the '+st.name+' rulebook yet.'+(isAdmin?' Click "+ Add rule" to start. It begins completely blank.':'')),
+    rules&&!rules.length&&el('div',{className:'empty'},'No rules in the '+st.name+' rulebook yet.'+(isAdmin?' Click "Upload rules PDF" to load the official rules PDF (Hendrix splits and sorts it), or "+ Add rule" to type one. It begins completely blank.':'')),
     cats.map(function(c){
       return el('div',{key:c,className:'card gold'},el('div',{className:'k',style:{marginBottom:8}},c),
         list.filter(function(r){return r.category===c;}).map(function(r){
@@ -445,11 +463,388 @@ function Rulebook(props){
               isAdmin&&el('div',{className:'row',style:{flexWrap:'nowrap'}},
                 el('button',{className:'btn ghost sm',onClick:function(){setModal({r:r});}},'Edit'),
                 canDel&&el('button',{className:'btn danger sm',onClick:function(){if(window.confirm('Delete this rule?'))run(function(){return db.remove('hx_rules',r.id);});}},'Delete'))),
-            r.body&&el('div',{style:{marginTop:6,whiteSpace:'pre-wrap',color:'var(--text)'}},r.body));
+            r.body&&el('div',{style:{marginTop:6,whiteSpace:'pre-wrap',color:'var(--text)'}},(r.body.length>700&&!openIds[r.id]&&!q)?r.body.slice(0,600).replace(/\s+\S*$/,'')+' \u2026':r.body),
+            r.body&&r.body.length>700&&!q&&el('button',{className:'btn ghost sm',style:{marginTop:4},onClick:function(){setOpenIds(function(p){const n={...p};if(n[r.id])delete n[r.id];else n[r.id]=1;return n;});}},openIds[r.id]?'Show less':'Show all ('+r.body.length.toLocaleString()+' characters)'));
         }));
     }),
+    imp&&el(RuleImport,{state:st,file:imp,rules:rules||[],profile:props.profile,canDel:canDel,onClose:function(){setImp(null);},
+      onDone:function(m){setImp(null);load();setOk(m);}}),
     modal&&el(RuleForm,{stateName:st.name,initial:modal.r,onClose:function(){setModal(null);},onSave:function(v){
       run(function(){return modal.r?db.update('hx_rules',modal.r.id,v):db.insert('hx_rules',{id:newId('rule'),state_id:st.id,category:v.category,citation:v.citation,title:v.title,body:v.body});});}}));
+}
+
+/* ---------- Rulebook PDF import ----------
+   Upload the official rules PDF: the text is read in the browser (pdf.js), split at the rule numbers
+   (Missouri "19 CSR 100-1.010 Title", Michigan "R 420.101 Title.", sections, rules), the rule text is
+   kept word for word, each rule is sorted into a category, and a review screen shows what is new,
+   changed or the same before anything is saved. AI is only used when the PDF has no rule numbers
+   Hendrix recognizes, or when asked to sort the categories. */
+const PDFJS_V='3.11.174';
+let _pdfjsP=null;
+function loadPdfJs(){
+  if(window.pdfjsLib)return Promise.resolve(window.pdfjsLib);
+  if(_pdfjsP)return _pdfjsP;
+  _pdfjsP=new Promise(function(res,rej){
+    const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/'+PDFJS_V+'/pdf.min.js';
+    s.onload=function(){const L=window.pdfjsLib;if(!L){_pdfjsP=null;rej(new Error('The PDF reader did not load.'));return;}
+      L.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/'+PDFJS_V+'/pdf.worker.min.js';res(L);};
+    s.onerror=function(){_pdfjsP=null;rej(new Error('Could not load the PDF reader. Check the internet connection and try again.'));};
+    document.head.appendChild(s);});
+  return _pdfjsP;
+}
+function rbRows(arr){
+  const its=arr.slice().sort(function(a,b){return (b.y-a.y)||(a.x-b.x);});
+  const rows=[];let cur=null;
+  its.forEach(function(it){
+    if(cur&&Math.abs(cur.y-it.y)<=Math.max(2,0.45*Math.min(cur.h,it.h)))cur.items.push(it);
+    else{cur={y:it.y,h:it.h,items:[it]};rows.push(cur);}
+  });
+  return rows;
+}
+function rbGroupLines(arr){
+  return rbRows(arr).map(function(l){
+    l.items.sort(function(a,b){return a.x-b.x;});
+    let t='',end=null;
+    l.items.forEach(function(it){
+      if(t&&!/\s$/.test(t)&&!/^\s/.test(it.s)&&end!==null&&it.x-end>Math.max(1,l.h*0.18))t+=' ';
+      t+=it.s;end=it.x+it.w;});
+    return {t:t.replace(/\s+/g,' ').trim(),y:l.y,h:l.h};
+  }).filter(function(l){return l.t;});
+}
+function rbWithGaps(lines){
+  return lines.map(function(l,i){const p=lines[i-1];return {t:l.t,h:l.h,gap:!!(p&&p.y-l.y>Math.max(l.h,p.h)*1.75)};});
+}
+// one page of text items -> reading-order lines; two-column pages (Missouri CSR) are read left column, then right
+function rbLayout(items,W){
+  if(!items.length)return [];
+  // a vertical gutter that (almost) no line crosses = two columns
+  let split=null;
+  const rows=rbRows(items);
+  if(rows.length>=3){
+    let best=null;
+    for(let x=W*0.3;x<=W*0.7;x+=2){
+      let c=0;for(let k=0;k<rows.length;k++){if(rows[k].items.some(function(it){return it.x<x-1&&it.x+it.w>x+1;}))c++;}
+      if(best===null||c<best.c)best={x:x,c:c};
+    }
+    const nl=rows.filter(function(r){return r.items.some(function(it){return it.x+it.w<=best.x+1;});}).length;
+    const nr=rows.filter(function(r){return r.items.some(function(it){return it.x>=best.x-1;});}).length;
+    if(best.c<=Math.max(1,rows.length*0.08)&&nl>=1&&nr>=1&&nl+nr>=4)split=best.x;
+  }
+  if(split===null)return rbWithGaps(rbGroupLines(items));
+  const left=[],right=[],full=[];
+  items.forEach(function(it){if(it.x+it.w<=split+1)left.push(it);else if(it.x>=split-1)right.push(it);else full.push(it);});
+  const colTop=Math.max.apply(null,left.concat(right).map(function(it){return it.y;}));
+  const colBot=Math.min.apply(null,left.concat(right).map(function(it){return it.y;}));
+  const top=full.filter(function(it){return it.y>colTop;}),bot=full.filter(function(it){return it.y<colBot;}),mid=full.filter(function(it){return it.y<=colTop&&it.y>=colBot;});
+  return rbWithGaps(rbGroupLines(top)).concat(rbWithGaps(rbGroupLines(left.concat(mid))),rbWithGaps(rbGroupLines(right)),rbWithGaps(rbGroupLines(bot)));
+}
+async function rbExtract(file,onProg){
+  const L=await loadPdfJs();
+  const buf=await file.arrayBuffer();
+  const doc=await L.getDocument({data:new Uint8Array(buf)}).promise;
+  const raw=[];
+  for(let p=1;p<=doc.numPages;p++){
+    const pg=await doc.getPage(p);const vp=pg.getViewport({scale:1});const tc=await pg.getTextContent();
+    const items=tc.items.filter(function(i){return i.str&&i.str.trim();}).map(function(i){
+      return {s:i.str,x:i.transform[4],y:i.transform[5],w:i.width||0,h:Math.abs(i.transform[3])||Math.abs(i.height)||10};});
+    raw.push({items:items,W:vp.width});
+    if(onProg)onProg(p,doc.numPages);
+  }
+  // running headers / footers: the same line in the top or bottom rows of many pages (page numbers ignored)
+  const key=function(t){return t.toLowerCase().replace(/\d+/g,'#').replace(/\s+/g,' ').trim();};
+  const seen={};
+  raw.forEach(function(P){const rows=rbGroupLines(P.items);P.edge=rows.slice(0,4).concat(rows.length>4?rows.slice(-4):[]);
+    const ks={};P.edge.forEach(function(r){ks[key(r.t)]=1;});Object.keys(ks).forEach(function(k){seen[k]=(seen[k]||0)+1;});});
+  const lim=Math.max(2,Math.ceil(raw.length*0.4));
+  const lines=[];let chars=0;
+  raw.forEach(function(P,pi){
+    const drop=raw.length>=3?P.edge.filter(function(r){return seen[key(r.t)]>=lim;}).map(function(r){return r.y;}):[];
+    const keep=P.items.filter(function(it){return !drop.some(function(y){return Math.abs(it.y-y)<=1.5;});});
+    rbLayout(keep,P.W).forEach(function(l){
+      if(/^(page\s*)?\d{1,4}(\s*of\s*\d{1,4})?$/i.test(l.t))return;
+      chars+=l.t.length;lines.push({t:l.t,gap:l.gap,page:pi+1});});
+  });
+  return {pages:raw.length,lines:lines,chars:chars};
+}
+const RB_FORMATS=[
+  {id:'csr',name:'Missouri Code of State Regulations (CSR)',re:/^(\d{1,2}\s?CSR\s?\d{1,3}-\d{1,3}\.\d{2,4})\s+(\S.*)$/},
+  {id:'mac',name:'Michigan Administrative Code (R numbers)',re:/^(R\s?\d{2,4}\.\d{1,5}[a-z]?)\.?\s+(\S.*)$/},
+  {id:'sec',name:'Numbered sections',re:/^((?:\u00a7{1,2}|Sec\.|Section)\s?\d+(?:[.\-:]\d+)*[a-z]?)\.?\s+(\S.*)$/i},
+  {id:'rule',name:'Numbered rules',re:/^(Rule\s\d+(?:[.\-]\d+)*[a-z]?)\.?\s+(\S.*)$/i}
+];
+const RB_BODY_START=/^(PURPOSE:|Rule\s\d+\.|\(1\)|\(a\)|\(A\)|Sec\.\s?1\b)/;
+function rbJoin(ls){
+  let out='';
+  ls.forEach(function(l){
+    const t=String(l.t||'').replace(/\s+/g,' ').trim();if(!t)return;
+    if(!out){out=t;return;}
+    const brk=l.gap||/^(\(\d+\)|\([A-Za-z]{1,4}\)|\d+\.\s|[A-Z]\.\s|[\u2022\u25cf\u25aa\u2013\-]\s|PURPOSE:|AUTHORITY:|PUBLISHER|EDITOR|Editor|History:|Rule\s\d+\.|Sec\.\s|Section\s\d)/.test(t);
+    if(brk)out+='\n'+t;
+    else if(/[a-z]-$/.test(out)&&/^[a-z]/.test(t)&&!/\w-\w+-$/.test(out.slice(-40)))out=out.slice(0,-1)+t;
+    else out+=' '+t;
+  });
+  return out;
+}
+function rbCleanTitle(t){return String(t||'').replace(/\s*(\.\s?){3,}.*$/,'').replace(/\s*\u2026+.*$/,'').replace(/\s+/g,' ').trim();}
+function rbOkTitle(t){return /^[A-Z0-9"\u201c(]/.test(t)&&!/^(and|or|of|to|through|as|in|is|are|shall)\b/i.test(t)&&t.length<=200;}
+// split the lines at the given starts [{i, citation, title, category?}]
+function rbBuild(lines,starts){
+  const st=starts.slice().sort(function(a,b){return a.i-b.i;});
+  const out=[];
+  st.forEach(function(s,k){
+    const end=k+1<st.length?st[k+1].i:lines.length;
+    let title=s.title,b=s.i+1;
+    if(!s.ai){
+      for(let j=s.i+1;j<=Math.min(s.i+3,end-1);j++){
+        if(RB_BODY_START.test(lines[j].t)){
+          const mid=lines.slice(s.i+1,j);
+          if(mid.every(function(l){return l.t.length<100;})){title=rbCleanTitle([title].concat(mid.map(function(l){return l.t;})).join(' '));b=j;}
+          break;
+        }
+      }
+    }
+    out.push({citation:s.citation,title:title||s.citation,body:rbJoin(lines.slice(b,end)),page:lines[s.i]?lines[s.i].page:0,aiCat:s.category||''});
+  });
+  // the contents pages list every rule too: keep the copy with the most text
+  const by={},order=[];
+  out.forEach(function(e){const k=(e.citation||e.title).replace(/\s+/g,'').toLowerCase();
+    if(!by[k]){by[k]=e;order.push(k);}else if(e.body.length>by[k].body.length)by[k]=e;});
+  return order.map(function(k){return by[k];});
+}
+function rbParse(lines){
+  for(let f=0;f<RB_FORMATS.length;f++){
+    const F=RB_FORMATS[f],starts=[];
+    lines.forEach(function(l,i){const m=F.re.exec(l.t);if(!m)return;const title=rbCleanTitle(m[2]);if(!rbOkTitle(title))return;
+      let c=m[1].replace(/\s+/g,' ').trim();
+      if(F.id==='csr')c=c.replace(/^(\d+) ?CSR ?/,'$1 CSR ');
+      if(F.id==='mac')c=c.replace(/^R ?/,'R ');
+      starts.push({i:i,citation:c,title:title});});
+    const rules=rbBuild(lines,starts);
+    if(rules.filter(function(r){return r.body.length>=80;}).length>=3)return {format:F,rules:rules};
+  }
+  return null;
+}
+// a long rule split into its numbered sections (1), (2), ...
+function rbSections(r){
+  const paras=r.body.split('\n');let n=0;const secs=[],pre=[];let cur=null;
+  paras.forEach(function(p){const m=/^\((\d+)\)\s*/.exec(p);
+    if(m&&+m[1]===n+1){n++;cur={n:n,paras:[p]};secs.push(cur);}else if(cur)cur.paras.push(p);else pre.push(p);});
+  if(secs.length<2)return [r];
+  const out=[];
+  if(pre.join('').trim())out.push({citation:r.citation,title:r.title+' \u2014 Purpose',head:'Purpose',body:pre.join('\n'),page:r.page,aiCat:r.aiCat,parent:r.citation,parentTitle:r.title});
+  secs.forEach(function(s){
+    const txt=s.paras.join('\n'),after=txt.replace(/^\(\d+\)\s*/,'');
+    // a short lead-in heading ("Video surveillance. Each facility ...") names the section; otherwise its first words
+    const hm=/^([A-Z][^.;:]{2,60})\.\s+(?=[A-Z(])/.exec(after);
+    let head='';
+    if(hm&&hm[1].split(/\s+/).length<=7&&!/\b(shall|must|may|will|means|is|are)\b/i.test(hm[1]))head=hm[1];
+    else{const w=after.split(/\s+/).slice(0,9).join(' ');head=w+(after.split(/\s+/).length>9?'\u2026':'');}
+    out.push({citation:r.citation+'('+s.n+')',title:r.title+' \u2014 '+head,head:head,body:txt,page:r.page,aiCat:r.aiCat,parent:r.citation,parentTitle:r.title});
+  });
+  return out;
+}
+const RB_CAT_KW={
+  'General':{t:['definition','purpose','scope','general provision','severab','applicab','construction','interpretation'],b:[]},
+  'Licensing':{t:['licens','certificat','application','renewal','ownership','owner','change','fee','denial','revocat','suspen','penalt','violation','hearing','appeal','microbusiness','local','zoning','variance','enforcement','disciplin','inspection','agent','identification card','patient','caregiver','physician','eligib','tax','expunge'],b:['application','applicant','renewal','revocation','suspension','fee','hearing']},
+  'Labeling':{t:['label'],b:['label']},
+  'Packaging':{t:['packag','child-resistant','child resistant'],b:['packag','child-resistant']},
+  'Testing':{t:['test','laborator','sampl','potency','contaminant','analys'],b:['test','sampl','laborator','potency','contaminant','pesticide','residual solvent']},
+  'Facility':{t:['facilit','premises','sanitation','building','cultivat','manufactur','infused','extraction','dispensar','retail','operation','processor','grower','storage','equipment','hygiene','grow'],b:['sanitation','sanitary','premises','equipment','hygiene','cultivat','manufactur','extraction']},
+  'Security':{t:['security','surveillance','camera','alarm','access','visitor','theft'],b:['surveillance','camera','alarm','security','restricted access','visitor']},
+  'Recordkeeping':{t:['record','report','documentation','retention'],b:['record','retain','documentation']},
+  'Training':{t:['training','education'],b:['training']},
+  'Inventory / Tracking':{t:['inventory','tracking','seed-to-sale','seed to sale','monitoring system','metrc','transport','transfer','manifest','waste','disposal','destruction','delivery','recall'],b:['inventory','seed-to-sale','statewide monitoring','metrc','manifest','transport','waste','disposal']},
+  'Advertising':{t:['advertis','marketing','promot'],b:['advertis','marketing']}
+};
+function rbCount(s,w){let n=0,i=0;while((i=s.indexOf(w,i))>=0){n++;i+=w.length;if(n>=20)break;}return n;}
+function rbCategory(title,body){
+  const t=String(title||'').toLowerCase(),b=String(body||'').toLowerCase();
+  let best='Other',bs=0;
+  Object.keys(RB_CAT_KW).forEach(function(c){const K=RB_CAT_KW[c];
+    const s=K.t.reduce(function(a,w){return a+(t.indexOf(w)>=0?100:0);},0)+K.b.reduce(function(a,w){return a+rbCount(b,w);},0);
+    if(s>bs){bs=s;best=c;}});
+  return bs>=3?best:'Other';
+}
+// a section takes its own category, except sections of a definitions / general rule; weak matches fall back to the rule's
+function rbItemCategory(r){
+  if(!r.parent)return rbCategory(r.title,r.body);
+  const pc=rbCategory(r.parentTitle,'');
+  if(pc==='General')return 'General';
+  const sc=r.head==='Purpose'?'Other':rbCategory(r.head,r.body);
+  return sc!=='Other'?sc:rbCategory(r.parentTitle,r.body);
+}
+function rbKey(r){const c=String(r.citation||'').replace(/\s+/g,'').toLowerCase();return c?'c:'+c:'t:'+String(r.title||'').trim().toLowerCase();}
+function rbNorm(s){return String(s||'').replace(/\s+/g,' ').trim();}
+function rbAiErr(e){return String(e&&e.message)==='AI_NOT_SETUP'?new Error('AI is not set up yet - deploy the hendrix-ai function (see hendrix-ai.ts).'):e;}
+// no rule numbers found: AI reads the numbered lines and says where each rule starts (the text itself is never rewritten)
+async function rbAiStarts(lines,onProg){
+  const starts=[],CH=1200;
+  for(let a=0;a<lines.length;a+=CH){
+    if(onProg)onProg(a,lines.length);
+    const part=lines.slice(a,a+CH).map(function(l,k){return (a+k)+'|'+l.t.slice(0,140);}).join('\n');
+    const prompt='Below are numbered lines of text extracted from a government cannabis rules / regulations PDF (format: line number|text). '+
+      'Find the line where each separate rule, regulation or section BEGINS (its heading), not cross-references inside the text, and not table of contents lines. '+
+      'Return ONLY JSON: {"rules":[{"line":123,"citation":"the rule or section number, or empty","title":"the heading title","category":"one of: '+RULE_CATS.join(', ')+'"}]}\n\n'+part;
+    let j;try{j=await aiCall({module:'rulebook',max_tokens:6000,system:'You output ONLY valid, parseable JSON. Never include prose or markdown fences.',messages:[{role:'user',content:prompt}]});}catch(e){throw rbAiErr(e);}
+    const r=parseJsonLoose((j.content&&j.content[0]&&j.content[0].text)||'');
+    (Array.isArray(r.rules)?r.rules:[]).forEach(function(x){const i=parseInt(x.line,10);if(i>=a&&i<a+CH&&i<lines.length)starts.push({i:i,citation:rbNorm(x.citation),title:rbCleanTitle(x.title)||rbNorm(lines[i].t).slice(0,120),category:RULE_CATS.indexOf(x.category)>=0?x.category:'',ai:true});});
+  }
+  const u={};return starts.filter(function(s){if(u[s.i])return false;u[s.i]=1;return true;});
+}
+async function rbAiCategories(items,onProg){
+  const out={},B=60;
+  for(let a=0;a<items.length;a+=B){
+    if(onProg)onProg(a,items.length);
+    const part=items.slice(a,a+B).map(function(r,k){return (a+k)+'|'+(r.citation||'')+'|'+r.title+'|'+rbNorm(r.body).slice(0,300);}).join('\n');
+    const prompt='Sort each cannabis regulation below into exactly one category from this list: '+RULE_CATS.join(', ')+'. '+
+      'Lines are: number|citation|title|start of the text. Return ONLY JSON: {"c":[[number,"Category"],...]}\n\n'+part;
+    let j;try{j=await aiCall({module:'rulebook',max_tokens:3000,system:'You output ONLY valid, parseable JSON. Never include prose or markdown fences.',messages:[{role:'user',content:prompt}]});}catch(e){throw rbAiErr(e);}
+    const r=parseJsonLoose((j.content&&j.content[0]&&j.content[0].text)||'');
+    (Array.isArray(r.c)?r.c:[]).forEach(function(x){if(Array.isArray(x)&&RULE_CATS.indexOf(x[1])>=0)out[x[0]]=x[1];});
+  }
+  return out;
+}
+// insert many rows; drops columns the database does not have yet (step 22 not run)
+async function rbInsertAll(rows){
+  let rs=rows.slice();
+  for(let a=0;a<rs.length;a+=25){
+    let chunk=rs.slice(a,a+25);
+    for(let tries=0;;tries++){
+      try{await db.insert('hx_rules',chunk);break;}
+      catch(e){const m=/Could not find the '([A-Za-z0-9_]+)' column/.exec(String(e&&e.message||e));
+        if(m&&tries<4){const col=m[1];rs=rs.map(function(r){const x={...r};delete x[col];return x;});chunk=rs.slice(a,a+25);continue;}throw e;}
+    }
+  }
+}
+function RuleImport(props){
+  const st=props.state,file=props.file;
+  const[phase,setPhase]=useState('read');
+  const[prog,setProg]=useState('Opening the PDF...');
+  const[err,setErr]=useState('');
+  const[res,setRes]=useState(null);
+  const[split,setSplit]=useState(false);
+  const[ov,setOv]=useState({});
+  const[aiCats,setAiCats]=useState({});
+  const[open,setOpen]=useState(null);
+  const[delOld,setDelOld]=useState(false);
+  const[busy,setBusy]=useState('');
+  const[filter,setFilter]=useState('');
+  useEffect(function(){let dead=false;
+    (async function(){
+      try{
+        const x=await rbExtract(file,function(p,n){if(!dead)setProg('Reading page '+p+' of '+n+'...');});
+        if(x.chars<200)throw new Error('This PDF has no readable text (it looks like a scan or a picture). Download the official text PDF from the state website and upload that one.');
+        setProg('Finding the rules...');
+        let r=rbParse(x.lines);
+        if(!r){
+          setProg('No standard rule numbers found - asking AI where each rule begins...');
+          const s=await rbAiStarts(x.lines,function(a,n){if(!dead)setProg('AI is reading the text ('+Math.round(a/n*100)+'%)...');});
+          const rules=rbBuild(x.lines,s);
+          if(rules.length<1)throw new Error('No rules could be found in this PDF.');
+          r={format:{id:'ai',name:'Found by AI (no standard rule numbers)'},rules:rules};
+        }
+        if(!dead){setRes({pages:x.pages,format:r.format,rules:r.rules});setPhase('review');}
+      }catch(e){if(!dead){setErr(String(e.message||e));setPhase('error');}}
+    })();
+    return function(){dead=true;};},[]);
+  const existing=props.rules||[];
+  const exMap={};existing.forEach(function(r){exMap[rbKey(r)]=r;});
+  const items=useMemo(function(){
+    if(!res)return [];
+    const base=split?[].concat.apply([],res.rules.map(rbSections)):res.rules;
+    return base.map(function(r,i){
+      const k=rbKey(r),ex=exMap[k];
+      const status=!ex?'new':(rbNorm(ex.body)===rbNorm(r.body)&&rbNorm(ex.title)===rbNorm(r.title))?'same':'changed';
+      return {...r,key:k,i:i,ex:ex,status:status,short:r.body.length<80,cat:r.aiCat||rbItemCategory(r)};
+    });
+  },[res,split,existing]);
+  const row=function(it){const o=ov[it.key]||{};
+    return {inc:o.inc!==undefined?o.inc:(it.status!=='same'&&!it.short),cat:o.cat||aiCats[it.key]||(it.ex&&it.status!=='new'?it.ex.category:it.cat),title:o.title!==undefined?o.title:it.title};};
+  const setO=function(k,v){setOv(function(p){const n={...p};n[k]={...(n[k]||{}),...v};return n;});};
+  const keys={};items.forEach(function(it){keys[it.key]=1;});
+  const missing=existing.filter(function(r){return r.source_id&&!keys[rbKey(r)];});
+  const cats=RULE_CATS.slice();existing.forEach(function(r){if(r.category&&cats.indexOf(r.category)<0)cats.push(r.category);});
+  const cnt={new:0,changed:0,same:0};items.forEach(function(it){cnt[it.status]++;});
+  const chosen=items.filter(function(it){return row(it).inc;});
+  const catCount={};chosen.forEach(function(it){const c=row(it).cat;catCount[c]=(catCount[c]||0)+1;});
+  async function sortAi(){
+    setErr('');setBusy('AI is sorting the categories...');
+    try{const m=await rbAiCategories(items,function(a,n){setBusy('AI is sorting the categories ('+Math.round(a/n*100)+'%)...');});
+      const ac={};items.forEach(function(it,i){if(m[i])ac[it.key]=m[i];});
+      setAiCats(ac);setOv(function(p){const n={};Object.keys(p).forEach(function(k){const x={...p[k]};delete x.cat;n[k]=x;});return n;});}
+    catch(e){setErr(String(e.message||e));}
+    setBusy('');
+  }
+  async function save(){
+    setErr('');setPhase('saving');
+    const warn=[];let path='';
+    try{
+      setProg('Saving the PDF...');
+      try{path=await storagePut(file,'rulebook/'+st.id+'/'+Date.now()+'-'+String(file.name||'rules.pdf').replace(/[^A-Za-z0-9._-]+/g,'_'));}
+      catch(e){warn.push('The PDF file itself could not be kept ('+String(e.message||e)+').');path='';}
+      const srcId=newId('rsrc');let srcOk=true;
+      const me=(props.profile&&props.profile.name)||'';
+      try{await db.insert('hx_rule_sources',{id:srcId,state_id:st.id,name:file.name||'rules.pdf',file_path:path,pages:res.pages,format:res.format.name,rules_found:items.length,created_by_name:me});}
+      catch(e){srcOk=false;warn.push(/step22|missing/i.test(String(e.message))?'Run hendrix_step22.sql to keep a list of imported PDFs and the official order of the rules.':'The PDF was not added to the source list ('+String(e.message||e)+').');}
+      const add=[],upd=[];
+      items.forEach(function(it){const r=row(it);if(!r.inc)return;
+        const rec={category:(r.cat||'Other'),citation:it.citation||'',title:rbNorm(r.title)||it.citation||'Rule',body:it.body,sort:(it.i+1)*10};
+        if(srcOk)rec.source_id=srcId;
+        if(it.ex&&it.status!=='new')upd.push([it.ex.id,rec]);else add.push({id:newId('rule'),state_id:st.id,...rec});});
+      setProg('Adding '+add.length+' rules...');
+      await rbInsertAll(add);
+      for(let k=0;k<upd.length;k++){setProg('Updating rule '+(k+1)+' of '+upd.length+'...');await dbSave('hx_rules',upd[k][0],upd[k][1]);}
+      // rules that are the same keep their place in the official order
+      if(srcOk){const same=items.filter(function(it){return it.status==='same'&&it.ex&&it.ex.sort!==(it.i+1)*10&&!row(it).inc;});
+        for(let k=0;k<same.length;k++){try{await db.update('hx_rules',same[k].ex.id,{sort:(same[k].i+1)*10});}catch(e){break;}}}
+      let removed=0;
+      if(delOld&&props.canDel){for(let k=0;k<missing.length;k++){setProg('Removing rule '+(k+1)+' of '+missing.length+'...');await db.remove('hx_rules',missing[k].id);removed++;}}
+      if(srcOk){try{await db.update('hx_rule_sources',srcId,{added:add.length,updated:upd.length,removed:removed});}catch(e){}}
+      props.onDone('Imported from '+(file.name||'the PDF')+': '+add.length+' new, '+upd.length+' updated'+(removed?', '+removed+' removed':'')+'.'+(warn.length?' '+warn.join(' '):''));
+    }catch(e){setErr(String(e.message||e));setPhase('review');}
+  }
+  const title='Import rules PDF - '+st.name;
+  if(phase==='read'||phase==='saving')return el(Modal,{title:title,wide:true,onClose:phase==='read'?props.onClose:null},
+    el('div',{className:'muted',style:{padding:'14px 0'}},prog),err&&el('div',{className:'msg err'},err));
+  if(phase==='error')return el(Modal,{title:title,wide:true,onClose:props.onClose},
+    el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn',onClick:props.onClose},'Close')));
+  const shown=items.filter(function(it){if(!filter)return true;if(filter==='inc')return row(it).inc;if(filter.indexOf('cat:')===0)return row(it).cat===filter.slice(4);return it.status===filter;});
+  return el(Modal,{title:title,wide:true,onClose:props.onClose},
+    el('div',{className:'sub',style:{marginBottom:10}},el('b',null,file.name),' \u00b7 '+res.pages+' pages \u00b7 '+res.format.name+' \u00b7 ',el('b',null,res.rules.length+' rules found')),
+    el('div',{className:'muted',style:{fontSize:13,marginBottom:10}},'The rule text is kept word for word from the PDF. Each rule was given a category from its title and text - change any category below. Nothing is saved until you click Import.'),
+    err&&el('div',{className:'msg err'},err),
+    busy&&el('div',{className:'msg'},busy),
+    el('div',{className:'row',style:{marginBottom:10,gap:14}},
+      el('label',{className:'ck'},el('input',{type:'checkbox',checked:split,onChange:function(e){setSplit(e.target.checked);}}),' Split each rule into its numbered sections (1), (2)...'),
+      el('button',{className:'btn ghost sm',disabled:!!busy,onClick:sortAi},'Sort categories with AI')),
+    el('div',{className:'row',style:{marginBottom:10,gap:6}},
+      [['','All '+items.length],['new','New '+cnt.new],['changed','Changed '+cnt.changed],['same','Same '+cnt.same],['inc','To import '+chosen.length]].map(function(f){
+        return el('button',{key:f[0],className:'btn sm'+(filter===f[0]?'':' ghost'),onClick:function(){setFilter(f[0]);}},f[1]);})),
+    el('div',{className:'row',style:{marginBottom:10,gap:6,fontSize:12}},Object.keys(catCount).sort().map(function(c){
+      return el('span',{key:c,className:'badge',style:{cursor:'pointer'},onClick:function(){setFilter('cat:'+c);}},c+' '+catCount[c]);})),
+    el('div',{style:{maxHeight:'48vh',overflow:'auto',border:'1px solid #222',borderRadius:10}},
+      shown.map(function(it){const r=row(it);
+        return el('div',{key:it.key+'-'+it.i,className:'rbrow',style:{padding:'8px 10px',borderTop:'1px solid #1d1d1d'}},
+          el('div',{className:'row',style:{flexWrap:'nowrap',gap:8,alignItems:'center'}},
+            el('input',{type:'checkbox',checked:r.inc,onChange:function(e){setO(it.key,{inc:e.target.checked});},style:{width:'auto'}}),
+            el('span',{className:'badge'+(it.status==='new'?' ok':it.status==='changed'?' warn':''),style:{minWidth:64,textAlign:'center'}},it.status==='new'?'New':it.status==='changed'?'Changed':'Same'),
+            el('span',{className:'muted',style:{fontSize:12,minWidth:120,whiteSpace:'nowrap'}},it.citation||'-'),
+            el('input',{value:r.title,onChange:function(e){setO(it.key,{title:e.target.value});},style:{flex:1,minWidth:120}}),
+            el('select',{value:r.cat,onChange:function(e){setO(it.key,{cat:e.target.value});},style:{width:195}},cats.concat(cats.indexOf(r.cat)<0?[r.cat]:[]).map(function(c){return el('option',{key:c,value:c},c);})),
+            el('button',{className:'btn ghost sm',onClick:function(){setOpen(open===it.key?null:it.key);}},open===it.key?'Hide':'Text')),
+          it.short&&el('div',{className:'muted',style:{fontSize:12,marginTop:4}},'Very little text - probably a contents line, not a rule. Left unticked.'),
+          open===it.key&&el('div',{style:{marginTop:6,whiteSpace:'pre-wrap',fontSize:13,maxHeight:260,overflow:'auto',background:'#0b0b0b',padding:8,borderRadius:8}},
+            it.page?el('div',{className:'muted',style:{fontSize:12}},'Page '+it.page):null,it.body||'(no text)',
+            it.status==='changed'&&el('div',{className:'muted',style:{fontSize:12,marginTop:6}},'Changed from what the Rulebook has now. Importing replaces the title and text; the category stays as shown here.')));
+      })),
+    missing.length>0&&el('div',{style:{marginTop:10}},
+      props.canDel?el('label',{className:'ck'},el('input',{type:'checkbox',checked:delOld,onChange:function(e){setDelOld(e.target.checked);}}),
+        ' Delete the '+missing.length+' rule'+(missing.length===1?'':'s')+' from an earlier PDF that '+(missing.length===1?'is':'are')+' not in this one (repealed or renumbered)'):
+        el('div',{className:'muted',style:{fontSize:13}},missing.length+' rule'+(missing.length===1?'':'s')+' from an earlier PDF '+(missing.length===1?'is':'are')+' not in this one. They are kept (Full access can delete them).')),
+    el('div',{className:'row',style:{justifyContent:'flex-end',marginTop:12}},
+      el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),
+      el('button',{className:'btn',disabled:!!busy||(!chosen.length&&!(delOld&&missing.length)),onClick:save},'Import '+chosen.length+' rule'+(chosen.length===1?'':'s'))));
 }
 
 /* ---------- Team (admin) ---------- */
@@ -1942,7 +2337,7 @@ function Products(props){
 /* ---------- Audit trail: history, void, admin page ----------
    The database writes every change to hx_audit_log (append-only). Records are never deleted:
    they are voided with a reason. Every change to a record needs a reason for change. */
-const AUDIT_AREAS={hx_complaints:'Complaint',hx_audits:'Internal audit',hx_audit_findings:'Audit finding',hx_recalls:'Recall / mock recall',hx_recall_contacts:'Recall contact',hx_lots:'Received lot',hx_lot_uses:'Lot use',hx_holds:'Hold',hx_shipments:'Shipment',hx_suppliers:'Supplier',hx_supplier_reviews:'Supplier review',hx_training_courses:'Training course',hx_training_records:'Training record',hx_deviations:'Deviation',hx_capas:'CAPA',hx_sops:'SOP',hx_sop_acks:'SOP signature',hx_label_prints:'Sticker print',hx_standards:'Standards',hx_standard_clauses:'Standard clauses',hx_license_standards:'Standard adoption',hx_conformance:'Standard conformance',hx_label_templates:'Label templates',hx_tests:'Testing record',hx_roles:'Roles',hx_batches:'Batch record',hx_facility_log:'Facility log entry',hx_visitor_log:'Visitor log',hx_log_lists:'Facility log lists',hx_rules:'Rulebook',
+const AUDIT_AREAS={hx_complaints:'Complaint',hx_audits:'Internal audit',hx_audit_findings:'Audit finding',hx_recalls:'Recall / mock recall',hx_recall_contacts:'Recall contact',hx_lots:'Received lot',hx_lot_uses:'Lot use',hx_holds:'Hold',hx_shipments:'Shipment',hx_suppliers:'Supplier',hx_supplier_reviews:'Supplier review',hx_training_courses:'Training course',hx_training_records:'Training record',hx_deviations:'Deviation',hx_capas:'CAPA',hx_sops:'SOP',hx_sop_acks:'SOP signature',hx_label_prints:'Sticker print',hx_standards:'Standards',hx_standard_clauses:'Standard clauses',hx_license_standards:'Standard adoption',hx_conformance:'Standard conformance',hx_label_templates:'Label templates',hx_tests:'Testing record',hx_roles:'Roles',hx_batches:'Batch record',hx_facility_log:'Facility log entry',hx_visitor_log:'Visitor log',hx_log_lists:'Facility log lists',hx_rules:'Rulebook',hx_rule_sources:'Rulebook source PDF',
   hx_states:'States',hx_licenses:'Licenses',hx_profiles:'Team and access',hx_skus:'SKUs',hx_flavors:'Flavors',hx_formulations:'Formulations',hx_cost_library:'Ingredient prices'};
 const AUDIT_SKIP=['voided_by','voided_at','updated_at','edit_reason'];
 function auditVal(v){
