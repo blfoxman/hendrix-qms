@@ -279,7 +279,7 @@ function LoginScreen(props){
 }
 
 /* ---------- Dashboard ---------- */
-const MODULES_SOON=['QMS (Deviations, CAPAs, Audits)','Time Clock and Badges','Production Planner'];
+const MODULES_SOON=['Training','Suppliers','Receiving and Recall','Internal Audits','HACCP','Time Clock and Badges','Production Planner'];
 function Dashboard(props){
   const st=props.state,lic=props.license;
   const isAdmin=props.profile.role==='admin';
@@ -302,6 +302,7 @@ function Dashboard(props){
         el('div',{className:'muted',style:{marginTop:10}},licsOfState.length+' license'+(licsOfState.length===1?'':'s')+' in '+(st?st.name:'this state'))),
       el('div',{className:'card gold'},el('div',{className:'k'},'State rulebook'),el('div',{className:'v'},(props.ruleCount===null||props.ruleCount===undefined?'...':props.ruleCount)+' rules'),
         el('div',{className:'muted',style:{marginTop:4}},'Only '+(st?st.name:'this state')+"'s own rules are ever loaded here."),el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go('rulebook');}},'Open rulebook')),
+      el(QmsDashCard,{license:lic,go:props.go}),
       el(SopDashCard,{license:lic,go:props.go}),
       el(StdDashCard,{license:lic,go:props.go})),
     !lic&&isAdmin&&el('div',{className:'empty',style:{marginBottom:14}},'This state has no license yet. ',el('a',{href:'#',style:{color:'var(--gold-hi)'},onClick:function(e){e.preventDefault();props.go('locations');}},'Add one')),
@@ -674,6 +675,7 @@ function num(v){return parseFloat(String(v).replace(/,/g,''));}
 function esc3(x){return String(x==null?'':x).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 const FLAG_RES=['Fail','Flag','Open'];
 const OK_RES=['Pass','OK','Resolved','Verified'];
+const LOG_DEV_CAT={sanitation:'Sanitation',temperature:'Environment / temperature',environmental:'Environment / temperature',pest:'Pest',security:'Security',security_inspection:'Security',equipment:'Equipment',scale_calibration:'Equipment',waste:'Documentation'};
 const SHIFTS={key:'common.shifts',title:'Shifts',ph:'e.g. Day',def:['Day','Evening','Night']};
 const SCALE_POINTS=['Front Left','Front Right','Back Left','Back Right','Middle'];
 const SCALE_DEFAULT_TOL=0.1;
@@ -1397,6 +1399,8 @@ function LogPanel(props){
           el('td',null,r.performed_by,r.source==='kiosk'&&el('span',{className:'badge off',style:{marginLeft:6}},'QR')),
           el('td',{style:{textAlign:'right',whiteSpace:'nowrap'}},
             el('button',{className:'btn ghost sm',onClick:function(){view(r);}},'View'),' ',
+            !r.voided&&FLAG_RES.indexOf(r.result)>=0&&el(RaiseDeviation,{state:st,license:lic,prefill:{title:def.name+': '+r.result+(r.item?' \u2014 '+r.item:''),category:LOG_DEV_CAT[def.id]||'Other',dept:def.id==='sanitation'||def.id==='pest'?'Sanitation':/security/.test(def.id)?'Security':'Facility',
+              description:def.name+' entry recorded '+when(r)+' by '+(r.performed_by||'-')+' with result '+r.result+'.',source_type:'facility_log',source_id:r.id,source_label:def.name+' \u00b7 '+when(r)+' \u00b7 '+r.result,occurred_on:String((r.data||{}).date||r.created_at||'').slice(0,10)}}),' ',
             isAdmin&&!r.voided&&el('button',{className:'btn ghost sm',onClick:function(){setModal({edit:r});}},'Edit'),' ',
             isAdmin&&!r.voided&&el('button',{className:'btn danger sm',onClick:function(){setModal({voidr:r});}},'Void')));
       })))),
@@ -1928,7 +1932,7 @@ function Products(props){
 /* ---------- Audit trail: history, void, admin page ----------
    The database writes every change to hx_audit_log (append-only). Records are never deleted:
    they are voided with a reason. Every change to a record needs a reason for change. */
-const AUDIT_AREAS={hx_sops:'SOP',hx_sop_acks:'SOP signature',hx_label_prints:'Sticker print',hx_standards:'Standards',hx_standard_clauses:'Standard clauses',hx_license_standards:'Standard adoption',hx_conformance:'Standard conformance',hx_label_templates:'Label templates',hx_tests:'Testing record',hx_roles:'Roles',hx_batches:'Batch record',hx_facility_log:'Facility log entry',hx_visitor_log:'Visitor log',hx_log_lists:'Facility log lists',hx_rules:'Rulebook',
+const AUDIT_AREAS={hx_deviations:'Deviation',hx_capas:'CAPA',hx_sops:'SOP',hx_sop_acks:'SOP signature',hx_label_prints:'Sticker print',hx_standards:'Standards',hx_standard_clauses:'Standard clauses',hx_license_standards:'Standard adoption',hx_conformance:'Standard conformance',hx_label_templates:'Label templates',hx_tests:'Testing record',hx_roles:'Roles',hx_batches:'Batch record',hx_facility_log:'Facility log entry',hx_visitor_log:'Visitor log',hx_log_lists:'Facility log lists',hx_rules:'Rulebook',
   hx_states:'States',hx_licenses:'Licenses',hx_profiles:'Team and access',hx_skus:'SKUs',hx_flavors:'Flavors',hx_formulations:'Formulations',hx_cost_library:'Ingredient prices'};
 const AUDIT_SKIP=['voided_by','voided_at','updated_at','edit_reason'];
 function auditVal(v){
@@ -2561,6 +2565,8 @@ function BatchTracker(props){
             (tests[b.id]||[]).map(function(t){return el(TestBadge,{key:t.id,s:t.status,prefix:'Test: ',style:{marginRight:6,marginTop:6}});})),
           el('div',{className:'row',style:{gap:6}},
             el('button',{className:'btn ghost sm',onClick:function(){view(b);}},'View'),
+            !b.voided&&el(RaiseDeviation,{state:st,license:lic,prefill:{title:def.name+' batch '+b.batch_number+': ',dept:'Production',category:'Process / procedure',product_affected:[b.sku,b.flavor].filter(Boolean).join(' \u00b7 '),lot_number:b.batch_number,
+              source_type:'batch',source_id:b.id,source_label:def.name+' batch '+b.batch_number,occurred_on:String((b.data||{}).date||b.created_at||'').slice(0,10)}}),
             can('testing',2)&&!b.voided&&!(tests[b.id]||[]).length&&testFinalTags(b).length>0&&el('button',{className:'btn sm',onClick:function(){submitTest(b);}},'Submit for testing'),
             !b.voided&&canAdd&&!isAdmin&&el('button',{className:'btn ghost sm',onClick:function(){openFull(b,'fill');}},'Continue'),
             !b.voided&&isAdmin&&el('button',{className:'btn ghost sm',onClick:function(){openFull(b,'edit');}},'Edit'),
@@ -2585,6 +2591,7 @@ const ACC={profile:null,roles:[]};
 const ACCESS_MODULES=[
   {id:'rulebook',label:'Rulebook',grp:'General',help:'View rules / add and edit / delete'},
   {id:'audit',label:'Audit Trail',grp:'General',max:1,help:'View only'},
+  {id:'qms',label:'QMS (Deviations, CAPA)',grp:'General',help:'View = see and report deviations / Edit = update deviations, create and work CAPAs / Full = root cause decision, close, verify effectiveness, cancel'},
   {id:'sops',label:'SOPs',grp:'General',help:'View = read and sign SOPs / Edit = write drafts (manual or AI) / Full = approve and publish, revise, archive, delete drafts'},
   {id:'standards',label:'Standards (CSQ)',grp:'General',help:'View the standard and conformance / update conformance, evidence and files / add the standard, adopt it for a license, set the target level'},
   {id:'batch',label:'Batch Tracker',grp:'Production',help:'View / create and continue (fill blanks) / change filled values with a reason and void'},
@@ -2748,18 +2755,18 @@ function Team(props){
 const LOGS_PROD=['logs_sanitation','logs_waste','logs_scale','logs_equipment','logs_temp','logs_env'];
 function pm(o,list,lv){const x={...o};(list||[]).forEach(function(k){x[k]=lv;});return x;}
 const STARTER_ROLES=[
-  ['General Manager','Leadership. Edit everywhere; Full on batches and every log; sees recipes, prices and the audit trail.',{sops:'admin',rulebook:'editor',standards:'editor',audit:'read',batch:'admin',testing:'admin',stickers:'admin',products:'editor',formbank:'read',cogs:'read',logs:'admin'}],
-  ['Assistant of General Manager','Leadership support. Edit on batches, products and every log; sees recipes and the audit trail.',{sops:'editor',rulebook:'editor',standards:'read',audit:'read',batch:'editor',testing:'editor',products:'editor',formbank:'read',logs:'editor'}],
-  ['Compliance Officer','Full on every log, the rulebook and standards (CSQ); sees batches, products and the audit trail.',{sops:'admin',rulebook:'admin',standards:'admin',audit:'read',logs:'admin',batch:'read',testing:'admin',stickers:'admin',products:'read'}],
-  ['Security Manager','Full on the security and visitor logs.',{sops:'read',rulebook:'read',logs_security:'admin',logs_visitor:'admin'}],
-  ['Security Officer','Fills the security and visitor logs.',{sops:'read',rulebook:'read',logs_security:'editor',logs_visitor:'editor'}],
-  ['Sanitation','Fills the sanitation, waste and pest control logs.',{sops:'read',logs_sanitation:'editor',logs_waste:'editor',logs_pest:'editor'}],
-  ['Team Member','Continues batches; fills the sanitation and temp / humidity logs.',{sops:'read',batch:'editor',products:'read',logs_temp:'editor',logs_sanitation:'editor'}],
-  ['Inventory Manager','Sees products and batches; fills the waste log.',{sops:'read',products:'read',batch:'read',logs_waste:'editor'}],
-  ['Extraction Manager','Full on batches; fills the scale, equipment and temp / humidity logs.',{sops:'editor',batch:'admin',testing:'editor',products:'read',formbank:'read',logs_scale:'editor',logs_equipment:'editor',logs_temp:'editor'}],
-  ['Production Manager','Full on batches; edits products; fills the production logs.',pm({batch:'admin',testing:'editor',stickers:'editor',products:'editor',formbank:'read',rulebook:'read',standards:'editor',sops:'editor'},LOGS_PROD,'editor')],
-  ['Sales Manager','Sees products.',{sops:'read',products:'read'}],
-  ['Production Lead','Creates and continues batches; fills the production logs.',pm({batch:'editor',testing:'read',stickers:'read',products:'read',sops:'read'},['logs_sanitation','logs_scale','logs_equipment','logs_temp'],'editor')]];
+  ['General Manager','Leadership. Edit everywhere; Full on batches and every log; sees recipes, prices and the audit trail.',{qms:'admin',sops:'admin',rulebook:'editor',standards:'editor',audit:'read',batch:'admin',testing:'admin',stickers:'admin',products:'editor',formbank:'read',cogs:'read',logs:'admin'}],
+  ['Assistant of General Manager','Leadership support. Edit on batches, products and every log; sees recipes and the audit trail.',{qms:'editor',sops:'editor',rulebook:'editor',standards:'read',audit:'read',batch:'editor',testing:'editor',products:'editor',formbank:'read',logs:'editor'}],
+  ['Compliance Officer','Full on every log, the rulebook and standards (CSQ); sees batches, products and the audit trail.',{qms:'admin',sops:'admin',rulebook:'admin',standards:'admin',audit:'read',logs:'admin',batch:'read',testing:'admin',stickers:'admin',products:'read'}],
+  ['Security Manager','Full on the security and visitor logs.',{qms:'editor',sops:'read',rulebook:'read',logs_security:'admin',logs_visitor:'admin'}],
+  ['Security Officer','Fills the security and visitor logs.',{qms:'read',sops:'read',rulebook:'read',logs_security:'editor',logs_visitor:'editor'}],
+  ['Sanitation','Fills the sanitation, waste and pest control logs.',{qms:'read',sops:'read',logs_sanitation:'editor',logs_waste:'editor',logs_pest:'editor'}],
+  ['Team Member','Continues batches; fills the sanitation and temp / humidity logs.',{qms:'read',sops:'read',batch:'editor',products:'read',logs_temp:'editor',logs_sanitation:'editor'}],
+  ['Inventory Manager','Sees products and batches; fills the waste log.',{qms:'editor',sops:'read',products:'read',batch:'read',logs_waste:'editor'}],
+  ['Extraction Manager','Full on batches; fills the scale, equipment and temp / humidity logs.',{qms:'editor',sops:'editor',batch:'admin',testing:'editor',products:'read',formbank:'read',logs_scale:'editor',logs_equipment:'editor',logs_temp:'editor'}],
+  ['Production Manager','Full on batches; edits products; fills the production logs.',pm({batch:'admin',testing:'editor',stickers:'editor',products:'editor',formbank:'read',rulebook:'read',standards:'editor',sops:'editor',qms:'editor'},LOGS_PROD,'editor')],
+  ['Sales Manager','Sees products.',{qms:'read',sops:'read',products:'read'}],
+  ['Production Lead','Creates and continues batches; fills the production logs.',pm({batch:'editor',testing:'read',stickers:'read',products:'read',sops:'read',qms:'editor'},['logs_sanitation','logs_scale','logs_equipment','logs_temp'],'editor')]];
 function accessSummary(perms){
   const p=perms||{},out=[];
   ACCESS_MODULES.forEach(function(m){if(has(p,m.id)&&lvRank(p[m.id]))out.push(m.label.replace(/ \(.*\)$/,'')+': '+LV_NAME[p[m.id]]);});
@@ -2833,6 +2840,336 @@ function Roles(){
           el('button',{className:'btn danger sm',onClick:function(){del(r,n);}},'Delete')));
     })),
     edit&&el(RoleEditor,{role:edit,count:(roles||[]).length,onClose:function(){setEdit(null);},onDone:function(){setEdit(null);load();}}));
+}
+
+/* ---------- QMS: Deviations and CAPA (Black Fox fields + CSQ 1.6) ---------- */
+const QMS_DEPTS=['Facility','Production','Sanitation','Compliance','Security','Warehouse','Distribution','Sales'];
+const QMS_PRIORITIES={critical:'Critical',major:'Major',minor:'Minor'};
+const QMS_STATUSES={open:'Open',in_progress:'In Progress',closed:'Closed',cancelled:'Cancelled'};
+const QMS_STATUS_TONE={open:'bad',in_progress:'warn',closed:'ok',cancelled:'off'};
+const QMS_PRI_TONE={critical:'bad',major:'warn',minor:''};
+const DEV_CATEGORIES=['Product quality','Process / procedure','Equipment','Environment / temperature','Sanitation','Pest','Security','Documentation','Labeling / packaging','Testing result','Supplier / material','Safety','Other'];
+const DEV_SOURCES={manual:'Reported',facility_log:'Facility log',batch:'Batch',test:'Lab test',visitor:'Visitor',standard:'Standard clause',complaint:'Complaint',audit:'Audit'};
+const DEV_SOURCE_PAGE={facility_log:'logs',batch:'batches',test:'testing',visitor:'visitors',standard:'standards'};
+const CAPA_EFF={effective:'Effective',partially:'Partially effective',ineffective:'Ineffective'};
+function qmsErr(e){const m=String((e&&e.message)||e);return /hx_deviations|hx_capas/.test(m)&&/missing|does not exist|schema cache/i.test(m)?'QMS is not set up yet - run hendrix_step14.sql in the Hendrix Supabase project.':m;}
+function qmsOpen(r){return r.status==='open'||r.status==='in_progress';}
+function qmsLate(r){return qmsOpen(r)&&r.due_date&&r.due_date<todayStr();}
+function qmsDays(a,b){return Math.max(0,Math.round((new Date(b).getTime()-new Date(a).getTime())/86400000));}
+function QmsBadges(props){const r=props.r;return el('span',{className:'row',style:{gap:6,display:'inline-flex'}},
+  el('span',{className:'badge '+QMS_STATUS_TONE[r.status]},QMS_STATUSES[r.status]),el('span',{className:'badge '+(QMS_PRI_TONE[r.priority]||'')},QMS_PRIORITIES[r.priority]||r.priority),
+  qmsLate(r)&&el('span',{className:'badge bad'},'Overdue'));}
+
+function DeviationForm(props){
+  const x=props.existing||{},pre=props.prefill||{},st=props.state,lic=props.license,canF=can('qms',3);
+  const[f,setF]=useState({title:x.title||pre.title||'',dept:x.dept||pre.dept||'Production',category:x.category||pre.category||'',priority:x.priority||pre.priority||'major',
+    description:x.description||pre.description||'',product_affected:x.product_affected||pre.product_affected||'',lot_number:x.lot_number||pre.lot_number||'',occurred_on:x.occurred_on||pre.occurred_on||todayStr(),
+    immediate_action:x.immediate_action||'',rca:x.rca_required==null?'':x.rca_required?'yes':'no',root_cause:x.root_cause||'',owner_name:x.owner_name||'',due_date:x.due_date||'',status:x.status||'open',attachments:(x.attachments||[]).slice()});
+  const[err,setErr]=useState('');const[busy,setBusy]=useState('');
+  function set(k,v){setF(function(p){return {...p,[k]:v};});}
+  async function upload(file){if(!file)return;setBusy('Uploading...');setErr('');
+    try{const ext=(file.name.split('.').pop()||'pdf').toLowerCase().replace(/[^a-z0-9]/g,'');const path=await storagePut(file,'qms/'+lic.id+'/'+Date.now()+'-'+Math.random().toString(36).slice(2,6)+'.'+ext);
+      setF(function(p){return {...p,attachments:p.attachments.concat([{path:path,name:file.name}])};});}catch(e){setErr(String(e.message||e));}setBusy('');}
+  async function save(){
+    setErr('');if(!f.title.trim()){setErr('Enter the deviation title.');return;}if(!f.description.trim()){setErr('Describe what happened.');return;}
+    const rec={title:f.title.trim(),dept:f.dept,category:f.category,priority:f.priority,description:f.description.trim(),product_affected:f.product_affected.trim(),lot_number:f.lot_number.trim(),occurred_on:f.occurred_on||null,
+      immediate_action:f.immediate_action.trim(),root_cause:f.root_cause.trim(),owner_name:f.owner_name.trim(),due_date:f.due_date||null,attachments:f.attachments};
+    if(canF)rec.rca_required=f.rca===''?null:f.rca==='yes';
+    if(x.id)rec.status=f.status;
+    setBusy('Saving...');
+    try{
+      const out=x.id?await db.update('hx_deviations',x.id,rec):await db.insert('hx_deviations',{...rec,id:newId('dev'),state_id:st.id,license_id:lic.id,status:'open',source_type:pre.source_type||'manual',source_id:pre.source_id||'',source_label:pre.source_label||''});
+      props.onDone(out&&out[0]);
+    }catch(e){setErr(qmsErr(e));}
+    setBusy('');
+  }
+  const inp=function(k,l,ph,type){return el(Field,{label:l},el('input',{type:type||'text',value:f[k]||'',placeholder:ph||'',onChange:function(e){set(k,e.target.value);}}));};
+  const ta=function(k,l,ph){return el(Field,{label:l},el('textarea',{rows:3,value:f[k],placeholder:ph||'',onChange:function(e){set(k,e.target.value);}}));};
+  return el(Modal,{title:(x.id?'Edit deviation '+x.number:'Report deviation')+' \u00b7 '+lic.name,wide:true,onClose:props.onClose},
+    (pre.source_label||x.source_label)&&el('div',{className:'msg',style:{marginBottom:10}},'Source: '+(DEV_SOURCES[pre.source_type||x.source_type]||'')+' \u00b7 '+(pre.source_label||x.source_label)),
+    inp('title','Deviation title *','e.g. Wrong label applied to Pre-Roll batch'),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:10}},
+      el(Field,{label:'Department'},el('select',{value:f.dept,onChange:function(e){set('dept',e.target.value);}},QMS_DEPTS.map(function(d){return el('option',{key:d,value:d},d);}))),
+      el(Field,{label:'Category'},el('select',{value:f.category,onChange:function(e){set('category',e.target.value);}},el('option',{value:''},'(choose)'),DEV_CATEGORIES.map(function(d){return el('option',{key:d,value:d},d);}))),
+      el(Field,{label:'Priority'},el('select',{value:f.priority,onChange:function(e){set('priority',e.target.value);}},Object.keys(QMS_PRIORITIES).map(function(k){return el('option',{key:k,value:k},QMS_PRIORITIES[k]);}))),
+      inp('occurred_on','Date it happened','','date')),
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr',gap:10}},inp('product_affected','Product affected','e.g. Live Resin Carts 1g'),inp('lot_number','Lot / batch number','e.g. LOT-2026-0601')),
+    ta('description','What happened? *','Describe the deviation in detail...'),
+    ta('immediate_action','Correction / immediate action taken','What was done right away to contain the issue? (required before closing)'),
+    canF&&el(Field,{label:'Root cause analysis needed? (authorized decision, CSQ 1.6)'},el('select',{value:f.rca,onChange:function(e){set('rca',e.target.value);}},el('option',{value:''},'Not decided yet'),el('option',{value:'yes'},'Yes - find the root cause'),el('option',{value:'no'},'No - the correction is enough'))),
+    !canF&&x.rca_required!=null&&el('div',{className:'muted',style:{fontSize:12,marginBottom:8}},'Root cause analysis '+(x.rca_required?'needed':'not needed')+(x.rca_decided_by?' (decided by '+x.rca_decided_by+')':'')),
+    ta('root_cause','Root cause'+(f.rca==='yes'?' *':' (if known)'),'Why did this happen?'),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:10}},
+      inp('owner_name','Owner (who resolves it)','Name'),inp('due_date','Due date','','date'),
+      x.id&&el(Field,{label:'Status'},el('select',{value:f.status,onChange:function(e){set('status',e.target.value);}},['open','in_progress'].map(function(k){return el('option',{key:k,value:k},QMS_STATUSES[k]);})))),
+    el('div',{className:'k',style:{margin:'4px 0 6px'}},'Photos / files'),
+    f.attachments.map(function(a,i){return el('div',{key:a.path,className:'row',style:{fontSize:12,marginBottom:4}},el('span',null,'\ud83d\udcce '+a.name),!(x.attachments||[]).some(function(o){return o.path===a.path;})&&el('button',{className:'btn ghost sm',onClick:function(){setF(function(p){return {...p,attachments:p.attachments.filter(function(_,j){return j!==i;})};});}},'Remove'));}),
+    el('label',{className:'btn ghost sm',style:{display:'inline-block'}},busy==='Uploading...'?'Uploading...':'+ Attach file',el('input',{type:'file',style:{display:'none'},onChange:function(e){upload(e.target.files[0]);e.target.value='';}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:!!busy,onClick:save},busy==='Saving...'?'Saving...':x.id?'Update':'Submit deviation')));
+}
+function CapaForm(props){
+  const x=props.existing||{},dv=props.deviation,st=props.state,lic=props.license;
+  const[f,setF]=useState({title:x.title||(dv?'CAPA for '+dv.number+': '+dv.title:''),deviation_id:x.deviation_id||(dv?dv.id:''),dept:x.dept||(dv?dv.dept:'Production'),priority:x.priority||(dv?dv.priority:'major'),
+    issue_description:x.issue_description||(dv?dv.description:''),root_cause:x.root_cause||(dv?dv.root_cause:''),correction:x.correction||(dv?dv.immediate_action:''),preventive_action:x.preventive_action||'',
+    responsible_person_id:x.responsible_person_id||'',responsible_person_name:x.responsible_person_name||'',due_date:x.due_date||'',verification_method:x.verification_method||'',status:x.status||'open'});
+  const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  function set(k,v){setF(function(p){return {...p,[k]:v};});}
+  async function save(){
+    setErr('');if(!f.title.trim()){setErr('Enter the CAPA title.');return;}if(!f.issue_description.trim()){setErr('Describe the issue.');return;}
+    if(!f.due_date){setErr('Set a due date (CSQ 1.6: a timescale for every action).');return;}
+    const rec={title:f.title.trim(),deviation_id:f.deviation_id||null,dept:f.dept,priority:f.priority,issue_description:f.issue_description.trim(),root_cause:f.root_cause.trim(),correction:f.correction.trim(),
+      preventive_action:f.preventive_action.trim(),responsible_person_id:f.responsible_person_id,responsible_person_name:f.responsible_person_name,due_date:f.due_date,verification_method:f.verification_method.trim()};
+    if(x.id)rec.status=f.status;
+    setBusy(true);
+    try{const out=x.id?await db.update('hx_capas',x.id,rec):await db.insert('hx_capas',{...rec,id:newId('capa'),state_id:st.id,license_id:lic.id,status:'open'});props.onDone(out&&out[0]);}
+    catch(e){setErr(qmsErr(e));}
+    setBusy(false);
+  }
+  const ta=function(k,l,ph){return el(Field,{label:l},el('textarea',{rows:3,value:f[k],placeholder:ph||'',onChange:function(e){set(k,e.target.value);}}));};
+  return el(Modal,{title:(x.id?'Edit '+x.number:'New CAPA')+' \u00b7 '+lic.name,wide:true,onClose:props.onClose},
+    el(Field,{label:'CAPA title *'},el('input',{value:f.title,placeholder:'e.g. Pre-roll weight deviation CAPA',onChange:function(e){set('title',e.target.value);}})),
+    el('div',{className:'grid',style:{gridTemplateColumns:'2fr 1fr 1fr',gap:10}},
+      el(Field,{label:'Linked deviation'},el('select',{value:f.deviation_id,onChange:function(e){set('deviation_id',e.target.value);}},el('option',{value:''},'(none)'),(props.deviations||[]).map(function(d){return el('option',{key:d.id,value:d.id},d.number+' \u00b7 '+d.title);}))),
+      el(Field,{label:'Department'},el('select',{value:f.dept,onChange:function(e){set('dept',e.target.value);}},QMS_DEPTS.map(function(d){return el('option',{key:d,value:d},d);}))),
+      el(Field,{label:'Priority'},el('select',{value:f.priority,onChange:function(e){set('priority',e.target.value);}},Object.keys(QMS_PRIORITIES).map(function(k){return el('option',{key:k,value:k},QMS_PRIORITIES[k]);})))),
+    ta('issue_description','Issue description *','Describe the problem being addressed...'),
+    ta('root_cause','Root cause','Why it happened'),
+    ta('correction','Correction (immediate fix)','What was done to fix the immediate problem?'),
+    ta('preventive_action','Preventive action (long-term fix)','What process changes prevent recurrence? e.g. Add hourly weight verification, supervisor sign-off every batch'),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:10}},
+      el(Field,{label:'Responsible person'},el('select',{value:f.responsible_person_id,onChange:function(e){const u=(props.people||[]).find(function(p){return p.id===e.target.value;});setF(function(p){return {...p,responsible_person_id:e.target.value,responsible_person_name:u?u.name:''};});}},
+        el('option',{value:''},'(select)'),(props.people||[]).map(function(u){return el('option',{key:u.id,value:u.id},u.name);}))),
+      el(Field,{label:'Due date *'},el('input',{type:'date',value:f.due_date,onChange:function(e){set('due_date',e.target.value);}})),
+      x.id&&el(Field,{label:'Status'},el('select',{value:f.status,onChange:function(e){set('status',e.target.value);}},['open','in_progress'].map(function(k){return el('option',{key:k,value:k},QMS_STATUSES[k]);})))),
+    el(Field,{label:'Verification method'},el('input',{value:f.verification_method,placeholder:'How will you verify the fix worked? e.g. 30 days of in-range temperature logs',onChange:function(e){set('verification_method',e.target.value);}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:save},busy?'Saving...':x.id?'Update CAPA':'Create CAPA')));
+}
+function QmsCloseDev(props){
+  const d=props.dev;const[note,setNote]=useState('');const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  const checks=[[!!String(d.immediate_action||'').trim(),'Correction / immediate action recorded'],[d.rca_required!=null,'Root cause analysis decision made'],[d.rca_required!==true||!!String(d.root_cause||'').trim(),'Root cause recorded (when needed)']];
+  const ok=checks.every(function(c){return c[0];});
+  async function close(){setBusy(true);setErr('');try{await db.update('hx_deviations',d.id,{status:'closed',close_note:note.trim()});props.onDone();}catch(e){setErr(qmsErr(e));}setBusy(false);}
+  return el(Modal,{title:'Close '+d.number,onClose:props.onClose},
+    checks.map(function(c,i){return el('div',{key:i,className:'row',style:{gap:8,fontSize:13,marginBottom:6}},el('span',{className:'badge '+(c[0]?'ok':'bad')},c[0]?'\u2713':'\u2717'),c[1]);}),
+    !ok&&el('div',{className:'msg err'},'Edit the deviation to complete the missing items first.'),
+    (props.capas||[]).filter(qmsOpen).length>0&&el('div',{className:'msg',style:{marginTop:8}},'Note: '+props.capas.filter(qmsOpen).length+' linked CAPA(s) are still open. They stay open until verified.'),
+    el(Field,{label:'Closing note'},el('textarea',{rows:2,value:note,onChange:function(e){setNote(e.target.value);}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy||!ok,onClick:close},'Close deviation')));
+}
+function QmsVerifyCapa(props){
+  const c=props.capa;const[ev,setEv]=useState(c.verification_evidence||'');const[rate,setRate]=useState(c.effectiveness_rating||'');const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  async function save(close){
+    setErr('');if(!ev.trim()){setErr('Write the verification evidence: what you checked and what you found.');return;}if(!rate){setErr('Rate the effectiveness.');return;}
+    setBusy(true);
+    try{await db.update('hx_capas',c.id,{verification_evidence:ev.trim(),effectiveness_rating:rate});if(close)await db.update('hx_capas',c.id,{status:'closed'});else if(rate!=='effective'&&c.status==='open')await db.update('hx_capas',c.id,{status:'in_progress'});props.onDone();}
+    catch(e){setErr(qmsErr(e));}
+    setBusy(false);
+  }
+  return el(Modal,{title:'Verify effectiveness \u00b7 '+c.number,onClose:props.onClose},
+    c.verification_method&&el('div',{className:'muted',style:{fontSize:12,marginBottom:8}},'Planned verification: '+c.verification_method),
+    el(Field,{label:'Verification evidence *'},el('textarea',{rows:4,value:ev,placeholder:'e.g. Reviewed 30 days of Temp / Humidity logs for Vault 1: all in range. No repeat deviations.',onChange:function(e){setEv(e.target.value);}})),
+    el(Field,{label:'Effectiveness *'},el('select',{value:rate,onChange:function(e){setRate(e.target.value);}},el('option',{value:''},'(rate it)'),Object.keys(CAPA_EFF).map(function(k){return el('option',{key:k,value:k},CAPA_EFF[k]);}))),
+    rate&&rate!=='effective'&&el('div',{className:'msg err'},'Not effective yet: the CAPA stays open. Update the preventive action and verify again.'),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),
+      el('button',{className:'btn ghost',disabled:busy,onClick:function(){save(false);}},'Save rating'),
+      rate==='effective'&&el('button',{className:'btn',disabled:busy||!String(c.correction||'').trim(),title:String(c.correction||'').trim()?'':'Record the correction first',onClick:function(){save(true);}},'Verify & close CAPA')));
+}
+function QmsCancel(props){
+  const[why,setWhy]=useState('');const[err,setErr]=useState('');
+  return el(Modal,{title:'Cancel '+props.rec.number,onClose:props.onClose},
+    el('div',{className:'muted',style:{fontSize:13,marginBottom:8}},'Records are never deleted. A cancelled record stays on file with your reason.'),
+    el(Field,{label:'Reason *'},el('textarea',{rows:3,value:why,onChange:function(e){setWhy(e.target.value);}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Back'),
+      el('button',{className:'btn danger',disabled:!why.trim(),onClick:function(){db.update(props.table,props.rec.id,{status:'cancelled',cancel_reason:why.trim()}).then(props.onDone).catch(function(e){setErr(qmsErr(e));});}},'Cancel record')));
+}
+function qmsRecHtml(kind,r,lic,st,extra){
+  const e=esc3,row=function(l,v){return v?'<tr><th>'+e(l)+'</th><td style="white-space:pre-wrap">'+e(v)+'</td></tr>':'';};
+  let h='<div class="hxrec"><h2>'+(kind==='dev'?'Deviation ':'CAPA ')+e(r.number)+' \u2014 '+e(r.title)+'</h2><div class="m">'+e(lic.name)+(lic.license_number?' ('+e(lic.license_number)+')':'')+' \u00b7 '+e(st.name)+' \u00b7 printed '+e(new Date().toLocaleString())+'</div><table>'+
+    row('Status',QMS_STATUSES[r.status])+row('Priority',QMS_PRIORITIES[r.priority])+row('Department',r.dept);
+  if(kind==='dev')h+=row('Category',r.category)+row('Date it happened',r.occurred_on)+row('Source',r.source_label?(DEV_SOURCES[r.source_type]||'')+': '+r.source_label:'')+row('Product affected',r.product_affected)+row('Lot / batch',r.lot_number)+
+    row('What happened',r.description)+row('Correction / immediate action',r.immediate_action)+row('Root cause analysis',r.rca_required==null?'Not decided':(r.rca_required?'Needed':'Not needed')+(r.rca_decided_by?' (decided by '+r.rca_decided_by+')':''))+
+    row('Root cause',r.root_cause)+row('Owner',r.owner_name)+row('Due date',r.due_date)+row('Reported by',r.reported_by+' \u00b7 '+new Date(r.created_at).toLocaleString())+row('Linked CAPAs',extra);
+  else h+=row('Linked deviation',extra)+row('Issue',r.issue_description)+row('Root cause',r.root_cause)+row('Correction',r.correction)+row('Preventive action',r.preventive_action)+row('Responsible',r.responsible_person_name)+row('Due date',r.due_date)+
+    row('Verification method',r.verification_method)+row('Verification evidence',r.verification_evidence)+row('Effectiveness',CAPA_EFF[r.effectiveness_rating])+row('Verified by',r.verified_by?r.verified_by+' \u00b7 '+new Date(r.verified_at).toLocaleString():'')+row('Opened by',r.created_by+' \u00b7 '+new Date(r.created_at).toLocaleString());
+  h+=row('Closed',r.closed_at?r.closed_by+' \u00b7 '+new Date(r.closed_at).toLocaleString()+(r.close_note?' \u00b7 '+r.close_note:''):'')+row('Cancelled',r.status==='cancelled'?r.cancel_reason:'');
+  return h+'</table></div>';
+}
+function QmsBarChart(props){
+  // simple vertical bars, one or two series, gold / green
+  const data=props.data,max=Math.max(1,...data.map(function(d){return Math.max(d.a||0,d.b||0);})),W=Math.max(320,data.length*48),H=170,bw=props.two?14:22;
+  return el('svg',{viewBox:'0 0 '+W+' '+(H+34),style:{width:'100%',maxHeight:260,height:'auto'},preserveAspectRatio:'xMinYMid meet'},
+    [0,.5,1].map(function(t,i){const y=10+(1-t)*H;return el('g',{key:i},el('line',{x1:28,x2:W,y1:y,y2:y,stroke:'#2a2a2a'}),el('text',{x:24,y:y+4,fill:'#6c685e',fontSize:10,textAnchor:'end'},Math.round(max*t)));}),
+    data.map(function(d,i){const x=40+i*((W-48)/data.length),ha=(d.a||0)/max*H,hb=(d.b||0)/max*H;
+      return el('g',{key:i},
+        el('rect',{x:x,y:10+H-ha,width:bw,height:Math.max(ha,0),fill:'#d4af37',rx:2},el('title',null,props.la+': '+(d.a||0))),
+        props.two&&el('rect',{x:x+bw+3,y:10+H-hb,width:bw,height:Math.max(hb,0),fill:'#5fbf8a',rx:2},el('title',null,props.lb+': '+(d.b||0))),
+        el('text',{x:x+(props.two?bw:bw/2),y:H+26,fill:'#9a968a',fontSize:10,textAnchor:'middle'},d.label));}));
+}
+function QmsHBars(props){
+  const rows=props.rows,max=Math.max(1,...rows.map(function(r){return r[1];}));
+  return el('div',null,rows.length?rows.map(function(r){return el('div',{key:r[0],className:'barrow'},el('div',{style:{width:170,flex:'0 0 auto',fontSize:12}},r[0]),
+    el('div',{style:{flex:1,height:10,background:'#1d1d1d',borderRadius:5,overflow:'hidden'}},el('div',{style:{width:(r[1]*100/max)+'%',height:'100%',background:'var(--gold-grad)'}})),el('div',{style:{width:34,textAlign:'right',fontSize:12}},r[1]));}):el('div',{className:'muted',style:{fontSize:12}},'No data yet'));
+}
+function QmsPage(props){
+  const st=props.state,lic=props.license,lid=lic?lic.id:'';
+  const[devs,setDevs]=useState(null);const[capas,setCapas]=useState([]);const[people,setPeople]=useState([]);
+  const[tab,setTab]=useState(lsGet('hx_qmstab')||'dashboard');
+  const[msg,setMsg]=useState('');const[q,setQ]=useState('');const[sf,setSf]=useState('OPEN');
+  const[sel,setSel]=useState(null);const[modal,setModal]=useState(null);
+  const load=useCallback(function(){
+    if(!lid){setDevs([]);return;}
+    Promise.all([db.get('hx_deviations','license_id=eq.'+encodeURIComponent(lid)+'&select=*&order=created_at.desc&limit=5000'),db.get('hx_capas','license_id=eq.'+encodeURIComponent(lid)+'&select=*&order=created_at.desc&limit=5000')])
+      .then(function(r){setDevs((r[0]||[]).filter(function(x){return x.license_id===lid;}));setCapas((r[1]||[]).filter(function(x){return x.license_id===lid;}));})
+      .catch(function(e){setMsg(qmsErr(e));setDevs([]);});
+    sb('rpc/hx_qms_people',{method:'POST',body:{p_lic:lid}}).then(function(r){setPeople(r||[]);}).catch(function(){setPeople([]);});
+  },[lid]);
+  useEffect(load,[load]);
+  if(!st||!lic)return el('div',null,el('h1',null,el('span',{className:'g'},'QMS')),el('div',{className:'empty'},'Pick a state and a license at the top first.'));
+  const canE=can('qms',2),canF=can('qms',3),D=devs||[],today=todayStr(),year=today.slice(0,4);
+  function go(t){setTab(t);lsSet('hx_qmstab',t);setSel(null);}
+  function done(text){setModal(null);if(text)setMsg(text);load();}
+  const capOf=function(d){return capas.filter(function(c){return c.deviation_id===d.id;});};
+  const devOf=function(c){return D.find(function(d){return d.id===c.deviation_id;});};
+  const openD=D.filter(qmsOpen),openC=capas.filter(qmsOpen),lateD=D.filter(qmsLate),lateC=capas.filter(qmsLate);
+  const awaitingRca=openD.filter(function(d){return d.rca_required==null;}),awaitingVerify=openC.filter(function(c){return c.effectiveness_rating!=='effective';});
+  const closedY=D.filter(function(d){return d.status==='closed'&&String(d.closed_at||'').slice(0,4)===year;});
+  const avgClose=closedY.length?Math.round(closedY.reduce(function(a,d){return a+qmsDays(d.created_at,d.closed_at);},0)/closedY.length):null;
+  const stat=function(l,v,tone,sub){return el('div',{key:l,className:'card gold',style:{marginBottom:0}},el('div',{className:'k'},l),el('div',{className:'v',style:{fontSize:26,color:tone||'var(--text)'}},v),sub&&el('div',{className:'muted',style:{fontSize:11,marginTop:2}},sub));};
+  function filt(list){const ql=q.trim().toLowerCase();return list.filter(function(r){
+    if(sf==='OPEN'&&!qmsOpen(r))return false;if(sf==='LATE'&&!qmsLate(r))return false;if(['open','in_progress','closed','cancelled'].indexOf(sf)>=0&&r.status!==sf)return false;
+    if(ql&&(r.number+' '+r.title+' '+(r.description||r.issue_description||'')+' '+(r.lot_number||'')+' '+(r.product_affected||'')+' '+(r.owner_name||r.responsible_person_name||'')).toLowerCase().indexOf(ql)<0)return false;return true;});}
+  // trends: last 12 months
+  const months=[];for(let i=11;i>=0;i--){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);months.push(d.toISOString().slice(0,7));}
+  const trend=months.map(function(m){return {label:new Date(m+'-15').toLocaleDateString([],{month:'short'}),a:D.filter(function(d){return String(d.created_at).slice(0,7)===m;}).length,b:capas.filter(function(c){return String(c.closed_at||'').slice(0,7)===m;}).length};});
+  const countBy=function(list,k,labels){const m={};list.forEach(function(r){const v=r[k]||'(none)';m[v]=(m[v]||0)+1;});return Object.keys(m).map(function(x){return [labels?labels[x]||x:x,m[x]];}).sort(function(a,b){return b[1]-a[1];});};
+  const yearD=D.filter(function(d){return String(d.created_at).slice(0,4)===year;});
+  const effRate=(function(){const v=capas.filter(function(c){return c.effectiveness_rating;});return v.length?Math.round(v.filter(function(c){return c.effectiveness_rating==='effective';}).length*100/v.length):null;})();
+  function trendReport(){
+    const e=esc3;let h='<div class="hxrec"><h2>Deviation and CAPA trend review \u2014 '+year+'</h2><div class="m">'+e(lic.name)+' \u00b7 '+e(st.name)+' \u00b7 CSQ 1.6 (g) annual review \u00b7 printed '+e(new Date().toLocaleString())+'</div>';
+    h+='<table><tr><th>Deviations this year</th><td>'+yearD.length+'</td></tr><tr><th>Open now</th><td>'+openD.length+' ('+lateD.length+' overdue)</td></tr><tr><th>CAPAs open</th><td>'+openC.length+' ('+lateC.length+' overdue)</td></tr><tr><th>Average days to close a deviation</th><td>'+(avgClose==null?'-':avgClose)+'</td></tr><tr><th>CAPAs verified effective</th><td>'+(effRate==null?'-':effRate+'%')+'</td></tr></table>';
+    h+='<table><tr class="sec"><td colspan="2">BY MONTH (deviations opened / CAPAs closed)</td></tr>'+trend.map(function(t){return '<tr><th>'+e(t.label)+'</th><td>'+t.a+' / '+t.b+'</td></tr>';}).join('')+'</table>';
+    [['BY CATEGORY',countBy(yearD,'category')],['BY SOURCE',countBy(yearD,'source_type',DEV_SOURCES)],['BY DEPARTMENT',countBy(yearD,'dept')],['BY PRIORITY',countBy(yearD,'priority',QMS_PRIORITIES)]].forEach(function(s){
+      h+='<table><tr class="sec"><td colspan="2">'+s[0]+'</td></tr>'+(s[1].length?s[1].map(function(r){return '<tr><th>'+e(r[0])+'</th><td>'+r[1]+'</td></tr>';}).join(''):'<tr><td colspan="2">None</td></tr>')+'</table>';});
+    h+='<table><tr class="sec"><td colspan="5">ALL DEVIATIONS THIS YEAR</td></tr><tr><th>Number</th><th>Title</th><th>Category</th><th>Status</th><th>Root cause</th></tr>'+yearD.map(function(d){return '<tr><td>'+e(d.number)+'</td><td>'+e(d.title)+'</td><td>'+e(d.category)+'</td><td>'+e(QMS_STATUSES[d.status])+'</td><td>'+e(d.root_cause)+'</td></tr>';}).join('')+'</table>';
+    h+='<table><tr><th>Reviewed by (name, signature, date)</th><td style="height:40px"></td></tr></table></div>';
+    printRecords('Deviation and CAPA trend review '+year+' - '+lic.name,[h]);
+  }
+  const selD=sel&&sel.k==='dev'?D.find(function(d){return d.id===sel.id;}):null,selC=sel&&sel.k==='capa'?capas.find(function(c){return c.id===sel.id;}):null;
+  const tabs=[['dashboard','Dashboard'],['deviations','Deviations ('+openD.length+' open)'],['capas','CAPAs ('+openC.length+' open)'],['trends','Trends']];
+  const needs=[].concat(lateD.map(function(d){return ['dev',d,'Deviation overdue (due '+d.due_date+')'];}),lateC.map(function(c){return ['capa',c,'CAPA overdue (due '+c.due_date+')'];}),
+    canF?awaitingRca.map(function(d){return ['dev',d,'Root cause analysis decision needed'];}):[],openC.filter(function(c){return c.effectiveness_rating&&c.effectiveness_rating!=='effective';}).map(function(c){return ['capa',c,'Rated '+CAPA_EFF[c.effectiveness_rating]+' - more action needed'];}));
+  const devCard=function(d){const cs=capOf(d);return el('div',{key:d.id,className:'card',style:{cursor:'pointer',padding:'12px 16px',borderLeft:'3px solid '+(d.priority==='critical'?'var(--red)':d.priority==='major'?'var(--gold)':'#3b82f6')},onClick:function(){setSel({k:'dev',id:d.id});}},
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start',flexWrap:'nowrap'}},
+      el('div',{style:{minWidth:0}},el('div',{className:'row',style:{gap:6,marginBottom:5}},el('b',{style:{color:'var(--gold-hi)',fontSize:12}},d.number),el(QmsBadges,{r:d}),el('span',{className:'badge off'},d.dept),d.source_type!=='manual'&&el('span',{className:'badge off'},DEV_SOURCES[d.source_type])),
+        el('div',{style:{fontWeight:700}},d.title),(d.product_affected||d.lot_number)&&el('div',{className:'muted',style:{fontSize:12}},[d.product_affected&&'Product: '+d.product_affected,d.lot_number&&'Lot: '+d.lot_number].filter(Boolean).join(' \u00b7 '))),
+      el('div',{className:'muted',style:{fontSize:11,textAlign:'right',flex:'0 0 auto'}},el('div',null,String(d.created_at).slice(0,10)),d.due_date&&el('div',{style:{color:qmsLate(d)?'var(--red)':''}},'Due '+d.due_date),cs.length>0&&el('div',null,cs.length+' CAPA'+(cs.length===1?'':'s')))));};
+  const capaCard=function(c){const d=devOf(c);return el('div',{key:c.id,className:'card',style:{cursor:'pointer',padding:'12px 16px',borderLeft:'3px solid '+(c.status==='closed'?'var(--green)':qmsLate(c)?'var(--red)':'var(--gold)')},onClick:function(){setSel({k:'capa',id:c.id});}},
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start',flexWrap:'nowrap'}},
+      el('div',{style:{minWidth:0}},el('div',{className:'row',style:{gap:6,marginBottom:5}},el('b',{style:{color:'var(--gold-hi)',fontSize:12}},c.number),el(QmsBadges,{r:c}),c.effectiveness_rating&&el('span',{className:'badge '+(c.effectiveness_rating==='effective'?'ok':'bad')},CAPA_EFF[c.effectiveness_rating])),
+        el('div',{style:{fontWeight:700}},c.title),el('div',{className:'muted',style:{fontSize:12}},[c.responsible_person_name&&'Responsible: '+c.responsible_person_name,d&&'From '+d.number].filter(Boolean).join(' \u00b7 '))),
+      el('div',{className:'muted',style:{fontSize:11,textAlign:'right',flex:'0 0 auto'}},el('div',null,String(c.created_at).slice(0,10)),c.due_date&&el('div',{style:{color:qmsLate(c)?'var(--red)':''}},'Due '+c.due_date))));};
+  const block=function(l,v){return v?el('div',{key:l,style:{marginBottom:10}},el('div',{className:'k',style:{marginBottom:4}},l),el('div',{style:{background:'var(--panel2)',borderRadius:8,padding:'8px 12px',fontSize:13,lineHeight:1.55,whiteSpace:'pre-wrap'}},v)):null;};
+  const filters=el('div',{className:'row',style:{margin:'0 0 12px'}},el('input',{value:q,placeholder:'Search number, title, lot, owner...',style:{width:260},onChange:function(e){setQ(e.target.value);}}),
+    el('select',{value:sf,onChange:function(e){setSf(e.target.value);}},[['OPEN','Open + in progress'],['LATE','Overdue'],['ALL','Everything'],['open','Open'],['in_progress','In progress'],['closed','Closed'],['cancelled','Cancelled']].map(function(o){return el('option',{key:o[0],value:o[0]},o[1]);})));
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,'Quality ',el('span',{className:'g'},'Management')),el('div',{className:'sub'},'Deviations and CAPA \u00b7 '+lic.name+' \u00b7 every deviation corrected, root cause when needed, every CAPA verified effective (CSQ 1.6)')),
+      el('div',{className:'row'},el('button',{className:'btn',onClick:function(){setModal({t:'dev'});}},'+ Report deviation'),canE&&el('button',{className:'btn ghost',onClick:function(){setModal({t:'capa'});}},'+ New CAPA'))),
+    msg&&el('div',{className:/^(Saved|Reported|Created|Closed|Cancelled|Reopened|Verified|Updated)/.test(msg)?'msg':'msg err'},msg),
+    el('div',{className:'tabs'},tabs.map(function(t){return el('button',{key:t[0],className:tab===t[0]?'on':'',onClick:function(){go(t[0]);}},t[1]);})),
+    devs===null?el('div',{className:'muted'},'Loading...'):
+    tab==='dashboard'?el('div',null,
+      el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',marginBottom:14}},
+        stat('Open deviations',openD.length,openD.length?'var(--red)':'var(--green)'),stat('Open CAPAs',openC.length,openC.length?'var(--gold-hi)':'var(--green)'),
+        stat('Overdue',lateD.length+lateC.length,lateD.length+lateC.length?'var(--red)':'var(--green)','deviations + CAPAs past due'),
+        stat('Closed this year',closedY.length,'var(--text)',avgClose==null?'':'avg '+avgClose+' days to close'),
+        stat('CAPAs effective',effRate==null?'-':effRate+'%',effRate==null?'var(--faint)':effRate>=80?'var(--green)':'var(--gold-hi)','of CAPAs rated')),
+      el('div',{className:'card'},el('h3',null,'Needs action',el('span',{className:'badge '+(needs.length?'bad':'ok'),style:{marginLeft:8}},needs.length?needs.length+' open':'All clear')),
+        !needs.length?el('div',{className:'muted',style:{fontSize:13}},'Nothing overdue and no decisions waiting.'):
+        needs.slice(0,15).map(function(n,i){return el('div',{key:i,className:'row',style:{gap:8,fontSize:13,padding:'4px 0',flexWrap:'nowrap'}},el('span',{style:{width:9,height:9,borderRadius:5,background:'var(--red)',flex:'0 0 auto'}}),
+          el('b',{style:{color:'var(--gold-hi)',minWidth:110}},n[1].number),el('span',{style:{flex:1}},n[1].title+' \u2014 '+n[2]),el('button',{className:'btn ghost sm',onClick:function(){setSel({k:n[0],id:n[1].id});}},'Open'));})),
+      el('div',{className:'card'},el('h3',null,'Last 12 months'),el('div',{className:'row',style:{gap:14,fontSize:12,marginBottom:6}},el('span',null,el('span',{style:{display:'inline-block',width:10,height:10,background:'#d4af37',marginRight:5}}),'Deviations opened'),el('span',null,el('span',{style:{display:'inline-block',width:10,height:10,background:'#5fbf8a',marginRight:5}}),'CAPAs closed')),
+        el(QmsBarChart,{data:trend,two:true,la:'Deviations opened',lb:'CAPAs closed'})),
+      el('div',{className:'card'},el('h3',null,'Recent activity'),D.concat(capas).sort(function(a,b){return String(b.updated_at).localeCompare(String(a.updated_at));}).slice(0,8).map(function(r){const isD=!!r.reported_by_id||r.source_type;
+        return el('div',{key:r.id,className:'row',style:{gap:8,fontSize:13,padding:'5px 0',borderTop:'1px solid var(--line)',cursor:'pointer',flexWrap:'nowrap'},onClick:function(){setSel({k:isD?'dev':'capa',id:r.id});}},
+          el('span',{className:'badge off'},isD?'Deviation':'CAPA'),el('b',{style:{color:'var(--gold-hi)',minWidth:110}},r.number),el('span',{style:{flex:1}},r.title),el('span',{className:'badge '+QMS_STATUS_TONE[r.status]},QMS_STATUSES[r.status]),el('span',{className:'muted',style:{fontSize:11}},String(r.updated_at).slice(0,10)));}),
+        !D.length&&!capas.length&&el('div',{className:'muted',style:{fontSize:13}},'No records yet. Report a deviation, or raise one from a failed log entry, batch or test.'))):
+    tab==='deviations'?el('div',null,filters,filt(D).length?filt(D).map(devCard):el('div',{className:'empty'},D.length?'No deviations match.':'No deviations recorded.')):
+    tab==='capas'?el('div',null,filters,filt(capas).length?filt(capas).map(capaCard):el('div',{className:'empty'},capas.length?'No CAPAs match.':'No CAPAs yet.')):
+    el('div',null,
+      el('div',{className:'row',style:{justifyContent:'space-between',marginBottom:10}},el('div',{className:'muted',style:{fontSize:13}},'Tracking and trending (CSQ 1.6 g). Print the review, discuss it, and sign it at least once a year.'),el('button',{className:'btn',onClick:trendReport},'Print annual trend review')),
+      el('div',{className:'card'},el('h3',null,'By month'),el(QmsBarChart,{data:trend,two:true,la:'Deviations opened',lb:'CAPAs closed'})),
+      el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(320px,1fr))'}},
+        el('div',{className:'card'},el('h3',null,'By category \u00b7 '+year),el(QmsHBars,{rows:countBy(yearD,'category')})),
+        el('div',{className:'card'},el('h3',null,'By source \u00b7 '+year),el(QmsHBars,{rows:countBy(yearD,'source_type',DEV_SOURCES)})),
+        el('div',{className:'card'},el('h3',null,'By department \u00b7 '+year),el(QmsHBars,{rows:countBy(yearD,'dept')})),
+        el('div',{className:'card'},el('h3',null,'By priority \u00b7 '+year),el(QmsHBars,{rows:countBy(yearD,'priority',QMS_PRIORITIES)})))),
+    selD&&!modal&&el(Modal,{title:selD.number+' \u00b7 '+selD.title,wide:true,onClose:function(){setSel(null);}},
+      el('div',{className:'row',style:{gap:6,marginBottom:8}},el(QmsBadges,{r:selD}),el('span',{className:'badge off'},selD.dept),selD.category&&el('span',{className:'badge off'},selD.category)),
+      el('div',{className:'muted',style:{fontSize:12,marginBottom:10}},'Reported by '+selD.reported_by+' \u00b7 '+new Date(selD.created_at).toLocaleString()+(selD.occurred_on?' \u00b7 happened '+selD.occurred_on:'')+(selD.owner_name?' \u00b7 owner '+selD.owner_name:'')+(selD.due_date?' \u00b7 due '+selD.due_date:'')),
+      selD.source_label&&el('div',{className:'msg',style:{marginBottom:10}},'Source: '+DEV_SOURCES[selD.source_type]+' \u00b7 '+selD.source_label,DEV_SOURCE_PAGE[selD.source_type]&&el('button',{className:'btn ghost sm',style:{marginLeft:8},onClick:function(){props.go(DEV_SOURCE_PAGE[selD.source_type]);}},'Open')),
+      (selD.product_affected||selD.lot_number)&&el('div',{className:'card gold',style:{padding:'8px 12px'}},el('span',null,el('span',{className:'k'},'Product '),selD.product_affected||'-'),el('span',{style:{marginLeft:18}},el('span',{className:'k'},'Lot '),selD.lot_number||'-')),
+      block('What happened',selD.description),block('Correction / immediate action',selD.immediate_action),
+      el('div',{style:{fontSize:12,marginBottom:8}},el('b',null,'Root cause analysis: '),selD.rca_required==null?el('span',{className:'badge warn'},'Decision needed'):(selD.rca_required?'Needed':'Not needed')+(selD.rca_decided_by?' (decided by '+selD.rca_decided_by+')':'')),
+      block('Root cause',selD.root_cause),
+      (selD.attachments||[]).length>0&&el('div',{style:{marginBottom:10}},el('div',{className:'k'},'Files'),selD.attachments.map(function(a){return el('div',{key:a.path},el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();openStored(a.path,a.name).catch(function(){});}},'\ud83d\udcce '+a.name));})),
+      selD.status==='closed'&&el('div',{className:'msg'},'Closed by '+selD.closed_by+' \u00b7 '+new Date(selD.closed_at).toLocaleString()+(selD.close_note?' \u00b7 '+selD.close_note:'')),
+      selD.status==='cancelled'&&el('div',{className:'msg err'},'Cancelled: '+selD.cancel_reason),
+      el('div',{className:'card',style:{padding:'8px 12px'}},el('div',{className:'row',style:{justifyContent:'space-between'}},el('b',null,'Linked CAPAs'),canE&&qmsOpen(selD)&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'capa',dev:selD});}},'+ Create CAPA')),
+        capOf(selD).length?capOf(selD).map(function(c){return el('div',{key:c.id,className:'row',style:{gap:6,marginTop:6,cursor:'pointer'},onClick:function(){setSel({k:'capa',id:c.id});}},el('b',{style:{color:'var(--gold-hi)',fontSize:12}},c.number),el('span',{style:{fontSize:13}},c.title),el(QmsBadges,{r:c}));}):el('div',{className:'muted',style:{fontSize:12,marginTop:4}},'None')),
+      el('div',{className:'row',style:{justifyContent:'space-between',marginTop:12}},
+        el('div',{className:'row',style:{gap:6}},
+          el('button',{className:'btn ghost sm',onClick:function(){printRecords(selD.number,[qmsRecHtml('dev',selD,lic,st,capOf(selD).map(function(c){return c.number+' ('+QMS_STATUSES[c.status]+')';}).join(', '))]);}},'Print / PDF'),
+          canE&&qmsOpen(selD)&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'dev',existing:selD});}},'Edit'),
+          canF&&qmsOpen(selD)&&el('button',{className:'btn sm',onClick:function(){setModal({t:'closedev'});}},'Close deviation'),
+          canF&&qmsOpen(selD)&&el('button',{className:'btn danger sm',onClick:function(){setModal({t:'cancel',table:'hx_deviations',rec:selD});}},'Cancel'),
+          canF&&!qmsOpen(selD)&&el('button',{className:'btn ghost sm',onClick:function(){db.update('hx_deviations',selD.id,{status:'open'}).then(function(){done('Reopened '+selD.number);}).catch(function(e){setMsg(qmsErr(e));});}},'Reopen')),
+        el('button',{className:'btn ghost sm',onClick:function(){setSel(null);}},'Close'))),
+    selC&&!modal&&el(Modal,{title:selC.number+' \u00b7 '+selC.title,wide:true,onClose:function(){setSel(null);}},
+      el('div',{className:'row',style:{gap:6,marginBottom:8}},el(QmsBadges,{r:selC}),el('span',{className:'badge off'},selC.dept),selC.effectiveness_rating&&el('span',{className:'badge '+(selC.effectiveness_rating==='effective'?'ok':'bad')},CAPA_EFF[selC.effectiveness_rating])),
+      el('div',{className:'muted',style:{fontSize:12,marginBottom:10}},'Opened by '+selC.created_by+' \u00b7 '+new Date(selC.created_at).toLocaleString()+(selC.responsible_person_name?' \u00b7 responsible '+selC.responsible_person_name:'')+(selC.due_date?' \u00b7 due '+selC.due_date:'')),
+      devOf(selC)&&el('div',{className:'msg',style:{marginBottom:10,cursor:'pointer'},onClick:function(){setSel({k:'dev',id:selC.deviation_id});}},'From deviation '+devOf(selC).number+' \u00b7 '+devOf(selC).title),
+      block('Issue',selC.issue_description),block('Root cause',selC.root_cause),block('Correction (immediate fix)',selC.correction),block('Preventive action (long-term fix)',selC.preventive_action),block('Verification method',selC.verification_method),
+      selC.verification_evidence&&el('div',{className:'card',style:{padding:'8px 12px',borderColor:selC.effectiveness_rating==='effective'?'#23543a':'#5a2a26'}},el('div',{className:'k'},'Verification \u00b7 '+(CAPA_EFF[selC.effectiveness_rating]||'')),el('div',{style:{fontSize:13,whiteSpace:'pre-wrap',margin:'4px 0'}},selC.verification_evidence),
+        selC.verified_by&&el('div',{className:'muted',style:{fontSize:11}},'Verified by '+selC.verified_by+' \u00b7 '+new Date(selC.verified_at).toLocaleString())),
+      selC.status==='closed'&&el('div',{className:'msg'},'Closed by '+selC.closed_by+' \u00b7 '+new Date(selC.closed_at).toLocaleString()),
+      selC.status==='cancelled'&&el('div',{className:'msg err'},'Cancelled: '+selC.cancel_reason),
+      el('div',{className:'row',style:{justifyContent:'space-between',marginTop:12}},
+        el('div',{className:'row',style:{gap:6}},
+          el('button',{className:'btn ghost sm',onClick:function(){printRecords(selC.number,[qmsRecHtml('capa',selC,lic,st,devOf(selC)?devOf(selC).number+' \u00b7 '+devOf(selC).title:'')]);}},'Print / PDF'),
+          canE&&qmsOpen(selC)&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'capa',existing:selC});}},'Edit'),
+          canF&&qmsOpen(selC)&&el('button',{className:'btn sm',onClick:function(){setModal({t:'verify'});}},'Verify effectiveness'),
+          canF&&qmsOpen(selC)&&el('button',{className:'btn danger sm',onClick:function(){setModal({t:'cancel',table:'hx_capas',rec:selC});}},'Cancel'),
+          canF&&!qmsOpen(selC)&&el('button',{className:'btn ghost sm',onClick:function(){db.update('hx_capas',selC.id,{status:'in_progress'}).then(function(){done('Reopened '+selC.number);}).catch(function(e){setMsg(qmsErr(e));});}},'Reopen')),
+        el('button',{className:'btn ghost sm',onClick:function(){setSel(null);}},'Close'))),
+    modal&&modal.t==='dev'&&el(DeviationForm,{state:st,license:lic,existing:modal.existing,onClose:function(){setModal(null);},onDone:function(r){if(r&&!modal.existing){setSel({k:'dev',id:r.id});}done(modal.existing?'Saved.':'Reported: '+(r?r.number:'deviation'));}}),
+    modal&&modal.t==='capa'&&el(CapaForm,{state:st,license:lic,existing:modal.existing,deviation:modal.dev,deviations:D,people:people,onClose:function(){setModal(null);},onDone:function(r){if(r&&!modal.existing)setSel({k:'capa',id:r.id});done(modal.existing?'Saved.':'Created: '+(r?r.number:'CAPA'));}}),
+    modal&&modal.t==='closedev'&&selD&&el(QmsCloseDev,{dev:selD,capas:capOf(selD),onClose:function(){setModal(null);},onDone:function(){done('Closed '+selD.number);}}),
+    modal&&modal.t==='verify'&&selC&&el(QmsVerifyCapa,{capa:selC,onClose:function(){setModal(null);},onDone:function(){done('Verified: '+selC.number);}}),
+    modal&&modal.t==='cancel'&&el(QmsCancel,{table:modal.table,rec:modal.rec,onClose:function(){setModal(null);},onDone:function(){done('Cancelled '+modal.rec.number);}}));
+}
+// "Deviation" button for any record (facility log entry, batch, test): opens the report form prefilled with the source
+function RaiseDeviation(props){
+  const[open,setOpen]=useState(false);const[ok,setOk]=useState('');
+  if(!can('qms',1)||!props.state||!props.license)return null;
+  return el('span',null,el('button',{className:'btn ghost sm',title:'Report a deviation linked to this record',onClick:function(e){e.stopPropagation();setOpen(true);}},ok?'\u2713 '+ok:'Deviation'),
+    open&&el(DeviationForm,{state:props.state,license:props.license,prefill:props.prefill,onClose:function(){setOpen(false);},onDone:function(r){setOpen(false);setOk(r?r.number:'Reported');}}));
+}
+function QmsDashCard(props){
+  const lid=props.license?props.license.id:'';const[d,setD]=useState(null);
+  useEffect(function(){if(!lid||!can('qms',1)){setD(null);return;}let dead=false;
+    Promise.all([db.get('hx_deviations','license_id=eq.'+encodeURIComponent(lid)+'&select=id,status,due_date,license_id'),db.get('hx_capas','license_id=eq.'+encodeURIComponent(lid)+'&select=id,status,due_date,license_id')])
+      .then(function(r){const a=(r[0]||[]).filter(function(x){return x.license_id===lid;}),b=(r[1]||[]).filter(function(x){return x.license_id===lid;});if(!dead)setD({od:a.filter(qmsOpen).length,oc:b.filter(qmsOpen).length,late:a.filter(qmsLate).length+b.filter(qmsLate).length});})
+      .catch(function(){if(!dead)setD(null);});return function(){dead=true;};},[lid]);
+  if(!d)return null;
+  return el('div',{className:'card gold'},el('div',{className:'k'},'Deviations & CAPA'),el('div',{className:'v',style:{color:d.late?'var(--red)':'var(--text)'}},d.od+' open deviation'+(d.od===1?'':'s')),
+    el('div',{className:'muted',style:{margin:'4px 0 8px'}},d.oc+' open CAPA'+(d.oc===1?'':'s')+(d.late?' \u00b7 '+d.late+' overdue':'')),
+    el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go('qms');}},'Open QMS'));
 }
 
 /* ---------- SOPs and document control (Black Fox SOP module + CSQ 1.4 document control) ----------
@@ -3393,7 +3730,7 @@ const CSQ_MFG_CLAUSES=[
  ['1.3','1','Regulatory compliance','Procedures that keep all operations and products compliant where they are made and sold, with compliance staff trained and current on regulations.',['rulebook','locations'],'Rulebook per state; licenses per state.',['Training']],
  ['1.4','1','Documentation and recordkeeping','Control documents and records: a master list, document type and current version, approved changes and replacement of old versions, legible and available records, secure storage for at least 1 year past the date on the label (or longer if required), ink only and no white-out on paper.',['sops','audit'],'Audit trail: every change kept with who, when and why; records are voided, never deleted. SOP library: master list, document numbers, versions, approval by Full access, every earlier version kept unchanged, review dates; audit trail on every record.',[]],
  ['1.5','1','Internal audits','Audit every applicable CSQ requirement at least once a year with competent auditors who do not audit their own work; record findings and corrective actions, share results, and close findings through CAPA.',[],'',['Internal audits']],
- ['1.6','1','Corrective and preventive actions (CAPA)','Document every deviation and nonconformance clearly with root cause (when an authorized person decides one is needed), owner, immediate correction, timescale, effectiveness check, and review the trend at least once a year.',[],'',['CAPA']],
+ ['1.6','1','Corrective and preventive actions (CAPA)','Document every deviation and nonconformance clearly with root cause (when an authorized person decides one is needed), owner, immediate correction, timescale, effectiveness check, and review the trend at least once a year.',['qms'],'QMS: numbered deviations with correction, authorized root-cause decision, owner and due date; CAPAs closed only when verified effective; monthly trends and a printable annual review.',[]],
  ['1.7','1','Complaint management','Name who investigates and resolves complaints, track and analyze complaint data, and record the corrective actions taken to stop them happening again.',[],'',['Complaints']],
  ['1.8','1','Product recalls and withdrawals','Recall and withdrawal procedures that meet regulation: a recall team with roles, an up-to-date contact list (team, emergency services, customers, suppliers, regulators, certification body), a communication plan, recovery or disposal of product, and a yearly mock recall completed in under 2 hours.',['batches','testing'],'Batch numbers and final package tags.',['Recall','Receiving','Shipping']],
  ['1.9','1','Product defense','Protect against theft, bioterrorism and intentional adulteration: threat assessment, access to sensitive areas limited to authorized people, cannabis materials, waste and product secured, secure transport, training for security and transport staff, and a yearly review and test.',['sops','visitors','logs','roles'],'Visitor Log and kiosk; security malfunction and security inspection logs; role-based access in Hendrix.',['Training']],
@@ -3402,32 +3739,32 @@ const CSQ_MFG_CLAUSES=[
  ['2A.1.1','2A','Facility construction and design','Buildings, grounds and utilities suit their purpose and prevent cross-contamination: cleanable surfaces in good repair, enough and protected lighting, shatterproof or protected glass, ventilation, sealed and screened openings, handwash stations at production entries (potable warm water, hands-free soap, paper towels), plumbing and wastewater that work, restrooms, changing and break areas sized for the shift, required signage, and clear aisles.',['sops'],'QR signs for posted signage.',[]],
  ['2A.1.2','2A','Facility and infrastructure maintenance','Keep buildings, grounds and amenities in good repair and clean: no debris, standing water or excessive dust, vegetation managed against pests, restrooms and break areas stocked and sanitary, roadways and docks clear.',['logs'],'Sanitation Log (weekly and monthly areas); Equipment Maintenance Log.',[]],
  ['2A.2.1','2A','Equipment','Equipment and utensils suit their purpose, are installed to regulation, cleanable and kept in repair, stored safely, have approved controls, hoses on racks off the floor, and measuring instruments that are accurate and maintained.',[],'',['Equipment register']],
- ['2A.2.2','2A','Maintenance','Maintenance procedures with a master preventive maintenance schedule (including manufacturer requirements), records of unplanned work, a way for staff to report repairs that threaten product, no contamination left after maintenance, and control of temporary repairs so they do not become permanent.',['logs'],'Equipment Maintenance Log records work done.',['Equipment register']],
+ ['2A.2.2','2A','Maintenance','Maintenance procedures with a master preventive maintenance schedule (including manufacturer requirements), records of unplanned work, a way for staff to report repairs that threaten product, no contamination left after maintenance, and control of temporary repairs so they do not become permanent.',['logs','qms'],'Equipment Maintenance Log records work done. Repairs that threaten product are reported as deviations from the maintenance log.',['Equipment register']],
  ['2A.2.3','2A','Calibration','Every instrument that affects safety or quality is listed and identified with a valid calibration certificate and due date, calibrated on time by recognized methods, with weights traceable to a reference standard (NIST, ASTM), and protected from damage or adjustment.',['logs'],'Scale Calibration Log.',['Equipment register']],
  ['2A.3','2A','Cleaning and sanitation','Cleaning procedures say what is cleaned, how and with which chemicals, how often (by risk), who cleans and who verifies; tools are color-coded or labeled, clean and dirty tools are stored apart, and cleaning never puts product at risk.',['logs'],'Sanitation Log: daily, weekly and monthly areas, equipment, chemical and concentration, and a second person who verifies the cleaning (visual, ATP swab or checklist).',[]],
  ['2A.4','2A','Waste management','Identify, separate and dispose of every waste type to regulation: waste areas and containers labeled, cleaned, emptied regularly, closed, restricted when required, and wastewater treated when required.',['logs'],'Waste Destruction Log: categories, 4 camera angles, rendering and disposal locations, methods.',[]],
  ['2A.4.1','2A','Cannabinoid waste','Cannabinoid waste is never mixed with other waste streams.',['sops','logs'],'Waste Destruction Log. Waste SOP.',[]],
  ['2A.4.2','2A','Non-cannabinoid waste','Each non-cannabinoid waste stream (municipal, hazardous, recyclables) is kept separate.',['sops'],'Waste SOP.',[]],
- ['2A.5.1','2A','Integrated pest management program','Risk-based pest program reviewed yearly: responsibilities, an accurate trap and bait station map, stations placed safely, approved pesticides with SDS, monitoring frequency, sightings recorded and trended, contractor recommendations acted on, rules for touching trap contents, pesticide use and storage to label and law, and cleanup of exposed areas and product.',['logs'],'Pest Control Log: numbered trap and bait stations checked on every visit, stations with activity, sightings counted, treatments and vendor license. Attach the station map here.',['Chemical register']],
+ ['2A.5.1','2A','Integrated pest management program','Risk-based pest program reviewed yearly: responsibilities, an accurate trap and bait station map, stations placed safely, approved pesticides with SDS, monitoring frequency, sightings recorded and trended, contractor recommendations acted on, rules for touching trap contents, pesticide use and storage to label and law, and cleanup of exposed areas and product.',['logs','qms'],'Pest Control Log: numbered trap and bait stations checked on every visit, stations with activity, sightings counted, treatments and vendor license. Attach the station map here. Pest sightings can be raised as deviations from the log.',['Chemical register']],
  ['2A.5.2','2A','Integrated pest management personnel','Pest control staff and contractors are trained, licensed when required, use only approved products, and leave a written report of findings and products used.',[],'',['Suppliers']],
  ['2A.6','2A','Facility air safety and quality','Air entering production areas is filtered and monitored by risk, tested at least yearly by an ISO/IEC 17025 lab, and air handling controls contaminants, fumes and odors.',['logs'],'Temp / Humidity Log.',['Facility tests']],
  ['2A.7','2A','Facility water safety and quality','Water is potable, filtered and monitored by risk, tested at least yearly by an ISO/IEC 17025 lab, tempered for washing, treated water meets spec, backflow devices are fitted and tested yearly, and the water system is monitored.',[],'',['Facility tests','Equipment register']],
  ['2A.8','2A','Environmental monitoring','Environmental monitoring program: who runs it and their competence, a risk assessment of hazards per area, sampling methods, frequency and limits, recording and trending, and a yearly review.',['logs'],'Environmental Monitoring Log.',[]],
  ['2A.9.1','2A','Dry goods storage','Dry goods stored in identified, suitable areas, off the floor and away from walls, and not mixed.',['sops'],'Storage SOP.',[]],
  ['2A.9.2','2A','Chemical controls and storage','Chemical approval process and approved list, SDS on file for every chemical, storage to SDS and label, food-grade kept apart from non-food-grade, original or labeled containers, ventilated and restricted storage with PPE, first aid, spill kits and a chemical list, and disposal to regulation.',[],'',['Chemical register']],
- ['2A.9.3','2A','Temperature and atmosphere controlled storage','Goods needing temperature or atmosphere control have defined specs; storage areas are identified, clean, working and fitted with monitoring devices; cold and frozen units have thermometers; goods off the floor and not mixed; condensation drains away from product.',['logs'],'Temp / Humidity Log: min and max per room; out-of-range readings are marked automatically and need a corrective action.',[]],
+ ['2A.9.3','2A','Temperature and atmosphere controlled storage','Goods needing temperature or atmosphere control have defined specs; storage areas are identified, clean, working and fitted with monitoring devices; cold and frozen units have thermometers; goods off the floor and not mixed; condensation drains away from product.',['logs','qms'],'Temp / Humidity Log: min and max per room; out-of-range readings are marked automatically and need a corrective action. Out-of-range readings can be raised as deviations from the log.',[]],
  ['2A.9.4','2A','Shipping and receiving','Loading and unloading limit damage: inspection before loading or unloading, minimal exposure, no cross-contamination, goods secured from tampering, and cannabis shipped and received to regulation.',[],'',['Receiving','Shipping']],
  ['2A.10.1','2A','Identification and traceability','Every inventory item is identified through the process, finished product is traceable one step forward to the customer, materials and supplies one step back to the supplier, traceability is kept through rework, and it is tested at least yearly in a mock recall.',['batches','testing'],'Batch numbers, final package tags, state tracking system (METRC).',['Receiving','Shipping','Recall']],
  ['2A.10.2','2A','Acceptance and release','Incoming materials meet specs, are inspected for damage, arrive with a COA or certificate of conformance, are sampled and tested when needed, have their documents reviewed before approval or rejection, and rejected goods are returned or held apart.',[],'',['Receiving']],
  ['2A.10.3','2A','Stock management','FIFO (or similar) rotation for finished product, WIP, rework and supplies; nothing used past its date; overflow storage monitored; labels, packaging, devices and excise stamps counted in an inventory system and protected from theft.',[],'',['Inventory']],
- ['2A.10.4','2A','Hold and release (quarantine)','Nonconforming and returned goods are clearly marked, quarantined so they cannot be released by accident, decided on only by qualified authorized people, and released, moved or destroyed to regulation.',['testing'],'Testing status (Pending, Failed, Retest); final results changed only with Full access and a reason.',['Hold and release']],
+ ['2A.10.4','2A','Hold and release (quarantine)','Nonconforming and returned goods are clearly marked, quarantined so they cannot be released by accident, decided on only by qualified authorized people, and released, moved or destroyed to regulation.',['testing','qms'],'Testing status (Pending, Failed, Retest); final results changed only with Full access and a reason. Nonconforming product recorded as a deviation (from a failed test or batch) with the decision documented.',['Hold and release']],
  ['2A.11','2A','Supplier approval and vendor qualification','Name each supplier and vendor type and the specs they must meet, verify them, select, approve and monitor them, keep an approved list, name who approves, allow emergency suppliers with checks, require ethical sourcing, audit contract manufacturers, and review all suppliers yearly.',[],'',['Suppliers']],
  ['2A.12.1','2A','Standard operating procedures','Documented SOPs for producing and processing cannabinoid materials and products that conform to CSQ and regulation.',['sops','batches'],'Batch Tracker records follow each process. SOP library for every production process; Batch Tracker records follow them.',[]],
  ['2A.12.2','2A','Process flow and segregation','Document how people and product move through the facility to keep segregation, with a map of area designations and their risks.',['sops'],'Process flow and area map attached to an SOP.',[]],
  ['2A.12.3','2A','Pre-operational inspections (line clearance)','Before production, record a check that areas and equipment are clean, within maintenance and calibration dates and ready, with any problem and correction noted.',[],'',['Line clearance']],
  ['2A.12.4','2A','Materials and supplies','Every material and supply has specs and is identified by type, use and hazard; meets regulation and is approved for use; is fit for purpose; has a yearly risk assessment; label information is kept on file; and is stored and used to label instructions.',['products'],'Products: ingredient price library and formulations.',['Receiving','Suppliers']],
  ['2A.12.5','2A','Rework','Rework is identified and dated for traceability, each batch inspected and analyzed before use, used before it would expire in the finished product, safe, and like-to-like.',[],'',['Rework']],
- ['2A.12.6','2A','Cross-contamination controls','Keep foreign matter out: exclude contamination sources, no loose objects overhead, inspection of facility and tools, a list of sources that cannot be removed with protective measures, control of blades, glass and brittle items, dust and chemicals, cleanup and release of contaminated areas, decisions on affected product, detection and removal methods, investigation, and calibrated detection equipment.',['sops'],'',['CAPA']],
+ ['2A.12.6','2A','Cross-contamination controls','Keep foreign matter out: exclude contamination sources, no loose objects overhead, inspection of facility and tools, a list of sources that cannot be removed with protective measures, control of blades, glass and brittle items, dust and chemicals, cleanup and release of contaminated areas, decisions on affected product, detection and removal methods, investigation, and calibrated detection equipment.',['sops','qms'],'Contamination incidents reported as deviations with correction and root cause.',[]],
  ['2A.12.7','2A','Allergen management','Allergen labeling meets the law, allergen labels are verified, allergens from materials, suppliers, staff and visitors are risk-assessed, and cleaning, changeover and storage prevent cross-contact.',['stickers','products'],'Label templates carry an allergen declaration that prints on every sticker.',[]],
  ['2A.12.8','2A','Product labeling and packaging','Label specs that meet CSQ and regulation; label content (potency, ingredients, allergens, warnings, claims, batch) verified against the batch; labels reviewed when materials, processes or rules change; only the labels and packaging a batch needs are issued, then reconciled; no mislabeled or damaged product; correct, inspected, clean packaging materials and tools.',['stickers','testing'],'Sticker templates per SKU and flavor with approval number; potency printed from the COA; every sticker print logged (batch, tag, count, who); template changes in the audit trail.',[]],
  ['2A.12.9','2A','Product sampling and testing','Finished product meets spec and regulation before release; samples are representative; samplers are competent; methods, frequency and limits are defined and results trended; held product is released after review; recognized methods; compliance labs accredited to ISO/IEC 17025; internal labs separated; retention samples kept when required.',['testing','batches'],'Testing: per final package tag, lab and lab license, COA stored privately, COA read by AI with tag check, retention samples (quantity, location, keep-until).',['Suppliers']],
@@ -3464,7 +3801,7 @@ const CSQ_MFG_CLAUSES=[
  ['4A.6','4A','Critical control points','Identify from the hazard analysis the steps that need CCPs, documented so they prevent, remove or reduce each hazard.',[],'',['HACCP']],
  ['4A.7','4A','Critical limits','Measurable critical limits for each CCP that separate acceptable from unacceptable product.',[],'',['HACCP']],
  ['4A.8','4A','Monitoring','Documented monitoring that keeps each CCP within its limits.',['batches'],'Batch records capture the process values.',['HACCP']],
- ['4A.9','4A','Corrective actions','Specific corrective actions for each CCP that bring it back under control and keep affected product from consumers.',[],'',['HACCP','CAPA']],
+ ['4A.9','4A','Corrective actions','Specific corrective actions for each CCP that bring it back under control and keep affected product from consumers.',['qms'],'Out-of-control CCPs handled as deviations and CAPAs.',['HACCP']],
  ['4A.10','4A','HACCP validation','Validate control measures and critical limits before use and again after significant product or process changes.',[],'',['HACCP']],
  ['4A.11','4A','HACCP verification','Ongoing verification that HACCP is followed and works, with a full reanalysis yearly or after significant change.',[],'',['HACCP']],
  ['5.1.1','5','Quality system personnel and org chart','An organizational chart showing reporting lines and everyone involved in safety, quality and CSQ conformance, with their functions and responsibilities.',['team','roles'],'Team members with roles.',['Org chart']],
@@ -3472,7 +3809,7 @@ const CSQ_MFG_CLAUSES=[
  ['5.1.3','5','Management review','Senior management reviews the system at least yearly: previous actions, complaints and feedback, internal, external and regulatory audits, risks and corrective actions, resources, CSQ conformance, and changes; minutes kept and shared.',[],'',['Management review']],
  ['5.1.4','5','Continuous improvement','Measurable improvement goals with KPIs and effectiveness checks, continuing education per role, shared with staff and reviewed at least quarterly.',[],'',['KPIs','Training']],
  ['5.1.5','5','Change management','A change management plan for people, processes and products: what each change affects, how it is documented and approved, training before use, and who is told (including regulators and the certification body).',['audit'],'Audit trail records every change with a reason.',['Change control']],
- ['5.1.6','5','Risk management','Risk procedures: the hazard, its root cause, the owner, immediate action, timescale for a permanent fix, verification, and routine surveillance of product safety and quality.',[],'',['Risk register']],
+ ['5.1.6','5','Risk management','Risk procedures: the hazard, its root cause, the owner, immediate action, timescale for a permanent fix, verification, and routine surveillance of product safety and quality.',['qms'],'',['Risk register']],
  ['5.1.7','5','Validation','Validate facilities and equipment with installation, operational and performance qualification (IQ, OQ, PQ), materials through supplier approval, and revalidate yearly and whenever critical limits, cGMPs or CSQ conformance change.',[],'',['Equipment register']],
  ['5.1.8','5','Verification','Verification procedures that list the activities to verify, who does them, how often, and how they are monitored and recorded.',[],'',['Verification schedule']],
  ['5.2','5','Safety and quality culture','Everyone acknowledges the safety and quality commitments, training covers anyone who affects product, improvements are planned and measured, and the culture policy is reviewed yearly.',['sops'],'Quality policy as an SOP; every signature recorded per version.',['Training']],
@@ -3484,9 +3821,9 @@ const STD_STATUSES=['Not assessed','Conforming','Partial','Not conforming','Not 
 const STD_TONE={'Not assessed':'off','Conforming':'ok','Partial':'warn','Not conforming':'bad','Not applicable':'off'};
 const STD_COLOR={'Conforming':'#5fbf8a','Partial':'#d4af37','Not conforming':'#e5645a','Not applicable':'#4a473f','Not assessed':'#2a2a2a'};
 const ADOPT_STATUSES=['Following','Audit scheduled','Certified','Suspended','Withdrawn'];
-const HX_PAGE_LABEL={sops:'SOPs',rulebook:'Rulebook',locations:'States and Licenses',audit:'Audit Trail',batches:'Batch Tracker',testing:'Testing',stickers:'Compliance Stickers',
+const HX_PAGE_LABEL={qms:'QMS (Deviations, CAPA)',sops:'SOPs',rulebook:'Rulebook',locations:'States and Licenses',audit:'Audit Trail',batches:'Batch Tracker',testing:'Testing',stickers:'Compliance Stickers',
   products:'Products',logs:'Facility Logs',visitors:'Visitor Log',roles:'Roles',team:'Team and Access'};
-const HX_PAGE_MOD={sops:'sops',rulebook:'rulebook',audit:'audit',batches:'batch',testing:'testing',stickers:'stickers',visitors:'logs_visitor'};
+const HX_PAGE_MOD={qms:'qms',sops:'sops',rulebook:'rulebook',audit:'audit',batches:'batch',testing:'testing',stickers:'stickers',visitors:'logs_visitor'};
 function stdLevelOf(m){return m==='4A'?2:m==='5'?3:1;}
 function stdErr(e){
   const m=String((e&&e.message)||e);
@@ -3661,6 +3998,12 @@ async function loadStdEvidence(st,lic){
     const k=((await db.get('hx_skus','state_id=eq.'+enc(sid)+'&select=id,active'))||[]);let f=[];try{f=(await db.get('hx_formulations','state_id=eq.'+enc(sid)+'&select=id'))||[];}catch(e){f=[];}
     return {n:k.length,active:k.filter(function(x){return x.active;}).length,forms:f.length};}));
   if(can('audit',1))jobs.push(tryGet('audit',async function(){const r=(await db.get('hx_audit_log','license_id=eq.'+enc(lid)+'&at=gte.'+enc(since)+'&select=id&limit=50000'))||[];return {n:r.length};}));
+  if(can('qms',1))jobs.push(tryGet('qms',async function(){
+    const d=((await db.get('hx_deviations','license_id=eq.'+enc(lid)+'&select=id,status,due_date,created_at,rca_required,root_cause,immediate_action,license_id&limit=20000'))||[]).filter(function(x){return x.license_id===lid;});
+    const c=((await db.get('hx_capas','license_id=eq.'+enc(lid)+'&select=id,status,due_date,effectiveness_rating,license_id&limit=20000'))||[]).filter(function(x){return x.license_id===lid;});
+    const d12=d.filter(function(x){return x.created_at>=since;});
+    return {n:d12.length,open:d.filter(qmsOpen).length,late:d.filter(qmsLate).length+c.filter(qmsLate).length,capas:c.length,capOpen:c.filter(qmsOpen).length,
+      closedC:c.filter(function(x){return x.status==='closed';}).length,eff:c.filter(function(x){return x.effectiveness_rating==='effective';}).length,noRca:d.filter(function(x){return qmsOpen(x)&&x.rca_required==null;}).length};}));
   if(can('sops',1))jobs.push(tryGet('sops',async function(){
     const l=((await db.get('hx_sops','license_ids=cs.%7B'+enc(lid)+'%7D&select=id,status,version,next_review,license_ids,target_mode,target_role_ids,target_user_ids'))||[]).filter(function(x){return (x.license_ids||[]).indexOf(lid)>=0;});
     const pub=l.filter(function(x){return x.status==='published';});let rate=null;
@@ -3702,6 +4045,9 @@ function clauseEvidence(x,E){
     else if(p==='rulebook'&&E.rulebook)out.push({label:'State rulebook',value:E.rulebook.n+' regulation'+(E.rulebook.n===1?'':'s')+' on file',page:'rulebook',warn:E.rulebook.n?'':'No regulations entered'});
     else if(p==='products'&&E.products)out.push({label:'Products',value:E.products.n+' SKUs ('+E.products.active+' active) \u00b7 '+E.products.forms+' formulations',page:'products',warn:E.products.n?'':'No SKUs yet'});
     else if(p==='audit'&&E.audit)out.push({label:'Audit trail',value:E.audit.n+' recorded change'+(E.audit.n===1?'':'s')+' (who, when, why)',page:'audit'});
+    else if(p==='qms'&&E.qms){const Q=E.qms;
+      out.push({label:'Deviations and CAPA',value:Q.n+' deviation'+(Q.n===1?'':'s')+' in 12 months \u00b7 '+Q.open+' open \u00b7 '+Q.capas+' CAPA'+(Q.capas===1?'':'s')+' ('+Q.capOpen+' open, '+Q.closedC+' closed after verifying effective)',page:'qms',
+        warn:Q.late?Q.late+' overdue':(Q.noRca?Q.noRca+' awaiting a root cause decision':'')});}
     else if(p==='sops'&&E.sops){const O=E.sops;
       out.push({label:'SOP library',value:O.pub+' published, numbered and approved SOP'+(O.pub===1?'':'s')+' \u00b7 '+O.drafts+' draft'+(O.drafts===1?'':'s')+(O.rate!=null?' \u00b7 '+O.rate+'% of required signatures done':'')+(O.late?' \u00b7 '+O.late+' overdue for review':''),page:'sops',
         warn:!O.pub?'No published SOPs yet':(O.late?O.late+' SOP'+(O.late===1?'':'s')+' overdue for review':(O.rate!=null&&O.rate<100?(100-O.rate)+'% of signatures missing':''))});}
@@ -4178,6 +4524,9 @@ function TestingPage(props){
             canE&&!r.voided&&r.coa_path&&el('button',{className:'btn ghost sm',disabled:!!busy[r.id],onClick:function(){runCoa(r,null);}},'Re-read COA'),
             r.coa_analysis&&!r.voided&&can('stickers',1)&&el('button',{className:'btn sm',onClick:function(){setModal({stick:r});}},'Compliance Sticker'),
             canE&&!r.voided&&el('button',{className:'btn ghost sm',onClick:function(){setModal({upd:r});}},'Update'),
+            !r.voided&&(r.status==='Failed'||r.status==='Retest')&&el(RaiseDeviation,{state:st,license:lic,prefill:{title:'Lab test '+r.status+': '+(r.batch_number||r.tag),dept:'Compliance',category:'Testing result',priority:r.status==='Failed'?'critical':'major',
+              product_affected:[r.sku,r.flavor].filter(Boolean).join(' \u00b7 '),lot_number:r.batch_number||'',description:'Test of package tag '+(r.tag||'-')+(r.lab_name?' at '+r.lab_name:'')+' returned '+r.status+'.'+(r.result_notes?' '+r.result_notes:''),
+              source_type:'test',source_id:r.id,source_label:'Tag '+(r.tag||'-')+' \u00b7 '+r.status,occurred_on:String(r.result_at||r.created_at||'').slice(0,10)}}),
             canF&&!r.voided&&el('button',{className:'btn danger sm',onClick:function(){setModal({voidr:r});}},'Void'))),
         open[r.id]&&el(CoaPanel,{rec:r}));
     }),
@@ -4672,7 +5021,7 @@ function App(){
   if(isAdmin)nav.push({id:'team',label:'Team and Access'},{id:'roles',label:'Roles'});
   if(can('audit',1))nav.push({id:'audit',label:'Audit Trail'});
   const anyLog=LOG_TYPES.some(function(t){return can(LOG_MOD[t.id],1);});
-  const mods=[can('sops',1)&&['sops','SOPs'],can('logs_visitor',1)&&['visitors','Visitor Log'],anyLog&&['logs','Facility Logs'],(can('products',1)||can('formbank',1)||can('cogs',1))&&['products','Products'],can('batch',1)&&['batches','Batch Tracker'],can('testing',1)&&['testing','Testing'],can('stickers',1)&&['stickers','Compliance Stickers']].filter(Boolean);
+  const mods=[can('qms',1)&&['qms','QMS'],can('sops',1)&&['sops','SOPs'],can('logs_visitor',1)&&['visitors','Visitor Log'],anyLog&&['logs','Facility Logs'],(can('products',1)||can('formbank',1)||can('cogs',1))&&['products','Products'],can('batch',1)&&['batches','Batch Tracker'],can('testing',1)&&['testing','Testing'],can('stickers',1)&&['stickers','Compliance Stickers']].filter(Boolean);
   let body;
   if(page==='locations')body=el(Locations,{profile:profile,states:states,licenses:licenses,reload:loadData,openRulebook:function(id){pickState(id);setPage('rulebook');}});
   else if(page==='visitors'&&can('logs_visitor',1))body=el(VisitorLog,{key:licId,state:st,license:lic});
@@ -4685,6 +5034,7 @@ function App(){
   else if(page==='team'&&isAdmin)body=el(Team,{profile:profile,states:states,licenses:licenses,onSelfChange:boot});
   else if(page==='roles'&&isAdmin)body=el(Roles);
   else if(page==='audit'&&can('audit',1))body=el(AuditTrail,{state:st});
+  else if(page==='qms'&&can('qms',1))body=el(QmsPage,{key:licId,state:st,license:lic,go:setPage});
   else if(page==='sops'&&can('sops',1))body=el(SopsPage,{key:licId,state:st,license:lic,licenses:licenses});
   else if(page==='standards'&&can('standards',1))body=el(StandardsPage,{key:licId,state:st,license:lic,go:setPage});
   else body=el(Dashboard,{profile:profile,states:states,licenses:licenses,state:st,license:lic,go:setPage,ruleCount:ruleCount});
@@ -4709,8 +5059,7 @@ function App(){
       el('div',{className:'grp'},'Hendrix'),
       nav.map(function(n){return el('button',{key:n.id,className:page===n.id?'on':'',onClick:function(){setPage(n.id);}},n.label);}),
       el('div',{className:'grp'},'Modules'),
-      mods.map(function(m){return el('button',{key:m[0],className:page===m[0]?'on':'',onClick:function(){setPage(m[0]);}},m[1]);}),
-      ['QMS'].map(function(m){return el('button',{key:m,className:'soon',disabled:true},m,el('span',{className:'tag'},'Soon'));}))),
+      mods.map(function(m){return el('button',{key:m[0],className:page===m[0]?'on':'',onClick:function(){setPage(m[0]);}},m[1]);}))),
     el('div',{className:'main'},body));
 }
 
