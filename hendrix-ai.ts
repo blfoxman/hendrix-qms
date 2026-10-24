@@ -10,7 +10,8 @@
 //
 // Deploy (Supabase dashboard, project bqrncllndvzbhmxanitq):
 //   1. Edge Functions > Deploy a new function > Via Editor. Name it exactly: hendrix-ai
-//   2. Paste this whole file, Deploy. Leave "Verify JWT" ON.
+//   2. Paste this whole file, Deploy. Then Settings: turn "Verify JWT with legacy secret" OFF
+//      (this function checks the Hendrix sign-in and access level itself).
 //   3. Edge Functions > Secrets: add ANTHROPIC_API_KEY = your Anthropic API key.
 //      Optional: HX_AI_MODEL to choose another model.
 
@@ -32,8 +33,11 @@ Deno.serve(async (req) => {
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: auth } },
     });
-    const { data: u } = await sb.auth.getUser();
-    if (!u || !u.user) return json({ error: { message: "Sign in to Hendrix first." } }, 401);
+    // the signed-in user's token must be passed to getUser (an Edge Function has no stored session)
+    const token = auth.replace(/^Bearer\s+/i, "").trim();
+    if (!token) return json({ error: { message: "Sign in to Hendrix first." } }, 401);
+    const { data: u, error: uerr } = await sb.auth.getUser(token);
+    if (uerr || !u || !u.user) return json({ error: { message: "Hendrix sign-in was not accepted by the AI function" + (uerr ? " (" + uerr.message + ")" : "") + ". Sign out of Hendrix, sign in again and retry." } }, 401);
     const body = await req.json();
     const mod = body.module === "sops" ? "sops" : body.module === "training" ? "training" : body.module === "rulebook" ? "rulebook" : "testing";
     const need = mod === "training" ? 3 : 2;
