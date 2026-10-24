@@ -170,7 +170,7 @@ async function sb(path,opt){
   if(!r.ok){
     const m=(j&&(j.message||j.hint||j.details))||txt||('Error '+r.status);
     if(/schema cache|Could not find the table|relation .* does not exist/i.test(m)&&!/Could not find the '[A-Za-z0-9_]+' column/.test(m)){
-      const step=/hx_recall|hx_trace_data/.test(m)?'hendrix_step18.sql':/hx_lots|hx_lot_uses|hx_holds|hx_shipments/.test(m)?'hendrix_step17.sql':/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
+      const step=/hx_complaints|hx_audits|hx_audit_findings/.test(m)?'hendrix_step19.sql':/hx_recall|hx_trace_data/.test(m)?'hendrix_step18.sql':/hx_lots|hx_lot_uses|hx_holds|hx_shipments/.test(m)?'hendrix_step17.sql':/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
       throw new Error('Database tables are missing - run '+step+' in the Hendrix Supabase project.');
     }
     if(/row-level security|permission denied/i.test(m))throw new Error('Not allowed - your access level does not allow this here. Ask a system admin.');
@@ -279,7 +279,7 @@ function LoginScreen(props){
 }
 
 /* ---------- Dashboard ---------- */
-const MODULES_SOON=['Complaints','Internal Audits','HACCP','Time Clock and Badges','Production Planner'];
+const MODULES_SOON=['Online training courses','Equipment and Chemical registers','HACCP','Time Clock and Badges','Production Planner'];
 function Dashboard(props){
   const st=props.state,lic=props.license;
   const isAdmin=props.profile.role==='admin';
@@ -303,6 +303,8 @@ function Dashboard(props){
       el('div',{className:'card gold'},el('div',{className:'k'},'State rulebook'),el('div',{className:'v'},(props.ruleCount===null||props.ruleCount===undefined?'...':props.ruleCount)+' rules'),
         el('div',{className:'muted',style:{marginTop:4}},'Only '+(st?st.name:'this state')+"'s own rules are ever loaded here."),el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go('rulebook');}},'Open rulebook')),
       el(QmsDashCard,{license:lic,go:props.go}),
+      el(CmpDashCard,{license:lic,go:props.go}),
+      el(IaDashCard,{license:lic,go:props.go}),
       el(TrainingDashCard,{license:lic,go:props.go}),
       el(SopDashCard,{license:lic,go:props.go}),
       el(SupplierDashCard,{license:lic,go:props.go}),
@@ -1936,7 +1938,7 @@ function Products(props){
 /* ---------- Audit trail: history, void, admin page ----------
    The database writes every change to hx_audit_log (append-only). Records are never deleted:
    they are voided with a reason. Every change to a record needs a reason for change. */
-const AUDIT_AREAS={hx_recalls:'Recall / mock recall',hx_recall_contacts:'Recall contact',hx_lots:'Received lot',hx_lot_uses:'Lot use',hx_holds:'Hold',hx_shipments:'Shipment',hx_suppliers:'Supplier',hx_supplier_reviews:'Supplier review',hx_training_courses:'Training course',hx_training_records:'Training record',hx_deviations:'Deviation',hx_capas:'CAPA',hx_sops:'SOP',hx_sop_acks:'SOP signature',hx_label_prints:'Sticker print',hx_standards:'Standards',hx_standard_clauses:'Standard clauses',hx_license_standards:'Standard adoption',hx_conformance:'Standard conformance',hx_label_templates:'Label templates',hx_tests:'Testing record',hx_roles:'Roles',hx_batches:'Batch record',hx_facility_log:'Facility log entry',hx_visitor_log:'Visitor log',hx_log_lists:'Facility log lists',hx_rules:'Rulebook',
+const AUDIT_AREAS={hx_complaints:'Complaint',hx_audits:'Internal audit',hx_audit_findings:'Audit finding',hx_recalls:'Recall / mock recall',hx_recall_contacts:'Recall contact',hx_lots:'Received lot',hx_lot_uses:'Lot use',hx_holds:'Hold',hx_shipments:'Shipment',hx_suppliers:'Supplier',hx_supplier_reviews:'Supplier review',hx_training_courses:'Training course',hx_training_records:'Training record',hx_deviations:'Deviation',hx_capas:'CAPA',hx_sops:'SOP',hx_sop_acks:'SOP signature',hx_label_prints:'Sticker print',hx_standards:'Standards',hx_standard_clauses:'Standard clauses',hx_license_standards:'Standard adoption',hx_conformance:'Standard conformance',hx_label_templates:'Label templates',hx_tests:'Testing record',hx_roles:'Roles',hx_batches:'Batch record',hx_facility_log:'Facility log entry',hx_visitor_log:'Visitor log',hx_log_lists:'Facility log lists',hx_rules:'Rulebook',
   hx_states:'States',hx_licenses:'Licenses',hx_profiles:'Team and access',hx_skus:'SKUs',hx_flavors:'Flavors',hx_formulations:'Formulations',hx_cost_library:'Ingredient prices'};
 const AUDIT_SKIP=['voided_by','voided_at','updated_at','edit_reason'];
 function auditVal(v){
@@ -2597,6 +2599,8 @@ const ACCESS_MODULES=[
   {id:'audit',label:'Audit Trail',grp:'General',max:1,help:'View only'},
   {id:'training',label:'Training',grp:'General',help:'View = see your own training / Edit = record training and see the matrix / Full = manage courses, void records'},
   {id:'qms',label:'QMS (Deviations, CAPA)',grp:'General',help:'View = see and report deviations / Edit = update deviations, create and work CAPAs / Full = root cause decision, close, verify effectiveness, cancel'},
+  {id:'complaints',label:'Complaints',grp:'General',help:'View = see and log complaints and feedback / Edit = investigate, respond, close / Full = reopen, cancel'},
+  {id:'intaudits',label:'Internal Audits',grp:'General',help:'View audits / plan and run audits, record and close findings / close audits, reopen, cancel'},
   {id:'sops',label:'SOPs',grp:'General',help:'View = read and sign SOPs / Edit = write drafts (manual or AI) / Full = approve and publish, revise, archive, delete drafts'},
   {id:'standards',label:'Standards (CSQ)',grp:'General',help:'View the standard and conformance / update conformance, evidence and files / add the standard, adopt it for a license, set the target level'},
   {id:'suppliers',label:'Suppliers',grp:'Production',help:'View the approved supplier list / add and edit suppliers and credentials / approve, review, suspend, disqualify, delete never-approved'},
@@ -2765,18 +2769,18 @@ function Team(props){
 const LOGS_PROD=['logs_sanitation','logs_waste','logs_scale','logs_equipment','logs_temp','logs_env'];
 function pm(o,list,lv){const x={...o};(list||[]).forEach(function(k){x[k]=lv;});return x;}
 const STARTER_ROLES=[
-  ['General Manager','Leadership. Edit everywhere; Full on batches and every log; sees recipes, prices and the audit trail.',{training:'admin',qms:'admin',sops:'admin',suppliers:'admin',receiving:'admin',holds:'admin',shipping:'admin',recall:'admin',rulebook:'editor',standards:'editor',audit:'read',batch:'admin',testing:'admin',stickers:'admin',products:'editor',formbank:'read',cogs:'read',logs:'admin'}],
-  ['Assistant of General Manager','Leadership support. Edit on batches, products and every log; sees recipes and the audit trail.',{training:'editor',qms:'editor',sops:'editor',suppliers:'editor',receiving:'editor',holds:'editor',shipping:'editor',recall:'editor',rulebook:'editor',standards:'read',audit:'read',batch:'editor',testing:'editor',products:'editor',formbank:'read',logs:'editor'}],
-  ['Compliance Officer','Full on every log, the rulebook and standards (CSQ); sees batches, products and the audit trail.',{training:'admin',qms:'admin',sops:'admin',suppliers:'admin',receiving:'admin',holds:'admin',shipping:'read',recall:'admin',rulebook:'admin',standards:'admin',audit:'read',logs:'admin',batch:'read',testing:'admin',stickers:'admin',products:'read'}],
-  ['Security Manager','Full on the security and visitor logs.',{training:'editor',qms:'editor',sops:'read',rulebook:'read',logs_security:'admin',logs_visitor:'admin'}],
-  ['Security Officer','Fills the security and visitor logs.',{training:'read',qms:'read',sops:'read',rulebook:'read',logs_security:'editor',logs_visitor:'editor'}],
-  ['Sanitation','Fills the sanitation, waste and pest control logs.',{training:'read',qms:'read',sops:'read',logs_sanitation:'editor',logs_waste:'editor',logs_pest:'editor'}],
-  ['Team Member','Continues batches; fills the sanitation and temp / humidity logs.',{training:'read',qms:'read',sops:'read',holds:'editor',receiving:'read',batch:'editor',products:'read',logs_temp:'editor',logs_sanitation:'editor'}],
-  ['Inventory Manager','Sees products and batches; fills the waste log.',{training:'editor',qms:'editor',sops:'read',suppliers:'editor',receiving:'admin',holds:'editor',shipping:'admin',recall:'editor',products:'read',batch:'read',logs_waste:'editor'}],
-  ['Extraction Manager','Full on batches; fills the scale, equipment and temp / humidity logs.',{training:'editor',qms:'editor',sops:'editor',suppliers:'read',receiving:'editor',holds:'editor',batch:'admin',testing:'editor',products:'read',formbank:'read',logs_scale:'editor',logs_equipment:'editor',logs_temp:'editor'}],
-  ['Production Manager','Full on batches; edits products; fills the production logs.',pm({batch:'admin',testing:'editor',stickers:'editor',products:'editor',formbank:'read',rulebook:'read',standards:'editor',sops:'editor',qms:'editor',training:'editor',suppliers:'editor',receiving:'editor',holds:'editor',shipping:'read',recall:'editor'},LOGS_PROD,'editor')],
-  ['Sales Manager','Sees products; records shipments.',{training:'read',qms:'read',sops:'read',products:'read',shipping:'editor',holds:'read',recall:'read'}],
-  ['Production Lead','Creates and continues batches; fills the production logs.',pm({batch:'editor',testing:'read',stickers:'read',products:'read',sops:'read',qms:'editor',training:'read',receiving:'read',holds:'editor'},['logs_sanitation','logs_scale','logs_equipment','logs_temp'],'editor')]];
+  ['General Manager','Leadership. Edit everywhere; Full on batches and every log; sees recipes, prices and the audit trail.',{training:'admin',qms:'admin',complaints:'admin',intaudits:'admin',sops:'admin',suppliers:'admin',receiving:'admin',holds:'admin',shipping:'admin',recall:'admin',rulebook:'editor',standards:'editor',audit:'read',batch:'admin',testing:'admin',stickers:'admin',products:'editor',formbank:'read',cogs:'read',logs:'admin'}],
+  ['Assistant of General Manager','Leadership support. Edit on batches, products and every log; sees recipes and the audit trail.',{training:'editor',qms:'editor',complaints:'editor',intaudits:'editor',sops:'editor',suppliers:'editor',receiving:'editor',holds:'editor',shipping:'editor',recall:'editor',rulebook:'editor',standards:'read',audit:'read',batch:'editor',testing:'editor',products:'editor',formbank:'read',logs:'editor'}],
+  ['Compliance Officer','Full on every log, the rulebook and standards (CSQ); sees batches, products and the audit trail.',{training:'admin',qms:'admin',complaints:'admin',intaudits:'admin',sops:'admin',suppliers:'admin',receiving:'admin',holds:'admin',shipping:'read',recall:'admin',rulebook:'admin',standards:'admin',audit:'read',logs:'admin',batch:'read',testing:'admin',stickers:'admin',products:'read'}],
+  ['Security Manager','Full on the security and visitor logs.',{training:'editor',qms:'editor',complaints:'editor',sops:'read',rulebook:'read',logs_security:'admin',logs_visitor:'admin'}],
+  ['Security Officer','Fills the security and visitor logs.',{training:'read',qms:'read',complaints:'read',sops:'read',rulebook:'read',logs_security:'editor',logs_visitor:'editor'}],
+  ['Sanitation','Fills the sanitation, waste and pest control logs.',{training:'read',qms:'read',complaints:'read',sops:'read',logs_sanitation:'editor',logs_waste:'editor',logs_pest:'editor'}],
+  ['Team Member','Continues batches; fills the sanitation and temp / humidity logs.',{training:'read',qms:'read',complaints:'read',sops:'read',holds:'editor',receiving:'read',batch:'editor',products:'read',logs_temp:'editor',logs_sanitation:'editor'}],
+  ['Inventory Manager','Sees products and batches; fills the waste log.',{training:'editor',qms:'editor',complaints:'editor',sops:'read',suppliers:'editor',receiving:'admin',holds:'editor',shipping:'admin',recall:'editor',products:'read',batch:'read',logs_waste:'editor'}],
+  ['Extraction Manager','Full on batches; fills the scale, equipment and temp / humidity logs.',{training:'editor',qms:'editor',complaints:'editor',sops:'editor',suppliers:'read',receiving:'editor',holds:'editor',batch:'admin',testing:'editor',products:'read',formbank:'read',logs_scale:'editor',logs_equipment:'editor',logs_temp:'editor'}],
+  ['Production Manager','Full on batches; edits products; fills the production logs.',pm({batch:'admin',testing:'editor',stickers:'editor',products:'editor',formbank:'read',rulebook:'read',standards:'editor',sops:'editor',qms:'editor',complaints:'editor',intaudits:'read',training:'editor',suppliers:'editor',receiving:'editor',holds:'editor',shipping:'read',recall:'editor'},LOGS_PROD,'editor')],
+  ['Sales Manager','Sees products; records shipments.',{training:'read',qms:'read',complaints:'read',sops:'read',products:'read',shipping:'editor',holds:'read',recall:'read'}],
+  ['Production Lead','Creates and continues batches; fills the production logs.',pm({batch:'editor',testing:'read',stickers:'read',products:'read',sops:'read',qms:'editor',complaints:'read',training:'read',receiving:'read',holds:'editor'},['logs_sanitation','logs_scale','logs_equipment','logs_temp'],'editor')]];
 function accessSummary(perms){
   const p=perms||{},out=[];
   ACCESS_MODULES.forEach(function(m){if(has(p,m.id)&&lvRank(p[m.id]))out.push(m.label.replace(/ \(.*\)$/,'')+': '+LV_NAME[p[m.id]]);});
@@ -3664,6 +3668,351 @@ function RecallDashCard(props){
   return el('div',{className:'card gold'},el('div',{className:'k'},'Mock recall'),el('div',{className:'v',style:{color:late||(d.m&&d.m.result==='Fail')?'var(--red)':'var(--green)'}},d.m?d.m.duration_minutes+' min \u00b7 '+d.m.result:'Never run'),
     el('div',{className:'muted',style:{margin:'4px 0 8px'}},(d.m?'Last '+String(d.m.ended_at).slice(0,10)+' \u00b7 next due '+due:'Required every year, under 2 hours')+(d.open?' \u00b7 '+d.open+' running':'')),
     el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go('recall');}},'Open recall'));
+}
+
+/* ---------- Complaints (Black Fox / Michigan fields + CSQ 1.7, 5.3) ---------- */
+const CMP_TYPES={consumer:'Consumer complaint',dispensary:'Dispensary complaint',return:'Product return',adverse_event:'Adverse event',feedback:'Customer feedback'};
+const CMP_CHANNELS=['Phone','Email','In person','Dispensary','Website / social media','State regulator','Other'];
+const CMP_CATS=['Taste / smell','Potency / effect','Foreign matter','Mold / contamination','Hardware / packaging failure','Labeling','Leaking / damage','Adverse health effect','Delivery / service','Other'];
+const CMP_STATUS={open:'Open',investigating:'Investigating',closed:'Closed',cancelled:'Cancelled'};
+function cmpErr(e){const m=String((e&&e.message)||e);return /hx_complaints|hx_audits|hx_audit_findings/.test(m)&&/missing|does not exist|schema cache/i.test(m)?'Complaints and internal audits are not set up yet - run hendrix_step19.sql in the Hendrix Supabase project.':m;}
+function cmpOpen(c){return c.status==='open'||c.status==='investigating';}
+function cmpLate(c){return cmpOpen(c)&&c.due_date&&c.due_date<todayStr();}
+// raise a deviation from a record and link it back
+function LinkDeviation(props){
+  const[open,setOpen]=useState(false);
+  if(!can('qms',1))return null;
+  return el('span',null,el('button',{className:'btn ghost sm',onClick:function(e){e.stopPropagation();setOpen(true);}},props.label||'Raise deviation'),
+    open&&el(DeviationForm,{state:props.state,license:props.license,prefill:props.prefill,onClose:function(){setOpen(false);},onDone:function(r){setOpen(false);if(r)props.onLinked(r);}}));
+}
+function ComplaintForm(props){
+  const x=props.rec||{},lic=props.license,st=props.state;
+  const[f,setF]=useState({title:x.title||'',type:x.type||props.type||'consumer',priority:x.priority||'minor',received_on:x.received_on||todayStr(),channel:x.channel||'Phone',complainant:x.complainant||'',complainant_contact:x.complainant_contact||'',
+    customer:x.customer||'',category:x.category||'',product:x.product||'',lot_number:x.lot_number||'',batch_id:x.batch_id||'',tag:x.tag||'',description:x.description||'',rating:x.rating||'',attachments:(x.attachments||[]).slice()});
+  const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  function set(k,v){setF(function(p){return {...p,[k]:v};});}
+  const fb=f.type==='feedback';
+  async function save(){setErr('');if(!f.title.trim()){setErr('Enter a short title.');return;}if(fb&&!f.rating){setErr('Pick the satisfaction rating.');return;}setBusy(true);
+    const b=(props.batches||[]).find(function(z){return z.id===f.batch_id;});
+    const rec={title:f.title.trim(),type:f.type,priority:f.priority,received_on:f.received_on,channel:f.channel,complainant:f.complainant.trim(),complainant_contact:f.complainant_contact.trim(),customer:f.customer.trim(),category:fb?'':f.category,
+      product:f.product.trim()||(b?[b.sku,b.flavor].filter(Boolean).join(' \u00b7 '):''),lot_number:f.lot_number.trim()||(b?b.batch_number:''),batch_id:f.batch_id||null,tag:f.tag.trim(),description:f.description.trim(),rating:fb?Number(f.rating):null,attachments:f.attachments};
+    try{const out=x.id?await db.update('hx_complaints',x.id,rec):await db.insert('hx_complaints',{...rec,id:newId('cmp'),state_id:st.id,license_id:lic.id,status:'open'});props.onDone(out&&out[0]);}catch(e){setErr(cmpErr(e));}setBusy(false);}
+  const inp=function(k,l,ph,type){return el(Field,{label:l},el('input',{type:type||'text',value:f[k],placeholder:ph||'',max:type==='date'?todayStr():undefined,onChange:function(e){set(k,e.target.value);}}));};
+  return el(Modal,{title:(x.id?'Edit ':'Log ')+(fb?'customer feedback':'complaint')+' \u00b7 '+lic.name,wide:true,onClose:props.onClose},
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr 1fr',gap:10}},
+      el(Field,{label:'Type'},el('select',{value:f.type,onChange:function(e){set('type',e.target.value);}},Object.keys(CMP_TYPES).map(function(k){return el('option',{key:k,value:k},CMP_TYPES[k]);}))),
+      !fb?el(Field,{label:'Priority'},el('select',{value:f.priority,onChange:function(e){set('priority',e.target.value);}},Object.keys(QMS_PRIORITIES).map(function(k){return el('option',{key:k,value:k},QMS_PRIORITIES[k]);}))):
+        el(Field,{label:'Satisfaction *'},el('select',{value:f.rating,onChange:function(e){set('rating',e.target.value);}},el('option',{value:''},'(pick)'),[5,4,3,2,1].map(function(n){return el('option',{key:n,value:n},n+' - '+['','Very unhappy','Unhappy','OK','Happy','Very happy'][n]);}))),
+      inp('received_on','Received on','','date')),
+    f.type==='adverse_event'&&el('div',{className:'msg err'},'Adverse event: report it to the state regulator. It cannot be closed until the report date is recorded.'),
+    inp('title','Title *',fb?'e.g. Dispensary A: customers love the new OG pre-rolls':'e.g. Customer reported harsh taste on Live Resin Cart'),
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr 1fr',gap:10}},
+      el(Field,{label:'Received by'},el('select',{value:f.channel,onChange:function(e){set('channel',e.target.value);}},CMP_CHANNELS.map(function(c){return el('option',{key:c,value:c},c);}))),
+      inp('complainant','Complainant','Name (or anonymous)'),inp('complainant_contact','Contact','Phone or email')),
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr',gap:10}},inp('customer','Customer (dispensary)',''),
+      !fb?el(Field,{label:'Category'},el('select',{value:f.category,onChange:function(e){set('category',e.target.value);}},el('option',{value:''},'(choose)'),CMP_CATS.map(function(c){return el('option',{key:c,value:c},c);}))):el('div')),
+    el('div',{className:'grid',style:{gridTemplateColumns:'1.4fr 1fr 1fr 1fr',gap:10}},
+      el(Field,{label:'Batch'},el('select',{value:f.batch_id,onChange:function(e){set('batch_id',e.target.value);}},el('option',{value:''},'(unknown / not listed)'),(props.batches||[]).map(function(b){return el('option',{key:b.id,value:b.id},batchName(b));}))),
+      inp('product','Product','Product name / SKU'),inp('lot_number','Lot number','LOT-XXXX'),inp('tag','Package tag','1A4...')),
+    el(Field,{label:'Description'},el('textarea',{rows:3,value:f.description,placeholder:fb?'What the customer said':'Describe the complaint in detail...',onChange:function(e){set('description',e.target.value);}})),
+    el(FileList,{files:f.attachments,folder:'complaints/'+lic.id,label:'+ Attach photo or file',onErr:setErr,onChange:function(v){set('attachments',v);}}),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:save},x.id?'Save':fb?'Log feedback':'Log complaint')));
+}
+function cmpHtml(c,lic){const e=esc3;
+  return '<div class="hxrec"><h2>'+e(c.number)+' \u00b7 '+e(c.title)+'</h2><div class="m">'+e(lic.name)+' \u00b7 CSQ 1.7 \u00b7 printed '+e(new Date().toLocaleString())+'</div><table>'+
+    [['Type',CMP_TYPES[c.type]],['Priority',QMS_PRIORITIES[c.priority]],['Status',CMP_STATUS[c.status]+(c.closed_by?' by '+c.closed_by+' '+String(c.closed_at||'').slice(0,10):'')],['Received',c.received_on+' \u00b7 '+c.channel+' \u00b7 logged by '+c.created_by],
+     ['Complainant',[c.complainant,c.complainant_contact].filter(Boolean).join(' \u00b7 ')],['Customer',c.customer],['Category',c.category],['Rating',c.rating?c.rating+' / 5':''],['Product / batch / tag',[c.product,c.lot_number,c.tag].filter(Boolean).join(' \u00b7 ')],
+     ['Description',c.description],['Investigator',c.investigator+(c.due_date?' \u00b7 due '+c.due_date:'')],['Investigation',c.investigation],['Root cause',c.root_cause],['Resolution',c.resolution],['Corrective action',c.corrective_action],
+     ['Deviation / CAPA',c.deviation_number],['Response to complainant',(c.responded_on?c.responded_on+': ':'')+c.response],['Reported to regulator',c.regulator_reported_on],['Cancelled',c.cancel_reason]]
+    .filter(function(r){return r[1];}).map(function(r){return '<tr><th>'+e(r[0])+'</th><td>'+e(r[1])+'</td></tr>';}).join('')+'</table></div>';}
+function ComplaintDetail(props){
+  const c=props.rec,lic=props.license,st=props.state,open=cmpOpen(c),canE=can('complaints',2),canF=can('complaints',3),fb=c.type==='feedback';
+  const[f,setF]=useState({investigator:c.investigator||'',due_date:c.due_date||trAddMonths(todayStr(),1),investigation:c.investigation||'',root_cause:c.root_cause||'',resolution:c.resolution||'',corrective_action:c.corrective_action||'',
+    response:c.response||'',responded_on:c.responded_on||'',regulator_reported_on:c.regulator_reported_on||''});
+  const[err,setErr]=useState('');const[busy,setBusy]=useState(false);const[ask,setAsk]=useState(null);
+  function set(k,v){setF(function(p){return {...p,[k]:v};});}
+  async function save(extra,msg){setErr('');setBusy(true);try{await db.update('hx_complaints',c.id,{...f,due_date:f.due_date||null,responded_on:f.responded_on||null,regulator_reported_on:f.regulator_reported_on||null,...(extra||{})});props.onDone(msg||'Saved.');}catch(e){setErr(cmpErr(e));}setBusy(false);}
+  const ta=function(k,l,ph){return el(Field,{label:l},el('textarea',{rows:2,value:f[k],disabled:!open||!canE,placeholder:ph||'',onChange:function(e){set(k,e.target.value);}}));};
+  const inp=function(k,l,type){return el(Field,{label:l},el('input',{type:type||'text',value:f[k],disabled:!open||!canE,max:type==='date'&&k!=='due_date'?todayStr():undefined,onChange:function(e){set(k,e.target.value);}}));};
+  return el(Modal,{title:c.number+' \u00b7 '+c.title,wide:true,onClose:props.onClose},
+    el('div',{className:'row',style:{gap:6,marginBottom:10}},el('span',{className:'badge '+(open?'warn':c.status==='closed'?'ok':'off')},CMP_STATUS[c.status]),el('span',{className:'badge '+(c.type==='adverse_event'?'bad':'off')},CMP_TYPES[c.type]),!fb&&el('span',{className:'badge '+(c.priority==='critical'?'bad':'off')},QMS_PRIORITIES[c.priority]),
+      cmpLate(c)&&el('span',{className:'badge bad'},'Overdue'),c.rating&&el('span',{className:'badge ok'},c.rating+' / 5')),
+    el('div',{className:'card gold',style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:10,padding:'10px 14px'}},
+      [['Received',c.received_on+' \u00b7 '+c.channel],['Complainant',[c.complainant,c.complainant_contact].filter(Boolean).join(' \u00b7 ')],['Customer',c.customer],['Category',c.category],['Product',c.product],['Lot / batch',c.lot_number],['Package tag',c.tag],['Logged by',c.created_by],
+       ['Deviation',c.deviation_number],['Closed',c.closed_by?c.closed_by+' \u00b7 '+String(c.closed_at).slice(0,10):'']].filter(function(p){return p[1];}).map(function(p){return el('div',{key:p[0]},el('div',{className:'k'},p[0]),el('div',{style:{fontSize:13}},p[1]));})),
+    c.description&&el('div',{style:{fontSize:13,marginBottom:10,whiteSpace:'pre-wrap'}},c.description),
+    (c.attachments||[]).length>0&&el(FileList,{files:c.attachments}),
+    !fb&&el('div',null,
+      el('div',{className:'k',style:{margin:'10px 0 6px'}},'Investigation (CSQ 1.7)'),
+      el('div',{className:'grid',style:{gridTemplateColumns:'2fr 1fr',gap:10}},inp('investigator','Investigator (responsible) *'),inp('due_date','Due date','date')),
+      ta('investigation','Investigation *','What was checked: retained sample, batch record, COA, other complaints on the same batch'),ta('root_cause','Root cause'),
+      ta('resolution','Resolution *','What was done for the complainant'),ta('corrective_action','Corrective action to stop it happening again'),
+      el('div',{className:'grid',style:{gridTemplateColumns:'2fr 1fr',gap:10}},ta('response','Response to the complainant'),inp('responded_on','Answered on','date')),
+      c.type==='adverse_event'&&inp('regulator_reported_on','Reported to the state regulator on *','date')),
+    c.cancel_reason&&el('div',{className:'msg err'},'Cancelled: '+c.cancel_reason),
+    err&&el('div',{className:'msg err'},err),
+    ask&&el(SimpleReason,{title:'Cancel '+c.number,btn:'Cancel complaint',onClose:function(){setAsk(null);},onGo:function(why){return db.update('hx_complaints',c.id,{status:'cancelled',cancel_reason:why}).then(function(){props.onDone('Cancelled '+c.number);});}}),
+    el('div',{className:'row',style:{justifyContent:'space-between',marginTop:14}},
+      el('div',{className:'row',style:{gap:6}},
+        open&&canE&&el('button',{className:'btn ghost sm',onClick:function(){props.onEdit();}},'Edit details'),
+        open&&canE&&!fb&&el('button',{className:'btn ghost sm',disabled:busy,onClick:function(){save(c.status==='open'?{status:'investigating'}:null,'Saved.');}},c.status==='open'?'Save and start investigating':'Save'),
+        open&&canE&&el('button',{className:'btn sm',disabled:busy,onClick:function(){save({status:'closed'},'Closed '+c.number);}},'Close'),
+        open&&canE&&!fb&&!c.deviation_id&&el(LinkDeviation,{state:st,license:lic,prefill:{title:'Complaint '+c.number+': '+c.title,dept:'Compliance',category:c.type==='adverse_event'?'Product quality':'Product quality',priority:c.priority,description:c.description,product_affected:c.product,lot_number:c.lot_number},
+          onLinked:function(r){db.update('hx_complaints',c.id,{deviation_id:r.id}).then(function(){props.onDone('Saved. Linked '+r.number);}).catch(function(e){setErr(cmpErr(e));});}}),
+        open&&!fb&&c.batch_id&&can('holds',2)&&el('button',{className:'btn danger sm',onClick:function(){props.onHold();}},'Put batch on hold'),
+        !open&&canF&&el('button',{className:'btn ghost sm',onClick:function(){db.update('hx_complaints',c.id,{status:'investigating'}).then(function(){props.onDone('Reopened '+c.number);}).catch(function(e){setErr(cmpErr(e));});}},'Reopen'),
+        open&&canF&&el('button',{className:'btn danger sm',onClick:function(){setAsk(true);}},'Cancel'),
+        el('button',{className:'btn ghost sm',onClick:function(){printRecords(c.number,[cmpHtml(c,lic)]);}},'Print')),
+      el('button',{className:'btn ghost sm',onClick:props.onClose},'Close window')));
+}
+function ComplaintsPage(props){
+  const st=props.state,lic=props.license,lid=lic?lic.id:'';
+  const[rows,setRows]=useState(null);const[batches,setBatches]=useState([]);const[msg,setMsg]=useState('');const[tab,setTab]=useState('list');
+  const[q,setQ]=useState('');const[sf,setSf]=useState('OPEN');const[tf,setTf]=useState('ALL');const[selId,setSelId]=useState(null);const[modal,setModal]=useState(null);
+  const load=useCallback(function(){if(!lid){setRows([]);return;}const enc=encodeURIComponent;
+    db.get('hx_complaints','license_id=eq.'+enc(lid)+'&select=*&order=received_on.desc,number.desc&limit=5000').then(function(r){setRows((r||[]).filter(function(x){return x.license_id===lid;}));}).catch(function(e){setMsg(cmpErr(e));setRows([]);});
+    db.get('hx_batches','license_id=eq.'+enc(lid)+'&voided=eq.false&select=id,batch_number,batch_type,sku,flavor,license_id,voided&order=created_at.desc&limit=1000').then(function(r){setBatches((r||[]).filter(function(b){return b.license_id===lid&&!b.voided;}));}).catch(function(){setBatches([]);});},[lid]);
+  useEffect(load,[load]);
+  if(!st||!lic)return el('div',null,el('h1',null,el('span',{className:'g'},'Complaints')),el('div',{className:'empty'},'Pick a state and a license at the top first.'));
+  if(!rows)return el('div',{className:'muted'},'Loading...');
+  function done(t){setModal(null);if(t)setMsg(t);load();}
+  const y1=new Date(Date.now()-365*864e5).toISOString().slice(0,10),C=rows.filter(function(c){return c.type!=='feedback'&&c.status!=='cancelled';}),C12=C.filter(function(c){return c.received_on>=y1;});
+  const FB=rows.filter(function(c){return c.type==='feedback'&&c.received_on>=y1&&c.rating;}),avgR=FB.length?Math.round(FB.reduce(function(n,c){return n+c.rating;},0)*10/FB.length)/10:null;
+  const closed=C12.filter(function(c){return c.status==='closed'&&c.closed_at;}),avgDays=closed.length?Math.round(closed.reduce(function(n,c){return n+Math.max(0,(new Date(c.closed_at)-new Date(c.received_on+'T00:00:00'))/864e5);},0)/closed.length):null;
+  const sel=rows.find(function(c){return c.id===selId;});
+  const stat=function(l,v,tone,sub){return el('div',{key:l,className:'card gold',style:{marginBottom:0}},el('div',{className:'k'},l),el('div',{className:'v',style:{fontSize:26,color:tone||'var(--text)'}},v),sub&&el('div',{className:'muted',style:{fontSize:11,marginTop:2}},sub));};
+  const shown=rows.filter(function(c){if(sf==='OPEN'&&!cmpOpen(c))return false;if(sf!=='ALL'&&sf!=='OPEN'&&c.status!==sf)return false;if(tf!=='ALL'&&c.type!==tf)return false;
+    if(q&&(c.number+' '+c.title+' '+c.product+' '+c.lot_number+' '+c.customer+' '+c.complainant+' '+c.tag).toLowerCase().indexOf(q.toLowerCase())<0)return false;return true;});
+  const months=[];for(let i=11;i>=0;i--){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);const k=d.toISOString().slice(0,7);months.push({k:k,label:d.toLocaleDateString(undefined,{month:'short'}),a:C.filter(function(c){return c.received_on.slice(0,7)===k;}).length,b:C.filter(function(c){return c.closed_at&&String(c.closed_at).slice(0,7)===k;}).length});}
+  const cnt=function(key){const m={};C12.forEach(function(c){const v=c[key]||'(not set)';m[v]=(m[v]||0)+1;});return Object.keys(m).map(function(k){return [k,m[k]];}).sort(function(a,b){return b[1]-a[1];}).slice(0,8);};
+  const byBatch=cnt('lot_number').filter(function(r){return r[0]!=='(not set)';}),repeat=byBatch.filter(function(r){return r[1]>1;});
+  function printLog(){const e=esc3;printRecords('Complaint log - '+lic.name,['<div class="hxrec"><h2>Complaint log</h2><div class="m">'+e(lic.name)+' \u00b7 CSQ 1.7 \u00b7 printed '+e(new Date().toLocaleString())+'</div><table><tr><th>Number</th><th>Received</th><th>Type</th><th>Title</th><th>Product / lot</th><th>Investigator</th><th>Resolution / corrective action</th><th>Status</th></tr>'+
+    rows.map(function(c){return '<tr><td>'+e(c.number)+'</td><td>'+e(c.received_on)+'</td><td>'+e(CMP_TYPES[c.type])+'</td><td>'+e(c.title)+(c.rating?' ('+c.rating+'/5)':'')+'</td><td>'+e([c.product,c.lot_number].filter(Boolean).join(' \u00b7 '))+'</td><td>'+e(c.investigator)+'</td><td>'+e(c.resolution)+(c.corrective_action?'<br>'+e(c.corrective_action):'')+(c.deviation_number?'<br>'+e(c.deviation_number):'')+'</td><td>'+e(CMP_STATUS[c.status])+'</td></tr>';}).join('')+'</table></div>']);}
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,el('span',{className:'g'},'Complaints')),el('div',{className:'sub'},lic.name+' \u00b7 complaints, returns, adverse events and customer feedback (CSQ 1.7, 5.3)')),
+      el('div',{className:'row'},el('button',{className:'btn ghost',onClick:printLog},'Complaint log'),el('button',{className:'btn ghost',onClick:function(){setModal({t:'form',type:'feedback'});}},'+ Feedback'),el('button',{className:'btn',onClick:function(){setModal({t:'form'});}},'+ Log complaint'))),
+    msg&&el('div',{className:/^(Logged|Saved|Closed|Reopened|Cancelled|Put on hold)/.test(msg)?'msg':'msg err'},msg),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',marginBottom:14}},
+      stat('Open',C.filter(cmpOpen).length,C.some(cmpOpen)?'var(--gold-hi)':'var(--green)'),stat('Overdue',C.filter(cmpLate).length,C.some(cmpLate)?'var(--red)':'var(--green)'),
+      stat('Complaints (12 months)',C12.length,null,C12.filter(function(c){return c.type==='adverse_event';}).length+' adverse events'),stat('Average days to close',avgDays==null?'-':avgDays),
+      stat('Customer satisfaction',avgR==null?'-':avgR+' / 5',avgR==null?null:avgR>=4?'var(--green)':avgR>=3?'var(--gold-hi)':'var(--red)',FB.length+' feedback (12 months)')),
+    repeat.length>0&&el('div',{className:'msg err',style:{marginBottom:12}},'Repeat complaints on the same lot: '+repeat.map(function(r){return r[0]+' ('+r[1]+')';}).join(', ')),
+    el('div',{className:'tabs',style:{marginBottom:12}},[['list','Complaints'],['trends','Trends']].map(function(x){return el('button',{key:x[0],className:tab===x[0]?'on':'',onClick:function(){setTab(x[0]);}},x[1]);})),
+    tab==='trends'?el('div',null,
+      el('div',{className:'card'},el('h3',null,'By month (last 12 months)'),el(QmsBarChart,{data:months,two:true,la:'Received',lb:'Closed'})),
+      el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(320px,1fr))'}},
+        el('div',{className:'card'},el('h3',null,'By category'),el(QmsHBars,{rows:cnt('category')})),el('div',{className:'card'},el('h3',null,'By type'),el(QmsHBars,{rows:cnt('type').map(function(r){return [CMP_TYPES[r[0]]||r[0],r[1]];})})),
+        el('div',{className:'card'},el('h3',null,'By lot / batch'),el(QmsHBars,{rows:byBatch})),el('div',{className:'card'},el('h3',null,'By customer'),el(QmsHBars,{rows:cnt('customer')})))):
+    el('div',null,
+      el('div',{className:'row',style:{marginBottom:12}},el('input',{value:q,placeholder:'Search number, product, lot, customer',style:{width:260},onChange:function(e){setQ(e.target.value);}}),
+        el('select',{value:sf,onChange:function(e){setSf(e.target.value);}},el('option',{value:'OPEN'},'Open'),el('option',{value:'ALL'},'Every status'),Object.keys(CMP_STATUS).map(function(k){return el('option',{key:k,value:k},CMP_STATUS[k]);})),
+        el('select',{value:tf,onChange:function(e){setTf(e.target.value);}},el('option',{value:'ALL'},'Every type'),Object.keys(CMP_TYPES).map(function(k){return el('option',{key:k,value:k},CMP_TYPES[k]);}))),
+      !shown.length?el('div',{className:'empty'},rows.length?'Nothing matches.':'No complaints on record for '+lic.name+'.'):
+      shown.map(function(c){return el('div',{key:c.id,className:'card',style:{cursor:'pointer',padding:'12px 16px',borderLeft:'3px solid '+(c.type==='adverse_event'?'var(--red)':cmpOpen(c)?'var(--gold)':'var(--green)')},onClick:function(){setSelId(c.id);}},
+        el('div',{className:'row',style:{justifyContent:'space-between',flexWrap:'nowrap'}},
+          el('div',{style:{minWidth:0}},el('div',{className:'row',style:{gap:6,marginBottom:4}},el('b',null,c.number),el('span',{className:'badge '+(cmpOpen(c)?'warn':c.status==='closed'?'ok':'off')},CMP_STATUS[c.status]),
+              el('span',{className:'badge '+(c.type==='adverse_event'?'bad':'off')},CMP_TYPES[c.type]),c.type!=='feedback'&&el('span',{className:'badge '+(c.priority==='critical'?'bad':'off')},QMS_PRIORITIES[c.priority]),cmpLate(c)&&el('span',{className:'badge bad'},'Overdue'),c.rating&&el('span',{className:'badge ok'},c.rating+' / 5')),
+            el('div',{style:{fontWeight:700}},c.title),el('div',{className:'muted',style:{fontSize:12}},[c.product&&'Product: '+c.product,c.lot_number&&'Lot '+c.lot_number,c.customer,c.investigator&&'Investigator: '+c.investigator].filter(Boolean).join(' \u00b7 '))),
+          el('div',{className:'muted',style:{fontSize:11,textAlign:'right',flex:'0 0 auto'}},c.received_on,c.due_date&&cmpOpen(c)&&el('div',{style:{color:cmpLate(c)?'var(--red)':''}},'Due '+c.due_date))));})),
+    sel&&!modal&&el(ComplaintDetail,{key:sel.id+sel.status,rec:sel,state:st,license:lic,onClose:function(){setSelId(null);},onDone:function(t){done(t);},onEdit:function(){setModal({t:'form',rec:sel});},
+      onHold:function(){setModal({t:'hold',prefill:{kind:'batch',batch_id:sel.batch_id,tag:sel.tag,source:'Complaint',reason:'Complaint '+sel.number+': '+sel.title}});}}),
+    modal&&modal.t==='form'&&el(ComplaintForm,{rec:modal.rec,type:modal.type,state:st,license:lic,batches:batches,onClose:function(){setModal(null);},onDone:function(r){if(r&&!modal.rec)setSelId(r.id);done(modal.rec?'Saved.':'Logged '+(r?r.number:''));}}),
+    modal&&modal.t==='hold'&&el(HoldForm,{state:st,license:lic,lots:[],batches:batches,prefill:modal.prefill,onClose:function(){setModal(null);},onDone:function(r){if(r&&sel)db.update('hx_complaints',sel.id,{hold_id:r.id}).catch(function(){});done('Put on hold: '+(r?r.number:''));}}));
+}
+function CmpDashCard(props){
+  const lid=props.license?props.license.id:'';const[d,setD]=useState(null);
+  useEffect(function(){if(!lid||!can('complaints',1)){setD(null);return;}let dead=false;
+    db.get('hx_complaints','license_id=eq.'+encodeURIComponent(lid)+'&select=type,status,due_date,rating,received_on,license_id').then(function(r){const a=(r||[]).filter(function(x){return x.license_id===lid&&x.type!=='feedback';});
+      if(!dead)setD({open:a.filter(cmpOpen).length,late:a.filter(cmpLate).length,ae:a.filter(function(x){return x.type==='adverse_event'&&cmpOpen(x);}).length});}).catch(function(){if(!dead)setD(null);});return function(){dead=true;};},[lid]);
+  if(!d)return null;
+  return el('div',{className:'card gold'},el('div',{className:'k'},'Complaints'),el('div',{className:'v',style:{color:d.late||d.ae?'var(--red)':d.open?'var(--gold-hi)':'var(--green)'}},d.open+' open'),
+    el('div',{className:'muted',style:{margin:'4px 0 8px'}},d.late+' overdue \u00b7 '+d.ae+' open adverse event'+(d.ae===1?'':'s')),
+    el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go('complaints');}},'Open complaints'));
+}
+
+/* ---------- Internal audits (Black Fox / Michigan audit fields + CSQ 1.5) ---------- */
+const IA_TYPES=['CSQ internal audit','METRC Audit','Packaging Audit','Security Audit','Training Audit','Testing Audit','SOP Compliance Audit','Equipment Calibration Audit','Sanitation Audit','Full Facility Audit','Custom'];
+const IA_RESULTS=['Conforming','Nonconforming','Observation','Not applicable'];
+const IA_STATUS={planned:'Planned',in_progress:'In progress',completed:'Completed',closed:'Closed',cancelled:'Cancelled'};
+const IA_SEV={critical:'Critical',major:'Major',minor:'Minor',observation:'Observation'};
+const IA_MOD_NAME={'1':'Module 1 \u00b7 Management','2A':'Module 2A \u00b7 cGMP','3C':'Module 3C \u00b7 Product','4A':'Module 4A \u00b7 HACCP','5':'Module 5 \u00b7 QMS'};
+function iaClauses(level){return CSQ_MFG_CLAUSES.filter(function(c){return stdLevelOf(c[1])<=(level||1);}).map(function(c){return {clause:c[0],module:c[1],title:c[2]};});}
+// last result per clause from audits done in the last 12 months
+function iaCoverage(audits,level){const y1=new Date(Date.now()-365*864e5).toISOString().slice(0,10),last={};
+  audits.filter(function(a){return (a.status==='completed'||a.status==='closed')&&a.audit_date&&a.audit_date>=y1;}).forEach(function(a){(a.clauses||[]).forEach(function(x){if(x.result&&(!last[x.clause]||last[x.clause].date<a.audit_date))last[x.clause]={date:a.audit_date,result:x.result,number:a.number,auditor:a.auditor_name};});});
+  const all=iaClauses(level);return {all:all,last:last,done:all.filter(function(c){return last[c.clause];}).length};}
+function AuditForm(props){
+  const x=props.rec||{},lic=props.license,st=props.state,level=props.level||1;
+  const[f,setF]=useState({title:x.title||'',audit_type:x.audit_type||'CSQ internal audit',dept:x.dept||'Compliance',planned_date:x.planned_date||todayStr(),audit_date:x.audit_date||'',auditor_name:x.auditor_name||'',auditor_qualification:x.auditor_qualification||'',
+    independent:!!x.independent,scope:x.scope||'',clauses:(x.clauses||[]).map(function(c){return {...c};}),recommendations:x.recommendations||'',conclusion:x.conclusion||'',next_audit_date:x.next_audit_date||'',attachments:(x.attachments||[]).slice()});
+  const[err,setErr]=useState('');const[busy,setBusy]=useState(false);const[add,setAdd]=useState('');
+  function set(k,v){setF(function(p){return {...p,[k]:v};});}
+  const all=iaClauses(level),have={};f.clauses.forEach(function(c){have[c.clause]=1;});
+  function addMany(list){setF(function(p){const h={};p.clauses.forEach(function(c){h[c.clause]=1;});return {...p,clauses:p.clauses.concat(list.filter(function(c){return !h[c.clause];}).map(function(c){return {clause:c.clause,title:c.title,result:'',evidence:''};}))};});}
+  function setC(i,k,v){setF(function(p){return {...p,clauses:p.clauses.map(function(c,j){return j===i?{...c,[k]:v}:c;})};});}
+  async function save(){setErr('');if(!f.title.trim()){setErr('Enter the audit title.');return;}setBusy(true);
+    const rec={title:f.title.trim(),audit_type:f.audit_type,dept:f.dept,planned_date:f.planned_date||null,audit_date:f.audit_date||null,auditor_name:f.auditor_name.trim(),auditor_qualification:f.auditor_qualification.trim(),independent:f.independent,scope:f.scope.trim(),
+      clauses:f.clauses,recommendations:f.recommendations.trim(),conclusion:f.conclusion.trim(),next_audit_date:f.next_audit_date||null,attachments:f.attachments};
+    try{const out=x.id?await db.update('hx_audits',x.id,rec):await db.insert('hx_audits',{...rec,id:newId('ia'),state_id:st.id,license_id:lic.id,status:'planned'});props.onDone(out&&out[0]);}catch(e){setErr(cmpErr(e));}setBusy(false);}
+  const inp=function(k,l,ph,type){return el(Field,{label:l},el('input',{type:type||'text',value:f[k],placeholder:ph||'',onChange:function(e){set(k,e.target.value);}}));};
+  const mods=Object.keys(IA_MOD_NAME).filter(function(m){return all.some(function(c){return c.module===m;});});
+  return el(Modal,{title:(x.id?'Edit audit '+x.number:'Plan an internal audit')+' \u00b7 '+lic.name,wide:true,onClose:props.onClose},
+    el('div',{className:'grid',style:{gridTemplateColumns:'2fr 1fr 1fr',gap:10}},inp('title','Audit title *','e.g. CSQ Module 2A audit - Q4 2026'),
+      el(Field,{label:'Audit type'},el('select',{value:f.audit_type,onChange:function(e){set('audit_type',e.target.value);}},IA_TYPES.map(function(t){return el('option',{key:t,value:t},t);}))),
+      el(Field,{label:'Department'},el('select',{value:f.dept,onChange:function(e){set('dept',e.target.value);}},QMS_DEPTS.map(function(d){return el('option',{key:d,value:d},d);})))),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:10}},inp('planned_date','Planned date','','date'),inp('audit_date','Audit date (done)','','date'),inp('auditor_name','Lead auditor',''),inp('auditor_qualification','Auditor qualification','e.g. CSQ internal auditor course 2026')),
+    el('label',{className:'ck',style:{margin:'4px 0 10px'}},el('input',{type:'checkbox',checked:f.independent,onChange:function(e){set('independent',e.target.checked);}}),el('span',null,'The auditor does not audit their own work (CSQ 1.5 c)')),
+    el(Field,{label:'Audit scope'},el('textarea',{rows:2,value:f.scope,placeholder:'What areas/processes were reviewed?',onChange:function(e){set('scope',e.target.value);}})),
+    el('div',{className:'k',style:{margin:'8px 0 6px'}},'CSQ checklist ('+f.clauses.length+' clauses)'),
+    el('div',{className:'row',style:{gap:6,marginBottom:8}},mods.map(function(m){const n=all.filter(function(c){return c.module===m&&!have[c.clause];}).length;return el('button',{key:m,className:'btn ghost sm',disabled:!n,onClick:function(){addMany(all.filter(function(c){return c.module===m;}));}},'+ '+IA_MOD_NAME[m]+' ('+n+')');}),
+      el('select',{value:add,onChange:function(e){const c=all.find(function(z){return z.clause===e.target.value;});if(c)addMany([c]);setAdd('');}},el('option',{value:''},'+ One clause...'),all.filter(function(c){return !have[c.clause];}).map(function(c){return el('option',{key:c.clause,value:c.clause},c.clause+' '+c.title);}))),
+    f.clauses.length>0&&el('div',{style:{maxHeight:320,overflowY:'auto',border:'1px solid var(--line)',borderRadius:8,padding:'4px 8px'}},f.clauses.map(function(c,i){return el('div',{key:c.clause,className:'grid',style:{gridTemplateColumns:'2.2fr 1fr 2fr auto',gap:6,alignItems:'center',padding:'4px 0',borderBottom:'1px dashed var(--line)'}},
+      el('div',{style:{fontSize:12}},el('b',null,c.clause),' '+(c.title||'')),
+      el('select',{value:c.result||'',style:{color:c.result==='Nonconforming'?'var(--red)':c.result==='Conforming'?'var(--green)':''},onChange:function(e){setC(i,'result',e.target.value);}},el('option',{value:''},'(result)'),IA_RESULTS.map(function(r){return el('option',{key:r,value:r},r);})),
+      el('input',{value:c.evidence||'',placeholder:'Evidence seen',onChange:function(e){setC(i,'evidence',e.target.value);}}),
+      el('button',{className:'btn ghost sm',onClick:function(){setF(function(p){return {...p,clauses:p.clauses.filter(function(_,j){return j!==i;})};});}},'\u00d7'));})),
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr',gap:10,marginTop:10}},
+      el(Field,{label:'Recommendations'},el('textarea',{rows:2,value:f.recommendations,onChange:function(e){set('recommendations',e.target.value);}})),el(Field,{label:'Conclusion'},el('textarea',{rows:2,value:f.conclusion,onChange:function(e){set('conclusion',e.target.value);}}))),
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 2fr',gap:10}},inp('next_audit_date','Next audit date','','date'),el('div',null,el('div',{className:'k',style:{marginTop:4}},'Attachments'),el(FileList,{files:f.attachments,folder:'audits/'+lic.id,label:'+ Attach',onErr:setErr,onChange:function(v){set('attachments',v);}}))),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:save},x.id?'Save':'Save audit')));
+}
+function FindingForm(props){
+  const a=props.audit,x=props.rec||{};const nc=(a.clauses||[]).filter(function(c){return c.result==='Nonconforming'||c.result==='Observation';});
+  const[f,setF]=useState({clause:x.clause||props.clause||(nc[0]?nc[0].clause:''),severity:x.severity||'minor',description:x.description||'',corrective_action:x.corrective_action||'',owner_name:x.owner_name||'',due_date:x.due_date||trAddMonths(todayStr(),1)});
+  const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  async function go(){setErr('');if(!f.description.trim()){setErr('Describe the finding.');return;}setBusy(true);const rec={...f,description:f.description.trim(),corrective_action:f.corrective_action.trim(),owner_name:f.owner_name.trim(),due_date:f.due_date||null};
+    try{x.id?await db.update('hx_audit_findings',x.id,rec):await db.insert('hx_audit_findings',{...rec,id:newId('fnd'),state_id:a.state_id,license_id:a.license_id,audit_id:a.id});props.onDone();}catch(e){setErr(cmpErr(e));}setBusy(false);}
+  return el(Modal,{title:(x.id?'Edit finding':'Record a finding')+' \u00b7 '+a.number,onClose:props.onClose},
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr',gap:10}},
+      el(Field,{label:'Clause'},el('select',{value:f.clause,onChange:function(e){setF({...f,clause:e.target.value});}},el('option',{value:''},'(general)'),(a.clauses||[]).map(function(c){return el('option',{key:c.clause,value:c.clause},c.clause+(c.result?' \u00b7 '+c.result:''));}))),
+      el(Field,{label:'Severity'},el('select',{value:f.severity,onChange:function(e){setF({...f,severity:e.target.value});}},Object.keys(IA_SEV).map(function(k){return el('option',{key:k,value:k},IA_SEV[k]);})))),
+    el(Field,{label:'Finding *'},el('textarea',{rows:3,value:f.description,onChange:function(e){setF({...f,description:e.target.value});}})),
+    el(Field,{label:'Corrective action required'},el('textarea',{rows:2,value:f.corrective_action,onChange:function(e){setF({...f,corrective_action:e.target.value});}})),
+    el('div',{className:'grid',style:{gridTemplateColumns:'2fr 1fr',gap:10}},el(Field,{label:'Owner'},el('input',{value:f.owner_name,onChange:function(e){setF({...f,owner_name:e.target.value});}})),el(Field,{label:'Due date'},el('input',{type:'date',value:f.due_date,onChange:function(e){setF({...f,due_date:e.target.value});}}))),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:go},'Save finding')));
+}
+function iaHtml(a,F,lic){const e=esc3;
+  let h='<div class="hxrec"><h2>'+e(a.number)+' \u00b7 '+e(a.title)+'</h2><div class="m">'+e(lic.name)+' \u00b7 CSQ 1.5 internal audit report \u00b7 printed '+e(new Date().toLocaleString())+'</div><table>'+
+    [['Type / department',a.audit_type+' \u00b7 '+a.dept],['Status',IA_STATUS[a.status]+(a.closed_by?' by '+a.closed_by:'')],['Planned / done',(a.planned_date||'-')+' / '+(a.audit_date||'-')],['Lead auditor',a.auditor_name+(a.auditor_qualification?' ('+a.auditor_qualification+')':'')],
+     ['Independent of the area',a.independent?'Yes':'NOT CONFIRMED'],['Scope',a.scope],['Recommendations',a.recommendations],['Conclusion',a.conclusion],['Results shared with',a.shared_with+(a.shared_on?' on '+a.shared_on:'')],['Next audit',a.next_audit_date]]
+    .filter(function(r){return r[1]&&String(r[1]).trim();}).map(function(r){return '<tr><th>'+e(r[0])+'</th><td>'+e(r[1])+'</td></tr>';}).join('')+'</table>';
+  if((a.clauses||[]).length)h+='<table><tr class="sec"><td colspan="3">Checklist</td></tr><tr><th>Clause</th><th>Result</th><th>Evidence</th></tr>'+(a.clauses||[]).map(function(c){return '<tr><td>'+e(c.clause+' '+(c.title||''))+'</td><td class="'+(c.result==='Nonconforming'?'bad':c.result==='Conforming'?'ok':'')+'">'+e(c.result||'-')+'</td><td>'+e(c.evidence||'')+'</td></tr>';}).join('')+'</table>';
+  h+='<table><tr class="sec"><td colspan="5">Findings</td></tr><tr><th>Clause / severity</th><th>Finding</th><th>Corrective action / deviation</th><th>Owner / due</th><th>Status / verification</th></tr>'+(F.length?F.map(function(x){return '<tr><td>'+e(x.clause)+'<br>'+e(IA_SEV[x.severity])+'</td><td>'+e(x.description)+'</td><td>'+e(x.corrective_action)+(x.deviation_number?'<br>'+e(x.deviation_number):'')+'</td><td>'+e(x.owner_name)+'<br>'+e(x.due_date||'')+'</td><td class="'+(x.status==='closed'?'ok':'bad')+'">'+e(x.status)+(x.verification?'<br>'+e(x.verification):'')+'</td></tr>';}).join(''):'<tr><td colspan="5">No findings</td></tr>')+'</table></div>';
+  return h;}
+function AuditDetail(props){
+  const a=props.rec,F=props.findings,lic=props.license,st=props.state,canE=can('intaudits',2),canF=can('intaudits',3),live=a.status!=='closed'&&a.status!=='cancelled';
+  const[err,setErr]=useState('');const[ask,setAsk]=useState(null);const[share,setShare]=useState({shared_with:a.shared_with||'',shared_on:a.shared_on||todayStr()});
+  function upd(rec,msg){setErr('');return db.update('hx_audits',a.id,rec).then(function(){props.onDone(msg);}).catch(function(e){setErr(cmpErr(e));});}
+  const nc=(a.clauses||[]).filter(function(c){return c.result==='Nonconforming';}),noF=nc.filter(function(c){return !F.some(function(x){return x.clause===c.clause;});});
+  const res={};(a.clauses||[]).forEach(function(c){res[c.result||'(no result)']=(res[c.result||'(no result)']||0)+1;});
+  return el(Modal,{title:a.number+' \u00b7 '+a.title,wide:true,onClose:props.onClose},
+    el('div',{className:'row',style:{gap:6,marginBottom:10}},el('span',{className:'badge '+(a.status==='closed'?'ok':a.status==='cancelled'?'off':'warn')},IA_STATUS[a.status]),el('span',{className:'badge off'},a.audit_type),el('span',{className:'badge off'},a.dept),
+      a.independent?el('span',{className:'badge ok'},'Independent auditor'):el('span',{className:'badge bad'},'Independence not confirmed')),
+    el('div',{className:'card gold',style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:10,padding:'10px 14px'}},
+      [['Planned',a.planned_date],['Done',a.audit_date],['Lead auditor',a.auditor_name],['Qualification',a.auditor_qualification],['Next audit',a.next_audit_date],['Shared with',a.shared_with?a.shared_with+' \u00b7 '+a.shared_on:'']].filter(function(p){return p[1];}).map(function(p){return el('div',{key:p[0]},el('div',{className:'k'},p[0]),el('div',{style:{fontSize:13}},p[1]));})),
+    a.scope&&el('div',{style:{fontSize:13,marginBottom:8}},el('b',null,'Scope: '),a.scope),
+    (a.clauses||[]).length>0&&el('div',null,el('div',{className:'k',style:{margin:'8px 0 6px'}},'Checklist \u00b7 '+Object.keys(res).map(function(k){return res[k]+' '+k.toLowerCase();}).join(' \u00b7 ')),
+      el('div',{style:{maxHeight:240,overflowY:'auto'}},(a.clauses||[]).map(function(c){return el('div',{key:c.clause,className:'row',style:{gap:8,fontSize:12,padding:'3px 0',borderBottom:'1px dashed var(--line)',flexWrap:'nowrap'}},
+        el('b',{style:{width:60,flex:'0 0 auto'}},c.clause),el('span',{style:{flex:1}},c.title),el('span',{className:'badge '+(c.result==='Nonconforming'?'bad':c.result==='Conforming'?'ok':c.result?'warn':'off')},c.result||'No result'),c.evidence&&el('span',{className:'muted',style:{maxWidth:260}},c.evidence));}))),
+    noF.length>0&&el('div',{className:'msg err',style:{marginTop:8}},'Nonconforming clauses without a finding: '+noF.map(function(c){return c.clause;}).join(', ')),
+    el('div',{className:'row',style:{justifyContent:'space-between',margin:'12px 0 6px'}},el('div',{className:'k'},'Findings ('+F.length+', '+F.filter(function(x){return x.status==='open';}).length+' open)'),live&&canE&&el('button',{className:'btn ghost sm',onClick:function(){props.onFinding(null,noF[0]?noF[0].clause:'');}},'+ Finding')),
+    F.map(function(x){const late=x.status==='open'&&x.due_date&&x.due_date<todayStr();return el('div',{key:x.id,className:'card',style:{padding:'10px 12px',marginBottom:6,borderLeft:'3px solid '+(x.status==='closed'?'var(--green)':x.severity==='critical'?'var(--red)':'var(--gold)')}},
+      el('div',{className:'row',style:{gap:6,marginBottom:4}},el('span',{className:'badge '+(x.severity==='critical'?'bad':x.severity==='major'?'warn':'off')},IA_SEV[x.severity]),x.clause&&el('b',null,x.clause),el('span',{className:'badge '+(x.status==='closed'?'ok':'warn')},x.status),late&&el('span',{className:'badge bad'},'Overdue'),x.deviation_number&&el('span',{className:'badge off'},x.deviation_number)),
+      el('div',{style:{fontSize:13,fontWeight:600}},x.description),x.corrective_action&&el('div',{className:'muted',style:{fontSize:12}},'Required: '+x.corrective_action),
+      el('div',{className:'muted',style:{fontSize:11}},[x.owner_name&&'Owner '+x.owner_name,x.due_date&&'due '+x.due_date,x.closed_by&&'closed by '+x.closed_by+' \u00b7 '+x.verification].filter(Boolean).join(' \u00b7 ')),
+      x.status==='open'&&live&&canE&&el('div',{className:'row',style:{gap:6,marginTop:6}},el('button',{className:'btn ghost sm',onClick:function(){props.onFinding(x);}},'Edit'),
+        !x.deviation_id&&x.severity!=='observation'&&el(LinkDeviation,{state:st,license:lic,label:'Raise deviation (CAPA)',prefill:{title:'Audit finding '+a.number+(x.clause?' '+x.clause:'')+': '+x.description.slice(0,60),dept:a.dept||'Compliance',category:'Documentation',priority:x.severity==='critical'?'critical':x.severity==='major'?'major':'minor',description:x.description},
+          onLinked:function(r){db.update('hx_audit_findings',x.id,{deviation_id:r.id}).then(function(){props.onDone('Linked '+r.number);}).catch(function(e){setErr(cmpErr(e));});}}),
+        el('button',{className:'btn sm',onClick:function(){setAsk({t:'closef',f:x});}},'Close finding')),
+      x.status==='closed'&&canF&&live&&el('button',{className:'btn ghost sm',style:{marginTop:6},onClick:function(){db.update('hx_audit_findings',x.id,{status:'open'}).then(function(){props.onDone('Reopened finding');}).catch(function(e){setErr(cmpErr(e));});}},'Reopen'));}),
+    a.status==='completed'&&canF&&el('div',{className:'card',style:{padding:'10px 12px'}},el('div',{className:'k',style:{marginBottom:6}},'Share the results (CSQ 1.5 e)'),
+      el('div',{className:'grid',style:{gridTemplateColumns:'2fr 1fr',gap:10}},el(Field,{label:'Shared with'},el('input',{value:share.shared_with,placeholder:'e.g. Managers meeting, production team',onChange:function(e){setShare({...share,shared_with:e.target.value});}})),
+        el(Field,{label:'On'},el('input',{type:'date',value:share.shared_on,max:todayStr(),onChange:function(e){setShare({...share,shared_on:e.target.value});}})))),
+    err&&el('div',{className:'msg err'},err),
+    ask&&ask.t==='closef'&&el(SimpleReason,{title:'Close finding'+(ask.f.clause?' '+ask.f.clause:''),label:'How the correction was verified as effective',btn:'Close finding',onClose:function(){setAsk(null);},onGo:function(v){return db.update('hx_audit_findings',ask.f.id,{status:'closed',verification:v}).then(function(){setAsk(null);props.onDone('Finding closed');});}}),
+    ask&&ask.t==='cancel'&&el(SimpleReason,{title:'Cancel '+a.number,btn:'Cancel audit',onClose:function(){setAsk(null);},onGo:function(v){return db.update('hx_audits',a.id,{status:'cancelled',cancel_reason:v}).then(function(){props.onDone('Cancelled '+a.number);});}}),
+    el('div',{className:'row',style:{justifyContent:'space-between',marginTop:14}},
+      el('div',{className:'row',style:{gap:6}},
+        live&&canE&&el('button',{className:'btn ghost sm',onClick:props.onEdit},'Edit / checklist'),
+        a.status==='planned'&&canE&&el('button',{className:'btn ghost sm',onClick:function(){upd({status:'in_progress'},'Started '+a.number);}},'Start audit'),
+        (a.status==='planned'||a.status==='in_progress')&&canE&&el('button',{className:'btn sm',onClick:function(){upd({status:'completed'},'Completed '+a.number);}},'Complete audit'),
+        a.status==='completed'&&canF&&el('button',{className:'btn sm',onClick:function(){upd({status:'closed',shared_with:share.shared_with.trim(),shared_on:share.shared_on||null},'Closed '+a.number);}},'Close audit'),
+        !live&&canF&&el('button',{className:'btn ghost sm',onClick:function(){upd({status:'completed'},'Reopened '+a.number);}},'Reopen'),
+        live&&canF&&el('button',{className:'btn danger sm',onClick:function(){setAsk({t:'cancel'});}},'Cancel'),
+        el('button',{className:'btn ghost sm',onClick:function(){printRecords(a.number,[iaHtml(a,F,lic)]);}},'Print report')),
+      el('button',{className:'btn ghost sm',onClick:props.onClose},'Close window')));
+}
+function AuditsPage(props){
+  const st=props.state,lic=props.license,lid=lic?lic.id:'';
+  const[rows,setRows]=useState(null);const[finds,setFinds]=useState([]);const[level,setLevel]=useState(1);const[msg,setMsg]=useState('');const[tab,setTab]=useState('audits');const[selId,setSelId]=useState(null);const[modal,setModal]=useState(null);const[cf,setCf]=useState('ALL');
+  const load=useCallback(function(){if(!lid){setRows([]);return;}const enc=encodeURIComponent;
+    db.get('hx_audits','license_id=eq.'+enc(lid)+'&select=*&order=created_at.desc').then(function(r){setRows((r||[]).filter(function(x){return x.license_id===lid;}));}).catch(function(e){setMsg(cmpErr(e));setRows([]);});
+    db.get('hx_audit_findings','license_id=eq.'+enc(lid)+'&select=*&order=created_at').then(function(r){setFinds((r||[]).filter(function(x){return x.license_id===lid;}));}).catch(function(){setFinds([]);});
+    db.get('hx_license_standards','license_id=eq.'+enc(lid)+'&select=target_level,status,license_id').then(function(r){const a=(r||[]).filter(function(x){return x.license_id===lid&&x.status!=='Withdrawn';})[0];setLevel(a?a.target_level:1);}).catch(function(){setLevel(1);});},[lid]);
+  useEffect(load,[load]);
+  if(!st||!lic)return el('div',null,el('h1',null,el('span',{className:'g'},'Internal Audits')),el('div',{className:'empty'},'Pick a state and a license at the top first.'));
+  if(!rows)return el('div',{className:'muted'},'Loading...');
+  function done(t){setModal(null);if(t)setMsg(t);load();}
+  const canE=can('intaudits',2),cov=iaCoverage(rows,level),pct=cov.all.length?Math.round(cov.done*100/cov.all.length):0;
+  const openF=finds.filter(function(f){const a=rows.find(function(x){return x.id===f.audit_id;});return f.status==='open'&&a&&a.status!=='cancelled';}),lateF=openF.filter(function(f){return f.due_date&&f.due_date<todayStr();});
+  const next=rows.filter(function(a){return a.status==='planned'&&a.planned_date;}).sort(function(a,b){return a.planned_date<b.planned_date?-1:1;})[0];
+  const sel=rows.find(function(a){return a.id===selId;});
+  const stat=function(l,v,tone,sub){return el('div',{key:l,className:'card gold',style:{marginBottom:0}},el('div',{className:'k'},l),el('div',{className:'v',style:{fontSize:26,color:tone||'var(--text)'}},v),sub&&el('div',{className:'muted',style:{fontSize:11,marginTop:2}},sub));};
+  let body;
+  if(tab==='coverage'){
+    const list=cov.all.filter(function(c){const l=cov.last[c.clause];if(cf==='MISS')return !l;if(cf==='NC')return l&&l.result==='Nonconforming';return true;});
+    body=el('div',null,
+      el('div',{className:'card'},el('div',{className:'row',style:{justifyContent:'space-between'}},el('h3',null,'Annual audit program \u00b7 Level '+level+' ('+cov.all.length+' clauses)'),el('b',{style:{color:pct===100?'var(--green)':pct>=50?'var(--gold-hi)':'var(--red)'}},pct+'% audited in the last 12 months')),
+        el('div',{style:{height:10,background:'#1d1d1d',borderRadius:5,overflow:'hidden',margin:'6px 0 10px'}},el('div',{style:{width:pct+'%',height:'100%',background:'var(--gold-grad)'}})),
+        el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:8}},Object.keys(IA_MOD_NAME).filter(function(m){return cov.all.some(function(c){return c.module===m;});}).map(function(m){const t=cov.all.filter(function(c){return c.module===m;}),d=t.filter(function(c){return cov.last[c.clause];}).length;
+          return el('div',{key:m},el('div',{style:{fontSize:12}},IA_MOD_NAME[m]+' \u00b7 '+d+' / '+t.length),el('div',{style:{height:6,background:'#1d1d1d',borderRadius:3,overflow:'hidden',marginTop:3}},el('div',{style:{width:(d*100/t.length)+'%',height:'100%',background:d===t.length?'var(--green)':'var(--gold)'}})));}))),
+      el('div',{className:'row',style:{marginBottom:10}},el('select',{value:cf,onChange:function(e){setCf(e.target.value);}},el('option',{value:'ALL'},'Every clause'),el('option',{value:'MISS'},'Not audited in 12 months'),el('option',{value:'NC'},'Nonconforming')),
+        canE&&cov.done<cov.all.length&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'form',rec:{title:'CSQ audit - clauses not yet audited',clauses:cov.all.filter(function(c){return !cov.last[c.clause];}).map(function(c){return {clause:c.clause,title:c.title,result:'',evidence:''};})},fresh:true});}},'Plan an audit of the '+(cov.all.length-cov.done)+' clauses not audited')),
+      el('div',{className:'card',style:{padding:0,overflowX:'auto'}},el('table',null,el('thead',null,el('tr',null,['Clause','Requirement','Last audited','Result','Audit','Auditor'].map(function(h){return el('th',{key:h},h);}))),
+        el('tbody',null,list.map(function(c){const l=cov.last[c.clause];return el('tr',{key:c.clause},el('td',null,el('b',null,c.clause)),el('td',null,c.title),el('td',null,l?l.date:el('span',{className:'badge bad'},'Not audited')),
+          el('td',null,l?el('span',{className:'badge '+(l.result==='Nonconforming'?'bad':l.result==='Conforming'?'ok':'warn')},l.result):'-'),el('td',null,l?l.number:''),el('td',null,l?l.auditor:''));})))));
+  }else{
+    body=!rows.length?el('div',{className:'empty'},'No internal audits yet. Plan one: CSQ requires every applicable clause to be audited every year by someone who does not audit their own work.'):
+      rows.map(function(a){const af=finds.filter(function(f){return f.audit_id===a.id;}),op=af.filter(function(f){return f.status==='open';}).length,ncs=(a.clauses||[]).filter(function(c){return c.result==='Nonconforming';}).length;
+        return el('div',{key:a.id,className:'card',style:{cursor:'pointer',padding:'12px 16px',borderLeft:'3px solid '+(a.status==='closed'?'var(--green)':a.status==='cancelled'?'var(--line)':'var(--gold)')},onClick:function(){setSelId(a.id);}},
+          el('div',{className:'row',style:{justifyContent:'space-between',flexWrap:'nowrap'}},
+            el('div',{style:{minWidth:0}},el('div',{className:'row',style:{gap:6,marginBottom:4}},el('b',null,a.number),el('span',{className:'badge '+(a.status==='closed'?'ok':a.status==='cancelled'?'off':'warn')},IA_STATUS[a.status]),el('span',{className:'badge off'},a.audit_type),
+                (a.clauses||[]).length>0&&el('span',{className:'badge off'},(a.clauses||[]).length+' clauses'),ncs>0&&el('span',{className:'badge bad'},ncs+' nonconforming'),op>0&&el('span',{className:'badge warn'},op+' open finding'+(op===1?'':'s'))),
+              el('div',{style:{fontWeight:700}},a.title),el('div',{className:'muted',style:{fontSize:12}},[a.auditor_name,af.length+' finding'+(af.length===1?'':'s')].filter(Boolean).join(' \u00b7 '))),
+            el('div',{className:'muted',style:{fontSize:11,textAlign:'right',flex:'0 0 auto'}},a.audit_date||('Planned '+(a.planned_date||'-')),a.next_audit_date&&el('div',null,'Next: '+a.next_audit_date))));});
+  }
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,el('span',{className:'g'},'Internal Audits')),el('div',{className:'sub'},lic.name+' \u00b7 every CSQ clause audited yearly, independent auditors, findings closed through CAPA (CSQ 1.5)')),
+      canE&&el('button',{className:'btn',onClick:function(){setModal({t:'form'});}},'+ Plan audit')),
+    msg&&el('div',{className:/^(Saved|Planned|Started|Completed|Closed|Reopened|Cancelled|Finding|Linked)/.test(msg)?'msg':'msg err'},msg),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',marginBottom:14}},
+      stat('CSQ clauses audited',pct+'%',pct===100?'var(--green)':pct>=50?'var(--gold-hi)':'var(--red)',cov.done+' of '+cov.all.length+' in the last 12 months'),
+      stat('Audits done (12 months)',rows.filter(function(a){return (a.status==='completed'||a.status==='closed')&&a.audit_date&&daysAgo(a.audit_date)<=365;}).length),
+      stat('Open findings',openF.length,openF.length?'var(--gold-hi)':'var(--green)'),stat('Overdue findings',lateF.length,lateF.length?'var(--red)':'var(--green)'),
+      stat('Next planned',next?next.planned_date:'None',next?null:'var(--red)',next?next.title:'')),
+    el('div',{className:'tabs',style:{marginBottom:12}},[['audits','Audits'],['coverage','Annual program (coverage)']].map(function(x){return el('button',{key:x[0],className:tab===x[0]?'on':'',onClick:function(){setTab(x[0]);}},x[1]);})),
+    body,
+    sel&&!modal&&el(AuditDetail,{key:sel.id+sel.status,rec:sel,findings:finds.filter(function(f){return f.audit_id===sel.id;}),state:st,license:lic,onClose:function(){setSelId(null);},onDone:function(t){done(t);},
+      onEdit:function(){setModal({t:'form',rec:sel});},onFinding:function(f,clause){setModal({t:'finding',rec:f,clause:clause});}}),
+    modal&&modal.t==='form'&&el(AuditForm,{rec:modal.fresh?{...modal.rec}:modal.rec,state:st,license:lic,level:level,onClose:function(){setModal(null);},onDone:function(r){if(r&&(!modal.rec||modal.fresh))setSelId(r.id);done(modal.rec&&!modal.fresh?'Saved.':'Planned '+(r?r.number:''));}}),
+    modal&&modal.t==='finding'&&sel&&el(FindingForm,{audit:sel,rec:modal.rec,clause:modal.clause,onClose:function(){setModal(null);},onDone:function(){done('Finding saved');}}));
+}
+function IaDashCard(props){
+  const lid=props.license?props.license.id:'';const[d,setD]=useState(null);
+  useEffect(function(){if(!lid||!can('intaudits',1)){setD(null);return;}let dead=false;const enc=encodeURIComponent;
+    Promise.all([db.get('hx_audits','license_id=eq.'+enc(lid)+'&select=id,status,audit_date,clauses,license_id'),db.get('hx_audit_findings','license_id=eq.'+enc(lid)+'&status=eq.open&select=id,license_id'),
+      db.get('hx_license_standards','license_id=eq.'+enc(lid)+'&select=target_level,status,license_id').catch(function(){return [];})]).then(function(r){
+      const a=(r[0]||[]).filter(function(x){return x.license_id===lid;}),ls=(r[2]||[]).filter(function(x){return x.license_id===lid&&x.status!=='Withdrawn';})[0],cov=iaCoverage(a,ls?ls.target_level:1);
+      if(!dead)setD({pct:cov.all.length?Math.round(cov.done*100/cov.all.length):0,open:(r[1]||[]).filter(function(x){return x.license_id===lid;}).length});}).catch(function(){if(!dead)setD(null);});return function(){dead=true;};},[lid]);
+  if(!d)return null;
+  return el('div',{className:'card gold'},el('div',{className:'k'},'Internal audits'),el('div',{className:'v',style:{color:d.pct===100?'var(--green)':d.pct>=50?'var(--gold-hi)':'var(--red)'}},d.pct+'% audited'),
+    el('div',{className:'muted',style:{margin:'4px 0 8px'}},'CSQ clauses in the last 12 months \u00b7 '+d.open+' open finding'+(d.open===1?'':'s')),
+    el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go('intaudits');}},'Open audits'));
 }
 
 /* ---------- Training (Black Fox / Michigan SOP training matrix + CSQ 2A.13.2 training program) ---------- */
@@ -4845,9 +5194,9 @@ const CSQ_MFG_CLAUSES=[
  ['1.2','1','Management commitment','Have a written safety, quality and compliance policy with measurable objectives, shared with staff, backed by resources, that keeps staff informed of new science and regulation and is reviewed regularly.',['sops'],'Write the safety, quality and compliance policy as an SOP; everyone signs it.',['KPIs']],
  ['1.3','1','Regulatory compliance','Procedures that keep all operations and products compliant where they are made and sold, with compliance staff trained and current on regulations.',['rulebook','locations','training'],'Rulebook per state; licenses per state. Regulatory training tracked per person.',[]],
  ['1.4','1','Documentation and recordkeeping','Control documents and records: a master list, document type and current version, approved changes and replacement of old versions, legible and available records, secure storage for at least 1 year past the date on the label (or longer if required), ink only and no white-out on paper.',['sops','audit'],'Audit trail: every change kept with who, when and why; records are voided, never deleted. SOP library: master list, document numbers, versions, approval by Full access, every earlier version kept unchanged, review dates; audit trail on every record.',[]],
- ['1.5','1','Internal audits','Audit every applicable CSQ requirement at least once a year with competent auditors who do not audit their own work; record findings and corrective actions, share results, and close findings through CAPA.',[],'',['Internal audits']],
+ ['1.5','1','Internal audits','Audit every applicable CSQ requirement at least once a year with competent auditors who do not audit their own work; record findings and corrective actions, share results, and close findings through CAPA.',['intaudits'],'Internal Audits: annual program of every CSQ clause in scope with coverage shown per clause, auditor named with qualification and confirmed independent, checklist results with evidence, a finding for every nonconformity, findings closed through deviations / CAPA with verification, results shared with staff before closing.',[]],
  ['1.6','1','Corrective and preventive actions (CAPA)','Document every deviation and nonconformance clearly with root cause (when an authorized person decides one is needed), owner, immediate correction, timescale, effectiveness check, and review the trend at least once a year.',['qms'],'QMS: numbered deviations with correction, authorized root-cause decision, owner and due date; CAPAs closed only when verified effective; monthly trends and a printable annual review.',[]],
- ['1.7','1','Complaint management','Name who investigates and resolves complaints, track and analyze complaint data, and record the corrective actions taken to stop them happening again.',[],'',['Complaints']],
+ ['1.7','1','Complaint management','Name who investigates and resolves complaints, track and analyze complaint data, and record the corrective actions taken to stop them happening again.',['complaints'],'Complaints: numbered, named investigator and due date, investigation, root cause, resolution, corrective action and linked deviation / CAPA, response to the complainant, adverse events reported to the regulator, trends by month, category, lot and customer.',[]],
  ['1.8','1','Product recalls and withdrawals','Recall and withdrawal procedures that meet regulation: a recall team with roles, an up-to-date contact list (team, emergency services, customers, suppliers, regulators, certification body), a communication plan, recovery or disposal of product, and a yearly mock recall completed in under 2 hours.',['batches','testing','shipping','holds','recall'],'Batch numbers and final package tags. Shipments show which customers received each batch; recalled product goes on hold. Traceability and Recall: recall team with roles and backups, contact list (emergency, regulators, certification body, customers, suppliers, lab) verified yearly, timed mock recalls (server clock, pass only if every step is done within 2 hours), real recalls and withdrawals that put affected product on hold and record who was notified and when.',[]],
  ['1.9','1','Product defense','Protect against theft, bioterrorism and intentional adulteration: threat assessment, access to sensitive areas limited to authorized people, cannabis materials, waste and product secured, secure transport, training for security and transport staff, and a yearly review and test.',['sops','visitors','logs','roles','training'],'Visitor Log and kiosk; security malfunction and security inspection logs; role-based access in Hendrix. Product defense training tracked per person.',[]],
  ['1.10','1','Fraud prevention','Assess vulnerability to mislabeling, substitution, dilution and counterfeiting, control what is found, verify label claims (strain, cannabinoid content and similar), and review and test yearly.',['sops','stickers','testing'],'Sticker potency is taken from the COA; COA tag mismatches are flagged.',[]],
@@ -4929,7 +5278,7 @@ const CSQ_MFG_CLAUSES=[
  ['5.1.7','5','Validation','Validate facilities and equipment with installation, operational and performance qualification (IQ, OQ, PQ), materials through supplier approval, and revalidate yearly and whenever critical limits, cGMPs or CSQ conformance change.',['suppliers'],'Materials validated through supplier approval.',['Equipment register']],
  ['5.1.8','5','Verification','Verification procedures that list the activities to verify, who does them, how often, and how they are monitored and recorded.',[],'',['Verification schedule']],
  ['5.2','5','Safety and quality culture','Everyone acknowledges the safety and quality commitments, training covers anyone who affects product, improvements are planned and measured, and the culture policy is reviewed yearly.',['sops','training'],'Quality policy as an SOP; every signature recorded per version. Training per person in the training matrix.',[]],
- ['5.3','5','Customer satisfaction','Know and meet customer requirements, have a channel for product information, feedback and complaints, and measure whether customers are satisfied.',[],'',['Complaints']],
+ ['5.3','5','Customer satisfaction','Know and meet customer requirements, have a channel for product information, feedback and complaints, and measure whether customers are satisfied.',['complaints'],'Customer feedback logged with a satisfaction rating; complaints and feedback tracked per customer.',[]],
  ['5.4.1','5','Product and process development','New products and changes are approved by a qualified person, trial runs prove the process when needed, and every product has a full process description and flow diagram kept current.',['products'],'A SKU cannot be switched on without a formulation.',['Change control']],
  ['5.4.2','5','Product and process specifications','Process specs with limits for every critical parameter, and product specs covering name and form, physical and chemical traits, contaminants, storage, shelf life, serving size, cannabinoid and terpene content, allergens, ingredients, reagents, packaging and devices, excise stamps and label, and customer and legal requirements.',['products','stickers'],'SKU specs, formulations, sticker servings and weight.',[]],
  ['5.4.3','5','Product and process verification and validation','Verify and validate that products and processes meet spec, with at least three consecutive batches meeting spec unless otherwise required.',['batches','testing'],'Batch and test records per SKU.',[]]];
@@ -4937,9 +5286,9 @@ const STD_STATUSES=['Not assessed','Conforming','Partial','Not conforming','Not 
 const STD_TONE={'Not assessed':'off','Conforming':'ok','Partial':'warn','Not conforming':'bad','Not applicable':'off'};
 const STD_COLOR={'Conforming':'#5fbf8a','Partial':'#d4af37','Not conforming':'#e5645a','Not applicable':'#4a473f','Not assessed':'#2a2a2a'};
 const ADOPT_STATUSES=['Following','Audit scheduled','Certified','Suspended','Withdrawn'];
-const HX_PAGE_LABEL={recall:'Traceability and Recall',receiving:'Receiving',inventory:'Inventory',holds:'Hold and Release',shipping:'Shipping',suppliers:'Suppliers',training:'Training',qms:'QMS (Deviations, CAPA)',sops:'SOPs',rulebook:'Rulebook',locations:'States and Licenses',audit:'Audit Trail',batches:'Batch Tracker',testing:'Testing',stickers:'Compliance Stickers',
+const HX_PAGE_LABEL={complaints:'Complaints',intaudits:'Internal Audits',recall:'Traceability and Recall',receiving:'Receiving',inventory:'Inventory',holds:'Hold and Release',shipping:'Shipping',suppliers:'Suppliers',training:'Training',qms:'QMS (Deviations, CAPA)',sops:'SOPs',rulebook:'Rulebook',locations:'States and Licenses',audit:'Audit Trail',batches:'Batch Tracker',testing:'Testing',stickers:'Compliance Stickers',
   products:'Products',logs:'Facility Logs',visitors:'Visitor Log',roles:'Roles',team:'Team and Access'};
-const HX_PAGE_MOD={recall:'recall',receiving:'receiving',inventory:'receiving',holds:'holds',shipping:'shipping',suppliers:'suppliers',training:'training',qms:'qms',sops:'sops',rulebook:'rulebook',audit:'audit',batches:'batch',testing:'testing',stickers:'stickers',visitors:'logs_visitor'};
+const HX_PAGE_MOD={complaints:'complaints',intaudits:'intaudits',recall:'recall',receiving:'receiving',inventory:'receiving',holds:'holds',shipping:'shipping',suppliers:'suppliers',training:'training',qms:'qms',sops:'sops',rulebook:'rulebook',audit:'audit',batches:'batch',testing:'testing',stickers:'stickers',visitors:'logs_visitor'};
 function stdLevelOf(m){return m==='4A'?2:m==='5'?3:1;}
 function stdErr(e){
   const m=String((e&&e.message)||e);
@@ -5167,6 +5516,18 @@ async function loadStdEvidence(st,lic){
     const m=r.filter(function(x){return x.kind==='mock'&&x.status==='closed';})[0];
     return {last:m?m.ended_at:'',dur:m?m.duration_minutes:null,result:m?m.result:'',mocks:r.filter(function(x){return x.kind==='mock'&&x.status==='closed'&&x.ended_at>=since;}).length,real:r.filter(function(x){return x.kind!=='mock';}).length,openReal:r.filter(function(x){return x.kind!=='mock'&&x.status==='open';}).length,
       contacts:c.length,team:c.filter(function(x){return x.kind==='team';}).length,missing:RC_REQUIRED.filter(function(k){return !c.some(function(x){return x.kind===k;});}),stale:c.filter(function(x){return !x.verified_on||x.verified_on<trAddMonths(todayStr(),-12);}).length,tr:tr};}));
+  if(can('complaints',1))jobs.push(tryGet('complaints',async function(){
+    const r=((await db.get('hx_complaints','license_id=eq.'+enc(lid)+'&select=id,type,status,received_on,closed_at,due_date,rating,investigator,deviation_id,corrective_action,license_id&limit=20000'))||[]).filter(function(x){return x.license_id===lid&&x.status!=='cancelled';});
+    const y=since.slice(0,10),c=r.filter(function(x){return x.type!=='feedback'&&x.received_on>=y;}),fb=r.filter(function(x){return x.type==='feedback'&&x.received_on>=y&&x.rating;});
+    return {n:c.length,open:c.filter(cmpOpen).length,late:r.filter(cmpLate).length,closed:c.filter(function(x){return x.status==='closed';}).length,ca:c.filter(function(x){return x.deviation_id||String(x.corrective_action||'').trim();}).length,
+      ae:c.filter(function(x){return x.type==='adverse_event';}).length,fb:fb.length,avg:fb.length?Math.round(fb.reduce(function(n,x){return n+x.rating;},0)*10/fb.length)/10:null,last:r.map(function(x){return x.received_on;}).sort().pop()||''};}));
+  if(can('intaudits',1))jobs.push(tryGet('intaudits',async function(){
+    const a=((await db.get('hx_audits','license_id=eq.'+enc(lid)+'&select=id,status,audit_date,clauses,independent,shared_on,license_id'))||[]).filter(function(x){return x.license_id===lid;});
+    const f=((await db.get('hx_audit_findings','license_id=eq.'+enc(lid)+'&select=id,status,due_date,deviation_id,license_id'))||[]).filter(function(x){return x.license_id===lid;});
+    let lvl=1;try{const ls=((await db.get('hx_license_standards','license_id=eq.'+enc(lid)+'&select=target_level,status,license_id'))||[]).filter(function(x){return x.license_id===lid&&x.status!=='Withdrawn';})[0];if(ls)lvl=ls.target_level;}catch(e){}
+    const cov=iaCoverage(a,lvl),done=a.filter(function(x){return (x.status==='completed'||x.status==='closed')&&x.audit_date>=since.slice(0,10);});
+    return {pct:cov.all.length?Math.round(cov.done*100/cov.all.length):0,done:cov.done,total:cov.all.length,audits:done.length,find:f.length,open:f.filter(function(x){return x.status==='open';}).length,late:f.filter(function(x){return x.status==='open'&&x.due_date&&x.due_date<todayStr();}).length,
+      viaDev:f.filter(function(x){return x.deviation_id;}).length,shared:done.filter(function(x){return x.shared_on;}).length,last:done.map(function(x){return x.audit_date;}).sort().pop()||''};}));
   jobs.push(tryGet('roles',async function(){const rs=ACC.roles||[];return {n:rs.length,noReq:rs.filter(function(r){return !String(r.requirements||'').trim()||!String(r.description||'').trim();}).length};}));
   await Promise.all(jobs);
   return E;
@@ -5232,6 +5593,13 @@ function clauseEvidence(x,E){
       if(cl==='1.8'||cl==='1.11')out.push({label:'Recall team and contacts',value:C.team+' team member'+(C.team===1?'':'s')+' \u00b7 '+C.contacts+' contacts \u00b7 '+(C.real?C.real+' real recall'+(C.real===1?'':'s')+'/withdrawal'+(C.real===1?'':'s'):'no real recalls'),page:'recall',
         warn:C.missing.length?'Missing: '+C.missing.map(function(k){return RC_KINDS[k];}).join(', '):(C.stale?C.stale+' contact'+(C.stale===1?'':'s')+' not verified in 12 months':(C.openReal?C.openReal+' recall open':''))});
       if(cl==='2A.10.1'&&C.tr)out.push({label:'Traceability coverage',value:C.tr.back+' of '+C.tr.shipped+' shipped batch'+(C.tr.shipped===1?'':'es')+' (12 months) traced back to received lots',page:'recall',warn:C.tr.shipped&&C.tr.back<C.tr.shipped?(C.tr.shipped-C.tr.back)+' shipped without input lots recorded':''});}
+    else if(p==='complaints'&&E.complaints){const K=E.complaints,cl=x.clause;
+      if(cl==='5.3')out.push({label:'Customer feedback',value:K.fb+' feedback record'+(K.fb===1?'':'s')+' in 12 months'+(K.avg!=null?' \u00b7 average satisfaction '+K.avg+' / 5':''),last:K.last,page:'complaints',warn:K.fb?'':'No customer feedback recorded'});
+      out.push({label:'Complaints',value:K.n+' complaint'+(K.n===1?'':'s')+' in 12 months \u00b7 '+K.closed+' closed with investigator, investigation and resolution \u00b7 '+K.ca+' with corrective action / CAPA \u00b7 '+K.ae+' adverse event'+(K.ae===1?'':'s')+' \u00b7 trends by category, lot and customer',last:K.last,page:'complaints',
+        warn:K.late?K.late+' overdue':''});}
+    else if(p==='intaudits'&&E.intaudits){const I=E.intaudits;
+      out.push({label:'Internal audits',value:I.done+' of '+I.total+' CSQ clauses audited in 12 months ('+I.pct+'%) \u00b7 '+I.audits+' audit'+(I.audits===1?'':'s')+' by independent auditors \u00b7 '+I.find+' finding'+(I.find===1?'':'s')+' ('+I.open+' open, '+I.viaDev+' through CAPA) \u00b7 results shared for '+I.shared,last:I.last,page:'intaudits',
+        warn:!I.audits?'No internal audit in 12 months':(I.pct<100?(I.total-I.done)+' clauses not audited in 12 months':(I.late?I.late+' finding'+(I.late===1?'':'s')+' overdue':''))});}
     else if(p==='roles'&&E.roles)out.push({label:'Roles',value:E.roles.n+' defined role'+(E.roles.n===1?'':'s')+(x.clause==='2A.13.1'?' \u00b7 '+(E.roles.n-E.roles.noReq)+' with duties and requirements':''),page:'roles',
       warn:!E.roles.n?'No roles defined':(x.clause==='2A.13.1'&&E.roles.noReq?E.roles.noReq+' role'+(E.roles.noReq===1?'':'s')+' missing duties or requirements':'')});
   });
@@ -6202,7 +6570,7 @@ function App(){
   if(isAdmin)nav.push({id:'team',label:'Team and Access'},{id:'roles',label:'Roles'});
   if(can('audit',1))nav.push({id:'audit',label:'Audit Trail'});
   const anyLog=LOG_TYPES.some(function(t){return can(LOG_MOD[t.id],1);});
-  const mods=[can('qms',1)&&['qms','QMS'],can('training',1)&&['training','Training'],can('sops',1)&&['sops','SOPs'],can('suppliers',1)&&['suppliers','Suppliers'],can('receiving',1)&&['receiving','Receiving'],can('holds',1)&&['holds','Hold and Release'],can('shipping',1)&&['shipping','Shipping'],can('recall',1)&&['recall','Traceability and Recall'],can('logs_visitor',1)&&['visitors','Visitor Log'],anyLog&&['logs','Facility Logs'],(can('products',1)||can('formbank',1)||can('cogs',1))&&['products','Products'],can('batch',1)&&['batches','Batch Tracker'],can('testing',1)&&['testing','Testing'],can('stickers',1)&&['stickers','Compliance Stickers']].filter(Boolean);
+  const mods=[can('qms',1)&&['qms','QMS'],can('complaints',1)&&['complaints','Complaints'],can('intaudits',1)&&['intaudits','Internal Audits'],can('training',1)&&['training','Training'],can('sops',1)&&['sops','SOPs'],can('suppliers',1)&&['suppliers','Suppliers'],can('receiving',1)&&['receiving','Receiving'],can('holds',1)&&['holds','Hold and Release'],can('shipping',1)&&['shipping','Shipping'],can('recall',1)&&['recall','Traceability and Recall'],can('logs_visitor',1)&&['visitors','Visitor Log'],anyLog&&['logs','Facility Logs'],(can('products',1)||can('formbank',1)||can('cogs',1))&&['products','Products'],can('batch',1)&&['batches','Batch Tracker'],can('testing',1)&&['testing','Testing'],can('stickers',1)&&['stickers','Compliance Stickers']].filter(Boolean);
   let body;
   if(page==='locations')body=el(Locations,{profile:profile,states:states,licenses:licenses,reload:loadData,openRulebook:function(id){pickState(id);setPage('rulebook');}});
   else if(page==='visitors'&&can('logs_visitor',1))body=el(VisitorLog,{key:licId,state:st,license:lic});
@@ -6216,6 +6584,8 @@ function App(){
   else if(page==='roles'&&isAdmin)body=el(Roles);
   else if(page==='audit'&&can('audit',1))body=el(AuditTrail,{state:st});
   else if((page==='receiving'&&can('receiving',1))||(page==='inventory'&&can('receiving',1))||(page==='holds'&&can('holds',1))||(page==='shipping'&&can('shipping',1)))body=el(MatPage,{key:licId,state:st,license:lic,tab:page,go:setPage});
+  else if(page==='complaints'&&can('complaints',1))body=el(ComplaintsPage,{key:licId,state:st,license:lic,go:setPage});
+  else if(page==='intaudits'&&can('intaudits',1))body=el(AuditsPage,{key:licId,state:st,license:lic,go:setPage});
   else if(page==='recall'&&can('recall',1))body=el(RecallPage,{key:licId,state:st,license:lic,go:setPage});
   else if(page==='suppliers'&&can('suppliers',1))body=el(SuppliersPage,{key:licId,state:st,license:lic,licenses:licenses,go:setPage});
   else if(page==='training'&&can('training',1))body=el(TrainingPage,{key:licId,state:st,license:lic,go:setPage});
