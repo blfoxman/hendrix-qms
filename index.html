@@ -292,7 +292,8 @@ function Dashboard(props){
         el('div',{className:'muted',style:{marginTop:4}},lic?[lic.license_type,lic.license_number].filter(Boolean).join('  \u00b7  '):'Add one under Locations.'),
         el('div',{className:'muted',style:{marginTop:10}},licsOfState.length+' license'+(licsOfState.length===1?'':'s')+' in '+(st?st.name:'this state'))),
       el('div',{className:'card gold'},el('div',{className:'k'},'State rulebook'),el('div',{className:'v'},(props.ruleCount===null||props.ruleCount===undefined?'...':props.ruleCount)+' rules'),
-        el('div',{className:'muted',style:{marginTop:4}},'Only '+(st?st.name:'this state')+"'s own rules are ever loaded here."),el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go('rulebook');}},'Open rulebook'))),
+        el('div',{className:'muted',style:{marginTop:4}},'Only '+(st?st.name:'this state')+"'s own rules are ever loaded here."),el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go('rulebook');}},'Open rulebook')),
+      el(StdDashCard,{license:lic,go:props.go})),
     !lic&&isAdmin&&el('div',{className:'empty',style:{marginBottom:14}},'This state has no license yet. ',el('a',{href:'#',style:{color:'var(--gold-hi)'},onClick:function(e){e.preventDefault();props.go('locations');}},'Add one')),
     el('div',{className:'card'},el('h3',null,'Coming next'),
       el('div',{className:'muted',style:{marginBottom:10}},'Modules are added one at a time and tested before the next. Each starts blank for every state and license.'),
@@ -1880,7 +1881,7 @@ function Products(props){
 /* ---------- Audit trail: history, void, admin page ----------
    The database writes every change to hx_audit_log (append-only). Records are never deleted:
    they are voided with a reason. Every change to a record needs a reason for change. */
-const AUDIT_AREAS={hx_label_templates:'Label templates',hx_tests:'Testing record',hx_roles:'Roles',hx_batches:'Batch record',hx_facility_log:'Facility log entry',hx_visitor_log:'Visitor log',hx_log_lists:'Facility log lists',hx_rules:'Rulebook',
+const AUDIT_AREAS={hx_standards:'Standards',hx_standard_clauses:'Standard clauses',hx_license_standards:'Standard adoption',hx_conformance:'Standard conformance',hx_label_templates:'Label templates',hx_tests:'Testing record',hx_roles:'Roles',hx_batches:'Batch record',hx_facility_log:'Facility log entry',hx_visitor_log:'Visitor log',hx_log_lists:'Facility log lists',hx_rules:'Rulebook',
   hx_states:'States',hx_licenses:'Licenses',hx_profiles:'Team and access',hx_skus:'SKUs',hx_flavors:'Flavors',hx_formulations:'Formulations',hx_cost_library:'Ingredient prices'};
 const AUDIT_SKIP=['voided_by','voided_at','updated_at','edit_reason'];
 function auditVal(v){
@@ -2537,6 +2538,7 @@ const ACC={profile:null,roles:[]};
 const ACCESS_MODULES=[
   {id:'rulebook',label:'Rulebook',grp:'General',help:'View rules / add and edit / delete'},
   {id:'audit',label:'Audit Trail',grp:'General',max:1,help:'View only'},
+  {id:'standards',label:'Standards (CSQ)',grp:'General',help:'View the standard and conformance / update conformance, evidence and files / add the standard, adopt it for a license, set the target level'},
   {id:'batch',label:'Batch Tracker',grp:'Production',help:'View / create and continue (fill blanks) / change filled values with a reason and void'},
   {id:'products',label:'Products (SKUs and flavors)',grp:'Production',help:'View / add and edit / delete'},
   {id:'formbank',label:'Formulation Bank (recipes)',grp:'Production',help:'View / add and edit / delete'},
@@ -2698,16 +2700,16 @@ function Team(props){
 const LOGS_PROD=['logs_sanitation','logs_waste','logs_scale','logs_equipment','logs_temp','logs_env'];
 function pm(o,list,lv){const x={...o};(list||[]).forEach(function(k){x[k]=lv;});return x;}
 const STARTER_ROLES=[
-  ['General Manager','Leadership. Edit everywhere; Full on batches and every log; sees recipes, prices and the audit trail.',{rulebook:'editor',audit:'read',batch:'admin',testing:'admin',stickers:'admin',products:'editor',formbank:'read',cogs:'read',logs:'admin'}],
-  ['Assistant of General Manager','Leadership support. Edit on batches, products and every log; sees recipes and the audit trail.',{rulebook:'editor',audit:'read',batch:'editor',testing:'editor',products:'editor',formbank:'read',logs:'editor'}],
-  ['Compliance Officer','Full on every log and the rulebook; sees batches, products and the audit trail.',{rulebook:'admin',audit:'read',logs:'admin',batch:'read',testing:'admin',stickers:'admin',products:'read'}],
+  ['General Manager','Leadership. Edit everywhere; Full on batches and every log; sees recipes, prices and the audit trail.',{rulebook:'editor',standards:'editor',audit:'read',batch:'admin',testing:'admin',stickers:'admin',products:'editor',formbank:'read',cogs:'read',logs:'admin'}],
+  ['Assistant of General Manager','Leadership support. Edit on batches, products and every log; sees recipes and the audit trail.',{rulebook:'editor',standards:'read',audit:'read',batch:'editor',testing:'editor',products:'editor',formbank:'read',logs:'editor'}],
+  ['Compliance Officer','Full on every log, the rulebook and standards (CSQ); sees batches, products and the audit trail.',{rulebook:'admin',standards:'admin',audit:'read',logs:'admin',batch:'read',testing:'admin',stickers:'admin',products:'read'}],
   ['Security Manager','Full on the security and visitor logs.',{rulebook:'read',logs_security:'admin',logs_visitor:'admin'}],
   ['Security Officer','Fills the security and visitor logs.',{rulebook:'read',logs_security:'editor',logs_visitor:'editor'}],
   ['Sanitation','Fills the sanitation, waste and pest control logs.',{logs_sanitation:'editor',logs_waste:'editor',logs_pest:'editor'}],
   ['Team Member','Continues batches; fills the sanitation and temp / humidity logs.',{batch:'editor',products:'read',logs_temp:'editor',logs_sanitation:'editor'}],
   ['Inventory Manager','Sees products and batches; fills the waste log.',{products:'read',batch:'read',logs_waste:'editor'}],
   ['Extraction Manager','Full on batches; fills the scale, equipment and temp / humidity logs.',{batch:'admin',testing:'editor',products:'read',formbank:'read',logs_scale:'editor',logs_equipment:'editor',logs_temp:'editor'}],
-  ['Production Manager','Full on batches; edits products; fills the production logs.',pm({batch:'admin',testing:'editor',stickers:'editor',products:'editor',formbank:'read',rulebook:'read'},LOGS_PROD,'editor')],
+  ['Production Manager','Full on batches; edits products; fills the production logs.',pm({batch:'admin',testing:'editor',stickers:'editor',products:'editor',formbank:'read',rulebook:'read',standards:'editor'},LOGS_PROD,'editor')],
   ['Sales Manager','Sees products.',{products:'read'}],
   ['Production Lead','Creates and continues batches; fills the production logs.',pm({batch:'editor',testing:'read',stickers:'read',products:'read'},['logs_sanitation','logs_scale','logs_equipment','logs_temp'],'editor')]];
 function accessSummary(perms){
@@ -2781,6 +2783,518 @@ function Roles(){
           el('button',{className:'btn danger sm',onClick:function(){del(r,n);}},'Delete')));
     })),
     edit&&el(RoleEditor,{role:edit,count:(roles||[]).length,onClose:function(){setEdit(null);},onDone:function(){setEdit(null);load();}}));
+}
+
+/* ---------- Standards: CSQ Standard for Manufacturing v2.0 (October 2025) ----------
+   Clause numbers and titles follow the published standard. Summaries are short paraphrases for day-to-day use;
+   the full text is the licensed standard document (upload it on the Standards page). */
+const CSQ_MFG={code:'CSQ-MFG',name:'CSQ Standard for Manufacturing',publisher:'Cannabis Safety & Quality (ASI Global Standards, LLC)',version:'2.0',issued:'October 2025',
+  scope:'Manufacture and packing of cannabinoid products for inhalation, ingestion and topical use in a cGMP setting, regardless of regulatory classification. Does not include cultivation or extraction of cannabinoid herbal materials.',
+  levels:[{level:1,name:'Level 1 - cGMP',modules:['1','2A','3C'],audit:'Announced. At least 1 day onsite, 0.5 day report.'},
+    {level:2,name:'Level 2 - cGMP + HACCP',modules:['1','2A','3C','4A'],audit:'Announced. At least 1.5 days onsite, 1 day report.'},
+    {level:3,name:'Level 3 - cGMP + HACCP + QMS',modules:['1','2A','3C','4A','5'],audit:'UNANNOUNCED. At least 2 days onsite, 1 day report.'}],
+  modules:{'1':'Requirements for All Licensed Operations','2A':'Current Good Manufacturing Practices','3C':'Cannabinoid Products and Processes','4A':'Hazard Analysis Critical Control Points (HACCP)','5':'Advanced Safety and Quality Management Systems'},
+  notes:['Every initial certification audit adds a 1-day offsite documentation review.','A mock recall must be done every year and finish in under 2 hours; the auditor also runs a traceability exercise during the audit.','Pest program effectiveness: no evidence of pests inside the facility at the audit.']};
+// [clause, module, title, summary, hendrix pages, what Hendrix already holds, planned Hendrix modules, applies to]
+const CSQ_MFG_CLAUSES=[
+ ['1.1','1','Safety and quality management system','Keep a documented safety and quality system (paper or electronic) that covers the CSQ requirements, names the people and backups who maintain it, holds every SOP, program, form, log, diagram and training material plus local regulations, is available to staff, sets the rules for using the CSQ logo, and is kept up to date.',['rulebook','logs','team'],'Hendrix is the electronic system; Rulebook holds each state\'s regulations; logs and records.',['SOPs']],
+ ['1.2','1','Management commitment','Have a written safety, quality and compliance policy with measurable objectives, shared with staff, backed by resources, that keeps staff informed of new science and regulation and is reviewed regularly.',[],'',['SOPs','KPIs']],
+ ['1.3','1','Regulatory compliance','Procedures that keep all operations and products compliant where they are made and sold, with compliance staff trained and current on regulations.',['rulebook','locations'],'Rulebook per state; licenses per state.',['Training']],
+ ['1.4','1','Documentation and recordkeeping','Control documents and records: a master list, document type and current version, approved changes and replacement of old versions, legible and available records, secure storage for at least 1 year past the date on the label (or longer if required), ink only and no white-out on paper.',['audit'],'Audit trail: every change kept with who, when and why; records are voided, never deleted.',['SOPs']],
+ ['1.5','1','Internal audits','Audit every applicable CSQ requirement at least once a year with competent auditors who do not audit their own work; record findings and corrective actions, share results, and close findings through CAPA.',[],'',['Internal audits']],
+ ['1.6','1','Corrective and preventive actions (CAPA)','Document every deviation and nonconformance clearly with root cause (when an authorized person decides one is needed), owner, immediate correction, timescale, effectiveness check, and review the trend at least once a year.',[],'',['CAPA']],
+ ['1.7','1','Complaint management','Name who investigates and resolves complaints, track and analyze complaint data, and record the corrective actions taken to stop them happening again.',[],'',['Complaints']],
+ ['1.8','1','Product recalls and withdrawals','Recall and withdrawal procedures that meet regulation: a recall team with roles, an up-to-date contact list (team, emergency services, customers, suppliers, regulators, certification body), a communication plan, recovery or disposal of product, and a yearly mock recall completed in under 2 hours.',['batches','testing'],'Batch numbers and final package tags.',['Recall','Receiving','Shipping']],
+ ['1.9','1','Product defense','Protect against theft, bioterrorism and intentional adulteration: threat assessment, access to sensitive areas limited to authorized people, cannabis materials, waste and product secured, secure transport, training for security and transport staff, and a yearly review and test.',['visitors','logs','roles'],'Visitor Log and kiosk; security malfunction and security inspection logs; role-based access in Hendrix.',['Training']],
+ ['1.10','1','Fraud prevention','Assess vulnerability to mislabeling, substitution, dilution and counterfeiting, control what is found, verify label claims (strain, cannabinoid content and similar), and review and test yearly.',['stickers','testing'],'Sticker potency is taken from the COA; COA tag mismatches are flagged.',[]],
+ ['1.11','1','Crisis management','Crisis procedures with the people responsible and their contacts, emergency contacts, response to foreseeable disasters, how affected product is found, isolated and released, how authorities and customers are told, and a yearly review and test.',[],'',['Recall']],
+ ['2A.1.1','2A','Facility construction and design','Buildings, grounds and utilities suit their purpose and prevent cross-contamination: cleanable surfaces in good repair, enough and protected lighting, shatterproof or protected glass, ventilation, sealed and screened openings, handwash stations at production entries (potable warm water, hands-free soap, paper towels), plumbing and wastewater that work, restrooms, changing and break areas sized for the shift, required signage, and clear aisles.',[],'QR signs for posted signage.',['SOPs']],
+ ['2A.1.2','2A','Facility and infrastructure maintenance','Keep buildings, grounds and amenities in good repair and clean: no debris, standing water or excessive dust, vegetation managed against pests, restrooms and break areas stocked and sanitary, roadways and docks clear.',['logs'],'Sanitation Log (weekly and monthly areas); Equipment Maintenance Log.',[]],
+ ['2A.2.1','2A','Equipment','Equipment and utensils suit their purpose, are installed to regulation, cleanable and kept in repair, stored safely, have approved controls, hoses on racks off the floor, and measuring instruments that are accurate and maintained.',[],'',['Equipment register']],
+ ['2A.2.2','2A','Maintenance','Maintenance procedures with a master preventive maintenance schedule (including manufacturer requirements), records of unplanned work, a way for staff to report repairs that threaten product, no contamination left after maintenance, and control of temporary repairs so they do not become permanent.',['logs'],'Equipment Maintenance Log records work done.',['Equipment register']],
+ ['2A.2.3','2A','Calibration','Every instrument that affects safety or quality is listed and identified with a valid calibration certificate and due date, calibrated on time by recognized methods, with weights traceable to a reference standard (NIST, ASTM), and protected from damage or adjustment.',['logs'],'Scale Calibration Log.',['Equipment register']],
+ ['2A.3','2A','Cleaning and sanitation','Cleaning procedures say what is cleaned, how and with which chemicals, how often (by risk), who cleans and who verifies; tools are color-coded or labeled, clean and dirty tools are stored apart, and cleaning never puts product at risk.',['logs'],'Sanitation Log: daily, weekly and monthly areas; equipment sanitized and cleaned.',[]],
+ ['2A.4','2A','Waste management','Identify, separate and dispose of every waste type to regulation: waste areas and containers labeled, cleaned, emptied regularly, closed, restricted when required, and wastewater treated when required.',['logs'],'Waste Destruction Log: categories, 4 camera angles, rendering and disposal locations, methods.',[]],
+ ['2A.4.1','2A','Cannabinoid waste','Cannabinoid waste is never mixed with other waste streams.',['logs'],'Waste Destruction Log.',['SOPs']],
+ ['2A.4.2','2A','Non-cannabinoid waste','Each non-cannabinoid waste stream (municipal, hazardous, recyclables) is kept separate.',[],'',['SOPs']],
+ ['2A.5.1','2A','Integrated pest management program','Risk-based pest program reviewed yearly: responsibilities, an accurate trap and bait station map, stations placed safely, approved pesticides with SDS, monitoring frequency, sightings recorded and trended, contractor recommendations acted on, rules for touching trap contents, pesticide use and storage to label and law, and cleanup of exposed areas and product.',['logs'],'Pest Control Log.',['Chemical register']],
+ ['2A.5.2','2A','Integrated pest management personnel','Pest control staff and contractors are trained, licensed when required, use only approved products, and leave a written report of findings and products used.',[],'',['Suppliers']],
+ ['2A.6','2A','Facility air safety and quality','Air entering production areas is filtered and monitored by risk, tested at least yearly by an ISO/IEC 17025 lab, and air handling controls contaminants, fumes and odors.',['logs'],'Temp / Humidity Log.',['Facility tests']],
+ ['2A.7','2A','Facility water safety and quality','Water is potable, filtered and monitored by risk, tested at least yearly by an ISO/IEC 17025 lab, tempered for washing, treated water meets spec, backflow devices are fitted and tested yearly, and the water system is monitored.',[],'',['Facility tests','Equipment register']],
+ ['2A.8','2A','Environmental monitoring','Environmental monitoring program: who runs it and their competence, a risk assessment of hazards per area, sampling methods, frequency and limits, recording and trending, and a yearly review.',['logs'],'Environmental Monitoring Log.',[]],
+ ['2A.9.1','2A','Dry goods storage','Dry goods stored in identified, suitable areas, off the floor and away from walls, and not mixed.',[],'',['SOPs']],
+ ['2A.9.2','2A','Chemical controls and storage','Chemical approval process and approved list, SDS on file for every chemical, storage to SDS and label, food-grade kept apart from non-food-grade, original or labeled containers, ventilated and restricted storage with PPE, first aid, spill kits and a chemical list, and disposal to regulation.',[],'',['Chemical register']],
+ ['2A.9.3','2A','Temperature and atmosphere controlled storage','Goods needing temperature or atmosphere control have defined specs; storage areas are identified, clean, working and fitted with monitoring devices; cold and frozen units have thermometers; goods off the floor and not mixed; condensation drains away from product.',['logs'],'Temp / Humidity Log.',[]],
+ ['2A.9.4','2A','Shipping and receiving','Loading and unloading limit damage: inspection before loading or unloading, minimal exposure, no cross-contamination, goods secured from tampering, and cannabis shipped and received to regulation.',[],'',['Receiving','Shipping']],
+ ['2A.10.1','2A','Identification and traceability','Every inventory item is identified through the process, finished product is traceable one step forward to the customer, materials and supplies one step back to the supplier, traceability is kept through rework, and it is tested at least yearly in a mock recall.',['batches','testing'],'Batch numbers, final package tags, state tracking system (METRC).',['Receiving','Shipping','Recall']],
+ ['2A.10.2','2A','Acceptance and release','Incoming materials meet specs, are inspected for damage, arrive with a COA or certificate of conformance, are sampled and tested when needed, have their documents reviewed before approval or rejection, and rejected goods are returned or held apart.',[],'',['Receiving']],
+ ['2A.10.3','2A','Stock management','FIFO (or similar) rotation for finished product, WIP, rework and supplies; nothing used past its date; overflow storage monitored; labels, packaging, devices and excise stamps counted in an inventory system and protected from theft.',[],'',['Inventory']],
+ ['2A.10.4','2A','Hold and release (quarantine)','Nonconforming and returned goods are clearly marked, quarantined so they cannot be released by accident, decided on only by qualified authorized people, and released, moved or destroyed to regulation.',['testing'],'Testing status (Pending, Failed, Retest); final results changed only with Full access and a reason.',['Hold and release']],
+ ['2A.11','2A','Supplier approval and vendor qualification','Name each supplier and vendor type and the specs they must meet, verify them, select, approve and monitor them, keep an approved list, name who approves, allow emergency suppliers with checks, require ethical sourcing, audit contract manufacturers, and review all suppliers yearly.',[],'',['Suppliers']],
+ ['2A.12.1','2A','Standard operating procedures','Documented SOPs for producing and processing cannabinoid materials and products that conform to CSQ and regulation.',['batches'],'Batch Tracker records follow each process.',['SOPs']],
+ ['2A.12.2','2A','Process flow and segregation','Document how people and product move through the facility to keep segregation, with a map of area designations and their risks.',[],'',['SOPs']],
+ ['2A.12.3','2A','Pre-operational inspections (line clearance)','Before production, record a check that areas and equipment are clean, within maintenance and calibration dates and ready, with any problem and correction noted.',[],'',['Line clearance']],
+ ['2A.12.4','2A','Materials and supplies','Every material and supply has specs and is identified by type, use and hazard; meets regulation and is approved for use; is fit for purpose; has a yearly risk assessment; label information is kept on file; and is stored and used to label instructions.',['products'],'Products: ingredient price library and formulations.',['Receiving','Suppliers']],
+ ['2A.12.5','2A','Rework','Rework is identified and dated for traceability, each batch inspected and analyzed before use, used before it would expire in the finished product, safe, and like-to-like.',[],'',['Rework']],
+ ['2A.12.6','2A','Cross-contamination controls','Keep foreign matter out: exclude contamination sources, no loose objects overhead, inspection of facility and tools, a list of sources that cannot be removed with protective measures, control of blades, glass and brittle items, dust and chemicals, cleanup and release of contaminated areas, decisions on affected product, detection and removal methods, investigation, and calibrated detection equipment.',[],'',['SOPs','CAPA']],
+ ['2A.12.7','2A','Allergen management','Allergen labeling meets the law, allergen labels are verified, allergens from materials, suppliers, staff and visitors are risk-assessed, and cleaning, changeover and storage prevent cross-contact.',['stickers','products'],'Sticker templates have an ingredients field.',[]],
+ ['2A.12.8','2A','Product labeling and packaging','Label specs that meet CSQ and regulation; label content (potency, ingredients, allergens, warnings, claims, batch) verified against the batch; labels reviewed when materials, processes or rules change; only the labels and packaging a batch needs are issued, then reconciled; no mislabeled or damaged product; correct, inspected, clean packaging materials and tools.',['stickers','testing'],'Sticker templates per SKU and flavor with approval number; potency printed from the COA; template changes in the audit trail.',[]],
+ ['2A.12.9','2A','Product sampling and testing','Finished product meets spec and regulation before release; samples are representative; samplers are competent; methods, frequency and limits are defined and results trended; held product is released after review; recognized methods; compliance labs accredited to ISO/IEC 17025; internal labs separated; retention samples kept when required.',['testing','batches'],'Testing: per final package tag, lab and lab license, COA stored privately, COA read by AI with tag check.',['Suppliers']],
+ ['2A.13.1','2A','Personnel roles and responsibilities','Everyone in the facility is classified by role; each role has defined duties and requirements (certifications, education, experience, training).',['roles','team'],'Roles and access per person.',[]],
+ ['2A.13.2','2A','Personnel training','Train everyone, including temps and contractors, before they work: minimum training for all, training per role, a training matrix, yearly refreshers, regular assessments, legal, cGMP, cannabis safety, hygiene, product defense and job training; at least one person with CSQ program overview training; qualified trainers; training in a language staff understand; records kept at least for the length of employment.',['roles'],'Roles (the training matrix will hang off them).',['Training']],
+ ['2A.13.3','2A','Personnel health (illness and injuries)','Staff know the symptoms that keep them off product and how to report them; no handling product with open wounds; minor cuts covered with bandage and glove; bodily fluid spills quarantined, cleaned and released by authorized people.',[],'',['SOPs']],
+ ['2A.13.4','2A','Personnel hygiene and cleanliness','Staff come to work clean; no false nails, nail polish or false eyelashes; no heavy perfume; eating, drinking and smoking only in permitted areas; protect product from sweat and skin medicines; smokers wash hands on return; hair can be contained.',[],'',['SOPs','Training']],
+ ['2A.13.5','2A','Clothing, jewelry and personal belongings','No jewelry except a plain band or medical bracelet; jewelry that cannot come off is covered; suitable outer garments; loose items removed and long hair tied back; storage for personal items.',[],'',['SOPs','Training']],
+ ['2A.13.6','2A','Personal protective equipment (PPE)','PPE defined by risk assessment for each task and available to staff and visitors, replaced and cleaned as needed, clean and dirty PPE kept apart, and hair nets, beard nets and gloves worn wherever product is exposed.',[],'',['SOPs']],
+ ['2A.13.7','2A','Handwashing','Staff are trained and wash at the right times (after contamination risks, when soiled, when changing gloves, after breaks, eating, smoking or the restroom); stations are accessible with handwash signs in a language staff understand.',[],'QR sign printing for posted signs.',['SOPs','Training']],
+ ['2A.13.8','2A','Contractors, service providers and visitors','Visitors and contractors stay out of production when ill, acknowledge the facility\'s cGMP rules, wear suitable clothing and PPE, remove jewelry and loose items, and follow hygiene and handwashing rules.',['visitors'],'Visitor Log with QR kiosk sign-in per state and license.',[]],
+ ['3C.1.1','3C','Manufacturing activities','Manufacturing follows cGMP and protects product from adulterants, foreign matter and residual solvents: areas identified with signage, simultaneous activities segregated, solvent and chemical levels in the final product within regulation and spec.',['batches','testing'],'Batch records; residual solvent results on COAs.',[],'All products'],
+ ['3C.1.2','3C','Manufacturing inputs and controls','Every manufacturing input is declared with safety and quality specs, and its use is controlled, recorded and tracked.',['products','batches'],'Formulations; batch records capture inputs used.',['Receiving'],'All products'],
+ ['3C.1.3','3C','Air, CO2 and other process gases','Process gases suit their use and are monitored: filtered, dry and oil-free; at least 99.5% pure unless specified; CO2 beverage grade or better (never medical grade).',[],'',['Receiving'],'Processes using gases'],
+ ['3C.1.4','3C','Ethanol and other liquid organic solvents','Solvents suit their use and are monitored: at least 99.5% pure; ethanol food grade and not denatured (approved denaturants reduced to legal levels if used); only ethanol may be an ingredient, and it must be food grade.',['batches'],'Ethanol and BHO batch records track solvent use.',['Receiving'],'Processes using solvents'],
+ ['3C.1.5','3C','Water used during manufacturing','Water used as an ingredient or in processing is potable, at least 99.5% pure, evaluated as a contamination source, tested on a continuing basis, informed by past tests and land use, with wastewater monitored.',[],'',['Facility tests'],'Products made with water'],
+ ['3C.1.6','3C','Water ice and dry ice','Ice meets water specs; ice machines installed to regulation with storage and production parts emptied and cleaned at least weekly; dry ice used sparingly and never touching product.',['logs'],'',['SOPs'],'Processes using ice or dry ice'],
+ ['3C.1.7','3C','Other solid and liquid processing inputs','Media, catalysts, reactants and similar inputs are at least 99.5% pure and food grade, or justified by a toxicological risk assessment; non-food-grade inputs are declared and reduced to safe levels in the final product.',[],'',['Receiving'],'Processes using media or reagents'],
+ ['3C.1.8','3C','Non-cannabinoid ingredients','Terpenes and other ingredients are food grade or justified by a toxicological risk assessment; non-food-grade ingredients are declared and reduced to safe levels.',['products'],'Formulations list ingredients.',['Receiving','Suppliers'],'Formulated products'],
+ ['3C.1.9','3C','Indoor air quality, airflow and environment','Production areas have air quality specs; air is conditioned, filtered, treated and monitored; air handling is checked; airflow, humidity and temperature have min and max limits and air never stagnates; milling and grinding areas are monitored for dust with dust handling and PPE.',['logs'],'Temp / Humidity Log.',[],'All products'],
+ ['3C.1.10','3C','Blending, compounding, formulation and mixing','Defined procedures and equipment for blending; every ingredient measured and added at the right step; parameters documented to spec; batches homogeneous before dispensing; rework approved by qualified staff; equipment sized for the batch.',['products','batches'],'Formulations; Batch Tracker calculations; changes to filled values need Full access and a reason.',[],'Blended and formulated products'],
+ ['3C.2.1','3C','Cannabinoid herbal material products','Dried or frozen flower is protected from foreign matter, chemical and microbial contamination, kept frozen when required, and handled with airflow, ventilation and dust control.',['batches'],'Infused flower, moon rocks and snow caps batch records.',['SOPs'],'Flower products'],
+ ['3C.2.2','3C','Cannabinoid pre-roll products','Pre-rolls are protected from contamination with dust control; ingredients for infused pre-rolls are fit for inhalation (food grade or GRAS alone is not enough).',['batches','products'],'Pre-roll batch type with coating (Kief, Diamond).',['Suppliers'],'Pre-rolls'],
+ ['3C.2.3','3C','Cannabinoid substance products','Concentrates and extracts are protected from contamination; residual solvents (also in solventless products) stay within the stricter of regulation or internal spec; converted or synthetic cannabinoids are declared, specified and tracked.',['testing','batches'],'Testing stores residual solvent results from COAs.',[],'Concentrates and distillate'],
+ ['3C.2.4','3C','Formulated cannabinoid substance products','Formulated substances are protected from contamination, risk-assessed for route of administration and labeled with it, carry allergen declarations when used as ingredients, and use inhalation-grade ingredients when meant for inhalation.',['products'],'SKU specs and formulations.',[],'Cartridge oil and formulated extracts'],
+ ['3C.2.5','3C','Inhalable cannabinoid products','Inhalable products are protected from contamination, risk-assessed for inhalation, and use only ingredients fit for inhalation (food grade or GRAS alone is not enough).',['products','batches'],'',['Suppliers'],'Cartridges and vapes'],
+ ['3C.2.6','3C','Ingestible cannabinoid products','Ingestible products are protected from contamination and every label carries an accurate allergen declaration.',['stickers','batches'],'Sticker templates per SKU.',[],'Gummies and edibles'],
+ ['3C.2.7','3C','Topical-use cannabinoid products','Topicals are protected from contamination, risk-assessed for skin or mucosal absorption and duration of use, and labeled with fragrance, skin irritant and allergen declarations.',[],'',[],'Topicals'],
+ ['4A.1','4A','HACCP system','Develop, document and run a HACCP system based on the 12 Codex Alimentarius steps as part of the quality system.',[],'',['HACCP']],
+ ['4A.2','4A','HACCP team','A documented multidisciplinary HACCP team (quality, sanitation, maintenance, senior management) with one member and one backup certified in an International HACCP Alliance approved course.',['team'],'Team members and roles.',['HACCP']],
+ ['4A.3','4A','Product descriptions and intended use','A description for each finished product: name, safety characteristics (water activity, pH, cannabinoids), ingredients, allergens, packaging, intended use, target market, shelf life, labeling instructions, storage and distribution.',['products','stickers'],'SKU specs, formulations, sticker templates (ingredients, instructions, warning).',['HACCP']],
+ ['4A.4','4A','Flow diagram','A flow diagram for each product and process showing every step, inputs, outsourced steps, rework, waste and by-products, with CCPs marked, reviewed yearly or on change.',['batches'],'Batch Tracker steps per batch type.',['HACCP']],
+ ['4A.5','4A','Hazard analysis','A hazard analysis matching the flow diagram that covers every product, material and packaging, and records each biological, chemical and physical hazard, its cause and its control.',[],'',['HACCP']],
+ ['4A.6','4A','Critical control points','Identify from the hazard analysis the steps that need CCPs, documented so they prevent, remove or reduce each hazard.',[],'',['HACCP']],
+ ['4A.7','4A','Critical limits','Measurable critical limits for each CCP that separate acceptable from unacceptable product.',[],'',['HACCP']],
+ ['4A.8','4A','Monitoring','Documented monitoring that keeps each CCP within its limits.',['batches'],'Batch records capture the process values.',['HACCP']],
+ ['4A.9','4A','Corrective actions','Specific corrective actions for each CCP that bring it back under control and keep affected product from consumers.',[],'',['HACCP','CAPA']],
+ ['4A.10','4A','HACCP validation','Validate control measures and critical limits before use and again after significant product or process changes.',[],'',['HACCP']],
+ ['4A.11','4A','HACCP verification','Ongoing verification that HACCP is followed and works, with a full reanalysis yearly or after significant change.',[],'',['HACCP']],
+ ['5.1.1','5','Quality system personnel and org chart','An organizational chart showing reporting lines and everyone involved in safety, quality and CSQ conformance, with their functions and responsibilities.',['team','roles'],'Team members with roles.',['Org chart']],
+ ['5.1.2','5','Quality policies and objectives','Quality policies and measurable objectives suited to the business, with a process to change, review and keep improving them.',[],'',['KPIs']],
+ ['5.1.3','5','Management review','Senior management reviews the system at least yearly: previous actions, complaints and feedback, internal, external and regulatory audits, risks and corrective actions, resources, CSQ conformance, and changes; minutes kept and shared.',[],'',['Management review']],
+ ['5.1.4','5','Continuous improvement','Measurable improvement goals with KPIs and effectiveness checks, continuing education per role, shared with staff and reviewed at least quarterly.',[],'',['KPIs','Training']],
+ ['5.1.5','5','Change management','A change management plan for people, processes and products: what each change affects, how it is documented and approved, training before use, and who is told (including regulators and the certification body).',['audit'],'Audit trail records every change with a reason.',['Change control']],
+ ['5.1.6','5','Risk management','Risk procedures: the hazard, its root cause, the owner, immediate action, timescale for a permanent fix, verification, and routine surveillance of product safety and quality.',[],'',['Risk register']],
+ ['5.1.7','5','Validation','Validate facilities and equipment with installation, operational and performance qualification (IQ, OQ, PQ), materials through supplier approval, and revalidate yearly and whenever critical limits, cGMPs or CSQ conformance change.',[],'',['Equipment register']],
+ ['5.1.8','5','Verification','Verification procedures that list the activities to verify, who does them, how often, and how they are monitored and recorded.',[],'',['Verification schedule']],
+ ['5.2','5','Safety and quality culture','Everyone acknowledges the safety and quality commitments, training covers anyone who affects product, improvements are planned and measured, and the culture policy is reviewed yearly.',[],'',['SOPs','Training']],
+ ['5.3','5','Customer satisfaction','Know and meet customer requirements, have a channel for product information, feedback and complaints, and measure whether customers are satisfied.',[],'',['Complaints']],
+ ['5.4.1','5','Product and process development','New products and changes are approved by a qualified person, trial runs prove the process when needed, and every product has a full process description and flow diagram kept current.',['products'],'A SKU cannot be switched on without a formulation.',['Change control']],
+ ['5.4.2','5','Product and process specifications','Process specs with limits for every critical parameter, and product specs covering name and form, physical and chemical traits, contaminants, storage, shelf life, serving size, cannabinoid and terpene content, allergens, ingredients, reagents, packaging and devices, excise stamps and label, and customer and legal requirements.',['products','stickers'],'SKU specs, formulations, sticker servings and weight.',[]],
+ ['5.4.3','5','Product and process verification and validation','Verify and validate that products and processes meet spec, with at least three consecutive batches meeting spec unless otherwise required.',['batches','testing'],'Batch and test records per SKU.',[]]];
+const STD_STATUSES=['Not assessed','Conforming','Partial','Not conforming','Not applicable'];
+const STD_TONE={'Not assessed':'off','Conforming':'ok','Partial':'warn','Not conforming':'bad','Not applicable':'off'};
+const STD_COLOR={'Conforming':'#5fbf8a','Partial':'#d4af37','Not conforming':'#e5645a','Not applicable':'#4a473f','Not assessed':'#2a2a2a'};
+const ADOPT_STATUSES=['Following','Audit scheduled','Certified','Suspended','Withdrawn'];
+const HX_PAGE_LABEL={rulebook:'Rulebook',locations:'States and Licenses',audit:'Audit Trail',batches:'Batch Tracker',testing:'Testing',stickers:'Compliance Stickers',
+  products:'Products',logs:'Facility Logs',visitors:'Visitor Log',roles:'Roles',team:'Team and Access'};
+const HX_PAGE_MOD={rulebook:'rulebook',audit:'audit',batches:'batch',testing:'testing',stickers:'stickers',visitors:'logs_visitor'};
+function stdLevelOf(m){return m==='4A'?2:m==='5'?3:1;}
+function stdErr(e){
+  const m=String((e&&e.message)||e);
+  if(/hx_standard|hx_conformance|hx_license_standards/.test(m)&&/does not exist|schema cache|Could not find/i.test(m))return 'Standards are not set up yet - run hendrix_step11.sql in the Hendrix Supabase project.';
+  if(/violates foreign key|hx_conformance_clause_id_fkey|restrict/i.test(m))return 'This clause or standard already has conformance records, so it cannot be removed.';
+  return accessErr(e);
+}
+function stdCounts(clauses,conf){
+  const c={total:clauses.length};STD_STATUSES.forEach(function(s){c[s]=0;});
+  clauses.forEach(function(x){const r=conf[x.id];c[(r&&r.status)||'Not assessed']++;});
+  c.done=c['Conforming']+c['Not applicable'];c.pct=c.total?Math.round(c.done*100/c.total):0;
+  return c;
+}
+function StdBar(props){
+  const c=props.c;
+  return el('div',{style:{display:'flex',height:props.h||10,borderRadius:6,overflow:'hidden',background:'#1d1d1d',border:'1px solid var(--line)'}},
+    ['Conforming','Not applicable','Partial','Not conforming'].map(function(s){return c[s]?el('div',{key:s,title:s+': '+c[s],style:{width:(c[s]*100/c.total)+'%',background:STD_COLOR[s]}}):null;}));
+}
+async function addStandardLib(existing){
+  let std=existing;
+  if(!std){
+    const rows=await db.insert('hx_standards',{id:newId('std'),code:CSQ_MFG.code,name:CSQ_MFG.name,publisher:CSQ_MFG.publisher,version:CSQ_MFG.version,issued:CSQ_MFG.issued,
+      scope:CSQ_MFG.scope,levels:CSQ_MFG.levels,modules:CSQ_MFG.modules,audit_notes:CSQ_MFG.notes});
+    std=rows&&rows[0];
+  }
+  const have=await db.get('hx_standard_clauses','standard_id=eq.'+encodeURIComponent(std.id)+'&select=clause');
+  const got={};(have||[]).forEach(function(x){got[x.clause]=1;});
+  const add=CSQ_MFG_CLAUSES.map(function(c,i){return {id:newId('cl'),standard_id:std.id,clause:c[0],module:c[1],title:c[2],summary:c[3],level:stdLevelOf(c[1]),
+    hx_pages:c[4]||[],hx_support:c[5]||'',hx_planned:c[6]||[],applies_to:c[7]||'',sort:i};}).filter(function(c){return !got[c.clause];});
+  for(let i=0;i<add.length;i+=40)await db.insert('hx_standard_clauses',add.slice(i,i+40));
+  return {std:std,added:add.length};
+}
+function AdoptForm(props){
+  const a=props.adopt||{};
+  const[f,setF]=useState({target_level:a.target_level||1,status:a.status||'Following',cert_body:a.cert_body||'',audit_date:a.audit_date||'',cert_number:a.cert_number||'',cert_expiry:a.cert_expiry||'',notes:a.notes||''});
+  const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  const levels=(props.std.levels&&props.std.levels.length?props.std.levels:CSQ_MFG.levels);
+  async function save(){
+    setErr('');setBusy(true);
+    try{
+      const rec={target_level:Number(f.target_level),status:f.status,cert_body:f.cert_body.trim(),audit_date:f.audit_date||null,cert_number:f.cert_number.trim(),cert_expiry:f.cert_expiry||null,notes:f.notes.trim()};
+      if(a.id)await db.update('hx_license_standards',a.id,rec);
+      else await db.insert('hx_license_standards',{...rec,id:newId('adopt'),state_id:props.state.id,license_id:props.license.id,standard_id:props.std.id});
+      props.onDone();
+    }catch(e){setErr(stdErr(e));}
+    setBusy(false);
+  }
+  function inp(k,ph,type){return el('input',{type:type||'text',value:f[k]||'',placeholder:ph||'',onChange:function(e){setF({...f,[k]:e.target.value});}});}
+  return el(Modal,{title:(a.id?'Edit adoption':'Adopt '+props.std.name)+' - '+props.license.name,onClose:props.onClose},
+    el(Field,{label:'Target level'},el('select',{value:f.target_level,onChange:function(e){setF({...f,target_level:e.target.value});}},
+      levels.map(function(l){return el('option',{key:l.level,value:l.level},l.name+' (Modules '+l.modules.join(', ')+')');}))),
+    el('div',{className:'muted',style:{fontSize:12,marginTop:-6,marginBottom:12}},(levels.find(function(l){return String(l.level)===String(f.target_level);})||{}).audit||''),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:10}},
+      el(Field,{label:'Status'},el('select',{value:f.status,onChange:function(e){setF({...f,status:e.target.value});}},ADOPT_STATUSES.map(function(s){return el('option',{key:s,value:s},s);}))),
+      el(Field,{label:'Certification body'},inp('cert_body','e.g. Kiwa ASI')),
+      el(Field,{label:'Audit date'},inp('audit_date','','date')),
+      el(Field,{label:'Certificate number'},inp('cert_number')),
+      el(Field,{label:'Certificate expiry'},inp('cert_expiry','','date'))),
+    el(Field,{label:'Notes'},el('textarea',{rows:2,value:f.notes,onChange:function(e){setF({...f,notes:e.target.value});}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:save},busy?'Saving...':a.id?'Save':'Adopt standard')));
+}
+function ConformanceForm(props){
+  const c=props.clause,r=props.rec||{};
+  const[f,setF]=useState({status:r.status||'Not assessed',owner:r.owner||'',due_date:r.due_date||'',doc_ref:r.doc_ref||'',evidence:r.evidence||'',files:(r.files||[]).slice()});
+  const[err,setErr]=useState('');const[busy,setBusy]=useState('');
+  async function upload(file){
+    if(!file)return;setErr('');setBusy('Uploading...');
+    try{
+      const ext=(file.name.split('.').pop()||'pdf').toLowerCase().replace(/[^a-z0-9]/g,'');
+      const path=await storagePut(file,'standards/'+props.license.id+'/'+c.id+'-'+Date.now()+'.'+ext);
+      setF(function(p){return {...p,files:p.files.concat([{path:path,name:file.name,at:new Date().toISOString(),by:(ACC.profile&&(ACC.profile.name||ACC.profile.email))||''}])};});
+    }catch(e){setErr(String(e.message||e));}
+    setBusy('');
+  }
+  async function save(){
+    setErr('');
+    if(f.status==='Not applicable'&&!f.evidence.trim()){setErr('Write why this clause does not apply before marking it Not applicable.');return;}
+    setBusy('Saving...');
+    try{
+      const rec={status:f.status,owner:f.owner.trim(),due_date:f.due_date||null,doc_ref:f.doc_ref.trim(),evidence:f.evidence.trim(),files:f.files};
+      if(r.id)await db.update('hx_conformance',r.id,rec);
+      else await db.insert('hx_conformance',{...rec,id:newId('conf'),state_id:props.state.id,license_id:props.license.id,standard_id:c.standard_id,clause_id:c.id});
+      props.onDone();
+    }catch(e){setErr(stdErr(e));}
+    setBusy('');
+  }
+  return el(Modal,{title:c.clause+'  '+c.title,wide:true,onClose:props.onClose},
+    el('div',{className:'muted',style:{fontSize:13,marginBottom:12,lineHeight:1.5}},c.summary),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:10}},
+      el(Field,{label:'Status'},el('select',{value:f.status,onChange:function(e){setF({...f,status:e.target.value});}},STD_STATUSES.map(function(s){return el('option',{key:s,value:s},s);}))),
+      el(Field,{label:'Owner'},el('input',{value:f.owner,placeholder:'Who is responsible',onChange:function(e){setF({...f,owner:e.target.value});}})),
+      el(Field,{label:'Due date'},el('input',{type:'date',value:f.due_date||'',onChange:function(e){setF({...f,due_date:e.target.value});}}))),
+    el(Field,{label:'SOP / document reference'},el('input',{value:f.doc_ref,placeholder:'e.g. SOP-QA-004 Rev 2',onChange:function(e){setF({...f,doc_ref:e.target.value});}})),
+    el(Field,{label:f.status==='Not applicable'?'Justification (why it does not apply) *':'Evidence - how we meet this clause'},el('textarea',{rows:4,value:f.evidence,placeholder:'Where an auditor finds the proof: records, logs, SOPs, training, photos',onChange:function(e){setF({...f,evidence:e.target.value});}})),
+    el(Field,{label:'Evidence files',plain:true},
+      el('div',null,
+        f.files.length?f.files.map(function(x,i){return el('div',{key:x.path,className:'row',style:{fontSize:12,marginBottom:4}},
+          el('a',{href:'#',style:{color:'var(--gold-hi)'},onClick:function(e){e.preventDefault();openStored(x.path,x.name).catch(function(er){setErr(String(er.message||er));});}},x.name),
+          el('span',{className:'muted'},(x.by?x.by+' \u00b7 ':'')+(x.at?new Date(x.at).toLocaleDateString():'')),
+          !r.id||!(r.files||[]).some(function(o){return o.path===x.path;})?el('button',{className:'btn ghost sm',onClick:function(){setF({...f,files:f.files.filter(function(_,j){return j!==i;})});}},'Remove'):null);}):el('div',{className:'muted',style:{fontSize:12,marginBottom:4}},'No files yet'),
+        el('label',{className:'btn ghost sm',style:{display:'inline-block',marginTop:4}},busy==='Uploading...'?'Uploading...':'+ Attach file',
+          el('input',{type:'file',style:{display:'none'},onChange:function(e){upload(e.target.files[0]);e.target.value='';}})))),
+    el('div',{className:'muted',style:{fontSize:11,marginTop:8}},'Files already saved on a clause stay attached. Every change is kept in the audit trail.'),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:!!busy,onClick:save},busy==='Saving...'?'Saving...':'Save')));
+}
+function stdRegisterHtml(std,lic,st,adopt,clauses,conf,inScope,E){
+  const e=esc3,c=stdCounts(inScope,conf),lv=(std.levels||[]).find(function(l){return l.level===(adopt&&adopt.target_level);});
+  const mods=Object.keys(std.modules||{});
+  let h='<div class="hxrec"><h2>'+e(std.name)+' v'+e(std.version)+' - Conformance register</h2><div class="m">'+e(std.publisher)+' &middot; '+e(std.issued)+'</div>'+
+    '<table><tr><th>Licensed operation</th><td>'+e(lic.name)+(lic.license_number?' ('+e(lic.license_number)+')':'')+' &middot; '+e(st.name)+'</td></tr>'+
+    '<tr><th>Target level</th><td>'+e(lv?lv.name:'-')+'</td></tr><tr><th>Status</th><td>'+e((adopt&&adopt.status)||'-')+(adopt&&adopt.cert_body?' &middot; '+e(adopt.cert_body):'')+(adopt&&adopt.audit_date?' &middot; audit '+e(adopt.audit_date):'')+'</td></tr>'+
+    '<tr><th>Clauses in scope</th><td>'+c.total+' &middot; Conforming '+c['Conforming']+' &middot; Partial '+c['Partial']+' &middot; Not conforming '+c['Not conforming']+' &middot; Not applicable '+c['Not applicable']+' &middot; Not assessed '+c['Not assessed']+' &middot; <b>'+c.pct+'% complete</b></td></tr>'+
+    '<tr><th>Printed</th><td>'+e(new Date().toLocaleString())+'</td></tr></table>';
+  mods.forEach(function(m){
+    const list=inScope.filter(function(x){return x.module===m;});if(!list.length)return;
+    h+='<table><tr class="sec"><td colspan="5">MODULE '+e(m)+': '+e(std.modules[m]).toUpperCase()+'</td></tr><tr><th style="width:9%">Clause</th><th style="width:25%">Requirement</th><th style="width:13%">Status</th><th style="width:15%">Owner / due</th><th>Evidence and documents</th></tr>';
+    list.forEach(function(x){const r=conf[x.id]||{},s=r.status||'Not assessed';
+      h+='<tr><td>'+e(x.clause)+'</td><td>'+e(x.title)+'</td><td class="'+(s==='Conforming'?'ok':s==='Not conforming'?'bad':'')+'">'+e(s)+'</td><td>'+e(r.owner||'-')+(r.due_date?'<br>Due '+e(r.due_date):'')+'</td><td>'+
+        (r.doc_ref?'<b>'+e(r.doc_ref)+'</b><br>':'')+e(r.evidence||'')+((r.files||[]).length?'<br>Files: '+r.files.map(function(f){return e(f.name);}).join(', '):'')+clauseEvidence(x,E).map(function(v){return '<br><i>'+e(v.label)+': '+e(v.value)+(v.last?' (last '+e(fmtDay(v.last))+')':'')+'</i>'+(v.warn?' <span class="bad">'+e(v.warn)+'</span>':'');}).join('')+'</td></tr>';});
+    h+='</table>';
+  });
+  return h+'</div>';
+}
+/* Live evidence: what Hendrix itself holds for each clause, counted from the real records (last 12 months).
+   Logs that stop being filled are flagged, so CSQ runs on daily records rather than paper. */
+const CSQ_LOG_MAP={'1.9':['security','security_inspection'],'2A.1.2':['sanitation','equipment'],'2A.2.2':['equipment'],'2A.2.3':['scale_calibration'],'2A.3':['sanitation'],
+  '2A.4':['waste'],'2A.4.1':['waste'],'2A.5.1':['pest'],'2A.6':['temperature'],'2A.8':['environmental'],'2A.9.3':['temperature'],'3C.1.6':['sanitation'],'3C.1.9':['temperature']};
+// a log with no entry for longer than this many days is flagged as not being kept up
+const LOG_STALE_DAYS={sanitation:2,temperature:2,waste:31,pest:35,environmental:35,scale_calibration:35,security_inspection:35,equipment:95,security:120};
+async function loadStdEvidence(st,lic){
+  const E={},enc=encodeURIComponent,since=new Date(Date.now()-365*86400000).toISOString(),lid=lic.id,sid=st.id;
+  async function tryGet(k,fn){try{E[k]=await fn();}catch(e){E[k]=null;}}
+  const jobs=[];
+  if(LOG_TYPES.some(function(t){return can(LOG_MOD[t.id],1);}))jobs.push(tryGet('logs',async function(){
+    const r=(await db.get('hx_facility_log','license_id=eq.'+enc(lid)+'&created_at=gte.'+enc(since)+'&select=id,log_type,created_at,voided,license_id&limit=20000'))||[];
+    const by={};r.forEach(function(x){if(x.license_id!==lid||x.voided)return;const b=by[x.log_type]||(by[x.log_type]={n:0,last:''});b.n++;if(x.created_at>b.last)b.last=x.created_at;});return by;}));
+  if(can('logs_visitor',1))jobs.push(tryGet('visitors',async function(){
+    const r=((await db.get('hx_visitor_log','license_id=eq.'+enc(lid)+'&time_in=gte.'+enc(since)+'&select=id,time_in,license_id,voided&limit=20000'))||[]).filter(function(x){return x.license_id===lid&&!x.voided;});
+    return {n:r.length,last:r.reduce(function(m,x){return x.time_in>m?x.time_in:m;},'')};}));
+  if(can('batch',1))jobs.push(tryGet('batches',async function(){
+    const r=((await db.get('hx_batches','license_id=eq.'+enc(lid)+'&select=id,created_at,voided,license_id&limit=20000'))||[]).filter(function(x){return x.license_id===lid&&!x.voided;});
+    return {n:r.length,last:r.reduce(function(m,x){return x.created_at>m?x.created_at:m;},'')};}));
+  if(can('testing',1))jobs.push(tryGet('testing',async function(){
+    const r=((await db.get('hx_tests','license_id=eq.'+enc(lid)+'&select=id,status,created_at,result_at,coa_path,voided,license_id&limit=20000'))||[]).filter(function(x){return x.license_id===lid&&!x.voided;});
+    return {n:r.length,passed:r.filter(function(x){return x.status==='Passed';}).length,failed:r.filter(function(x){return x.status==='Failed';}).length,
+      coas:r.filter(function(x){return x.coa_path;}).length,last:r.reduce(function(m,x){const d=x.result_at||x.created_at||'';return d>m?d:m;},'')};}));
+  if(can('stickers',1))jobs.push(tryGet('stickers',async function(){const r=((await db.get('hx_label_templates','license_id=eq.'+enc(lid)+'&select=id,license_id'))||[]).filter(function(x){return x.license_id===lid;});return {n:r.length};}));
+  if(can('rulebook',1))jobs.push(tryGet('rulebook',async function(){const r=(await db.get('hx_rules','state_id=eq.'+enc(sid)+'&select=id'))||[];return {n:r.length};}));
+  if(can('products',1)||can('formbank',1))jobs.push(tryGet('products',async function(){
+    const k=((await db.get('hx_skus','state_id=eq.'+enc(sid)+'&select=id,active'))||[]);let f=[];try{f=(await db.get('hx_formulations','state_id=eq.'+enc(sid)+'&select=id'))||[];}catch(e){f=[];}
+    return {n:k.length,active:k.filter(function(x){return x.active;}).length,forms:f.length};}));
+  if(can('audit',1))jobs.push(tryGet('audit',async function(){const r=(await db.get('hx_audit_log','license_id=eq.'+enc(lid)+'&at=gte.'+enc(since)+'&select=id&limit=50000'))||[];return {n:r.length};}));
+  jobs.push(tryGet('roles',async function(){return {n:(ACC.roles||[]).length};}));
+  await Promise.all(jobs);
+  return E;
+}
+function daysAgo(iso){if(!iso)return null;return Math.floor((Date.now()-new Date(iso).getTime())/86400000);}
+function fmtDay(iso){return iso?new Date(iso).toLocaleDateString():'';}
+// rows of live evidence for one clause: {label, value, last, warn, page}
+function clauseEvidence(x,E){
+  if(!E)return [];
+  const out=[],pages=x.hx_pages||[];
+  pages.forEach(function(p){
+    if(p==='logs'&&E.logs){
+      const types=CSQ_LOG_MAP[x.clause]||[];
+      (types.length?types:Object.keys(E.logs)).forEach(function(t){
+        const def=LOG_TYPES.find(function(d){return d.id===t;});if(!def)return;
+        const b=E.logs[t]||{n:0,last:''},d=daysAgo(b.last),lim=LOG_STALE_DAYS[t];
+        out.push({label:def.name,value:b.n+' entr'+(b.n===1?'y':'ies'),last:b.last,page:'logs',
+          warn:!b.n?'No entries in 12 months':(lim&&d>lim?'No entry for '+d+' days':'')});
+      });
+    }
+    else if(p==='visitors'&&E.visitors)out.push({label:'Visitor Log',value:E.visitors.n+' sign-in'+(E.visitors.n===1?'':'s'),last:E.visitors.last,page:'visitors',warn:E.visitors.n?'':'No visitors recorded'});
+    else if(p==='batches'&&E.batches)out.push({label:'Batch records',value:E.batches.n+' batch'+(E.batches.n===1?'':'es'),last:E.batches.last,page:'batches',warn:E.batches.n?'':'No batch records yet'});
+    else if(p==='testing'&&E.testing)out.push({label:'Lab tests',value:E.testing.n+' tests \u00b7 '+E.testing.passed+' passed \u00b7 '+E.testing.failed+' failed \u00b7 '+E.testing.coas+' COAs on file',last:E.testing.last,page:'testing',warn:E.testing.n?'':'No test records yet'});
+    else if(p==='stickers'&&E.stickers)out.push({label:'Label templates',value:E.stickers.n+' approved template'+(E.stickers.n===1?'':'s'),page:'stickers',warn:E.stickers.n?'':'No label templates yet'});
+    else if(p==='rulebook'&&E.rulebook)out.push({label:'State rulebook',value:E.rulebook.n+' regulation'+(E.rulebook.n===1?'':'s')+' on file',page:'rulebook',warn:E.rulebook.n?'':'No regulations entered'});
+    else if(p==='products'&&E.products)out.push({label:'Products',value:E.products.n+' SKUs ('+E.products.active+' active) \u00b7 '+E.products.forms+' formulations',page:'products',warn:E.products.n?'':'No SKUs yet'});
+    else if(p==='audit'&&E.audit)out.push({label:'Audit trail',value:E.audit.n+' recorded change'+(E.audit.n===1?'':'s')+' (who, when, why)',page:'audit'});
+    else if(p==='roles'&&E.roles)out.push({label:'Roles',value:E.roles.n+' defined role'+(E.roles.n===1?'':'s'),page:'roles',warn:E.roles.n?'':'No roles defined'});
+  });
+  return out;
+}
+function EvidenceList(props){
+  const rows=props.rows;if(!rows.length)return null;
+  return el('div',{style:{margin:'6px 0'}},el('div',{className:'muted',style:{fontSize:11,letterSpacing:'.1em',textTransform:'uppercase',marginBottom:4}},'Live records in Hendrix (last 12 months)'),
+    rows.map(function(r,i){return el('div',{key:i,className:'row',style:{gap:8,fontSize:12,padding:'4px 0',borderBottom:'1px dashed var(--line)',flexWrap:'nowrap'}},
+      el('span',{style:{width:9,height:9,borderRadius:5,flex:'0 0 auto',background:r.warn?'var(--red)':'var(--green)'}}),
+      el('b',{style:{minWidth:150}},r.label),el('span',{style:{flex:1}},r.value+(r.last?' \u00b7 last '+fmtDay(r.last):'')),
+      r.warn&&el('span',{className:'badge bad'},r.warn),
+      props.go&&el('button',{className:'btn ghost sm',onClick:function(e){e.stopPropagation();props.go(r.page);}},'Open'));}));
+}
+function StdAlerts(props){
+  const E=props.ev,items=[];
+  if(E&&E.logs)LOG_TYPES.forEach(function(t){const lim=LOG_STALE_DAYS[t.id];if(!lim||!can(LOG_MOD[t.id],1))return;const b=E.logs[t.id],d=b?daysAgo(b.last):null;
+    if(!b||!b.n)items.push({tone:'bad',text:t.name+': no entries in the last 12 months',page:'logs'});else if(d>lim)items.push({tone:'bad',text:t.name+': last entry '+d+' days ago (expected every '+lim+' days or sooner)',page:'logs'});});
+  const late=props.inScope.filter(function(x){const r=props.conf[x.id];return r&&r.due_date&&r.due_date<props.today&&r.status!=='Conforming'&&r.status!=='Not applicable';}).length;
+  const nc=props.inScope.filter(function(x){const r=props.conf[x.id];return r&&r.status==='Not conforming';}).length;
+  const na=props.inScope.filter(function(x){return !props.conf[x.id];}).length;
+  if(nc)items.push({tone:'bad',text:nc+' clause'+(nc===1?' is':'s are')+' not conforming',filter:'Not conforming'});
+  if(late)items.push({tone:'bad',text:late+' clause'+(late===1?' is':'s are')+' past the due date',filter:'OPEN'});
+  if(na)items.push({tone:'warn',text:na+' clause'+(na===1?' has':'s have')+' not been assessed yet',filter:'Not assessed'});
+  return el('div',{className:'card'},el('h3',null,'Operational alerts',el('span',{className:'badge '+(items.length?'bad':'ok'),style:{marginLeft:8}},items.length?items.length+' open':'All clear')),
+    !E?el('div',{className:'muted',style:{fontSize:12}},'Checking live records...'):
+    !items.length?el('div',{className:'muted',style:{fontSize:12}},'Every log is current and every clause in scope is assessed and on time.'):
+    items.map(function(it,i){return el('div',{key:i,className:'row',style:{gap:8,fontSize:13,padding:'4px 0',flexWrap:'nowrap'}},
+      el('span',{style:{width:9,height:9,borderRadius:5,flex:'0 0 auto',background:it.tone==='bad'?'var(--red)':'var(--gold)'}}),el('span',{style:{flex:1}},it.text),
+      el('button',{className:'btn ghost sm',onClick:function(){if(it.page)props.go(it.page);else props.onFilter(it.filter);}},it.page?'Open':'Show'));}));
+}
+function StandardsPage(props){
+  const st=props.state,lic=props.license,lid=lic?lic.id:'';
+  const[stds,setStds]=useState(null);
+  const[sel,setSel]=useState('');
+  const[clauses,setClauses]=useState(null);
+  const[adopt,setAdopt]=useState(null);
+  const[conf,setConf]=useState({});
+  const[msg,setMsg]=useState('');
+  const[busy,setBusy]=useState('');
+  const[mf,setMf]=useState('ALL');
+  const[sf,setSf]=useState('ALL');
+  const[scope,setScope]=useState('target');
+  const[q,setQ]=useState('');
+  const[open,setOpen]=useState({});
+  const[modal,setModal]=useState(null);
+  const[ev,setEv]=useState(null);
+  const[insp,setInsp]=useState(false);
+  const loadStds=useCallback(function(){
+    db.get('hx_standards','select=*&order=name').then(function(r){setStds(r||[]);setSel(function(s){return (r||[]).some(function(x){return x.id===s;})?s:((r||[])[0]?r[0].id:'');});})
+      .catch(function(e){setMsg(stdErr(e));setStds([]);});
+  },[]);
+  useEffect(loadStds,[loadStds]);
+  const loadStd=useCallback(function(){
+    if(!sel){setClauses(null);return;}
+    const enc=encodeURIComponent;
+    Promise.all([db.get('hx_standard_clauses','standard_id=eq.'+enc(sel)+'&select=*&order=sort'),
+      lid?db.get('hx_license_standards','license_id=eq.'+enc(lid)+'&standard_id=eq.'+enc(sel)+'&select=*'):Promise.resolve([]),
+      lid?db.get('hx_conformance','license_id=eq.'+enc(lid)+'&standard_id=eq.'+enc(sel)+'&select=*'):Promise.resolve([])])
+      .then(function(r){setClauses(r[0]||[]);setAdopt(((r[1]||[]).filter(function(x){return x.license_id===lid;}))[0]||null);
+        const m={};(r[2]||[]).forEach(function(x){if(x.license_id===lid)m[x.clause_id]=x;});setConf(m);})
+      .catch(function(e){setMsg(stdErr(e));setClauses([]);});
+  },[sel,lid]);
+  useEffect(loadStd,[loadStd]);
+  useEffect(function(){
+    if(!st||!lic){setEv(null);return;}let dead=false;
+    loadStdEvidence(st,lic).then(function(E){if(!dead)setEv(E);}).catch(function(){if(!dead)setEv({});});
+    return function(){dead=true;};
+  },[st&&st.id,lid]);
+  const canE=can('standards',2)&&!insp,canF=can('standards',3)&&!insp;
+  const std=(stds||[]).find(function(x){return x.id===sel;})||null;
+  async function addLib(){
+    setMsg('');setBusy('Adding standard...');
+    try{const ex=(stds||[]).find(function(x){return x.code===CSQ_MFG.code;})||null;const r=await addStandardLib(ex);setSel(r.std.id);setMsg('Added '+CSQ_MFG.name+' v'+CSQ_MFG.version+' with '+r.added+' clauses.');loadStds();loadStd();}
+    catch(e){setMsg(stdErr(e));}
+    setBusy('');
+  }
+  async function uploadDoc(file){
+    if(!file||!std)return;setMsg('');setBusy('Uploading the standard...');
+    try{const ext=(file.name.split('.').pop()||'pdf').toLowerCase().replace(/[^a-z0-9]/g,'');
+      const path=await storagePut(file,'standards/library/'+std.id+'-'+Date.now()+'.'+ext);
+      await db.update('hx_standards',std.id,{file_path:path,file_name:file.name});setMsg('Standard document saved.');loadStds();}
+    catch(e){setMsg(stdErr(e));}
+    setBusy('');
+  }
+  const head=el('div',null,el('h1',null,el('span',{className:'g'},'Standards')),
+    el('div',{className:'sub'},'The published standards this company follows, clause by clause. The standard is the same for every state; conformance is kept per license.'));
+  if(stds===null)return el('div',null,head,el('div',{className:'muted'},'Loading...'));
+  if(!stds.length)return el('div',null,head,msg&&el('div',{className:'msg err'},msg),
+    el('div',{className:'empty'},
+      el('div',{style:{fontSize:16,color:'var(--text)',marginBottom:6}},'No standard added yet'),
+      el('div',{style:{marginBottom:14,maxWidth:620,marginLeft:'auto',marginRight:'auto'}},CSQ_MFG.name+' v'+CSQ_MFG.version+' ('+CSQ_MFG.issued+') by '+CSQ_MFG.publisher+': '+CSQ_MFG_CLAUSES.length+' clauses in 5 modules, with each clause linked to the Hendrix records that prove it.'),
+      canF?el('button',{className:'btn',disabled:!!busy,onClick:addLib},busy||'Add '+CSQ_MFG.name+' v'+CSQ_MFG.version):el('div',null,'Ask someone with Full access to Standards to add it.')));
+  if(!std||clauses===null)return el('div',null,head,el('div',{className:'muted'},'Loading...'));
+  const levels=std.levels||[],target=adopt&&adopt.status!=='Withdrawn'?adopt.target_level:null;
+  const lv=levels.find(function(l){return l.level===target;});
+  const inScope=clauses.filter(function(x){return target?x.level<=target:true;});
+  const base=scope==='target'&&target?inScope:clauses;
+  const ql=q.trim().toLowerCase();
+  const shown=base.filter(function(x){const r=conf[x.id],s=(r&&r.status)||'Not assessed';
+    if(mf!=='ALL'&&x.module!==mf)return false;
+    if(sf==='OPEN'){if(s==='Conforming'||s==='Not applicable')return false;}else if(sf!=='ALL'&&s!==sf)return false;
+    if(ql&&(x.clause+' '+x.title+' '+x.summary+' '+((r&&(r.owner+' '+r.evidence+' '+r.doc_ref))||'')).toLowerCase().indexOf(ql)<0)return false;return true;});
+  const c=stdCounts(target?inScope:clauses,conf),today=new Date().toISOString().slice(0,10);
+  const missing=CSQ_MFG.code===std.code&&clauses.length<CSQ_MFG_CLAUSES.length;
+  const mods=Object.keys(std.modules||{});
+  function go(p){if(props.go)props.go(p);}
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},head,
+      el('div',{className:'row'},
+        stds.length>1&&el('select',{value:sel,onChange:function(e){setSel(e.target.value);}},stds.map(function(s){return el('option',{key:s.id,value:s.id},s.name+' v'+s.version);})),
+        std.file_path?el('button',{className:'btn ghost sm',onClick:function(){openStored(std.file_path,std.file_name).catch(function(e){setMsg(String(e.message||e));});}},'Open standard (PDF)'):null,
+        canF&&el('label',{className:'btn ghost sm',style:{display:'inline-block'}},std.file_path?'Replace PDF':'Upload licensed PDF',el('input',{type:'file',accept:'application/pdf',style:{display:'none'},onChange:function(e){uploadDoc(e.target.files[0]);e.target.value='';}})),
+        lic&&target&&el('button',{className:insp?'btn sm':'btn ghost sm',onClick:function(){setInsp(!insp);}},insp?'Exit inspector view':'Inspector view'),
+        lic&&target&&el('button',{className:'btn ghost sm',onClick:function(){printRecords(std.name+' conformance - '+lic.name,[stdRegisterHtml(std,lic,st,adopt,clauses,conf,inScope,ev)]);}},'Print register'))),
+    msg&&el('div',{className:/^Added|saved/.test(msg)?'msg':'msg err'},msg),
+    insp&&adopt&&el('div',{className:'card gold',style:{borderWidth:2}},
+      el('div',{className:'k'},'Inspector view \u00b7 read only'),
+      el('div',{className:'v',style:{fontSize:20}},lic.name+(lic.license_number?' ('+lic.license_number+')':'')+' \u00b7 '+st.name),
+      el('div',{style:{marginTop:6,fontSize:14}},'Follows '+std.name+' v'+std.version+' ('+std.publisher+') \u00b7 '+(lv?lv.name:'Level '+target)+' \u00b7 '+adopt.status+(adopt.cert_body?' \u00b7 '+adopt.cert_body:'')+(adopt.cert_number?' \u00b7 Certificate '+adopt.cert_number:'')+(adopt.cert_expiry?' (expires '+adopt.cert_expiry+')':'')),
+      el('div',{className:'muted',style:{marginTop:6,fontSize:12}},'Every clause below shows the requirement, how this facility meets it, the documents and files, and the live Hendrix records behind it. Green dot = records are current; red = attention needed. All records are tamper-evident: changes keep who, when and why in the audit trail.')),
+    target&&!insp&&el(StdAlerts,{ev:ev,inScope:inScope,conf:conf,today:today,go:go,onFilter:function(v){setSf(v);}}),
+    missing&&canF&&el('div',{className:'msg'},'This standard is missing '+(CSQ_MFG_CLAUSES.length-clauses.length)+' clauses. ',el('button',{className:'btn sm',disabled:!!busy,onClick:addLib},busy||'Add missing clauses')),
+    el('div',{className:'grid'},
+      el('div',{className:'card gold'},el('div',{className:'k'},'Standard'),el('div',{className:'v'},std.name),
+        el('div',{className:'muted',style:{marginTop:4}},'Version '+std.version+(std.issued?' \u00b7 '+std.issued:'')),
+        el('div',{className:'muted',style:{marginTop:4,fontSize:12}},std.publisher),
+        std.scope&&el('div',{className:'muted',style:{marginTop:8,fontSize:12,lineHeight:1.5}},std.scope)),
+      el('div',{className:'card gold'},el('div',{className:'k'},lic?lic.name:'License'),
+        !lic?el('div',{className:'muted'},'Pick a license at the top to see its conformance.'):
+        adopt?el('div',null,el('div',{className:'v'},lv?lv.name:'Level '+adopt.target_level),
+          el('div',{style:{marginTop:6}},el('span',{className:'badge '+(adopt.status==='Certified'?'ok':adopt.status==='Suspended'||adopt.status==='Withdrawn'?'bad':'')},adopt.status)),
+          el('div',{className:'muted',style:{marginTop:8,fontSize:12,lineHeight:1.6}},[adopt.cert_body&&('Certification body: '+adopt.cert_body),adopt.audit_date&&('Audit: '+adopt.audit_date),adopt.cert_number&&('Certificate: '+adopt.cert_number),adopt.cert_expiry&&('Expires: '+adopt.cert_expiry)].filter(Boolean).map(function(t){return el('div',{key:t},t);})),
+          lv&&el('div',{className:'muted',style:{fontSize:12,marginTop:4}},lv.audit),
+          canF&&el('button',{className:'btn ghost sm',style:{marginTop:10},onClick:function(){setModal({t:'adopt'});}},'Edit level and certification')):
+        el('div',null,el('div',{className:'muted',style:{margin:'4px 0 10px'}},'This license has not adopted '+std.name+' yet.'),
+          canF?el('button',{className:'btn sm',onClick:function(){setModal({t:'adopt'});}},'Adopt for this license'):el('div',{className:'muted',style:{fontSize:12}},'Someone with Full access to Standards adopts it.'))),
+      el('div',{className:'card gold'},el('div',{className:'k'},target?'Conformance (Level '+target+' scope)':'Clauses'),
+        el('div',{className:'v'},target?c.pct+'% complete':clauses.length+' clauses'),
+        target&&el('div',{style:{margin:'8px 0'}},el(StdBar,{c:c})),
+        target&&el('div',{className:'muted',style:{fontSize:12,lineHeight:1.6}},['Conforming','Partial','Not conforming','Not applicable','Not assessed'].map(function(s){return el('div',{key:s,className:'row',style:{gap:6}},el('span',{style:{display:'inline-block',width:9,height:9,borderRadius:2,background:STD_COLOR[s],border:'1px solid #444'}}),s+': '+c[s]);})))),
+    !insp&&(std.audit_notes||[]).length>0&&el('div',{className:'card'},el('h3',null,'Audit essentials'),(std.audit_notes||[]).map(function(n){return el('div',{key:n,className:'muted',style:{fontSize:13,marginBottom:4}},'\u2022 '+n);})),
+    target&&el('div',{className:'card'},el('h3',null,'By module'),mods.map(function(m){
+      const list=inScope.filter(function(x){return x.module===m;});if(!list.length)return null;const mc=stdCounts(list,conf);
+      return el('div',{key:m,className:'barrow',style:{cursor:'pointer'},onClick:function(){setMf(m);}},
+        el('div',{style:{width:250,flex:'0 0 auto'}},el('b',{style:{color:'var(--gold-hi)'}},'Module '+m),' '+std.modules[m]),
+        el('div',{style:{flex:1}},el(StdBar,{c:mc,h:8})),el('div',{style:{width:110,textAlign:'right'},className:'muted'},mc.done+' / '+mc.total+' ('+mc.pct+'%)'));
+    })),
+    el('div',{className:'row',style:{margin:'4px 0 12px'}},
+      el('input',{value:q,placeholder:'Search clauses, owners, evidence',style:{minWidth:240},onChange:function(e){setQ(e.target.value);}}),
+      el('select',{value:mf,onChange:function(e){setMf(e.target.value);}},el('option',{value:'ALL'},'All modules'),mods.map(function(m){return el('option',{key:m,value:m},'Module '+m+' - '+std.modules[m]);})),
+      el('select',{value:sf,onChange:function(e){setSf(e.target.value);}},el('option',{value:'ALL'},'Every status'),el('option',{value:'OPEN'},'Open (still to do)'),STD_STATUSES.map(function(s){return el('option',{key:s,value:s},s);})),
+      target&&el('select',{value:scope,onChange:function(e){setScope(e.target.value);}},el('option',{value:'target'},'My target level only'),el('option',{value:'all'},'All levels')),
+      el('span',{className:'muted',style:{fontSize:12}},shown.length+' clause'+(shown.length===1?'':'s'))),
+    !shown.length?el('div',{className:'empty'},'No clauses match.'):
+    mods.map(function(m){
+      const list=shown.filter(function(x){return x.module===m;});if(!list.length)return null;
+      return el('div',{key:m,className:'card'},
+        el('h3',null,'Module '+m+': '+std.modules[m],el('span',{className:'badge off',style:{marginLeft:8}},'Level '+stdLevelOf(m)+'+')),
+        list.map(function(x){
+          const r=conf[x.id],s=(r&&r.status)||'Not assessed',isOpen=insp||!!open[x.id],evr=clauseEvidence(x,ev),evWarn=evr.some(function(v){return v.warn;}),late=r&&r.due_date&&r.due_date<today&&s!=='Conforming'&&s!=='Not applicable';
+          return el('div',{key:x.id,style:{borderTop:'1px solid var(--line)',padding:'10px 0'}},
+            el('div',{className:'row',style:{justifyContent:'space-between',flexWrap:'nowrap',alignItems:'flex-start',cursor:'pointer'},onClick:function(){setOpen(function(p){return {...p,[x.id]:!p[x.id]};});}},
+              el('div',{style:{minWidth:0}},el('span',{style:{color:'var(--gold-hi)',fontWeight:700,marginRight:8}},x.clause),el('span',{style:{fontWeight:600}},x.title),
+                x.applies_to&&el('span',{className:'muted',style:{fontSize:11,marginLeft:8}},x.applies_to),
+                !isOpen&&el('div',{className:'muted',style:{fontSize:12,marginTop:3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},x.summary)),
+              el('div',{className:'row',style:{flex:'0 0 auto',gap:6}},
+                r&&r.owner&&el('span',{className:'muted',style:{fontSize:11}},r.owner),
+                evr.length>0&&el('span',{title:evWarn?'Some live records need attention':'Live records are current',style:{width:9,height:9,borderRadius:5,display:'inline-block',background:evWarn?'var(--red)':'var(--green)'}}),
+                r&&r.due_date&&el('span',{className:late?'badge bad':'badge off'},(late?'Overdue ':'Due ')+r.due_date),
+                el('span',{className:'badge '+STD_TONE[s]},s))),
+            isOpen&&el('div',{style:{marginTop:8,fontSize:13}},
+              el('div',{style:{lineHeight:1.55,marginBottom:8}},insp&&el('b',{style:{color:'var(--gold-hi)'}},'Requirement: '),x.summary),
+              el(EvidenceList,{rows:evr,go:go}),
+              !insp&&(x.hx_pages||[]).length>0&&el('div',{className:'row',style:{marginBottom:6,gap:6}},el('span',{className:'muted',style:{fontSize:12}},'Proof in Hendrix:'),
+                x.hx_pages.map(function(p){const ok=!HX_PAGE_MOD[p]||can(HX_PAGE_MOD[p],1);return el('button',{key:p,className:'btn ghost sm',disabled:!ok,onClick:function(e){e.stopPropagation();go(p);}},HX_PAGE_LABEL[p]||p);})),
+              !insp&&x.hx_support&&el('div',{className:'muted',style:{fontSize:12,marginBottom:6}},'Already in Hendrix: '+x.hx_support),
+              !insp&&(x.hx_planned||[]).length>0&&el('div',{className:'row',style:{marginBottom:6,gap:6}},el('span',{className:'muted',style:{fontSize:12}},'Hendrix module planned:'),x.hx_planned.map(function(p){return el('span',{key:p,className:'badge off'},p);})),
+              r&&el('div',{style:{background:'var(--panel2)',border:'1px solid var(--line)',borderRadius:8,padding:'8px 10px',margin:'6px 0',fontSize:12,lineHeight:1.6}},
+                r.doc_ref&&el('div',null,el('b',null,'Document: '),r.doc_ref),
+                r.evidence&&el('div',{style:{whiteSpace:'pre-wrap'}},el('b',null,s==='Not applicable'?'Justification: ':'How we meet it: '),r.evidence),
+                r.owner&&el('div',null,el('b',null,'Responsible: '),r.owner),
+                (r.files||[]).length>0&&el('div',null,el('b',null,'Files: '),r.files.map(function(f,i){return el('a',{key:f.path,href:'#',style:{color:'var(--gold-hi)',marginRight:10},onClick:function(e){e.preventDefault();openStored(f.path,f.name).catch(function(er){setMsg(String(er.message||er));});}},f.name);})),
+                r.reviewed_at&&el('div',{className:'muted'},'Last updated '+new Date(r.reviewed_at).toLocaleString())),
+              insp&&!r&&el('div',{className:'badge bad'},'Not assessed yet'),
+              lic&&!insp&&(adopt&&adopt.status!=='Withdrawn'?(canE&&el('button',{className:'btn sm',style:{marginTop:4},onClick:function(){setModal({t:'conf',clause:x});}},r?'Update conformance':'Record conformance')):
+                el('div',{className:'muted',style:{fontSize:12}},'Adopt the standard for this license to record conformance.'))));
+        }));
+    }),
+    modal&&modal.t==='adopt'&&el(AdoptForm,{std:std,adopt:adopt,state:st,license:lic,onClose:function(){setModal(null);},onDone:function(){setModal(null);loadStd();}}),
+    modal&&modal.t==='conf'&&el(ConformanceForm,{clause:modal.clause,rec:conf[modal.clause.id],state:st,license:lic,onClose:function(){setModal(null);},onDone:function(){setModal(null);loadStd();}}));
+}
+function StdDashCard(props){
+  const lid=props.license?props.license.id:'';
+  const[d,setD]=useState(null);
+  useEffect(function(){
+    if(!lid||!can('standards',1)){setD(null);return;}
+    let dead=false;
+    (async function(){
+      try{
+        const ad=((await db.get('hx_license_standards','license_id=eq.'+encodeURIComponent(lid)+'&select=*'))||[]).filter(function(a){return a.license_id===lid&&a.status!=='Withdrawn';});
+        if(!ad.length){if(!dead)setD({none:true});return;}
+        const a=ad[0],s=((await db.get('hx_standards','id=eq.'+encodeURIComponent(a.standard_id)+'&select=*'))||[])[0];
+        const cl=(await db.get('hx_standard_clauses','standard_id=eq.'+encodeURIComponent(a.standard_id)+'&select=id,level'))||[];
+        const cf=(await db.get('hx_conformance','license_id=eq.'+encodeURIComponent(lid)+'&standard_id=eq.'+encodeURIComponent(a.standard_id)+'&select=clause_id,status'))||[];
+        const m={};cf.forEach(function(x){m[x.clause_id]=x;});
+        if(!dead)setD({a:a,s:s,c:stdCounts(cl.filter(function(x){return x.level<=a.target_level;}),m)});
+      }catch(e){if(!dead)setD(null);}
+    })();
+    return function(){dead=true;};
+  },[lid]);
+  if(!d)return null;
+  const link=el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go('standards');}},'Open standards');
+  if(d.none)return el('div',{className:'card gold'},el('div',{className:'k'},'Quality standard'),el('div',{className:'v'},'Not adopted'),el('div',{className:'muted',style:{margin:'4px 0 8px'}},'This license does not follow a published standard yet.'),link);
+  const lv=((d.s&&d.s.levels)||[]).find(function(l){return l.level===d.a.target_level;});
+  return el('div',{className:'card gold'},el('div',{className:'k'},'Quality standard'),el('div',{className:'v'},d.s?d.s.name+' v'+d.s.version:'Standard'),
+    el('div',{className:'muted',style:{margin:'4px 0'}},(lv?lv.name:'Level '+d.a.target_level)+' \u00b7 '+d.a.status),
+    el('div',{style:{margin:'8px 0 4px'}},el(StdBar,{c:d.c})),
+    el('div',{className:'muted',style:{fontSize:12,marginBottom:6}},d.c.pct+'% complete \u00b7 '+(d.c.total-d.c.done)+' clause'+(d.c.total-d.c.done===1?'':'s')+' still open'),link);
 }
 
 /* ---------- Testing: lab submissions, results and COAs (Black Fox Testing module) ---------- */
@@ -3501,6 +4015,7 @@ function App(){
 
   const nav=[{id:'home',label:'Dashboard'},{id:'locations',label:'States and Licenses'}];
   if(can('rulebook',1))nav.push({id:'rulebook',label:(st?st.name+' ':'')+'Rulebook'});
+  if(can('standards',1))nav.push({id:'standards',label:'Standards (CSQ)'});
   if(isAdmin)nav.push({id:'team',label:'Team and Access'},{id:'roles',label:'Roles'});
   if(can('audit',1))nav.push({id:'audit',label:'Audit Trail'});
   const anyLog=LOG_TYPES.some(function(t){return can(LOG_MOD[t.id],1);});
@@ -3517,6 +4032,7 @@ function App(){
   else if(page==='team'&&isAdmin)body=el(Team,{profile:profile,states:states,licenses:licenses,onSelfChange:boot});
   else if(page==='roles'&&isAdmin)body=el(Roles);
   else if(page==='audit'&&can('audit',1))body=el(AuditTrail,{state:st});
+  else if(page==='standards'&&can('standards',1))body=el(StandardsPage,{key:licId,state:st,license:lic,go:setPage});
   else body=el(Dashboard,{profile:profile,states:states,licenses:licenses,state:st,license:lic,go:setPage,ruleCount:ruleCount});
 
   return el('div',{className:'shell'},
