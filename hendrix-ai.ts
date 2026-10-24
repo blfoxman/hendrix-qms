@@ -62,6 +62,12 @@ Deno.serve(async (req) => {
       headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
       body: JSON.stringify(payload),
     });
+    if (r.status === 401 || r.status === 403) {
+      return json({ error: { message: "Anthropic refused the ANTHROPIC_API_KEY saved in Supabase (Edge Functions > Secrets). Create a new key at console.anthropic.com > API Keys, paste it there (whole key, no spaces or quotes) and retry." } }, 502);
+    }
+    if (r.status === 400 && (await r.clone().text()).includes("credit balance")) {
+      return json({ error: { message: "The Anthropic account has no credit. Add credit at console.anthropic.com > Billing and retry." } }, 502);
+    }
     return new Response(await r.text(), { status: r.status, headers: { ...cors, "Content-Type": "application/json" } });
   } catch (e) {
     return json({ error: { message: String((e as Error)?.message || e) } }, 500);
