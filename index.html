@@ -170,7 +170,7 @@ async function sb(path,opt){
   if(!r.ok){
     const m=(j&&(j.message||j.hint||j.details))||txt||('Error '+r.status);
     if(/schema cache|Could not find the table|relation .* does not exist/i.test(m)&&!/Could not find the '[A-Za-z0-9_]+' column/.test(m)){
-      const step=/hx_complaints|hx_audits|hx_audit_findings/.test(m)?'hendrix_step19.sql':/hx_recall|hx_trace_data/.test(m)?'hendrix_step18.sql':/hx_lots|hx_lot_uses|hx_holds|hx_shipments/.test(m)?'hendrix_step17.sql':/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
+      const step=/hx_training_keys|hx_training_attempts|hx_course_submit|content_status/.test(m)?'hendrix_step20.sql':/hx_complaints|hx_audits|hx_audit_findings/.test(m)?'hendrix_step19.sql':/hx_recall|hx_trace_data/.test(m)?'hendrix_step18.sql':/hx_lots|hx_lot_uses|hx_holds|hx_shipments/.test(m)?'hendrix_step17.sql':/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
       throw new Error('Database tables are missing - run '+step+' in the Hendrix Supabase project.');
     }
     if(/row-level security|permission denied/i.test(m))throw new Error('Not allowed - your access level does not allow this here. Ask a system admin.');
@@ -279,7 +279,7 @@ function LoginScreen(props){
 }
 
 /* ---------- Dashboard ---------- */
-const MODULES_SOON=['Online training courses','Equipment and Chemical registers','HACCP','Time Clock and Badges','Production Planner'];
+const MODULES_SOON=['Equipment and Chemical registers','HACCP','Time Clock and Badges','Production Planner'];
 function Dashboard(props){
   const st=props.state,lic=props.license;
   const isAdmin=props.profile.role==='admin';
@@ -4051,6 +4051,10 @@ async function trAutoSetup(st,lic,C){
     if(n)out.push(n+' course'+(n===1?' is':'s are')+' now required manager training');
     const law=C.find(function(x){return x.name.trim().toLowerCase()===TR_GENERIC_LAW.toLowerCase();}),L=trLawCourse(st);
     if(law&&!C.some(function(x){return x.name.trim().toLowerCase()===L.name.toLowerCase();})){await db.update('hx_training_courses',law.id,L);out.push((out.length?'r':'R')+'egulatory course is now '+L.name);}}
+  // online content: load the Hendrix starter lessons and quizzes as drafts (step 20)
+  let list=C;if(!C.length){try{list=((await db.get('hx_training_courses','license_ids=cs.%7B'+encodeURIComponent(lic.id)+'%7D&select=*'))||[]).filter(function(c){return (c.license_ids||[c.license_id]).indexOf(lic.id)>=0;});}catch(e){list=[];}}
+  let d=0;for(const c of list){if(c.content_status!=='none')continue;const t=trContentFor(c);if(!t)continue;try{await trSaveContent(c,trStarterForm(t),false);d++;}catch(e){break;}}
+  if(d)out.push((out.length?'':'')+d+' online course'+(d===1?' is':'s are')+' ready to review and publish');
   return out.join('. ');
 }
 function trErr(e){const m=String((e&&e.message)||e);return /hx_training/.test(m)&&/missing|does not exist|schema cache/i.test(m)?'Training is not set up yet - run hendrix_step15.sql in the Hendrix Supabase project.':m;}
@@ -4182,11 +4186,217 @@ function trPersonPdf(u,lic,st,courses,recs,acks,sops){
   const n=doc.internal.getNumberOfPages();for(let i=1;i<=n;i++){doc.setPage(i);doc.setFontSize(8);doc.setTextColor(110,110,110);doc.text('Training record from Hendrix QMS \u2014 every record keeps who recorded it, when, and why it changed.',m,H-30);doc.text('Page '+i+' of '+n,W-m,H-30,{align:'right'});}
   doc.save('Training_'+String(u.name).replace(/[^a-z0-9]/gi,'_')+'_'+todayStr()+'.pdf');
 }
+/* ---------- Online course content (Hendrix starter courses, written from the CSQ Standard for Manufacturing v2.0) ---------- */
+// lesson body: blank line = new paragraph, "- " = bullet, "## " = heading
+// quiz: [question, [options], index of the correct option, why]
+const TRAIN_CONTENT={
+'cGMP':{source:'Hendrix starter course, based on CSQ Standard for Manufacturing v2.0 (Modules 1 and 2A)',minutes:25,
+ lessons:[
+  ['What cGMP means and why it matters','Current Good Manufacturing Practices (cGMP) are the basic rules that make sure every product we make is safe, consistent and exactly what the label says. They cover the people, the building, the equipment, the materials, the process and the records.\n\nThe "c" stands for current: the rules improve over time and we follow the version in force today. Our facility follows the CSQ Standard for Manufacturing, a published international cannabis safety and quality standard, on top of the state rules.\n\n## The idea behind every rule\n- Do it the same way every time: follow the approved SOP.\n- Prevent problems instead of fixing them later.\n- If it is not written down, it did not happen.\n- When something goes wrong, stop, report it and fix the cause.'],
+  ['Standard Operating Procedures (SOPs)','Every production task has an approved, numbered SOP. You must read and sign the current version of each SOP that applies to your job before you do the work. Hendrix keeps the list of SOPs you must sign under SOPs and Training.\n\n- Use only the current version. Old printed copies are not allowed on the floor.\n- Do not skip, add or change steps. If the SOP cannot be followed, stop and tell your supervisor.\n- Suggest improvements to your supervisor; only an approved revision changes the SOP.'],
+  ['Good documentation','Batch records, logs and checklists are legal records. Inspectors and auditors use them to see what really happened.\n\n- Record at the time you do the work, never from memory later.\n- Write clearly, in ink on paper; never use white-out or pencil.\n- On paper, correct a mistake with one line through it, write the correct value, your initials, the date and the reason. In Hendrix, changes need a reason and are kept in the Audit Trail.\n- Never sign for work someone else did, and never fill in a record ahead of time.\n- Blank fields are not allowed: write N/A when a field does not apply.'],
+  ['Clean, ready and in control','Before production starts, the area and equipment must pass a pre-operational inspection (line clearance): clean, nothing left from the previous product, equipment in its maintenance and calibration dates, and the right materials and labels only.\n\n- Use only equipment that is clean, working and calibrated (check the calibration sticker or log).\n- Keep one product and one batch on the line at a time.\n- Use only materials that were received, inspected and accepted. Never use anything marked HOLD, QUARANTINE or REJECTED.\n- Keep doors closed, keep the area tidy and remove anything that does not belong.'],
+  ['Deviations and holds','A deviation is anything that does not go as written: a failed check, a wrong reading, a spill, a machine problem, a label mix-up or a missed step.\n\n- Stop and make the product safe. Report it right away to your supervisor.\n- The deviation is recorded in Hendrix (QMS) with the correction taken. An authorized person decides if a root cause investigation (CAPA) is needed.\n- Product that may be affected goes ON HOLD. Only an authorized person can release, rework or destroy it.\n- Reporting a mistake is always the right thing to do. Hiding it puts customers and the license at risk.']],
+ quiz:[
+  ['What does the "c" in cGMP stand for?',['Cannabis','Current','Certified','Controlled'],1,'cGMP means Current Good Manufacturing Practices: the practices in force today.'],
+  ['You find that an SOP step cannot be done the way it is written. What do you do?',['Skip the step and finish the batch','Do it your own way and write a note','Stop and tell your supervisor','Ask a coworker to sign for it'],2,'Never change an SOP on the fly. Stop and report it; only an approved revision changes the SOP.'],
+  ['When should you fill in a batch record or log?',['At the end of the shift','At the time you do the work','The next morning','Whenever there is time'],1,'Records are made at the time of the activity, never from memory.'],
+  ['How do you correct a mistake on a paper record?',['White-out and rewrite','Scribble it out','One line through it, correct value, initials, date and reason','Tear out the page and start again'],2,'The original entry must stay readable and the correction must show who, when and why.'],
+  ['A field on the record does not apply to this batch. What do you write?',['Leave it blank','N/A','A dash only if you have time','Copy the value from the last batch'],1,'Blank fields are not allowed; N/A shows the field was considered.'],
+  ['What is a line clearance (pre-operational inspection)?',['A cleaning chemical','A check that the area and equipment are clean, ready and free of the previous product before starting','The end-of-day trash run','A security patrol'],1,'Line clearance confirms the area is clean, ready and holds nothing from the previous product.'],
+  ['A container in the warehouse is marked HOLD. Can you use it if production is short?',['Yes, if your supervisor is busy','Yes, if it looks fine','No, never use held material','Only half of it'],2,'Held, quarantined or rejected material can only be released by an authorized person.'],
+  ['The scale calibration sticker is out of date. What do you do?',['Use it, it is probably fine','Use another calibrated scale and report the expired one','Adjust it yourself','Write the weight a little higher'],1,'Only calibrated equipment may be used. Report the expired one so it is calibrated or taken out of use.'],
+  ['You spilled product on the floor during filling. This is:',['Not worth mentioning','A deviation to report right away','Only a problem if the supervisor saw it','Something to fix next week'],1,'Anything that does not go as written is a deviation and must be reported and recorded.'],
+  ['Who decides whether product on hold is released, reworked or destroyed?',['Anyone on the line','The person who found the problem','An authorized person (Full access)','The customer'],2,'Only qualified, authorized people decide the disposition of held product (CSQ 2A.10.4).']]},
+'Cannabis safety':{source:'Hendrix starter course, based on CSQ Standard for Manufacturing v2.0 (2A.12, 3C) - a Cannabis Safety 101 or food safety course may replace it after a qualified review',minutes:25,
+ lessons:[
+  ['Hazards: what can make a product unsafe','A hazard is anything that can make a product unsafe for the person who uses it. We control three kinds:\n\n- Biological: mold, yeast, bacteria (for example from dirty hands, wet materials or poor storage).\n- Chemical: pesticides, heavy metals, residual solvents, cleaning chemicals, lubricants, unapproved ingredients.\n- Physical: glass, metal, hard plastic, hair, jewelry, packaging pieces, insects.\n\nEvery step of the process is planned so these hazards are prevented, removed or reduced to a safe level, and the controls are checked and recorded.'],
+  ['Contamination and cross-contact','Contamination happens when a hazard gets into the product. Cross-contact happens when one material ends up in another (for example a residue of the previous flavor or an allergen).\n\n- Keep raw materials, work in progress and finished product covered and off the floor.\n- Clean and sanitize between products and record it in the Sanitation log.\n- Control cutting tools, glass and brittle items: count them in and out and report any breakage right away.\n- Dust from flower and pre-roll work spreads: use the dust controls and clean surfaces often.'],
+  ['Allergens','Some ingredients cause allergic reactions (for example milk, egg, peanuts, tree nuts, soy, wheat, fish, shellfish, sesame). Edibles and some ingredients can contain them.\n\n- Know which materials on site contain allergens; they are labeled and stored apart.\n- Clean thoroughly at changeover from an allergen product and verify it before the next run.\n- The label must declare allergens correctly; verify the label before releasing the batch.\n- Do not bring food into production areas: it can carry allergens.'],
+  ['Ingredients fit for use','Every input must be approved and meet its specification: from an approved supplier, received with its COA, inspected and accepted.\n\n- Terpenes and other ingredients must be food grade, and for products that are inhaled they must be fit for inhalation: food grade alone is not enough.\n- Solvents and gases must meet purity specifications (for example food-grade, undenatured ethanol; CO2 beverage grade or better, never medical grade).\n- Never use an expired, unlabeled or held material.'],
+  ['Testing, labels and release','Finished product is released only after it meets specifications and regulations: approved lab results, correct potency, correct label and package tag.\n\n- Retained samples are kept so complaints can be investigated.\n- A failed test means the batch goes on hold; it cannot ship until an authorized decision is made.\n- Label errors are a safety issue: the wrong potency or a missing allergen can hurt someone. Check the label against the batch record every time.']],
+ quiz:[
+  ['Which of these is a physical hazard?',['Mold','Residual solvent','A piece of glass','Pesticide'],2,'Glass, metal, plastic and hair are physical hazards.'],
+  ['Which of these is a biological hazard?',['Mold','A metal shaving','Heavy metals','Cleaning chemical'],0,'Mold, yeast and bacteria are biological hazards.'],
+  ['What is cross-contact?',['Two employees talking','One material ending up in another product, such as an allergen or a previous flavor','A supplier visit','A shipping mistake'],1,'Cross-contact moves residues of one material into another product.'],
+  ['A glass jar breaks in the production room. What do you do?',['Sweep it up and continue','Stop, report it right away and follow the breakage procedure','Wait until the end of the shift','Keep working but avoid that spot'],1,'Glass breakage must be reported immediately; nearby product may be contaminated.'],
+  ['For a vape product, is a food-grade terpene always enough?',['Yes, food grade is always safe','No, it must also be fit for inhalation','Only if it smells good','Only for edibles'],1,'For inhaled products, food grade or GRAS alone is not enough (CSQ 3C.2.5).'],
+  ['Which CO2 grade is NOT allowed for processing?',['Beverage grade','Food grade','Medical grade','A higher purity than beverage grade'],2,'The standard requires beverage grade or better and never medical grade.'],
+  ['Why do we keep retained samples?',['To sell later','To investigate complaints and confirm results','To give to visitors','They are not needed'],1,'Retained samples let us investigate complaints and confirm quality later.'],
+  ['A batch failed its lab test. What happens?',['Ship it anyway','It goes on hold until an authorized decision is made','Mix it with a passing batch','Relabel it'],1,'Failed product is held; it cannot ship without a passing retest or authorized decision.'],
+  ['Why must allergen products have a verified changeover clean?',['To save time','To stop allergens reaching the next product','Because inspectors like it','It is optional'],1,'Cleaning and verifying at changeover prevents allergen cross-contact.'],
+  ['Who checks the label against the batch record?',['Nobody, the printer is always right','The trained person releasing the batch, every time','Only the customer','Only the lab'],1,'Label errors (potency, allergens) are a safety issue and must be verified every time.']]},
+'Personnel hygiene & safety':{source:'Hendrix starter course, based on CSQ Standard for Manufacturing v2.0 (2A.13.3 to 2A.13.7)',minutes:20,
+ lessons:[
+  ['Health and illness','You must not be a source of illness or contamination.\n\n- Tell your supervisor before your shift if you have vomiting, diarrhea, fever, jaundice, a sore throat with fever, or an infected cut. You will be kept away from product until it is safe.\n- Open cuts, sores or lesions: do not handle product. Small cuts must be covered with a bandage and a disposable glove.\n- If blood or vomit gets on a surface, the area is closed off, cleaned, sanitized and released by an authorized person before work continues.'],
+  ['Personal cleanliness','- Come to work clean and well kept.\n- No false nails, nail polish or false eyelashes. Keep nails short and clean.\n- No strong perfume or aftershave.\n- Eat, drink, smoke, vape and chew gum or tobacco only in the break areas, never in production or storage areas.\n- If you smoke, wash your hands as soon as you come back to work.\n- Medicines, creams and sweat must not reach the product: cover up and wash.'],
+  ['Clothing, jewelry and personal items','- No jewelry except a plain wedding band or a medical alert bracelet. Jewelry that cannot be removed must be covered.\n- Wear the clean outer garments provided for the area.\n- Nothing in top pockets: pens, phones and badges can fall into product.\n- Long hair is tied back and covered. Personal items and outdoor clothes stay in the lockers provided.'],
+  ['PPE: hair nets, beard covers and gloves','Personal protective equipment (PPE) protects the product and you.\n\n- Hair nets and gloves are worn wherever product is or may be exposed. Facial hair of any length needs a beard cover.\n- Put PPE on in the right order at the entrance and take it off when you leave the area. Dirty PPE goes in the collection bin; never wear it into the break room or outside.\n- Change gloves when they tear, get dirty, or after touching your face, phone, trash or the floor.\n- Use the extra PPE an SOP or SDS asks for (eye protection, respirator, chemical gloves).'],
+  ['Handwashing','Clean hands are the most important hygiene control.\n\n## How\n- Wet hands with warm water, apply soap.\n- Scrub for at least 20 seconds: palms, backs, between fingers, thumbs, nails and wrists.\n- Rinse, dry with a single-use towel, turn off the tap with the towel.\n\n## When\n- Before starting work and when entering production.\n- After the restroom, a break, eating, drinking or smoking.\n- After touching anything dirty: trash, the floor, your face or hair, your phone.\n- Before putting on new gloves, and whenever hands are soiled.']],
+ quiz:[
+  ['You woke up with vomiting and fever. What do you do?',['Come in and work as normal','Tell your supervisor before your shift','Wear two pairs of gloves','Only avoid the break room'],1,'Report symptoms before work; you will be kept away from product.'],
+  ['You have a small cut on your finger. Can you handle product?',['Yes, nothing is needed','Only if it is covered with a bandage and a disposable glove','Only on Fridays','Yes, if you work fast'],1,'Minor cuts must be covered with a bandage and a disposable glove.'],
+  ['Which jewelry is allowed in production?',['Earrings','A plain wedding band','A watch','Any ring'],1,'Only a plain wedding band or a medical alert bracelet is allowed.'],
+  ['Who must wear a beard cover?',['Only people with long beards','Anyone with facial hair of any length in exposed-product areas','Only visitors','Nobody'],1,'Facial hair of any length needs a beard cover.'],
+  ['How long should you scrub your hands with soap?',['3 seconds','At least 20 seconds','Only rinse with water','1 minute only on Mondays'],1,'Scrub at least 20 seconds, covering all parts of the hands.'],
+  ['When must you change your gloves?',['Once a day','When they tear or get dirty, or after touching your face, phone, trash or the floor','Never during a shift','Only after lunch'],1,'Gloves must be changed whenever they could carry contamination.'],
+  ['Where can you eat or drink?',['At your workstation','Only in the designated break areas','In the warehouse','Anywhere if you are careful'],1,'Eating and drinking happen only in permitted areas away from production.'],
+  ['You smoked on your break. What do you do when you return?',['Go straight to the line','Wash your hands immediately','Put on cologne','Nothing'],1,'Smokers wash their hands immediately on returning to work (CSQ 2A.13.4 f).'],
+  ['Are false nails or nail polish allowed in production?',['Yes','No','Only clear polish','Only under gloves'],1,'False nails, polish and false eyelashes are not allowed.'],
+  ['Where do used hair nets and coats go when you leave production?',['In your pocket','In the collection bin at the exit','On the break room chair','Wear them home'],1,'Dirty PPE is separated in the collection bins and never worn outside the area.']]},
+'Product defense':{source:'Hendrix starter course, based on CSQ Standard for Manufacturing v2.0 (1.9, 2A.13.8) and the state security rules',minutes:15,
+ lessons:[
+  ['What product defense is','Product defense protects our products from theft and from intentional harm (someone deliberately adding something to a product). Cannabis is valuable and regulated, so the risk is real.\n\nThe facility has a threat assessment that lists the possible threats and how each is controlled. Your job is to follow the controls and report anything unusual.'],
+  ['Access control','- Sensitive areas (vault, production, extraction, storage, camera room) are restricted to authorized people. Use your own badge every time; never lend it.\n- Do not hold doors open or let anyone follow you through ("tailgating").\n- Every visitor and contractor signs in, wears a visitor badge, follows the GMP rules and is escorted.\n- A person you do not recognize in a restricted area: politely ask who they are and tell your supervisor or security right away.'],
+  ['Securing materials and product','- Flower, extracts, waste and finished product are stored in secured, locked areas and tracked in the state system (METRC).\n- Containers stay closed and sealed when not in use; look for broken seals, signs of tampering or anything that looks or smells wrong.\n- Cannabinoid waste is secured and destroyed according to the rules and recorded in the Waste log.\n- Inventory differences are reported immediately, never "fixed" on paper.'],
+  ['Transport and reporting','- Shipments travel in secure vehicles with the manifest; packages are sealed and tamper evident and checked before loading.\n- Report suspicious behavior, threats, missing product, broken seals, alarms or camera problems immediately to your supervisor or security.\n- You will never get in trouble for reporting a concern in good faith.']],
+ quiz:[
+  ['What does product defense protect against?',['Only fire','Theft and intentional harm to products','Only bad weather','Slow sales'],1,'Product defense covers theft, bioterrorism and intentional adulteration (CSQ 1.9).'],
+  ['A coworker forgot their badge and asks you to let them in. What do you do?',['Let them in','Lend them your badge','Send them to security or a supervisor to be logged in','Prop the door open'],2,'Never share badges or let others follow you in; access must be controlled and recorded.'],
+  ['What is tailgating?',['Parking too close','Letting someone follow you through a secured door','A shipping method','A type of label'],1,'Tailgating is following someone through a secured door without using your own access.'],
+  ['You see a person you do not recognize in the extraction room. What do you do?',['Ignore them','Politely ask who they are and tell your supervisor or security','Take a photo for social media','Leave the building'],1,'Unknown people in restricted areas must be challenged politely and reported.'],
+  ['A product container has a broken seal. What do you do?',['Use it','Reseal it','Do not use it; report it and put it on hold','Throw it away quietly'],2,'Broken seals can mean tampering; report and hold the product.'],
+  ['Must visitors be escorted in restricted areas?',['No','Yes','Only on weekends','Only if they ask'],1,'Visitors sign in, wear a badge, follow GMP rules and are escorted.'],
+  ['Your count of finished units is 10 short of the system. What do you do?',['Change the count to match','Report it immediately','Wait to see if it shows up','Ask a friend to cover it'],1,'Inventory differences are reported immediately, never fixed on paper.'],
+  ['What must travel with a shipment of product?',['Nothing','The state manifest, with sealed tamper-evident packages','Only an invoice','A sample for the driver'],1,'Product travels with its manifest in sealed, tamper-evident packages.']]},
+'Safety':{source:'Hendrix starter course, based on CSQ Standard for Manufacturing v2.0 (2A.9.2) and the chemical labels / SDS',minutes:15,
+ lessons:[
+  ['Approved chemicals only','Only chemicals on the approved chemical list may be brought on site and used. Each one has a Safety Data Sheet (SDS) on file.\n\n- Never bring cleaning products or other chemicals from home.\n- Use each chemical only for its approved purpose, at the dilution on the label or SOP.\n- Never mix chemicals (for example bleach and ammonia make a toxic gas).'],
+  ['Reading an SDS','The SDS tells you everything about a chemical. The most useful sections:\n\n- Section 2: hazards (pictograms, signal word "Danger" or "Warning").\n- Section 4: first aid.\n- Section 6: what to do for a spill.\n- Section 7: handling and storage.\n- Section 8: the PPE you must wear.\n\nSDS binders are kept in each chemical storage area. Read the SDS before using a chemical for the first time.'],
+  ['Storage and labeling','- Store chemicals in their original containers, or in secondary containers clearly labeled with the name and hazard.\n- Food-grade chemicals are stored apart from non-food-grade chemicals.\n- Keep chemicals away from product, packaging and ingredients, in the ventilated, marked chemical areas.\n- Keep containers closed. Report damaged or leaking containers.'],
+  ['Spills, exposure and disposal','- Know where the spill kit, eye wash, first aid kit and PPE are in each chemical area.\n- Small spill: put on the PPE from the SDS, contain and clean it with the spill kit, and report it. Large spill: leave the area and alert your supervisor.\n- Skin or eye contact: rinse with water right away (eye wash at least 15 minutes) and follow the SDS first aid section; report it.\n- Chemicals and empty containers are disposed of according to the rules, never down the drain unless the SDS allows it.']],
+ quiz:[
+  ['Can you bring a cleaner from home to use at work?',['Yes, if it works well','No, only approved chemicals with an SDS on file','Only on weekends','Only if it is natural'],1,'Only chemicals on the approved list, with an SDS on file, may be used.'],
+  ['Which SDS section tells you which PPE to wear?',['Section 2','Section 4','Section 8','Section 16'],2,'Section 8 covers exposure controls and personal protection.'],
+  ['Which SDS section tells you what to do for a spill?',['Section 1','Section 6','Section 9','Section 12'],1,'Section 6 covers accidental release measures.'],
+  ['What happens if you mix bleach and ammonia?',['Nothing','It cleans better','It makes a toxic gas','It becomes food grade'],2,'Never mix chemicals; bleach and ammonia release a toxic gas.'],
+  ['How must a chemical in a spray bottle be labeled?',['No label is needed','With the chemical name and hazard','With your name only','With the date only'],1,'Secondary containers must be clearly labeled with the contents and hazard.'],
+  ['Food-grade and non-food-grade chemicals are stored:',['Together on the same shelf','Separately','In the break room','In production'],1,'Food-grade chemicals are stored separately from non-food-grade chemicals.'],
+  ['You splash a chemical in your eye. First step?',['Rub it','Rinse at the eye wash right away for at least 15 minutes','Finish your task first','Put on sunglasses'],1,'Rinse immediately and follow the SDS first aid section, then report it.'],
+  ['A large chemical spill happens. What do you do?',['Clean it with paper towels','Leave the area and alert your supervisor','Ignore it','Cover it with product boxes'],1,'Large spills: leave the area and alert your supervisor; small spills are handled with the spill kit and PPE.']]}};
+
+// ----- online courses: read the lessons, pass the quiz -----
+function trIsCert(c){return c.topic==='HACCP'||c.topic==='CSQ program';}
+function trOnline(c){return c&&c.active&&c.online&&c.content_status==='published'&&(c.quiz||[]).length>0;}
+function LessonBody(props){
+  const blocks=String(props.text||'').split(/\n\s*\n/);
+  return el('div',{style:{fontSize:15,lineHeight:1.65}},blocks.map(function(b,i){const lines=b.split('\n').filter(function(x){return x.trim();});
+    if(!lines.length)return null;
+    if(lines.every(function(x){return /^\s*- /.test(x);}))return el('ul',{key:i,style:{margin:'6px 0 12px 18px',padding:0}},lines.map(function(x,j){return el('li',{key:j,style:{marginBottom:4}},x.replace(/^\s*- /,''));}));
+    return el('div',{key:i,style:{marginBottom:12}},lines.map(function(x,j){
+      if(/^## /.test(x))return el('div',{key:j,style:{color:'var(--gold-hi)',fontWeight:700,margin:'10px 0 4px'}},x.slice(3));
+      if(/^\s*- /.test(x))return el('div',{key:j,style:{paddingLeft:14,textIndent:-10}},'\u2022 '+x.replace(/^\s*- /,''));
+      return el('div',{key:j},x);}));}));
+}
+function CoursePlayer(props){
+  const c=props.course,lic=props.license,L=c.lessons||[],Q=c.quiz||[];
+  const[step,setStep]=useState(0);const[ans,setAns]=useState(Q.map(function(){return null;}));const[res,setRes]=useState(null);const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  const started=useRef(new Date().toISOString());
+  const quizStep=L.length,done=!!res;
+  async function submit(){setErr('');if(ans.some(function(a){return a===null;})){setErr('Answer every question.');return;}setBusy(true);
+    try{const r=await sb('rpc/hx_course_submit',{method:'POST',body:{p_course:c.id,p_lic:lic.id,p_answers:ans,p_started:started.current}});setRes(r);if(r&&r.passed&&props.onPassed)props.onPassed(r);}
+    catch(e){setErr(/hx_course_submit/.test(String(e.message))?'Online courses are not set up yet - run hendrix_step20.sql.':String(e.message||e));}setBusy(false);}
+  const pct=Math.round(Math.min(step,quizStep)*100/Math.max(1,quizStep+1));
+  return el(Modal,{title:c.name+(props.preview?' (preview)':''),wide:true,onClose:props.onClose},
+    el('div',{className:'row',style:{justifyContent:'space-between',marginBottom:8}},el('div',{className:'muted',style:{fontSize:12}},(c.minutes?'About '+c.minutes+' min \u00b7 ':'')+L.length+' lesson'+(L.length===1?'':'s')+' \u00b7 '+Q.length+' questions \u00b7 pass mark '+c.pass_mark+'%'+(c.content_version?' \u00b7 version '+c.content_version:'')),
+      el('div',{className:'muted',style:{fontSize:12}},done?'Finished':step<quizStep?'Lesson '+(step+1)+' of '+L.length:'Quiz')),
+    el('div',{style:{height:6,background:'#1d1d1d',borderRadius:3,overflow:'hidden',marginBottom:14}},el('div',{style:{width:(done?100:pct)+'%',height:'100%',background:'var(--gold-grad)'}})),
+    !done&&step<quizStep&&el('div',null,el('h2',{style:{margin:'0 0 10px',color:'var(--gold-hi)'}},L[step].title),el(LessonBody,{text:L[step].body}),
+      el('div',{className:'row',style:{justifyContent:'space-between',marginTop:16}},el('button',{className:'btn ghost',disabled:step===0,onClick:function(){setStep(step-1);}},'Back'),
+        el('button',{className:'btn',onClick:function(){setStep(step+1);}},step===quizStep-1?'Go to the quiz':'Next lesson'))),
+    !done&&step>=quizStep&&el('div',null,
+      el('div',{className:'muted',style:{marginBottom:10}},'Answer every question. You need '+c.pass_mark+'% to pass.'),
+      Q.map(function(q,i){return el('div',{key:i,className:'card',style:{padding:'10px 14px',marginBottom:8}},el('div',{style:{fontWeight:600,marginBottom:6}},(i+1)+'. '+q.q),
+        (q.options||[]).map(function(o,j){return el('label',{key:j,className:'ck',style:{display:'flex',margin:'4px 0'}},el('input',{type:'radio',name:'q'+i,checked:ans[i]===j,onChange:function(){setAns(function(a){const b=a.slice();b[i]=j;return b;});}}),el('span',null,o));}));}),
+      err&&el('div',{className:'msg err'},err),
+      el('div',{className:'row',style:{justifyContent:'space-between'}},el('button',{className:'btn ghost',onClick:function(){setStep(Math.max(0,quizStep-1));}},'Back to the lessons'),
+        props.preview?el('span',{className:'muted',style:{fontSize:12}},'Preview: answers are checked when someone takes the course.'):el('button',{className:'btn',disabled:busy,onClick:submit},busy?'Checking...':'Submit answers'))),
+    done&&el('div',null,
+      el('div',{className:'card gold',style:{textAlign:'center',padding:'18px'}},el('div',{style:{fontSize:42,fontWeight:700,color:res.passed?'var(--green)':'var(--red)'}},res.score+'%'),
+        el('div',{style:{fontSize:16,fontWeight:700,marginTop:4}},res.passed?'Passed - your training is recorded':'Not passed (pass mark '+res.pass_mark+'%)'),el('div',{className:'muted',style:{marginTop:4}},res.correct+' of '+res.total+' correct')),
+      (res.wrong||[]).length>0&&el('div',null,el('div',{className:'k',style:{margin:'10px 0 6px'}},'Review'),(res.wrong||[]).map(function(w){const q=Q[w.q]||{};return el('div',{key:w.q,className:'card',style:{padding:'8px 12px',marginBottom:6,borderLeft:'3px solid var(--red)'}},
+        el('div',{style:{fontWeight:600}},(w.q+1)+'. '+q.q),w.explain&&el('div',{className:'muted',style:{fontSize:13,marginTop:4}},w.explain));})),
+      el('div',{className:'row',style:{justifyContent:'flex-end',marginTop:10}},!res.passed&&el('button',{className:'btn ghost',onClick:function(){setRes(null);setStep(0);setAns(Q.map(function(){return null;}));started.current=new Date().toISOString();}},'Read again and retake'),
+        el('button',{className:'btn',onClick:props.onClose},'Done'))));
+}
+async function trKeyGet(cid){const r=await sb('hx_training_keys?course_id=eq.'+encodeURIComponent(cid)+'&select=*');return (r||[])[0]||null;}
+async function trKeySave(cid,answers,explain){const have=await trKeyGet(cid);
+  if(have)return sb('hx_training_keys?course_id=eq.'+encodeURIComponent(cid),{method:'PATCH',body:{answers:answers,explain:explain},prefer:'return=representation'});
+  return sb('hx_training_keys',{method:'POST',body:{course_id:cid,answers:answers,explain:explain},prefer:'return=representation'});}
+function trContentFor(c){return c&&!trIsCert(c)?TRAIN_CONTENT[c.topic]||null:null;}
+// save lessons, quiz (no answers) and the answer key; publish when asked
+async function trSaveContent(c,f,publish){
+  await trKeySave(c.id,f.quiz.map(function(q){return q.answer;}),f.quiz.map(function(q){return q.explain||'';}));
+  return db.update('hx_training_courses',c.id,{online:true,lessons:f.lessons,quiz:f.quiz.map(function(q){return {q:q.q,options:q.options};}),pass_mark:f.pass_mark,minutes:f.minutes,content_source:f.content_source,content_status:publish?'published':'draft'});
+}
+function trStarterForm(t){return {lessons:t.lessons.map(function(l){return {title:l[0],body:l[1]};}),quiz:t.quiz.map(function(q){return {q:q[0],options:q[1].slice(),answer:q[2],explain:q[3]};}),pass_mark:80,minutes:t.minutes,content_source:t.source};}
+async function trAiDraftLaw(st,c){
+  const rules=(await db.get('hx_rules','state_id=eq.'+encodeURIComponent(st.id)+'&select=category,citation,title,body&order=category'))||[];
+  if(!rules.length)throw new Error('The '+st.name+' Rulebook is empty. Add the state rules first; the course is written from them.');
+  let txt='';rules.forEach(function(r){const add='['+(r.citation||'')+'] '+r.category+' - '+r.title+': '+String(r.body||'').replace(/\s+/g,' ').slice(0,700)+'\n';if(txt.length+add.length<45000)txt+=add;});
+  const prompt='You write a training course for employees of a licensed cannabis manufacturer in '+st.name+(st.agency?' (regulator: '+st.agency+')':'')+'. Use ONLY the state rules below; do not invent rules, numbers or citations. '+
+    'Cover what a production employee must know and do: licensing and badges, security and access, inventory tracking (METRC), testing, packaging and labeling, waste, recordkeeping, and anything else the rules require of employees. Cite the rule citation in brackets after each requirement.\n'+
+    'Return ONLY JSON: {"lessons":[{"title":"...","body":"plain text, blank line between paragraphs, lines starting with - for bullets"}],"quiz":[{"q":"...","options":["...","...","...","..."],"answer":0,"explain":"one sentence with the citation"}]}. Write 4 to 6 lessons and 10 questions with 4 options each; vary the position of the correct option.\n\nRULES OF '+st.name.toUpperCase()+':\n'+txt;
+  let j;try{j=await aiCall({module:'training',max_tokens:8000,messages:[{role:'user',content:prompt}]});}catch(e){if(String(e.message)==='AI_NOT_SETUP')throw new Error('AI is not set up yet - deploy the hendrix-ai function (see hendrix-ai.ts).');throw e;}
+  const out=sopAiJson(((j.content||[])[0]||{}).text||'');
+  const lessons=(out.lessons||[]).filter(function(l){return l&&l.title&&l.body;}).map(function(l){return {title:String(l.title),body:String(l.body)};});
+  const quiz=(out.quiz||[]).filter(function(q){return q&&q.q&&Array.isArray(q.options)&&q.options.length>=2&&q.answer>=0&&q.answer<q.options.length;}).map(function(q){return {q:String(q.q),options:q.options.map(String),answer:Number(q.answer),explain:String(q.explain||'')};});
+  if(!lessons.length||!quiz.length)throw new Error('The AI did not return a usable course. Try again.');
+  return {lessons:lessons,quiz:quiz,pass_mark:80,minutes:20,content_source:'AI draft from the '+st.name+' Rulebook ('+rules.length+' rules) - review before publishing'};
+}
+function CourseContentEditor(props){
+  const c=props.course,st=props.state;const starter=trContentFor(c),isLaw=c.topic==='Required by law';
+  const[f,setF]=useState(null);const[err,setErr]=useState('');const[busy,setBusy]=useState('');const[prev,setPrev]=useState(false);
+  useEffect(function(){let dead=false;trKeyGet(c.id).then(function(k){if(dead)return;const a=(k&&k.answers)||[],x=(k&&k.explain)||[];
+    setF({lessons:(c.lessons||[]).map(function(l){return {...l};}),quiz:(c.quiz||[]).map(function(q,i){return {q:q.q,options:(q.options||[]).slice(),answer:a[i]!=null?a[i]:0,explain:x[i]||''};}),pass_mark:c.pass_mark||80,minutes:c.minutes||15,content_source:c.content_source||''});})
+    .catch(function(e){if(!dead){setErr(String(e.message||e));setF({lessons:[],quiz:[],pass_mark:80,minutes:15,content_source:''});}});return function(){dead=true;};},[c.id]);
+  if(!f)return el(Modal,{title:'Course content \u00b7 '+c.name,onClose:props.onClose},el('div',{className:'muted'},'Loading...'));
+  function set(k,v){setF(function(p){return {...p,[k]:v};});}
+  function setL(i,k,v){setF(function(p){return {...p,lessons:p.lessons.map(function(l,j){return j===i?{...l,[k]:v}:l;})};});}
+  function setQ(i,k,v){setF(function(p){return {...p,quiz:p.quiz.map(function(q,j){return j===i?{...q,[k]:v}:q;})};});}
+  async function save(pub){setErr('');
+    if(pub){if(!f.lessons.length||!f.quiz.length){setErr('Add at least one lesson and one question.');return;}
+      if(f.quiz.some(function(q){return !q.q.trim()||q.options.length<2||q.options.some(function(o){return !String(o).trim();});})){setErr('Every question needs text and at least two filled options.');return;}}
+    setBusy(pub?'Publishing...':'Saving...');try{await trSaveContent(c,f,pub);props.onDone(pub?'Published '+c.name+' online.':'Draft saved.');}catch(e){setErr(trErr(e));}setBusy('');}
+  async function ai(){setErr('');setBusy('The AI is writing the course from the '+st.name+' Rulebook...');try{const d=await trAiDraftLaw(st,c);setF(d);}catch(e){setErr(String(e.message||e));}setBusy('');}
+  return el(Modal,{title:'Online course \u00b7 '+c.name,wide:true,onClose:props.onClose},
+    el('div',{className:'row',style:{gap:6,marginBottom:10}},el('span',{className:'badge '+(c.content_status==='published'?'ok':c.content_status==='draft'?'warn':'off')},c.content_status==='published'?'Published v'+c.content_version+' by '+c.content_by:c.content_status==='draft'?'Draft':'No content yet'),
+      starter&&el('button',{className:'btn ghost sm',onClick:function(){setF(trStarterForm(starter));}},'Load Hendrix starter content'),
+      isLaw&&el('button',{className:'btn ghost sm',disabled:!!busy,onClick:ai},'Draft from the '+st.name+' Rulebook with AI'),
+      el('button',{className:'btn ghost sm',disabled:!f.lessons.length,onClick:function(){setPrev(true);}},'Preview')),
+    isLaw&&el('div',{className:'muted',style:{fontSize:12,marginBottom:8}},'The '+st.name+' course is written only from the '+st.name+' Rulebook in Hendrix. Read it and correct it before publishing: you are approving the legal content.'),
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr 3fr',gap:10}},
+      el(Field,{label:'Pass mark %'},el('input',{type:'number',min:50,max:100,value:f.pass_mark,onChange:function(e){set('pass_mark',Math.max(50,Math.min(100,parseInt(e.target.value,10)||80)));}})),
+      el(Field,{label:'Minutes (about)'},el('input',{type:'number',min:1,value:f.minutes,onChange:function(e){set('minutes',parseInt(e.target.value,10)||15);}})),
+      el(Field,{label:'Source of the content'},el('input',{value:f.content_source,placeholder:'e.g. Written by QA from SOP-PRD-001',onChange:function(e){set('content_source',e.target.value);}}))),
+    el('div',{className:'k',style:{margin:'8px 0 6px'}},'Lessons ('+f.lessons.length+')'),
+    f.lessons.map(function(l,i){return el('div',{key:i,className:'card',style:{padding:'8px 12px',marginBottom:6}},
+      el('div',{className:'row',style:{gap:6,flexWrap:'nowrap'}},el('b',null,(i+1)+'.'),el('input',{value:l.title,placeholder:'Lesson title',style:{flex:1},onChange:function(e){setL(i,'title',e.target.value);}}),
+        el('button',{className:'btn ghost sm',disabled:i===0,onClick:function(){setF(function(p){const a=p.lessons.slice();const t=a[i-1];a[i-1]=a[i];a[i]=t;return {...p,lessons:a};});}},'\u2191'),
+        el('button',{className:'btn ghost sm',onClick:function(){setF(function(p){return {...p,lessons:p.lessons.filter(function(_,j){return j!==i;})};});}},'\u00d7')),
+      el('textarea',{rows:5,value:l.body,style:{marginTop:6,width:'100%'},placeholder:'Text. Blank line = new paragraph, "- " = bullet, "## " = heading',onChange:function(e){setL(i,'body',e.target.value);}}));}),
+    el('button',{className:'btn ghost sm',onClick:function(){setF(function(p){return {...p,lessons:p.lessons.concat([{title:'',body:''}])};});}},'+ Lesson'),
+    el('div',{className:'k',style:{margin:'14px 0 6px'}},'Quiz ('+f.quiz.length+' questions) \u00b7 tick the correct answer'),
+    f.quiz.map(function(q,i){return el('div',{key:i,className:'card',style:{padding:'8px 12px',marginBottom:6}},
+      el('div',{className:'row',style:{gap:6,flexWrap:'nowrap'}},el('b',null,(i+1)+'.'),el('input',{value:q.q,placeholder:'Question',style:{flex:1},onChange:function(e){setQ(i,'q',e.target.value);}}),
+        el('button',{className:'btn ghost sm',onClick:function(){setF(function(p){return {...p,quiz:p.quiz.filter(function(_,j){return j!==i;})};});}},'\u00d7')),
+      q.options.map(function(o,j){return el('div',{key:j,className:'row',style:{gap:6,margin:'4px 0 0 18px',flexWrap:'nowrap'}},el('input',{type:'radio',name:'ans'+i,checked:q.answer===j,title:'Correct answer',onChange:function(){setQ(i,'answer',j);}}),
+        el('input',{value:o,placeholder:'Option '+(j+1),style:{flex:1,borderColor:q.answer===j?'var(--green)':''},onChange:function(e){const a=q.options.slice();a[j]=e.target.value;setQ(i,'options',a);}}),
+        q.options.length>2&&el('button',{className:'btn ghost sm',onClick:function(){const a=q.options.filter(function(_,k){return k!==j;});setQ(i,'options',a);if(q.answer>=a.length)setQ(i,'answer',0);}},'\u00d7'));}),
+      el('div',{className:'row',style:{gap:6,margin:'4px 0 0 18px'}},q.options.length<6&&el('button',{className:'btn ghost sm',onClick:function(){setQ(i,'options',q.options.concat(['']));}},'+ Option'),
+        el('input',{value:q.explain,placeholder:'Why (shown after a wrong answer)',style:{flex:1},onChange:function(e){setQ(i,'explain',e.target.value);}})));}),
+    el('button',{className:'btn ghost sm',onClick:function(){setF(function(p){return {...p,quiz:p.quiz.concat([{q:'',options:['','','',''],answer:0,explain:''}])};});}},'+ Question'),
+    busy&&el('div',{className:'msg'},busy),err&&el('div',{className:'msg err'},err),
+    prev&&el(CoursePlayer,{course:{...c,lessons:f.lessons,quiz:f.quiz,pass_mark:f.pass_mark,minutes:f.minutes},license:props.license,preview:true,onClose:function(){setPrev(false);}}),
+    el('div',{className:'row',style:{justifyContent:'flex-end',marginTop:12}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn ghost',disabled:!!busy,onClick:function(){save(false);}},'Save draft'),
+      el('button',{className:'btn',disabled:!!busy,onClick:function(){save(true);}},c.content_status==='published'?'Publish new version':'Publish online')));
+}
+
 function TrainingPage(props){
   const st=props.state,lic=props.license,lid=lic?lic.id:'';
   const[courses,setCourses]=useState(null);const[recs,setRecs]=useState([]);const[people,setPeople]=useState([]);const[sops,setSops]=useState([]);const[acks,setAcks]=useState([]);
   const[tab,setTab]=useState(can('training',2)?(lsGet('hx_trtab')||'matrix'):'mine');const[msg,setMsg]=useState('');const[modal,setModal]=useState(null);
-  const[roleF,setRoleF]=useState('ALL');const[stF,setStF]=useState('ALL');const[q,setQ]=useState('');
+  const[roleF,setRoleF]=useState('ALL');const[stF,setStF]=useState('ALL');const[q,setQ]=useState('');const[atts,setAtts]=useState([]);
   const load=useCallback(function(){
     if(!lid){setCourses([]);return;}const enc=encodeURIComponent;
     Promise.all([db.get('hx_training_courses','license_ids=cs.%7B'+enc(lid)+'%7D&select=*&order=sort,name'),db.get('hx_training_records','license_id=eq.'+enc(lid)+'&select=*&order=completed_on.desc&limit=20000')])
@@ -4195,6 +4405,7 @@ function TrainingPage(props){
     sb('rpc/hx_training_roster',{method:'POST',body:{p_lic:lid}}).then(function(r){setPeople(r||[]);}).catch(function(){setPeople([]);});
     db.get('hx_sops','license_ids=cs.%7B'+enc(lid)+'%7D&status=eq.published&select=id,title,sop_number,version,status,license_id,license_ids,target_mode,target_role_ids,target_user_ids').then(function(r){setSops((r||[]).filter(function(s){return s.status==='published'&&(s.license_ids||[]).indexOf(lid)>=0;}));}).catch(function(){setSops([]);});
     sb('rpc/hx_training_sop_acks',{method:'POST',body:{p_lic:lid}}).then(function(r){setAcks(r||[]);}).catch(function(){setAcks([]);});
+    db.get('hx_training_attempts','license_id=eq.'+enc(lid)+'&select=*&order=finished_at.desc&limit=500').then(function(r){setAtts((r||[]).filter(function(x){return x.license_id===lid;}));}).catch(function(){setAtts([]);});
   },[lid]);
   useEffect(load,[load]);
   const autoRef=useRef('');
@@ -4226,7 +4437,11 @@ function TrainingPage(props){
     el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
       el('div',null,el('h1',null,el('span',{className:'g'},'Training')),el('div',{className:'sub'},'Training matrix \u00b7 '+lic.name+' \u00b7 required training per role, refreshers, qualified trainers, assessments and SOP signatures (CSQ 2A.13.2)')),
       el('div',{className:'row'},canE&&el('button',{className:'btn',disabled:!active.length,onClick:function(){setModal({t:'rec'});}},'+ Record training'),canF&&el('button',{className:'btn ghost',onClick:function(){setModal({t:'course'});}},'+ Course'))),
-    msg&&el('div',{className:/^(Added|Saved|Recorded|Voided|Created|Regulatory|\d+ course)/.test(msg)?'msg':'msg err'},msg),
+    msg&&el('div',{className:/^(Added|Saved|Recorded|Voided|Created|Regulatory|Published|Draft|Passed|\d+ (online )?course)/.test(msg)?'msg':'msg err'},msg),
+    canF&&C.some(function(c){return c.content_status==='draft'&&/^Hendrix starter/.test(c.content_source||'');})&&el('div',{className:'card',style:{borderColor:'var(--gold)',padding:'10px 14px',marginBottom:12}},
+      el('div',{className:'row',style:{justifyContent:'space-between'}},el('div',null,el('b',null,'Online courses ready: '),C.filter(function(c){return c.content_status==='draft'&&/^Hendrix starter/.test(c.content_source||'');}).map(function(c){return c.name;}).join(', '),
+        el('div',{className:'muted',style:{fontSize:12}},'Hendrix starter lessons and quizzes written from the CSQ standard. Review them (Courses tab > Online course), then publish so people can take them.')),
+        el('button',{className:'btn sm',onClick:async function(){let n=0;try{for(const c of C){if(c.content_status==='draft'&&/^Hendrix starter/.test(c.content_source||'')){await db.update('hx_training_courses',c.id,{content_status:'published'});n++;}}setMsg('Published '+n+' online course'+(n===1?'':'s')+'.');load();}catch(e){setMsg(trErr(e));load();}}},'Publish all'))),
     canE&&courses!==null&&el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',marginBottom:14}},
       stat('Training current',S.pct==null?'-':S.pct+'%',S.pct==null?'var(--faint)':S.pct>=95?'var(--green)':S.pct>=80?'var(--gold-hi)':'var(--red)',S.ok+' of '+S.req+' required'),
       stat('Fully trained',S.full+' / '+people.length,'var(--text)','people at 100%'),
@@ -4240,10 +4455,13 @@ function TrainingPage(props){
       C.map(function(c){const roles=(ACC.roles||[]).filter(function(r){return (c.role_ids||[]).indexOf(r.id)>=0;}).map(function(r){return r.name;});
         const sop=sops.find(function(s){return s.id===c.sop_id;});
         return el('div',{key:c.id,className:'card',style:{padding:'12px 16px',opacity:c.active?1:.55}},el('div',{className:'row',style:{justifyContent:'space-between',flexWrap:'nowrap',alignItems:'flex-start'}},
-          el('div',null,el('div',{className:'row',style:{gap:6,marginBottom:4}},el('b',null,c.name),el('span',{className:'badge off'},c.topic),!c.active&&el('span',{className:'badge off'},'Off')),
+          el('div',null,el('div',{className:'row',style:{gap:6,marginBottom:4}},el('b',null,c.name),el('span',{className:'badge off'},c.topic),!c.active&&el('span',{className:'badge off'},'Off'),
+              trOnline(c)?el('span',{className:'badge ok'},'Online \u00b7 v'+c.content_version+' \u00b7 pass '+c.pass_mark+'%'):c.content_status==='draft'?el('span',{className:'badge warn'},'Online draft'):trIsCert(c)?el('span',{className:'badge off'},'Outside certification'):null),
             c.description&&el('div',{className:'muted',style:{fontSize:12}},c.description),
             el('div',{style:{fontSize:12,marginTop:4}},TRAIN_MODES[c.required_mode]+(c.required_mode==='roles'?': '+roles.join(', '):'')+(c.required_mode==='at_least'?' ('+c.min_people+')':trCounted(c)?' \u00b7 at least '+c.min_people+' certified':'')+' \u00b7 '+(c.refresher_months?'refresher every '+c.refresher_months+' months':'one time')+(c.assessment_required?' \u00b7 assessment required':'')+(sop?' \u00b7 met by signing '+(sop.sop_number||sop.title):''))),
-          canF&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'course',course:c});}},'Edit')));})):
+          el('div',{className:'row',style:{gap:6,flex:'0 0 auto'}},trOnline(c)&&el('button',{className:'btn sm',onClick:function(){setModal({t:'take',course:c});}},'Take course'),
+            canF&&!trIsCert(c)&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'content',course:c});}},'Online course'),
+            canF&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'course',course:c});}},'Edit'))));})):
     tab==='matrix'?(!active.length?el('div',{className:'empty'},'Add courses first (Courses tab).'):el('div',null,
       el('div',{className:'row',style:{marginBottom:10}},el('input',{value:q,placeholder:'Search people',style:{width:200},onChange:function(e){setQ(e.target.value);}}),
         el('select',{value:roleF,onChange:function(e){setRoleF(e.target.value);}},el('option',{value:'ALL'},'All roles'),(ACC.roles||[]).map(function(r){return el('option',{key:r.id,value:r.id},r.name);})),
@@ -4268,7 +4486,11 @@ function TrainingPage(props){
           return el('td',{key:s.id,style:{textAlign:'center'},title:a?'Signed '+String(a.at).slice(0,10):'Not signed (v'+s.version+')'},el('span',{className:'trcell',style:{background:a?'var(--green)':'#333',color:a?'#000':'#888'}},a?'\u2713':'\u25a1'));});
         const rate=n?Math.round(d*100/n):100;
         return el('tr',{key:u.id},el('td',null,u.name),cells,el('td',{style:{fontWeight:700,color:rate===100?'var(--green)':rate>=80?'var(--gold-hi)':'var(--red)'}},rate+'%'));}))))):
-    tab==='records'?el('div',null,!recs.length?el('div',{className:'empty'},'No training recorded yet.'):el('div',{className:'card',style:{overflowX:'auto'}},el('table',null,
+    tab==='records'?el('div',null,atts.length>0&&el('div',{className:'card'},el('h3',null,'Online quiz attempts ('+atts.length+')'),el('div',{style:{overflowX:'auto'}},el('table',null,
+        el('thead',null,el('tr',null,['Date','Person','Course','Score','Result','Time','Version'].map(function(h){return el('th',{key:h},h);}))),
+        el('tbody',null,atts.slice(0,200).map(function(a){const c=C.find(function(x){return x.id===a.course_id;});return el('tr',{key:a.id},el('td',null,String(a.finished_at).slice(0,16).replace('T',' ')),el('td',null,a.person_name),el('td',null,c?c.name:'-'),
+          el('td',null,a.correct+'/'+a.total+' ('+a.score+'%)'),el('td',null,el('span',{className:'badge '+(a.passed?'ok':'bad')},a.passed?'Passed':'Not passed')),el('td',null,a.minutes!=null?a.minutes+' min':'-'),el('td',null,'v'+a.content_version));}))))),
+      !recs.length?el('div',{className:'empty'},'No training recorded yet.'):el('div',{className:'card',style:{overflowX:'auto'}},el('table',null,
       el('thead',null,el('tr',null,['Date','Person','Course','Trainer','Method','Assessment','Expires','',''].map(function(h,i){return el('th',{key:i},h);}))),
       el('tbody',null,recs.map(function(r){const c=C.find(function(x){return x.id===r.course_id;});return el('tr',{key:r.id,className:r.voided?'voidrow':''},
         el('td',null,r.completed_on),el('td',null,r.person_name),el('td',null,c?c.name:'-'),el('td',null,r.trainer_name,r.trainer_qualification&&el('div',{className:'muted',style:{fontSize:11}},r.trainer_qualification)),el('td',null,r.method+(r.language&&r.language!=='English'?' \u00b7 '+r.language:'')),
@@ -4282,12 +4504,19 @@ function TrainingPage(props){
         el('div',{className:'card gold'},el('div',{className:'k'},'My required training'),!req.length?el('div',{className:'muted',style:{marginTop:6}},'No required courses for your roles yet.'):
           req.map(function(c){const x=trCell(c,mine,recs,acks,sops);return el('div',{key:c.id,className:'row',style:{gap:10,padding:'6px 0',borderTop:'1px solid var(--line)',flexWrap:'nowrap'}},
             el('span',{className:'trcell',style:{background:TR_TONE[x.st]}},x.st==='current'?'\u2713':x.st==='due'?'!':'\u00d7'),el('span',{style:{flex:1}},c.name),
-            el('span',{className:'muted',style:{fontSize:12}},x.st==='missing'?'Not completed - ask your trainer':(x.st==='expired'?'Expired ':x.st==='due'?'Due soon \u00b7 ':'Completed ')+x.on+(x.exp?' \u00b7 expires '+x.exp:'')));})),
+            el('span',{className:'muted',style:{fontSize:12}},x.st==='missing'?(trOnline(c)?'Not completed':'Not completed - ask your trainer'):(x.st==='expired'?'Expired ':x.st==='due'?'Due soon \u00b7 ':'Completed ')+x.on+(x.exp?' \u00b7 expires '+x.exp:'')),
+            trOnline(c)&&el('button',{className:x.st==='current'?'btn ghost sm':'btn sm',onClick:function(){setModal({t:'take',course:c});}},x.st==='current'?'Take again':'Take course'));})),
+        (function(){const opt=active.filter(function(c){return trOnline(c)&&!trRequired(c,mine);});return opt.length?el('div',{className:'card'},el('div',{className:'k'},'Other online courses'),opt.map(function(c){return el('div',{key:c.id,className:'row',style:{gap:10,padding:'6px 0',borderTop:'1px solid var(--line)',flexWrap:'nowrap'}},
+          el('span',{style:{flex:1}},c.name),el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'take',course:c});}},'Take course'));})):null;})(),
+        atts.filter(function(a){return a.user_id===mine.id;}).length>0&&el('div',{className:'card'},el('div',{className:'k'},'My quiz attempts'),atts.filter(function(a){return a.user_id===mine.id;}).slice(0,20).map(function(a){const c=C.find(function(x){return x.id===a.course_id;});
+          return el('div',{key:a.id,style:{fontSize:13,padding:'3px 0'}},String(a.finished_at).slice(0,10)+' \u00b7 '+(c?c.name:'')+' \u00b7 '+a.score+'% ',el('span',{className:'badge '+(a.passed?'ok':'bad')},a.passed?'Passed':'Not passed'));})),
         el('div',{className:'card'},el('div',{className:'k'},'SOPs waiting for my signature'),pend.length?pend.map(function(s){return el('div',{key:s.id,style:{fontSize:13,padding:'4px 0'}},(s.sop_number?s.sop_number+' \u00b7 ':'')+s.title+' (v'+s.version+')');}):el('div',{className:'muted',style:{marginTop:6}},'None - all signed.'),
           pend.length>0&&props.go&&el('button',{className:'btn sm',style:{marginTop:8},onClick:function(){props.go('sops');}},'Open SOPs')),
         el('button',{className:'btn ghost',onClick:function(){trPersonPdf(mine,lic,st,active,recs,acks,sops);}},'Download my training record (PDF)'));})()),
     modal&&modal.t==='course'&&el(TrainingCourseForm,{course:modal.course,state:st,license:lic,sops:sops,count:C.length,onClose:function(){setModal(null);},onDone:function(){setModal(null);setMsg('Saved.');load();}}),
     modal&&modal.t==='rec'&&el(TrainingRecordForm,{state:st,license:lic,courses:C,people:people,courseId:modal.course,personId:modal.person,onClose:function(){setModal(null);},onDone:function(n){setModal(null);setMsg('Recorded '+n+' training record'+(n===1?'':'s')+'.');load();}}),
+    modal&&modal.t==='content'&&el(CourseContentEditor,{course:modal.course,state:st,license:lic,onClose:function(){setModal(null);},onDone:function(t){setModal(null);setMsg(t);load();}}),
+    modal&&modal.t==='take'&&el(CoursePlayer,{course:modal.course,license:lic,onPassed:function(){load();},onClose:function(){setModal(null);load();}}),
     modal&&modal.t==='void'&&el(VoidModal,{what:'training record ('+modal.rec.person_name+')',onClose:function(){setModal(null);},onVoid:function(why){return db.update('hx_training_records',modal.rec.id,{voided:true,void_reason:why}).then(function(){setModal(null);setMsg('Voided.');load();});}}));
 }
 function TrainingDashCard(props){
@@ -5468,8 +5697,8 @@ async function loadStdEvidence(st,lic){
     const r=((await db.get('hx_training_records','license_id=eq.'+enc(lid)+'&select=course_id,user_id,completed_on,expires_on,voided,assessment,trainer_name,license_id&limit=50000'))||[]).filter(function(x){return x.license_id===lid;});
     const ro=(await sb('rpc/hx_training_roster',{method:'POST',body:{p_lic:lid}}))||[];
     let so=[],ak=[];try{so=((await db.get('hx_sops','license_ids=cs.%7B'+enc(lid)+'%7D&status=eq.published&select=id,version,status,license_ids,target_mode,target_role_ids,target_user_ids'))||[]).filter(function(x){return x.status==='published';});ak=(await sb('rpc/hx_training_sop_acks',{method:'POST',body:{p_lic:lid}}))||[];}catch(e){}
-    const S=trStats(c,ro,r,ak,so);
-    return {courses:c.length,pct:S.pct,bad:S.bad,due:S.due,people:ro.length,recs:r.filter(function(x){return !x.voided;}).length,atLeast:S.atLeast.map(function(a){return {name:a.c.name,have:a.have.length,need:a.c.min_people,topic:a.c.topic};})};}));
+    const S=trStats(c,ro,r,ak,so);let at=[];try{at=((await db.get('hx_training_attempts','license_id=eq.'+enc(lid)+'&select=passed,finished_at,license_id&limit=50000'))||[]).filter(function(x){return x.license_id===lid&&x.finished_at>=since;});}catch(e){at=[];}
+    return {online:c.filter(trOnline).length,att:at.length,attPass:at.filter(function(x){return x.passed;}).length,courses:c.length,pct:S.pct,bad:S.bad,due:S.due,people:ro.length,recs:r.filter(function(x){return !x.voided;}).length,atLeast:S.atLeast.map(function(a){return {name:a.c.name,have:a.have.length,need:a.c.min_people,topic:a.c.topic};})};}));
   if(can('qms',1))jobs.push(tryGet('qms',async function(){
     const d=((await db.get('hx_deviations','license_id=eq.'+enc(lid)+'&select=id,status,due_date,created_at,rca_required,root_cause,immediate_action,license_id&limit=20000'))||[]).filter(function(x){return x.license_id===lid;});
     const c=((await db.get('hx_capas','license_id=eq.'+enc(lid)+'&select=id,status,due_date,effectiveness_rating,license_id&limit=20000'))||[]).filter(function(x){return x.license_id===lid;});
@@ -5563,7 +5792,7 @@ function clauseEvidence(x,E){
     else if(p==='products'&&E.products)out.push({label:'Products',value:E.products.n+' SKUs ('+E.products.active+' active) \u00b7 '+E.products.forms+' formulations',page:'products',warn:E.products.n?'':'No SKUs yet'});
     else if(p==='audit'&&E.audit)out.push({label:'Audit trail',value:E.audit.n+' recorded change'+(E.audit.n===1?'':'s')+' (who, when, why)',page:'audit'});
     else if(p==='training'&&E.training){const T=E.training,al=T.atLeast.filter(function(a){return x.clause==='4A.2'?a.topic==='HACCP':x.clause==='2A.13.2'?a.topic==='CSQ program':false;});
-      out.push({label:'Training matrix',value:T.courses?(T.pct==null?'-':T.pct+'%')+' of required training current for '+T.people+' people \u00b7 '+T.courses+' courses \u00b7 '+T.recs+' records with trainer and date'+(T.due?' \u00b7 '+T.due+' due in 30 days':''):'No courses set up',page:'training',
+      out.push({label:'Training matrix',value:T.courses?(T.pct==null?'-':T.pct+'%')+' of required training current for '+T.people+' people \u00b7 '+T.courses+' courses \u00b7 '+T.recs+' records with trainer and date'+(T.online?' \u00b7 '+T.online+' online course'+(T.online===1?'':'s')+', '+T.att+' quiz attempt'+(T.att===1?'':'s')+' ('+T.attPass+' passed)':'')+(T.due?' \u00b7 '+T.due+' due in 30 days':''):'No courses set up',page:'training',
         warn:!T.courses?'Training program not set up':(T.bad?T.bad+' expired or missing':'')});
       al.forEach(function(a){out.push({label:a.name,value:a.have+' of at least '+a.need+' people certified',page:'training',warn:a.have<a.need?'needs '+(a.need-a.have)+' more':''});});}
     else if(p==='qms'&&E.qms){const Q=E.qms;
