@@ -4436,6 +4436,18 @@ function trStarterFor(lic){const op=licOp(lic);return TRAIN_STARTER.filter(funct
 const TR_GENERIC_LAW='Regulatory compliance (state rules)';
 function trLawCourse(st){const n=(st&&st.name)||'State';return {name:n+' regulatory compliance (state rules)',description:'The '+n+' cannabis rules'+(st&&st.agency?' ('+st.agency+')':'')+' that apply to each person\'s work. Only for '+n+' licenses; train from the '+n+' Rulebook in Hendrix (CSQ 1.3, 2A.13.2 g1).'};}
 function trStarterNamed(s,st){return s[1]==='Required by law'?trLawCourse(st):{name:s[0],description:s[2]};}
+// shared courses (step 23): the same course at every license counts once per person.
+// csq:<topic> = every license in both states; law:<state> = every license of that state; custom:<name> = marked shared
+function trSlug(t){return String(t||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');}
+function trShareKey(s,st){return s[1]==='Required by law'?'law:'+((st&&st.id)||''):'csq:'+trSlug(s[1]);}
+function trShareLabel(c,st){const k=c&&c.share_key;if(!k)return '';return /^law:/.test(k)?'Shared \u00b7 all '+((st&&st.name)||'state')+' licenses':'Shared \u00b7 all licenses';}
+// insert rows; columns the database does not have yet (a newer SQL step not run) are dropped
+async function trInsertAll(rows){let rs=rows.slice();
+  for(let t=0;t<6;t++){try{return await db.insert('hx_training_courses',rs);}catch(e){const m=/Could not find the '([A-Za-z0-9_]+)' column/.exec(String(e&&e.message||e));if(!m)throw e;rs=rs.map(function(r){const x={...r};delete x[m[1]];return x;});}}}
+// training done for the same shared course at other licenses, shown as this license's course (the record stays where it was made)
+function trSharedMap(shared,courses){const out=[];(shared||[]).forEach(function(r){const c=(courses||[]).find(function(x){return x.share_key&&x.share_key===r.share_key;});
+  if(c)out.push({...r,course_id:c.id,src_course_id:r.course_id,shared:true,voided:false,trainer_name:(r.trainer_name||'')+' (at '+r.license_name+(r.state_name?', '+r.state_name:'')+')'});});return out;}
+async function trSharedGet(lid){try{return (await sb('rpc/hx_training_shared',{method:'POST',body:{p_lic:lid}}))||[];}catch(e){return [];}}
 // manager roles: any role whose name says manager, compliance, director, supervisor or owner
 function trManagerRoles(roles){return (roles||[]).filter(function(r){return /manager|compliance|director|supervisor|owner/i.test(r.name||'');});}
 // who a starter course is for: managers (and sanitation for chemicals) when those roles exist, otherwise its default
@@ -4449,19 +4461,24 @@ function trCounted(c){return c.required_mode==='at_least'||(c.required_mode==='r
 // first visit by someone with Full access: create the CSQ courses; turn the starter manager courses into required manager training
 async function trAutoSetup(st,lic,C){
   const roles=ACC.roles||[],out=[];
-  if(!C.length){const add=trStarterFor(lic).map(function(s,i){return {id:newId('crs')+i,state_id:st.id,license_id:lic.id,...trStarterNamed(s,st),topic:s[1],...trStarterWho(s,roles),refresher_months:s[4],assessment_required:s[5],min_people:s[6],sort:i};});
-    await db.insert('hx_training_courses',add);out.push('Created the '+add.length+' CSQ training courses');}
+  if(!C.length){const add=trStarterFor(lic).map(function(s,i){return {id:newId('crs')+i,state_id:st.id,license_id:lic.id,...trStarterNamed(s,st),topic:s[1],...trStarterWho(s,roles),refresher_months:s[4],assessment_required:s[5],min_people:s[6],sort:i,share_key:trShareKey(s,st)};});
+    await trInsertAll(add);out.push('Created the '+add.length+' CSQ training courses');}
   else{const extra=trStarterFor(lic).filter(function(s){return s[8]&&!C.some(function(c){return c.name.trim().toLowerCase()===s[0].toLowerCase();});});
-    if(extra.length){await db.insert('hx_training_courses',extra.map(function(s,i){return {id:newId('crs')+i,state_id:st.id,license_id:lic.id,name:s[0],topic:s[1],description:s[2],...trStarterWho(s,roles),refresher_months:s[4],assessment_required:s[5],min_people:s[6],sort:C.length+i};}));
+    if(extra.length){await trInsertAll(extra.map(function(s,i){return {id:newId('crs')+i,state_id:st.id,license_id:lic.id,name:s[0],topic:s[1],description:s[2],...trStarterWho(s,roles),refresher_months:s[4],assessment_required:s[5],min_people:s[6],sort:C.length+i,share_key:trShareKey(s,st)};}));
       out.push('Added '+extra.map(function(s){return s[0];}).join(', '));}
     let n=0;for(const s of TRAIN_STARTER){if(!s[7]||(s[8]&&s[8]!==licOp(lic)))continue;const c=C.find(function(x){return x.name.trim().toLowerCase()===s[0].toLowerCase();});
       if(!c||!(c.required_mode==='at_least'||c.required_mode==='optional')||(c.role_ids||[]).length)continue;const w=trStarterWho(s,roles);if(w.required_mode!=='roles')continue;
       await db.update('hx_training_courses',c.id,{required_mode:'roles',role_ids:w.role_ids,description:s[2]});n++;}
     if(n)out.push(n+' course'+(n===1?' is':'s are')+' now required manager training');
     const law=C.find(function(x){return x.name.trim().toLowerCase()===TR_GENERIC_LAW.toLowerCase();}),L=trLawCourse(st);
-    if(law&&!C.some(function(x){return x.name.trim().toLowerCase()===L.name.toLowerCase();})){await db.update('hx_training_courses',law.id,L);out.push((out.length?'r':'R')+'egulatory course is now '+L.name);}}
+    if(law&&!C.some(function(x){return x.name.trim().toLowerCase()===L.name.toLowerCase();})){await db.update('hx_training_courses',law.id,L);out.push((out.length?'r':'R')+'egulatory course is now '+L.name);}
+    // step 23: link the starter courses made before sharing, so one pass counts at every license
+    let lk=0;if(C.some(function(c){return 'share_key' in c;}))for(const s of trStarterFor(lic)){const nm=[s[0],trStarterNamed(s,st).name].map(function(x){return x.toLowerCase();});
+      const c=C.find(function(x){return !x.share_key&&nm.indexOf(x.name.trim().toLowerCase())>=0;});if(!c)continue;
+      try{await db.update('hx_training_courses',c.id,{share_key:trShareKey(s,st)});lk++;}catch(e){break;}}
+    if(lk)out.push(lk+' course'+(lk===1?' is':'s are')+' now shared with your other licenses (one pass counts everywhere)');}
   // online content: load the Hendrix starter lessons and quizzes as drafts (step 20)
-  let list=C;if(!C.length||out.some(function(x){return /^Added /.test(x);})){try{list=((await db.get('hx_training_courses','license_ids=cs.%7B'+encodeURIComponent(lic.id)+'%7D&select=*'))||[]).filter(function(c){return (c.license_ids||[c.license_id]).indexOf(lic.id)>=0;});}catch(e){list=[];}}
+  let list=C;if(!C.length||out.some(function(x){return /^Added |now shared/.test(x);})){try{list=((await db.get('hx_training_courses','license_ids=cs.%7B'+encodeURIComponent(lic.id)+'%7D&select=*'))||[]).filter(function(c){return (c.license_ids||[c.license_id]).indexOf(lic.id)>=0;});}catch(e){list=[];}}
   let d=0;for(const c of list){if(c.content_status!=='none')continue;const t=trContentFor(c);if(!t)continue;try{await trSaveContent(c,trStarterForm(t),false);d++;}catch(e){break;}}
   if(d)out.push((out.length?'':'')+d+' online course'+(d===1?' is':'s are')+' ready to review and publish');
   return out.join('. ');
@@ -4493,15 +4510,17 @@ function trStats(courses,people,recs,acks,sops){
 function TrainingCourseForm(props){
   const c=props.course||{},st=props.state,lic=props.license;
   const[f,setF]=useState({name:c.name||'',topic:c.topic||'Job-specific',description:c.description||'',required_mode:c.required_mode||'everyone',role_ids:(c.role_ids||[]).slice(),min_people:c.min_people||1,
-    refresher_months:c.refresher_months==null?12:c.refresher_months,assessment_required:!!c.assessment_required,sop_id:c.sop_id||'',active:c.active!==false});
+    refresher_months:c.refresher_months==null?12:c.refresher_months,assessment_required:!!c.assessment_required,sop_id:c.sop_id||'',active:c.active!==false,shared:!!c.share_key});
+  const fixedKey=/^(csq|law):/.test(c.share_key||'');
   const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
   function set(k,v){setF(function(p){return {...p,[k]:v};});}
   async function save(){
     setErr('');if(!f.name.trim()){setErr('Enter the course name.');return;}
     const rec={name:f.name.trim(),topic:f.topic,description:f.description.trim(),required_mode:f.required_mode,role_ids:f.required_mode==='roles'?f.role_ids:[],min_people:Math.max(1,parseInt(f.min_people,10)||1),
       refresher_months:Math.max(0,parseInt(f.refresher_months,10)||0),assessment_required:f.assessment_required,sop_id:f.sop_id||null,active:f.active};
+    if(!fixedKey&&(c.share_key||f.shared))rec.share_key=f.shared&&!f.sop_id?(c.share_key||'custom:'+trSlug(rec.name)):null;
     setBusy(true);
-    try{if(c.id)await db.update('hx_training_courses',c.id,rec);else await db.insert('hx_training_courses',{...rec,id:newId('crs'),state_id:st.id,license_id:lic.id,sort:props.count||0});props.onDone();}
+    try{if(c.id)await dbSave('hx_training_courses',c.id,rec);else await dbSave('hx_training_courses',null,{...rec,id:newId('crs'),state_id:st.id,license_id:lic.id,sort:props.count||0});props.onDone();}
     catch(e){setErr(/hx_training_courses_name/.test(String(e.message))?'A course with that name already exists.':trErr(e));}
     setBusy(false);
   }
@@ -4522,6 +4541,9 @@ function TrainingCourseForm(props){
       el(Field,{label:'Met by signing an SOP (read and sign training)'},el('select',{value:f.sop_id,onChange:function(e){set('sop_id',e.target.value);}},el('option',{value:''},'(no - record it as training)'),(props.sops||[]).filter(function(s){return s.status==='published';}).map(function(s){return el('option',{key:s.id,value:s.id},(s.sop_number?s.sop_number+' \u00b7 ':'')+s.title);}))),
       el('div',null,el('label',{className:'ck',style:{marginTop:24}},el('input',{type:'checkbox',checked:f.assessment_required,onChange:function(e){set('assessment_required',e.target.checked);}}),el('span',null,'Assessment required')),
         el('label',{className:'ck'},el('input',{type:'checkbox',checked:f.active,onChange:function(e){set('active',e.target.checked);}}),el('span',null,'Active')))),
+    fixedKey?el('div',{className:'muted',style:{fontSize:13,margin:'4px 0 10px'}},trShareLabel(c,st)+': one pass counts at every license that has this course, and its online content is shared.'):
+      el('label',{className:'ck',style:{marginBottom:8}},el('input',{type:'checkbox',checked:f.shared&&!f.sop_id,disabled:!!f.sop_id,onChange:function(e){set('shared',e.target.checked);}}),
+        el('span',null,'Same course at all my licenses (one pass counts everywhere)'+(f.sop_id?' - not for courses met by an SOP of this license':''))),
     err&&el('div',{className:'msg err'},err),
     el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:save},busy?'Saving...':'Save course')));
 }
@@ -4813,6 +4835,7 @@ function CourseContentEditor(props){
     el('div',{className:'row',style:{gap:6,marginBottom:10}},el('span',{className:'badge '+(c.content_status==='published'?'ok':c.content_status==='draft'?'warn':'off')},c.content_status==='published'?'Published v'+c.content_version+' by '+c.content_by:c.content_status==='draft'?'Draft':'No content yet'),
       starter&&el('button',{className:'btn ghost sm',onClick:function(){setF(trStarterForm(starter));}},'Load Hendrix starter content'),
       isLaw&&el('button',{className:'btn ghost sm',disabled:!!busy,onClick:ai},'Draft from the '+st.name+' Rulebook with AI'),
+      c.share_key&&el('span',{className:'badge',title:'Publishing updates this course at every license that shares it'},trShareLabel(c,st)),
       el('button',{className:'btn ghost sm',disabled:!f.lessons.length,onClick:function(){setPrev(true);}},'Preview')),
     isLaw&&el('div',{className:'muted',style:{fontSize:12,marginBottom:8}},'The '+st.name+' course is written only from the '+st.name+' Rulebook in Hendrix. Read it and correct it before publishing: you are approving the legal content.'),
     el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr 3fr',gap:10}},
@@ -4846,7 +4869,7 @@ function TrainingPage(props){
   const st=props.state,lic=props.license,lid=lic?lic.id:'';
   const[courses,setCourses]=useState(null);const[recs,setRecs]=useState([]);const[people,setPeople]=useState([]);const[sops,setSops]=useState([]);const[acks,setAcks]=useState([]);
   const[tab,setTab]=useState(can('training',2)?(lsGet('hx_trtab')||'matrix'):'mine');const[msg,setMsg]=useState('');const[modal,setModal]=useState(null);
-  const[roleF,setRoleF]=useState('ALL');const[stF,setStF]=useState('ALL');const[q,setQ]=useState('');const[atts,setAtts]=useState([]);
+  const[roleF,setRoleF]=useState('ALL');const[stF,setStF]=useState('ALL');const[q,setQ]=useState('');const[atts,setAtts]=useState([]);const[shared,setShared]=useState([]);
   const load=useCallback(function(){
     if(!lid){setCourses([]);return;}const enc=encodeURIComponent;
     Promise.all([db.get('hx_training_courses','license_ids=cs.%7B'+enc(lid)+'%7D&select=*&order=sort,name'),db.get('hx_training_records','license_id=eq.'+enc(lid)+'&select=*&order=completed_on.desc&limit=20000')])
@@ -4855,6 +4878,7 @@ function TrainingPage(props){
     sb('rpc/hx_training_roster',{method:'POST',body:{p_lic:lid}}).then(function(r){setPeople(r||[]);}).catch(function(){setPeople([]);});
     db.get('hx_sops','license_ids=cs.%7B'+enc(lid)+'%7D&status=eq.published&select=id,title,sop_number,version,status,license_id,license_ids,target_mode,target_role_ids,target_user_ids').then(function(r){setSops((r||[]).filter(function(s){return s.status==='published'&&(s.license_ids||[]).indexOf(lid)>=0;}));}).catch(function(){setSops([]);});
     sb('rpc/hx_training_sop_acks',{method:'POST',body:{p_lic:lid}}).then(function(r){setAcks(r||[]);}).catch(function(){setAcks([]);});
+    trSharedGet(lid).then(setShared);
     db.get('hx_training_attempts','license_id=eq.'+enc(lid)+'&select=*&order=finished_at.desc&limit=500').then(function(r){setAtts((r||[]).filter(function(x){return x.license_id===lid;}));}).catch(function(){setAtts([]);});
   },[lid]);
   useEffect(load,[load]);
@@ -4864,17 +4888,18 @@ function TrainingPage(props){
   if(!st||!lic)return el('div',null,el('h1',null,el('span',{className:'g'},'Training')),el('div',{className:'empty'},'Pick a state and a license at the top first.'));
   const canE=can('training',2),canF=can('training',3),me=ACC.profile&&ACC.profile.id;
   const C=(courses||[]),active=C.filter(function(c){return c.active;});
-  const S=trStats(active,people,recs,acks,sops);
+  const shRecs=trSharedMap(shared,C),allRecs=recs.concat(shRecs);
+  const S=trStats(active,people,allRecs,acks,sops);
   function go(t){setTab(t);lsSet('hx_trtab',t);}
   async function starter(){
     setMsg('');try{const have={};C.forEach(function(c){have[c.name.trim().toLowerCase()]=1;});
-      const add=trStarterFor(lic).filter(function(s){return !have[trStarterNamed(s,st).name.toLowerCase()]&&!have[s[0].toLowerCase()];}).map(function(s,i){return {id:newId('crs')+i,state_id:st.id,license_id:lic.id,...trStarterNamed(s,st),topic:s[1],...trStarterWho(s,ACC.roles),refresher_months:s[4],assessment_required:s[5],min_people:s[6],sort:C.length+i};});
-      if(add.length)await db.insert('hx_training_courses',add);setMsg('Added '+add.length+' CSQ starter course'+(add.length===1?'':'s')+'.');load();}catch(e){setMsg(trErr(e));}
+      const add=trStarterFor(lic).filter(function(s){return !have[trStarterNamed(s,st).name.toLowerCase()]&&!have[s[0].toLowerCase()];}).map(function(s,i){return {id:newId('crs')+i,state_id:st.id,license_id:lic.id,...trStarterNamed(s,st),topic:s[1],...trStarterWho(s,ACC.roles),refresher_months:s[4],assessment_required:s[5],min_people:s[6],sort:C.length+i,share_key:trShareKey(s,st)};});
+      if(add.length)await trInsertAll(add);setMsg('Added '+add.length+' CSQ starter course'+(add.length===1?'':'s')+'.');load();}catch(e){setMsg(trErr(e));}
   }
   const shownPeople=people.filter(function(u){if(roleF!=='ALL'&&(u.role_ids||[]).indexOf(roleF)<0)return false;if(q&&u.name.toLowerCase().indexOf(q.toLowerCase())<0)return false;
     if(stF==='GAPS')return S.per[u.id]&&S.per[u.id].pct<100;if(stF==='OK')return S.per[u.id]&&S.per[u.id].pct===100;return true;});
   const stat=function(l,v,tone,sub){return el('div',{key:l,className:'card gold',style:{marginBottom:0}},el('div',{className:'k'},l),el('div',{className:'v',style:{fontSize:26,color:tone||'var(--text)'}},v),sub&&el('div',{className:'muted',style:{fontSize:11,marginTop:2}},sub));};
-  const cellEl=function(c,u){const req=trRequired(c,u),x=trCell(c,u,recs,acks,sops);
+  const cellEl=function(c,u){const req=trRequired(c,u),x=trCell(c,u,allRecs,acks,sops);
     if(!req&&x.st==='missing')return el('td',{key:c.id,style:{textAlign:'center',color:'var(--faint)'}},'\u2014');
     const col=req?TR_TONE[x.st]:(x.st==='missing'?'var(--faint)':'var(--green)');
     return el('td',{key:c.id,style:{textAlign:'center'},title:x.st==='missing'?'Not completed':(x.st+' \u00b7 '+x.on+(x.exp?' \u00b7 expires '+x.exp:'')+(x.by?' \u00b7 '+x.by:''))},
@@ -4906,7 +4931,8 @@ function TrainingPage(props){
         const sop=sops.find(function(s){return s.id===c.sop_id;});
         return el('div',{key:c.id,className:'card',style:{padding:'12px 16px',opacity:c.active?1:.55}},el('div',{className:'row',style:{justifyContent:'space-between',flexWrap:'nowrap',alignItems:'flex-start'}},
           el('div',null,el('div',{className:'row',style:{gap:6,marginBottom:4}},el('b',null,c.name),el('span',{className:'badge off'},c.topic),!c.active&&el('span',{className:'badge off'},'Off'),
-              trOnline(c)?el('span',{className:'badge ok'},'Online \u00b7 v'+c.content_version+' \u00b7 pass '+c.pass_mark+'%'):c.content_status==='draft'?el('span',{className:'badge warn'},'Online draft'):trIsCert(c)?el('span',{className:'badge off'},'Outside certification'):null),
+              trOnline(c)?el('span',{className:'badge ok'},'Online \u00b7 v'+c.content_version+' \u00b7 pass '+c.pass_mark+'%'):c.content_status==='draft'?el('span',{className:'badge warn'},'Online draft'):trIsCert(c)?el('span',{className:'badge off'},'Outside certification'):null,
+              c.share_key&&el('span',{className:'badge',title:'One pass counts at every license that has this course'},trShareLabel(c,st))),
             c.description&&el('div',{className:'muted',style:{fontSize:12}},c.description),
             el('div',{style:{fontSize:12,marginTop:4}},TRAIN_MODES[c.required_mode]+(c.required_mode==='roles'?': '+roles.join(', '):'')+(c.required_mode==='at_least'?' ('+c.min_people+')':trCounted(c)?' \u00b7 at least '+c.min_people+' certified':'')+' \u00b7 '+(c.refresher_months?'refresher every '+c.refresher_months+' months':'one time')+(c.assessment_required?' \u00b7 assessment required':'')+(sop?' \u00b7 met by signing '+(sop.sop_number||sop.title):''))),
           el('div',{className:'row',style:{gap:6,flex:'0 0 auto'}},trOnline(c)&&el('button',{className:'btn sm',onClick:function(){setModal({t:'take',course:c});}},'Take course'),
@@ -4919,7 +4945,7 @@ function TrainingPage(props){
         el('span',{className:'muted',style:{fontSize:12}},el('span',{className:'trcell',style:{background:'var(--green)',width:14,height:14,marginRight:4}}),'current ',el('span',{className:'trcell',style:{background:'var(--gold)',width:14,height:14,margin:'0 4px 0 10px'}}),'due in 30 days ',el('span',{className:'trcell',style:{background:'var(--red)',width:14,height:14,margin:'0 4px 0 10px'}}),'expired / missing \u00b7 \u2014 not required'),
         el('button',{className:'btn ghost sm',style:{marginLeft:'auto'},onClick:function(){
           const e=esc3;let h='<div class="hxrec"><h2>Training matrix \u2014 '+e(lic.name)+'</h2><div class="m">'+e(st.name)+' \u00b7 printed '+e(new Date().toLocaleString())+' \u00b7 overall '+(S.pct==null?'-':S.pct+'%')+' current</div><table><tr><th>Person</th>'+active.map(function(c){return '<th style="font-size:10px">'+e(c.name)+'</th>';}).join('')+'<th>%</th></tr>';
-          shownPeople.forEach(function(u){h+='<tr><td>'+e(u.name)+'</td>'+active.map(function(c){const r=trRequired(c,u),x=trCell(c,u,recs,acks,sops);return '<td class="'+(r&&(x.st==='expired'||x.st==='missing')?'bad':x.st==='current'?'ok':'')+'">'+(!r&&x.st==='missing'?'\u2014':x.st==='missing'?'MISSING':(x.st==='expired'?'EXPIRED ':x.st==='due'?'DUE ':'')+x.on)+'</td>';}).join('')+'<td>'+(S.per[u.id]?S.per[u.id].pct+'%':'')+'</td></tr>';});
+          shownPeople.forEach(function(u){h+='<tr><td>'+e(u.name)+'</td>'+active.map(function(c){const r=trRequired(c,u),x=trCell(c,u,allRecs,acks,sops);return '<td class="'+(r&&(x.st==='expired'||x.st==='missing')?'bad':x.st==='current'?'ok':'')+'">'+(!r&&x.st==='missing'?'\u2014':x.st==='missing'?'MISSING':(x.st==='expired'?'EXPIRED ':x.st==='due'?'DUE ':'')+x.on)+'</td>';}).join('')+'<td>'+(S.per[u.id]?S.per[u.id].pct+'%':'')+'</td></tr>';});
           printRecords('Training matrix - '+lic.name,[h+'</table></div>']);}},'Print matrix')),
       el('div',{className:'card',style:{overflowX:'auto',padding:0}},el('table',null,
         el('thead',null,el('tr',null,el('th',{style:{minWidth:170,position:'sticky',left:0,background:'var(--panel)'}},'Person'),active.map(function(c){return el('th',{key:c.id,style:{fontSize:11,minWidth:84,maxWidth:96,whiteSpace:'normal',textAlign:'center',textTransform:'none',letterSpacing:0,lineHeight:1.25,wordBreak:'break-word',verticalAlign:'bottom'},title:c.name},c.name.length>34?c.name.slice(0,32)+'...':c.name);}),el('th',null,'%'),el('th',null,''))),
@@ -4927,7 +4953,7 @@ function TrainingPage(props){
           el('td',{style:{position:'sticky',left:0,background:'var(--panel)'}},el('div',{style:{fontWeight:600}},u.name),el('div',{className:'muted',style:{fontSize:11}},(ACC.roles||[]).filter(function(r){return (u.role_ids||[]).indexOf(r.id)>=0;}).map(function(r){return r.name;}).join(', ')||'No role')),
           active.map(function(c){return cellEl(c,u);}),
           el('td',{style:{fontWeight:700,color:p.pct===100?'var(--green)':p.pct>=80?'var(--gold-hi)':'var(--red)'}},p.req?p.pct+'%':'-'),
-          el('td',null,el('button',{className:'btn ghost sm',onClick:function(){trPersonPdf(u,lic,st,active,recs,acks,sops);}},'PDF')));})))),
+          el('td',null,el('button',{className:'btn ghost sm',onClick:function(){trPersonPdf(u,lic,st,active,allRecs,acks,sops);}},'PDF')));})))),
       !people.length&&el('div',{className:'muted',style:{marginTop:8}},'No team members found for this license.'))):
     tab==='sops'?(!sops.length?el('div',{className:'empty'},'No published SOPs yet for '+lic.name+'.'):el('div',{className:'card',style:{overflowX:'auto',padding:0}},el('table',null,
       el('thead',null,el('tr',null,el('th',{style:{minWidth:170}},'Person'),sops.map(function(s){return el('th',{key:s.id,style:{fontSize:11,textAlign:'center',minWidth:84,maxWidth:96,whiteSpace:'normal',textTransform:'none',letterSpacing:0,wordBreak:'break-word'},title:s.title},(s.sop_number||s.title).slice(0,24));}),el('th',null,'Rate'))),
@@ -4940,7 +4966,13 @@ function TrainingPage(props){
         el('thead',null,el('tr',null,['Date','Person','Course','Score','Result','Time','Version'].map(function(h){return el('th',{key:h},h);}))),
         el('tbody',null,atts.slice(0,200).map(function(a){const c=C.find(function(x){return x.id===a.course_id;});return el('tr',{key:a.id},el('td',null,String(a.finished_at).slice(0,16).replace('T',' ')),el('td',null,a.person_name),el('td',null,c?c.name:'-'),
           el('td',null,a.correct+'/'+a.total+' ('+a.score+'%)'),el('td',null,el('span',{className:'badge '+(a.passed?'ok':'bad')},a.passed?'Passed':'Not passed')),el('td',null,a.minutes!=null?a.minutes+' min':'-'),el('td',null,'v'+a.content_version));}))))),
-      !recs.length?el('div',{className:'empty'},'No training recorded yet.'):el('div',{className:'card',style:{overflowX:'auto'}},el('table',null,
+      shRecs.length>0&&el('div',{className:'card'},el('h3',null,'Counted from your other licenses ('+shRecs.length+')'),
+        el('div',{className:'muted',style:{fontSize:12,marginBottom:6}},'Training done once for a shared course at another license. It counts here too; the record itself stays at the license where it was done.'),
+        el('div',{style:{overflowX:'auto'}},el('table',null,el('thead',null,el('tr',null,['Date','Person','Course','Done at','Trainer','Assessment','Expires'].map(function(h){return el('th',{key:h},h);}))),
+          el('tbody',null,shRecs.map(function(r){const c=C.find(function(x){return x.id===r.course_id;});return el('tr',{key:'sh'+r.id},el('td',null,r.completed_on),el('td',null,r.person_name),el('td',null,c?c.name:'-'),
+            el('td',null,r.license_name+(r.state_name?' \u00b7 '+r.state_name:'')),el('td',null,String(r.trainer_name||'').replace(/ \(at .*\)$/,'')),
+            el('td',null,el('span',{className:'badge '+(r.assessment==='Passed'?'ok':'off')},r.assessment),r.score&&el('span',{className:'muted',style:{marginLeft:4,fontSize:11}},r.score)),el('td',null,r.expires_on||'No expiry'));}))))),
+      !recs.length?el('div',{className:'empty'},'No training recorded yet'+(shRecs.length?' at this license.':'.')):el('div',{className:'card',style:{overflowX:'auto'}},el('table',null,
       el('thead',null,el('tr',null,['Date','Person','Course','Trainer','Method','Assessment','Expires','',''].map(function(h,i){return el('th',{key:i},h);}))),
       el('tbody',null,recs.map(function(r){const c=C.find(function(x){return x.id===r.course_id;});return el('tr',{key:r.id,className:r.voided?'voidrow':''},
         el('td',null,r.completed_on),el('td',null,r.person_name),el('td',null,c?c.name:'-'),el('td',null,r.trainer_name,r.trainer_qualification&&el('div',{className:'muted',style:{fontSize:11}},r.trainer_qualification)),el('td',null,r.method+(r.language&&r.language!=='English'?' \u00b7 '+r.language:'')),
@@ -4952,7 +4984,7 @@ function TrainingPage(props){
       const req=active.filter(function(c){return trRequired(c,mine);}),pend=sops.filter(function(s){const t=sopTargets(s,[mine]);return t&&t.length&&!acks.some(function(a){return a.sop_id===s.id&&a.version===s.version&&a.user_id===mine.id;});});
       return el('div',null,
         el('div',{className:'card gold'},el('div',{className:'k'},'My required training'),!req.length?el('div',{className:'muted',style:{marginTop:6}},'No required courses for your roles yet.'):
-          req.map(function(c){const x=trCell(c,mine,recs,acks,sops);return el('div',{key:c.id,className:'row',style:{gap:10,padding:'6px 0',borderTop:'1px solid var(--line)',flexWrap:'nowrap'}},
+          req.map(function(c){const x=trCell(c,mine,allRecs,acks,sops);return el('div',{key:c.id,className:'row',style:{gap:10,padding:'6px 0',borderTop:'1px solid var(--line)',flexWrap:'nowrap'}},
             el('span',{className:'trcell',style:{background:TR_TONE[x.st]}},x.st==='current'?'\u2713':x.st==='due'?'!':'\u00d7'),el('span',{style:{flex:1}},c.name),
             el('span',{className:'muted',style:{fontSize:12}},x.st==='missing'?(trOnline(c)?'Not completed':'Not completed - ask your trainer'):(x.st==='expired'?'Expired ':x.st==='due'?'Due soon \u00b7 ':'Completed ')+x.on+(x.exp?' \u00b7 expires '+x.exp:'')),
             trOnline(c)&&el('button',{className:x.st==='current'?'btn ghost sm':'btn sm',onClick:function(){setModal({t:'take',course:c});}},x.st==='current'?'Take again':'Take course'));})),
@@ -4962,7 +4994,7 @@ function TrainingPage(props){
           return el('div',{key:a.id,style:{fontSize:13,padding:'3px 0'}},String(a.finished_at).slice(0,10)+' \u00b7 '+(c?c.name:'')+' \u00b7 '+a.score+'% ',el('span',{className:'badge '+(a.passed?'ok':'bad')},a.passed?'Passed':'Not passed'));})),
         el('div',{className:'card'},el('div',{className:'k'},'SOPs waiting for my signature'),pend.length?pend.map(function(s){return el('div',{key:s.id,style:{fontSize:13,padding:'4px 0'}},(s.sop_number?s.sop_number+' \u00b7 ':'')+s.title+' (v'+s.version+')');}):el('div',{className:'muted',style:{marginTop:6}},'None - all signed.'),
           pend.length>0&&props.go&&el('button',{className:'btn sm',style:{marginTop:8},onClick:function(){props.go('sops');}},'Open SOPs')),
-        el('button',{className:'btn ghost',onClick:function(){trPersonPdf(mine,lic,st,active,recs,acks,sops);}},'Download my training record (PDF)'));})()),
+        el('button',{className:'btn ghost',onClick:function(){trPersonPdf(mine,lic,st,active,allRecs,acks,sops);}},'Download my training record (PDF)'));})()),
     modal&&modal.t==='course'&&el(TrainingCourseForm,{course:modal.course,state:st,license:lic,sops:sops,count:C.length,onClose:function(){setModal(null);},onDone:function(){setModal(null);setMsg('Saved.');load();}}),
     modal&&modal.t==='rec'&&el(TrainingRecordForm,{state:st,license:lic,courses:C,people:people,courseId:modal.course,personId:modal.person,onClose:function(){setModal(null);},onDone:function(n){setModal(null);setMsg('Recorded '+n+' training record'+(n===1?'':'s')+'.');load();}}),
     modal&&modal.t==='content'&&el(CourseContentEditor,{course:modal.course,state:st,license:lic,onClose:function(){setModal(null);},onDone:function(t){setModal(null);setMsg(t);load();}}),
@@ -4974,9 +5006,9 @@ function TrainingDashCard(props){
   useEffect(function(){if(!lid||!can('training',1)){setD(null);return;}let dead=false;const enc=encodeURIComponent;
     Promise.all([db.get('hx_training_courses','license_ids=cs.%7B'+enc(lid)+'%7D&active=eq.true&select=*'),db.get('hx_training_records','license_id=eq.'+enc(lid)+'&select=course_id,user_id,completed_on,expires_on,voided,assessment,license_id'),
       sb('rpc/hx_training_roster',{method:'POST',body:{p_lic:lid}}),db.get('hx_sops','license_ids=cs.%7B'+enc(lid)+'%7D&status=eq.published&select=id,version,status,license_ids,target_mode,target_role_ids,target_user_ids').catch(function(){return [];}),
-      sb('rpc/hx_training_sop_acks',{method:'POST',body:{p_lic:lid}}).catch(function(){return [];})])
+      sb('rpc/hx_training_sop_acks',{method:'POST',body:{p_lic:lid}}).catch(function(){return [];}),trSharedGet(lid)])
       .then(function(r){const c=(r[0]||[]).filter(function(x){return x.active&&(x.license_ids||[]).indexOf(lid)>=0;});if(!c.length){if(!dead)setD({none:true});return;}
-        const S=trStats(c,r[2]||[],(r[1]||[]).filter(function(x){return x.license_id===lid;}),r[4]||[],(r[3]||[]).filter(function(x){return x.status==='published';}));if(!dead)setD({S:S,mine:can('training',2)?null:(S.per[ACC.profile.id]||null)});})
+        const S=trStats(c,r[2]||[],(r[1]||[]).filter(function(x){return x.license_id===lid;}).concat(trSharedMap(r[5],c)),r[4]||[],(r[3]||[]).filter(function(x){return x.status==='published';}));if(!dead)setD({S:S,mine:can('training',2)?null:(S.per[ACC.profile.id]||null)});})
       .catch(function(){if(!dead)setD(null);});return function(){dead=true;};},[lid]);
   if(!d)return null;
   const link=el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go('training');}},'Open training');
