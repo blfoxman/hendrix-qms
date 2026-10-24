@@ -1,8 +1,9 @@
 // Hendrix QMS - Supabase Edge Function "hendrix-ai"
-// Claude for the Hendrix app: reads lab COAs (Testing) and writes / revises SOPs (SOPs).
+// Claude for the Hendrix app: reads lab COAs (Testing), writes / revises SOPs (SOPs) and
+// drafts online training courses from the state Rulebook (Training).
 //
 // Security: only a signed-in, approved Hendrix user with at least Edit access to the
-// module making the request (Testing or SOPs) can use it, checked with the user's own
+// module making the request (Testing or SOPs; Full access for Training) can use it, checked with the user's own
 // login through hx_perm. The Anthropic key stays in Supabase secrets and never reaches
 // the browser. After changing this file, deploy it again (same name: hendrix-ai).
 //
@@ -33,11 +34,12 @@ Deno.serve(async (req) => {
     const { data: u } = await sb.auth.getUser();
     if (!u || !u.user) return json({ error: { message: "Sign in to Hendrix first." } }, 401);
     const body = await req.json();
-    const mod = body.module === "sops" ? "sops" : "testing";
+    const mod = body.module === "sops" ? "sops" : body.module === "training" ? "training" : "testing";
+    const need = mod === "training" ? 3 : 2;
     const { data: lvl, error: perr } = await sb.rpc("hx_perm", { p_mod: mod });
     if (perr) return json({ error: { message: "Access check failed: " + perr.message } }, 500);
-    if (!lvl || lvl < 2) {
-      return json({ error: { message: mod === "sops" ? "You need Edit access to SOPs to use the AI SOP tools." : "You need Edit access to Testing to read COAs." } }, 403);
+    if (!lvl || lvl < need) {
+      return json({ error: { message: mod === "sops" ? "You need Edit access to SOPs to use the AI SOP tools." : mod === "training" ? "You need Full access to Training to draft courses with AI." : "You need Edit access to Testing to read COAs." } }, 403);
     }
 
     const key = Deno.env.get("ANTHROPIC_API_KEY");
