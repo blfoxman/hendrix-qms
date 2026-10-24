@@ -279,7 +279,7 @@ function LoginScreen(props){
 }
 
 /* ---------- Dashboard ---------- */
-const MODULES_SOON=['Equipment and Chemical registers','HACCP','Time Clock and Badges','Production Planner'];
+const MODULES_SOON=['Cultivation records (CUL)','Equipment and Chemical registers','HACCP','Time Clock and Badges','Production Planner'];
 function Dashboard(props){
   const st=props.state,lic=props.license;
   const isAdmin=props.profile.role==='admin';
@@ -331,14 +331,18 @@ function StateForm(props){
       el('button',{className:'btn',disabled:!f.name.trim(),onClick:function(){props.onSave({name:f.name.trim(),agency:f.agency.trim(),code:f.code.trim(),tracking_system:(f.tracking_system||'').trim()||'METRC'});}},'Save')));
 }
 function LicenseForm(props){
-  const[f,setF]=useState(props.initial||{name:'',license_number:'',license_type:''});
+  const[f,setF]=useState({operation:'',...(props.initial||{name:'',license_number:'',license_type:''})});
+  const guess=licOp({license_number:f.license_number,license_type:f.license_type});
   return el(Modal,{title:props.initial?'Edit license':'Add a license to '+props.stateName,onClose:props.onClose},
     el(Field,{label:'License / facility name'},el('input',{value:f.name,onChange:function(e){setF({...f,name:e.target.value});}})),
     el(Field,{label:'License number'},el('input',{value:f.license_number,onChange:function(e){setF({...f,license_number:e.target.value});}})),
     el(Field,{label:'License type'},el('input',{value:f.license_type,placeholder:'e.g. Manufacturer, Processor, Cultivation',onChange:function(e){setF({...f,license_type:e.target.value});}})),
+    el(Field,{label:'Operation (decides which CSQ standards apply)'},el('select',{value:f.operation||'',onChange:function(e){setF({...f,operation:e.target.value});}},
+      el('option',{value:''},'Automatic: '+LIC_OPS[guess]),Object.keys(LIC_OPS).map(function(k){return el('option',{key:k,value:k},LIC_OPS[k]);}))),
+    el('div',{className:'muted',style:{fontSize:12,marginTop:-6,marginBottom:10}},(f.operation||guess)==='cultivation'?'CSQ Standard for Cultivation (Module 3A).':(f.operation||guess)==='manufacturing'?'CSQ Standard for Manufacturing (3C) and CSQ Standard for Extraction (3B).':'No CSQ standard (CSQ covers manufacturing and cultivation).'),
     el('div',{className:'row',style:{justifyContent:'flex-end'}},
       el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),
-      el('button',{className:'btn',disabled:!f.name.trim(),onClick:function(){props.onSave({name:f.name.trim(),license_number:f.license_number.trim(),license_type:f.license_type.trim()});}},'Save')));
+      el('button',{className:'btn',disabled:!f.name.trim(),onClick:function(){props.onSave({name:f.name.trim(),license_number:f.license_number.trim(),license_type:f.license_type.trim(),operation:f.operation||''});}},'Save')));
 }
 function Locations(props){
   const isAdmin=props.profile.role==='admin';
@@ -368,9 +372,9 @@ function Locations(props){
           el('div',{className:'row',style:{justifyContent:'space-between',marginBottom:6}},
             el('div',{className:'k'},'Licenses'),
             isAdmin&&el('button',{className:'btn sm',onClick:function(){setModal({t:'lic',st:st});}},'+ Add license')),
-          lics.length?el('table',null,el('thead',null,el('tr',null,['Name','License #','Type','Status',''].map(function(h,i){return el('th',{key:i},h);}))),
+          lics.length?el('table',null,el('thead',null,el('tr',null,['Name','License #','Type','CSQ','Status',''].map(function(h,i){return el('th',{key:i},h);}))),
             el('tbody',null,lics.map(function(l){
-              return el('tr',{key:l.id},el('td',null,l.name),el('td',null,l.license_number||'-'),el('td',null,l.license_type||'-'),
+              return el('tr',{key:l.id},el('td',null,l.name),el('td',null,l.license_number||'-'),el('td',null,l.license_type||'-'),el('td',{style:{fontSize:12}},csqPartNames(csqDefaultScopes(licOp(l))).map(function(n){return n.replace('CSQ Standard for ','');}).join(' + ')||'-'),
                 el('td',null,el('span',{className:'badge'+(l.active?'':' off')},l.active?'Active':'Inactive')),
                 el('td',{style:{textAlign:'right',whiteSpace:'nowrap'}},isAdmin&&el('span',{className:'row',style:{justifyContent:'flex-end',flexWrap:'nowrap'}},
                   el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'lic',st:st,l:l});}},'Edit'),
@@ -384,7 +388,7 @@ function Locations(props){
     modal&&modal.t==='state'&&el(StateForm,{initial:modal.s,onClose:function(){setModal(null);},onSave:function(v){
       run(function(){return modal.s?db.update('hx_states',modal.s.id,v):db.insert('hx_states',{id:newId('st'),name:v.name,agency:v.agency,code:v.code,tracking_system:v.tracking_system,rules:[]});});}}),
     modal&&modal.t==='lic'&&el(LicenseForm,{stateName:modal.st.name,initial:modal.l,onClose:function(){setModal(null);},onSave:function(v){
-      run(function(){return modal.l?db.update('hx_licenses',modal.l.id,v):db.insert('hx_licenses',{id:newId('lic'),state_id:modal.st.id,name:v.name,license_number:v.license_number,license_type:v.license_type,active:true});});}}));
+      run(function(){return modal.l?dbSave('hx_licenses',modal.l.id,v):db.insert('hx_licenses',{id:newId('lic'),state_id:modal.st.id,name:v.name,license_number:v.license_number,license_type:v.license_type,operation:v.operation||'',active:true}).catch(function(e){if(/operation/.test(String(e.message)))return db.insert('hx_licenses',{id:newId('lic'),state_id:modal.st.id,name:v.name,license_number:v.license_number,license_type:v.license_type,active:true});throw e;});});}}));
 }
 
 /* ---------- Rulebook: every rule row carries its state; only the active state's rules are ever loaded ---------- */
@@ -2858,7 +2862,8 @@ function Roles(){
 
 /* ---------- Suppliers (Black Fox / Michigan Suppliers tab + CSQ 2A.11 supplier approval) ---------- */
 const SUP_CATS=['Cones/Pre-roll Supplies','Packaging','Distillate/Extract','Terpenes','Ingredients','Testing Lab','Equipment','Labels',
-  'Co-manufacturer','Pest Control','Waste Disposal','Chemicals / Sanitation','Gases / Solvents','Transport / Distribution','Service Provider','Other'];
+  'Co-manufacturer','Pest Control','Waste Disposal','Chemicals / Sanitation','Gases / Solvents','Transport / Distribution','Service Provider',
+  'Biomass / Flower (cannabis)','Nutrients / Fertilizers','Grow Media / Soil','Clones / Seeds','Crop Protection Products','Other'];
 const SUP_STATUS={pending:'Pending approval',approved:'Approved',conditional:'Approved with conditions',emergency:'Emergency (temporary)',suspended:'Suspended',disqualified:'Disqualified'};
 const SUP_TONE={pending:'warn',approved:'ok',conditional:'warn',emergency:'warn',suspended:'bad',disqualified:'bad'};
 const SUP_CRED_KINDS=['ISO/IEC 17025 accreditation','State license','Pest control applicator license','Food-grade / GMP certificate','Inhalation-grade statement','Organic / other certification','Insurance','Spec sheet / COA','Audit report','Other'];
@@ -3046,7 +3051,7 @@ function SupplierDashCard(props){
 }
 
 /* ---------- Receiving, Inventory, Hold and Release, Shipping (CSQ 2A.9.4, 2A.10) ---------- */
-const LOT_CATS=['Packaging','Labels','Hardware (cartridges, batteries)','Cones / pre-roll supplies','Ingredients','Terpenes','Distillate / extract','Cannabis (flower, trim, biomass)','Chemicals / sanitation','Gases','Solvents','Other'];
+const LOT_CATS=['Packaging','Labels','Hardware (cartridges, batteries)','Cones / pre-roll supplies','Ingredients','Terpenes','Distillate / extract','Cannabis (flower, trim, biomass)','Chemicals / sanitation','Gases','Solvents','Nutrients / fertilizers','Grow media / soil','Clones / seeds','Crop protection products','Other'];
 const LOT_UNITS=['each','g','kg','mL','L','lb','oz','case','roll','box'];
 const LOT_CHECKS=[['docs','Matches the order, invoice or manifest'],['intact','Packaging intact: no damage, leaks or wet cartons'],['clean','Clean: no pests, dirt, odors or foreign matter'],['sealed','Seals / tamper evidence intact'],['labeled','Labeled with item, lot and expiry'],['condition','Temperature and condition OK on arrival'],['vehicle','Delivery vehicle clean and secure']];
 const SHIP_CHECKS=[['vehicle_clean','Vehicle clean, dry and free of pests'],['secure','Vehicle secure and locked; product out of sight'],['temp','Temperature suitable for the product'],['sealed','Packages sealed and tamper evident'],['match','Products and quantities match the manifest'],['labels','Labels and package tags correct'],['released','Every batch is released: tests passed, nothing on hold'],['separate','No damage while loading; kept apart from chemicals and non-cannabis goods']];
@@ -3837,19 +3842,19 @@ const IA_TYPES=['CSQ internal audit','METRC Audit','Packaging Audit','Security A
 const IA_RESULTS=['Conforming','Nonconforming','Observation','Not applicable'];
 const IA_STATUS={planned:'Planned',in_progress:'In progress',completed:'Completed',closed:'Closed',cancelled:'Cancelled'};
 const IA_SEV={critical:'Critical',major:'Major',minor:'Minor',observation:'Observation'};
-const IA_MOD_NAME={'1':'Module 1 \u00b7 Management','2A':'Module 2A \u00b7 cGMP','3C':'Module 3C \u00b7 Product','4A':'Module 4A \u00b7 HACCP','5':'Module 5 \u00b7 QMS'};
-function iaClauses(level){return CSQ_MFG_CLAUSES.filter(function(c){return stdLevelOf(c[1])<=(level||1);}).map(function(c){return {clause:c[0],module:c[1],title:c[2]};});}
+const IA_MOD_NAME={'1':'Module 1 \u00b7 Management','2A':'Module 2A \u00b7 cGMP','3A':'Module 3A \u00b7 Cultivation','3B':'Module 3B \u00b7 Extraction','3C':'Module 3C \u00b7 Manufacturing','4A':'Module 4A \u00b7 HACCP','5':'Module 5 \u00b7 QMS'};
+function iaClauses(level,scopes){return CSQ_MFG_CLAUSES.filter(function(c){return stdLevelOf(c[1])<=(level||1)&&stdModOk(c[1],scopes||['3C','3B']);}).map(function(c){return {clause:c[0],module:c[1],title:c[2]};});}
 // last result per clause from audits done in the last 12 months
-function iaCoverage(audits,level){const y1=new Date(Date.now()-365*864e5).toISOString().slice(0,10),last={};
+function iaCoverage(audits,level,scopes){const y1=new Date(Date.now()-365*864e5).toISOString().slice(0,10),last={};
   audits.filter(function(a){return (a.status==='completed'||a.status==='closed')&&a.audit_date&&a.audit_date>=y1;}).forEach(function(a){(a.clauses||[]).forEach(function(x){if(x.result&&(!last[x.clause]||last[x.clause].date<a.audit_date))last[x.clause]={date:a.audit_date,result:x.result,number:a.number,auditor:a.auditor_name};});});
-  const all=iaClauses(level);return {all:all,last:last,done:all.filter(function(c){return last[c.clause];}).length};}
+  const all=iaClauses(level,scopes);return {all:all,last:last,done:all.filter(function(c){return last[c.clause];}).length};}
 function AuditForm(props){
   const x=props.rec||{},lic=props.license,st=props.state,level=props.level||1;
   const[f,setF]=useState({title:x.title||'',audit_type:x.audit_type||'CSQ internal audit',dept:x.dept||'Compliance',planned_date:x.planned_date||todayStr(),audit_date:x.audit_date||'',auditor_name:x.auditor_name||'',auditor_qualification:x.auditor_qualification||'',
     independent:!!x.independent,scope:x.scope||'',clauses:(x.clauses||[]).map(function(c){return {...c};}),recommendations:x.recommendations||'',conclusion:x.conclusion||'',next_audit_date:x.next_audit_date||'',attachments:(x.attachments||[]).slice()});
   const[err,setErr]=useState('');const[busy,setBusy]=useState(false);const[add,setAdd]=useState('');
   function set(k,v){setF(function(p){return {...p,[k]:v};});}
-  const all=iaClauses(level),have={};f.clauses.forEach(function(c){have[c.clause]=1;});
+  const all=iaClauses(level,props.scopes),have={};f.clauses.forEach(function(c){have[c.clause]=1;});
   function addMany(list){setF(function(p){const h={};p.clauses.forEach(function(c){h[c.clause]=1;});return {...p,clauses:p.clauses.concat(list.filter(function(c){return !h[c.clause];}).map(function(c){return {clause:c.clause,title:c.title,result:'',evidence:''};}))};});}
   function setC(i,k,v){setF(function(p){return {...p,clauses:p.clauses.map(function(c,j){return j===i?{...c,[k]:v}:c;})};});}
   async function save(){setErr('');if(!f.title.trim()){setErr('Enter the audit title.');return;}setBusy(true);
@@ -3948,16 +3953,16 @@ function AuditDetail(props){
 }
 function AuditsPage(props){
   const st=props.state,lic=props.license,lid=lic?lic.id:'';
-  const[rows,setRows]=useState(null);const[finds,setFinds]=useState([]);const[level,setLevel]=useState(1);const[msg,setMsg]=useState('');const[tab,setTab]=useState('audits');const[selId,setSelId]=useState(null);const[modal,setModal]=useState(null);const[cf,setCf]=useState('ALL');
+  const[rows,setRows]=useState(null);const[finds,setFinds]=useState([]);const[level,setLevel]=useState(1);const[scopes,setScopes]=useState(csqScopes(null,props.license));const[msg,setMsg]=useState('');const[tab,setTab]=useState('audits');const[selId,setSelId]=useState(null);const[modal,setModal]=useState(null);const[cf,setCf]=useState('ALL');
   const load=useCallback(function(){if(!lid){setRows([]);return;}const enc=encodeURIComponent;
     db.get('hx_audits','license_id=eq.'+enc(lid)+'&select=*&order=created_at.desc').then(function(r){setRows((r||[]).filter(function(x){return x.license_id===lid;}));}).catch(function(e){setMsg(cmpErr(e));setRows([]);});
     db.get('hx_audit_findings','license_id=eq.'+enc(lid)+'&select=*&order=created_at').then(function(r){setFinds((r||[]).filter(function(x){return x.license_id===lid;}));}).catch(function(){setFinds([]);});
-    db.get('hx_license_standards','license_id=eq.'+enc(lid)+'&select=target_level,status,license_id').then(function(r){const a=(r||[]).filter(function(x){return x.license_id===lid&&x.status!=='Withdrawn';})[0];setLevel(a?a.target_level:1);}).catch(function(){setLevel(1);});},[lid]);
+    db.get('hx_license_standards','license_id=eq.'+enc(lid)+'&select=target_level,status,scopes,license_id').then(function(r){const a=(r||[]).filter(function(x){return x.license_id===lid&&x.status!=='Withdrawn';})[0];setLevel(a?a.target_level:1);setScopes(csqScopes(a,lic));}).catch(function(){setLevel(1);setScopes(csqScopes(null,lic));});},[lid]);
   useEffect(load,[load]);
   if(!st||!lic)return el('div',null,el('h1',null,el('span',{className:'g'},'Internal Audits')),el('div',{className:'empty'},'Pick a state and a license at the top first.'));
   if(!rows)return el('div',{className:'muted'},'Loading...');
   function done(t){setModal(null);if(t)setMsg(t);load();}
-  const canE=can('intaudits',2),cov=iaCoverage(rows,level),pct=cov.all.length?Math.round(cov.done*100/cov.all.length):0;
+  const canE=can('intaudits',2),cov=iaCoverage(rows,level,scopes),pct=cov.all.length?Math.round(cov.done*100/cov.all.length):0;
   const openF=finds.filter(function(f){const a=rows.find(function(x){return x.id===f.audit_id;});return f.status==='open'&&a&&a.status!=='cancelled';}),lateF=openF.filter(function(f){return f.due_date&&f.due_date<todayStr();});
   const next=rows.filter(function(a){return a.status==='planned'&&a.planned_date;}).sort(function(a,b){return a.planned_date<b.planned_date?-1:1;})[0];
   const sel=rows.find(function(a){return a.id===selId;});
@@ -3966,7 +3971,7 @@ function AuditsPage(props){
   if(tab==='coverage'){
     const list=cov.all.filter(function(c){const l=cov.last[c.clause];if(cf==='MISS')return !l;if(cf==='NC')return l&&l.result==='Nonconforming';return true;});
     body=el('div',null,
-      el('div',{className:'card'},el('div',{className:'row',style:{justifyContent:'space-between'}},el('h3',null,'Annual audit program \u00b7 Level '+level+' ('+cov.all.length+' clauses)'),el('b',{style:{color:pct===100?'var(--green)':pct>=50?'var(--gold-hi)':'var(--red)'}},pct+'% audited in the last 12 months')),
+      el('div',{className:'card'},el('div',{className:'row',style:{justifyContent:'space-between'}},el('h3',null,'Annual audit program \u00b7 '+csqPartNames(scopes).join(' + ')+' \u00b7 Level '+level+' ('+cov.all.length+' clauses)'),el('b',{style:{color:pct===100?'var(--green)':pct>=50?'var(--gold-hi)':'var(--red)'}},pct+'% audited in the last 12 months')),
         el('div',{style:{height:10,background:'#1d1d1d',borderRadius:5,overflow:'hidden',margin:'6px 0 10px'}},el('div',{style:{width:pct+'%',height:'100%',background:'var(--gold-grad)'}})),
         el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:8}},Object.keys(IA_MOD_NAME).filter(function(m){return cov.all.some(function(c){return c.module===m;});}).map(function(m){const t=cov.all.filter(function(c){return c.module===m;}),d=t.filter(function(c){return cov.last[c.clause];}).length;
           return el('div',{key:m},el('div',{style:{fontSize:12}},IA_MOD_NAME[m]+' \u00b7 '+d+' / '+t.length),el('div',{style:{height:6,background:'#1d1d1d',borderRadius:3,overflow:'hidden',marginTop:3}},el('div',{style:{width:(d*100/t.length)+'%',height:'100%',background:d===t.length?'var(--green)':'var(--gold)'}})));}))),
@@ -3999,15 +4004,15 @@ function AuditsPage(props){
     body,
     sel&&!modal&&el(AuditDetail,{key:sel.id+sel.status,rec:sel,findings:finds.filter(function(f){return f.audit_id===sel.id;}),state:st,license:lic,onClose:function(){setSelId(null);},onDone:function(t){done(t);},
       onEdit:function(){setModal({t:'form',rec:sel});},onFinding:function(f,clause){setModal({t:'finding',rec:f,clause:clause});}}),
-    modal&&modal.t==='form'&&el(AuditForm,{rec:modal.fresh?{...modal.rec}:modal.rec,state:st,license:lic,level:level,onClose:function(){setModal(null);},onDone:function(r){if(r&&(!modal.rec||modal.fresh))setSelId(r.id);done(modal.rec&&!modal.fresh?'Saved.':'Planned '+(r?r.number:''));}}),
+    modal&&modal.t==='form'&&el(AuditForm,{rec:modal.fresh?{...modal.rec}:modal.rec,state:st,license:lic,level:level,scopes:scopes,onClose:function(){setModal(null);},onDone:function(r){if(r&&(!modal.rec||modal.fresh))setSelId(r.id);done(modal.rec&&!modal.fresh?'Saved.':'Planned '+(r?r.number:''));}}),
     modal&&modal.t==='finding'&&sel&&el(FindingForm,{audit:sel,rec:modal.rec,clause:modal.clause,onClose:function(){setModal(null);},onDone:function(){done('Finding saved');}}));
 }
 function IaDashCard(props){
   const lid=props.license?props.license.id:'';const[d,setD]=useState(null);
   useEffect(function(){if(!lid||!can('intaudits',1)){setD(null);return;}let dead=false;const enc=encodeURIComponent;
     Promise.all([db.get('hx_audits','license_id=eq.'+enc(lid)+'&select=id,status,audit_date,clauses,license_id'),db.get('hx_audit_findings','license_id=eq.'+enc(lid)+'&status=eq.open&select=id,license_id'),
-      db.get('hx_license_standards','license_id=eq.'+enc(lid)+'&select=target_level,status,license_id').catch(function(){return [];})]).then(function(r){
-      const a=(r[0]||[]).filter(function(x){return x.license_id===lid;}),ls=(r[2]||[]).filter(function(x){return x.license_id===lid&&x.status!=='Withdrawn';})[0],cov=iaCoverage(a,ls?ls.target_level:1);
+      db.get('hx_license_standards','license_id=eq.'+enc(lid)+'&select=target_level,status,scopes,license_id').catch(function(){return [];})]).then(function(r){
+      const a=(r[0]||[]).filter(function(x){return x.license_id===lid;}),ls=(r[2]||[]).filter(function(x){return x.license_id===lid&&x.status!=='Withdrawn';})[0],cov=iaCoverage(a,ls?ls.target_level:1,csqScopes(ls,props.license));
       if(!dead)setD({pct:cov.all.length?Math.round(cov.done*100/cov.all.length):0,open:(r[1]||[]).filter(function(x){return x.license_id===lid;}).length});}).catch(function(){if(!dead)setD(null);});return function(){dead=true;};},[lid]);
   if(!d)return null;
   return el('div',{className:'card gold'},el('div',{className:'k'},'Internal audits'),el('div',{className:'v',style:{color:d.pct===100?'var(--green)':d.pct>=50?'var(--gold-hi)':'var(--red)'}},d.pct+'% audited'),
@@ -4016,7 +4021,7 @@ function IaDashCard(props){
 }
 
 /* ---------- Training (Black Fox / Michigan SOP training matrix + CSQ 2A.13.2 training program) ---------- */
-const TRAIN_TOPICS=['Required by law','cGMP','Cannabis safety','Personnel hygiene & safety','Product defense','Job-specific','Safety','CSQ program','HACCP','Other'];
+const TRAIN_TOPICS=['Required by law','cGMP','cGACP','Extraction','Cannabis safety','Personnel hygiene & safety','Product defense','Job-specific','Safety','CSQ program','HACCP','Other'];
 const TRAIN_METHODS=['Classroom','On the job','Online course','Read and sign','External certification'];
 const TRAIN_MODES={everyone:'Everyone on the license',roles:'Chosen roles',at_least:'At least N people',optional:'Optional'};
 const TRAIN_STARTER=[
@@ -4027,7 +4032,11 @@ const TRAIN_STARTER=[
   ['Product defense and security awareness','Product defense','Protecting product from theft and intentional adulteration (CSQ 1.9 f, 2A.13.2 g5).','everyone',12,false,1],
   ['Chemical safety and SDS','Safety','Safe use and storage of chemicals, reading an SDS. Required for managers and sanitation.','optional',12,false,1,'managers+sanitation'],
   ['CSQ Certification Program Overview','CSQ program','Manager training. At least one person responsible for CSQ conformance completes the CSQ Program Overview course or equivalent (CSQ 2A.13.2 h).','at_least',0,false,1,'managers'],
-  ['HACCP certification (International HACCP Alliance)','HACCP','Manager training. One person and one backup certified in an International HACCP Alliance approved course (CSQ 4A.2 b, Level 2).','at_least',0,false,2,'managers']];
+  ['HACCP certification (International HACCP Alliance)','HACCP','Manager training. One person and one backup certified in an International HACCP Alliance approved course (CSQ 4A.2 b, Level 2).','at_least',0,false,2,'managers'],
+  ['Current Good Agricultural and Collection Practices (cGACP)','cGACP','Good practices for growing, harvesting, drying and curing (CSQ Standard for Cultivation 2A.13.2 and Module 3A). Cultivation licenses only.','everyone',12,true,1,null,'cultivation'],
+  ['Extraction safety and solvent controls','Extraction','Safe extraction and refinement: solvents and gases, equipment, solventless, residual solvents (CSQ Standard for Extraction, Module 3B). Manufacturing licenses.','optional',12,true,1,'extraction','manufacturing']];
+// starter courses for this license's operation
+function trStarterFor(lic){const op=licOp(lic);return TRAIN_STARTER.filter(function(s){return !s[8]||s[8]===op;});}
 // the law course is per state: Missouri licenses get Missouri rules, Michigan licenses get Michigan rules
 const TR_GENERIC_LAW='Regulatory compliance (state rules)';
 function trLawCourse(st){const n=(st&&st.name)||'State';return {name:n+' regulatory compliance (state rules)',description:'The '+n+' cannabis rules'+(st&&st.agency?' ('+st.agency+')':'')+' that apply to each person\'s work. Only for '+n+' licenses; train from the '+n+' Rulebook in Hendrix (CSQ 1.3, 2A.13.2 g1).'};}
@@ -4035,7 +4044,9 @@ function trStarterNamed(s,st){return s[1]==='Required by law'?trLawCourse(st):{n
 // manager roles: any role whose name says manager, compliance, director, supervisor or owner
 function trManagerRoles(roles){return (roles||[]).filter(function(r){return /manager|compliance|director|supervisor|owner/i.test(r.name||'');});}
 // who a starter course is for: managers (and sanitation for chemicals) when those roles exist, otherwise its default
-function trStarterWho(s,roles){if(!s[7])return {required_mode:s[3],role_ids:[]};let rs=trManagerRoles(roles);
+function trStarterWho(s,roles){if(!s[7])return {required_mode:s[3],role_ids:[]};
+  if(s[7]==='extraction'){const ex=(roles||[]).filter(function(r){return /extract/i.test(r.name||'');});return ex.length?{required_mode:'roles',role_ids:ex.map(function(r){return r.id;})}:{required_mode:s[3],role_ids:[]};}
+  let rs=trManagerRoles(roles);
   if(s[7]==='managers+sanitation')rs=rs.concat((roles||[]).filter(function(r){return /sanitation/i.test(r.name||'')&&rs.indexOf(r)<0;}));
   return rs.length?{required_mode:'roles',role_ids:rs.map(function(r){return r.id;})}:{required_mode:s[3],role_ids:[]};}
 // courses that also show an "at least N people certified" count
@@ -4043,16 +4054,19 @@ function trCounted(c){return c.required_mode==='at_least'||(c.required_mode==='r
 // first visit by someone with Full access: create the CSQ courses; turn the starter manager courses into required manager training
 async function trAutoSetup(st,lic,C){
   const roles=ACC.roles||[],out=[];
-  if(!C.length){const add=TRAIN_STARTER.map(function(s,i){return {id:newId('crs')+i,state_id:st.id,license_id:lic.id,...trStarterNamed(s,st),topic:s[1],...trStarterWho(s,roles),refresher_months:s[4],assessment_required:s[5],min_people:s[6],sort:i};});
+  if(!C.length){const add=trStarterFor(lic).map(function(s,i){return {id:newId('crs')+i,state_id:st.id,license_id:lic.id,...trStarterNamed(s,st),topic:s[1],...trStarterWho(s,roles),refresher_months:s[4],assessment_required:s[5],min_people:s[6],sort:i};});
     await db.insert('hx_training_courses',add);out.push('Created the '+add.length+' CSQ training courses');}
-  else{let n=0;for(const s of TRAIN_STARTER){if(!s[7])continue;const c=C.find(function(x){return x.name.trim().toLowerCase()===s[0].toLowerCase();});
+  else{const extra=trStarterFor(lic).filter(function(s){return s[8]&&!C.some(function(c){return c.name.trim().toLowerCase()===s[0].toLowerCase();});});
+    if(extra.length){await db.insert('hx_training_courses',extra.map(function(s,i){return {id:newId('crs')+i,state_id:st.id,license_id:lic.id,name:s[0],topic:s[1],description:s[2],...trStarterWho(s,roles),refresher_months:s[4],assessment_required:s[5],min_people:s[6],sort:C.length+i};}));
+      out.push('Added '+extra.map(function(s){return s[0];}).join(', '));}
+    let n=0;for(const s of TRAIN_STARTER){if(!s[7]||(s[8]&&s[8]!==licOp(lic)))continue;const c=C.find(function(x){return x.name.trim().toLowerCase()===s[0].toLowerCase();});
       if(!c||!(c.required_mode==='at_least'||c.required_mode==='optional')||(c.role_ids||[]).length)continue;const w=trStarterWho(s,roles);if(w.required_mode!=='roles')continue;
       await db.update('hx_training_courses',c.id,{required_mode:'roles',role_ids:w.role_ids,description:s[2]});n++;}
     if(n)out.push(n+' course'+(n===1?' is':'s are')+' now required manager training');
     const law=C.find(function(x){return x.name.trim().toLowerCase()===TR_GENERIC_LAW.toLowerCase();}),L=trLawCourse(st);
     if(law&&!C.some(function(x){return x.name.trim().toLowerCase()===L.name.toLowerCase();})){await db.update('hx_training_courses',law.id,L);out.push((out.length?'r':'R')+'egulatory course is now '+L.name);}}
   // online content: load the Hendrix starter lessons and quizzes as drafts (step 20)
-  let list=C;if(!C.length){try{list=((await db.get('hx_training_courses','license_ids=cs.%7B'+encodeURIComponent(lic.id)+'%7D&select=*'))||[]).filter(function(c){return (c.license_ids||[c.license_id]).indexOf(lic.id)>=0;});}catch(e){list=[];}}
+  let list=C;if(!C.length||out.some(function(x){return /^Added /.test(x);})){try{list=((await db.get('hx_training_courses','license_ids=cs.%7B'+encodeURIComponent(lic.id)+'%7D&select=*'))||[]).filter(function(c){return (c.license_ids||[c.license_id]).indexOf(lic.id)>=0;});}catch(e){list=[];}}
   let d=0;for(const c of list){if(c.content_status!=='none')continue;const t=trContentFor(c);if(!t)continue;try{await trSaveContent(c,trStarterForm(t),false);d++;}catch(e){break;}}
   if(d)out.push((out.length?'':'')+d+' online course'+(d===1?' is':'s are')+' ready to review and publish');
   return out.join('. ');
@@ -4192,7 +4206,7 @@ function trPersonPdf(u,lic,st,courses,recs,acks,sops){
 const TRAIN_CONTENT={
 'cGMP':{source:'Hendrix starter course, based on CSQ Standard for Manufacturing v2.0 (Modules 1 and 2A)',minutes:25,
  lessons:[
-  ['What cGMP means and why it matters','Current Good Manufacturing Practices (cGMP) are the basic rules that make sure every product we make is safe, consistent and exactly what the label says. They cover the people, the building, the equipment, the materials, the process and the records.\n\nThe "c" stands for current: the rules improve over time and we follow the version in force today. Our facility follows the CSQ Standard for Manufacturing, a published international cannabis safety and quality standard, on top of the state rules.\n\n## The idea behind every rule\n- Do it the same way every time: follow the approved SOP.\n- Prevent problems instead of fixing them later.\n- If it is not written down, it did not happen.\n- When something goes wrong, stop, report it and fix the cause.'],
+  ['What cGMP means and why it matters','Current Good Manufacturing Practices (cGMP) are the basic rules that make sure every product we make is safe, consistent and exactly what the label says. They cover the people, the building, the equipment, the materials, the process and the records.\n\nThe "c" stands for current: the rules improve over time and we follow the version in force today. Our facility follows the CSQ standards (Manufacturing, Extraction or Cultivation, depending on the license), published international cannabis safety and quality standards, on top of the state rules.\n\n## The idea behind every rule\n- Do it the same way every time: follow the approved SOP.\n- Prevent problems instead of fixing them later.\n- If it is not written down, it did not happen.\n- When something goes wrong, stop, report it and fix the cause.'],
   ['Standard Operating Procedures (SOPs)','Every production task has an approved, numbered SOP. You must read and sign the current version of each SOP that applies to your job before you do the work. Hendrix keeps the list of SOPs you must sign under SOPs and Training.\n\n- Use only the current version. Old printed copies are not allowed on the floor.\n- Do not skip, add or change steps. If the SOP cannot be followed, stop and tell your supervisor.\n- Suggest improvements to your supervisor; only an approved revision changes the SOP.'],
   ['Good documentation','Batch records, logs and checklists are legal records. Inspectors and auditors use them to see what really happened.\n\n- Record at the time you do the work, never from memory later.\n- Write clearly, in ink on paper; never use white-out or pencil.\n- On paper, correct a mistake with one line through it, write the correct value, your initials, the date and the reason. In Hendrix, changes need a reason and are kept in the Audit Trail.\n- Never sign for work someone else did, and never fill in a record ahead of time.\n- Blank fields are not allowed: write N/A when a field does not apply.'],
   ['Clean, ready and in control','Before production starts, the area and equipment must pass a pre-operational inspection (line clearance): clean, nothing left from the previous product, equipment in its maintenance and calibration dates, and the right materials and labels only.\n\n- Use only equipment that is clean, working and calibrated (check the calibration sticker or log).\n- Keep one product and one batch on the line at a time.\n- Use only materials that were received, inspected and accepted. Never use anything marked HOLD, QUARANTINE or REJECTED.\n- Keep doors closed, keep the area tidy and remove anything that does not belong.'],
@@ -4288,6 +4302,38 @@ function LessonBody(props){
       if(/^\s*- /.test(x))return el('div',{key:j,style:{paddingLeft:14,textIndent:-10}},'\u2022 '+x.replace(/^\s*- /,''));
       return el('div',{key:j},x);}));}));
 }
+TRAIN_CONTENT['cGACP']={source:'Hendrix starter course, based on CSQ Standard for Cultivation v2.0 (Module 3A, 2A.13.2)',minutes:25,
+ lessons:[
+  ['What cGACP means','Current Good Agricultural and Collection Practices (cGACP) are the good practices for growing, harvesting and handling cannabis plants so the flower is safe and consistent. They sit on top of cGMP: in the field we follow cGACP, and once plants come indoors (harvest rooms, drying, curing, trimming, packaging) we follow cGMP.\n\nThe goal is to protect plants and flower from disease, pests, foreign matter and microbes (mold, bacteria) at every step, and to record what we do so every batch can be traced.'],
+  ['Grow rooms and environment','- Grow rooms are identified and signed. Keep doors closed and follow the entry rules (clean clothing, hand washing, foot baths where used).\n- Air is filtered and conditioned. Temperature, humidity and airflow have limits for each room: record them in the Temp / Humidity log and report readings out of range right away.\n- Air must never be stagnant: stagnant, humid air grows mold.\n- Keep equipment and utensils clean, used only for their purpose (color coded or labeled) and stored apart from plants and product. Hoses are emptied and hung on racks off the floor.'],
+  ['Inputs: nutrients, media, water and propagation material','- Use only approved nutrients, fertilizers, additives and grow media, from approved suppliers, received and accepted. Follow the nutrient plan; never improvise a mix.\n- No untreated manure or untreated grow media, ever.\n- Store organic and inorganic inputs apart, and keep them away from water supplies.\n- Water is tested; irrigation and fertigation systems are maintained (no leaks, no lead fittings) and set to the plants\' needs without runoff or soggy media.\n- Clones and seeds come from approved sources or our own mothers and are labeled with name, source and date. Record every input used on each batch.'],
+  ['Crop protection and pests','- Inspect plants as you work. Report pests, mold, powdery mildew or sick plants to your supervisor at once; isolate affected plants as directed.\n- Only approved crop protection products are applied, by trained people, at the label rate, and every application is recorded (product, rate, date, area, who).\n- Respect re-entry and pre-harvest intervals on the label.\n- Never bring outside plants, soil or pets into the facility.'],
+  ['Harvest, drying and curing','- Harvest with clean tools and clean containers; keep harvested material off the floor and away from contamination.\n- Every harvest batch is identified and tagged in the state system (METRC) and its weights recorded.\n- Dry and cure rooms have temperature and humidity limits; record them and report problems.\n- Trim, grinding and milling areas control dust: use the dust collection and PPE.\n- Flower that is moldy, contaminated or dropped is set aside and put on hold, never mixed back in.']],
+ quiz:[
+  ['When do cGMP rules take over from cGACP?',['Never','Once plants are brought indoors for harvest, drying and processing','Only for edibles','Only during inspections'],1,'In the field follow cGACP; once plants are indoors, all activities follow cGMP (CSQ 3A.1.15).'],
+  ['Why must air in a grow room never be stagnant?',['It is noisy','Stagnant humid air promotes mold and disease','It wastes electricity','It is a fire risk only'],1,'Moving, conditioned air prevents mold and microbial growth.'],
+  ['Can untreated manure be used as a soil amendment?',['Yes, it is organic','No, never untreated','Only outdoors','Only on Fridays'],1,'Untreated manure is not allowed; amendments must be treated and verified.'],
+  ['How are hoses stored?',['On the floor','Emptied, on racks, off the floor','Full of water in a bucket','Anywhere'],1,'Hoses are emptied and stored on racks off the floor (CSQ 3A.1.4).'],
+  ['You see powdery mildew on a plant. What do you do?',['Wipe it off and continue','Report it to your supervisor right away','Ignore it until harvest','Spray any product you find'],1,'Report pests and disease immediately so plants can be isolated and treated by trained people.'],
+  ['Who may apply crop protection products?',['Anyone','Trained people, approved products, at the label rate, with a record','Visitors','Only at night'],1,'Only approved products, applied by trained staff and recorded.'],
+  ['Clones must be labeled with:',['Nothing','Name, source and date','Only the price','Only the room number'],1,'Propagation material is labeled with name, origin and date (CSQ 3A.1.13).'],
+  ['A bud falls on the floor during trimming. What happens to it?',['Put it back in the batch','Set it aside as waste or hold as directed; never back into the batch','Give it away','Hide it'],1,'Contaminated material is kept out of product and handled as waste or held.']]};
+TRAIN_CONTENT['Extraction']={source:'Hendrix starter course, based on CSQ Standard for Extraction v2.0 (Module 3B)',minutes:25,
+ lessons:[
+  ['Extraction areas and equipment','Extraction and refinement follow cGMP and must protect the extract from adulterants, foreign matter and residual solvents.\n\n- Extraction areas are identified and signed. Only trained, authorized people operate the equipment.\n- Spill kits sized for the solvents used sit next to every extraction area.\n- Closed-loop systems are used where they apply, built to the safety standards for their use, and cleaned as designed.\n- Before you start: fire and life safety systems (gas detection, ventilation, alarms) are working, and the equipment is within its maintenance and calibration dates. If not, do not start.'],
+  ['Solvents and gases','- Use only approved solvents and gases, received with a COA and accepted. Butane, propane, CO2, nitrogen and other gases must be at least 99.5% pure unless specified.\n- CO2 must be beverage grade or better. Medical-grade CO2 is not allowed (it can carry metal impurities).\n- Ethanol must be at least 99.5% pure, food grade and not denatured (approved denaturants only if the state allows, and reduced to legal levels).\n- Gas and solvent levels are monitored in the room, on the person and in the product. Report any alarm or smell immediately and follow the emergency procedure.'],
+  ['Solventless and water','- Solventless means no solvent dissolves the cannabinoids (ice water, dry sift, rosin). Water used only as a process aid counts as solventless.\n- Process water and ice must be at least potable and meet spec. Ice machines and bins are emptied and cleaned at least weekly.\n- Dry ice is used sparingly, only to control temperature, and never touches the material or the extract.'],
+  ['Records, residual solvents and release','- Record every input on the batch record: biomass lot, solvent or gas lot, quantities, times, temperatures and pressures.\n- Residual solvents in the final product must meet the stricter of the state limit or our spec. Every batch is tested before release.\n- A failed test puts the batch on hold. It can only be reprocessed, released or destroyed by an authorized decision.\n- Clean the equipment with methods suited to the solvent used, and record the clean.']],
+ quiz:[
+  ['Before starting a solvent extraction, what must be checked?',['Nothing','Fire and life safety systems working; equipment within maintenance and calibration','Only the music','Only the weather'],1,'Safety systems and maintenance/calibration status are checked before use (CSQ 3B.1.2).'],
+  ['Which CO2 grade is NOT allowed for extraction?',['Beverage grade','Higher than beverage grade','Medical grade','Food grade'],2,'Medical-grade CO2 may carry elemental impurities and is not allowed.'],
+  ['What minimum purity do extraction gases and solvents need unless specified?',['90%','95%','99.5%','50%'],2,'Gases, LPG and solvents must be at least 99.5% pure unless otherwise specified.'],
+  ['Can dry ice touch the biomass or the extract?',['Yes','No, never; it only controls temperature','Only for rosin','Only if clean'],1,'Dry ice must be isolated from product (CSQ 3B.1.8).'],
+  ['Ice water extraction is considered:',['Solvent-based','Solventless, because water is only a process aid','Illegal','Ethanol extraction'],1,'Water used as a process aid, not to dissolve compounds, is solventless.'],
+  ['The gas detector alarms during a run. What do you do?',['Finish the run quickly','Follow the emergency procedure and report it immediately','Turn the alarm off','Open a window and continue'],1,'Alarms are acted on immediately following the emergency procedure.'],
+  ['A batch fails residual solvent testing. What happens?',['Ship it','It goes on hold until an authorized decision','Blend it with a good batch','Relabel it'],1,'Failed product is held; only an authorized decision releases, reprocesses or destroys it.'],
+  ['How often are ice machines and ice bins emptied and cleaned?',['Yearly','At least weekly','Never','When they smell'],1,'Ice storage and production parts are emptied and cleaned at least weekly.']]};
+
 function CoursePlayer(props){
   const c=props.course,lic=props.license,L=c.lessons||[],Q=c.quiz||[];
   const[step,setStep]=useState(0);const[ans,setAns]=useState(Q.map(function(){return null;}));const[res,setRes]=useState(null);const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
@@ -4418,7 +4464,7 @@ function TrainingPage(props){
   function go(t){setTab(t);lsSet('hx_trtab',t);}
   async function starter(){
     setMsg('');try{const have={};C.forEach(function(c){have[c.name.trim().toLowerCase()]=1;});
-      const add=TRAIN_STARTER.filter(function(s){return !have[trStarterNamed(s,st).name.toLowerCase()]&&!have[s[0].toLowerCase()];}).map(function(s,i){return {id:newId('crs')+i,state_id:st.id,license_id:lic.id,...trStarterNamed(s,st),topic:s[1],...trStarterWho(s,ACC.roles),refresher_months:s[4],assessment_required:s[5],min_people:s[6],sort:C.length+i};});
+      const add=trStarterFor(lic).filter(function(s){return !have[trStarterNamed(s,st).name.toLowerCase()]&&!have[s[0].toLowerCase()];}).map(function(s,i){return {id:newId('crs')+i,state_id:st.id,license_id:lic.id,...trStarterNamed(s,st),topic:s[1],...trStarterWho(s,ACC.roles),refresher_months:s[4],assessment_required:s[5],min_people:s[6],sort:C.length+i};});
       if(add.length)await db.insert('hx_training_courses',add);setMsg('Added '+add.length+' CSQ starter course'+(add.length===1?'':'s')+'.');load();}catch(e){setMsg(trErr(e));}
   }
   const shownPeople=people.filter(function(u){if(roleF!=='ALL'&&(u.role_ids||[]).indexOf(roleF)<0)return false;if(q&&u.name.toLowerCase().indexOf(q.toLowerCase())<0)return false;
@@ -5410,13 +5456,23 @@ function SopDashCard(props){
 /* ---------- Standards: CSQ Standard for Manufacturing v2.0 (October 2025) ----------
    Clause numbers and titles follow the published standard. Summaries are short paraphrases for day-to-day use;
    the full text is the licensed standard document (upload it on the Standards page). */
-const CSQ_MFG={code:'CSQ-MFG',name:'CSQ Standard for Manufacturing',publisher:'Cannabis Safety & Quality (ASI Global Standards, LLC)',version:'2.0',issued:'October 2025',
-  scope:'Manufacture and packing of cannabinoid products for inhalation, ingestion and topical use in a cGMP setting, regardless of regulatory classification. Does not include cultivation or extraction of cannabinoid herbal materials.',
-  levels:[{level:1,name:'Level 1 - cGMP',modules:['1','2A','3C'],audit:'Announced. At least 1 day onsite, 0.5 day report.'},
-    {level:2,name:'Level 2 - cGMP + HACCP',modules:['1','2A','3C','4A'],audit:'Announced. At least 1.5 days onsite, 1 day report.'},
-    {level:3,name:'Level 3 - cGMP + HACCP + QMS',modules:['1','2A','3C','4A','5'],audit:'UNANNOUNCED. At least 2 days onsite, 1 day report.'}],
-  modules:{'1':'Requirements for All Licensed Operations','2A':'Current Good Manufacturing Practices','3C':'Cannabinoid Products and Processes','4A':'Hazard Analysis Critical Control Points (HACCP)','5':'Advanced Safety and Quality Management Systems'},
-  notes:['Every initial certification audit adds a 1-day offsite documentation review.','A mock recall must be done every year and finish in under 2 hours; the auditor also runs a traceability exercise during the audit.','Pest program effectiveness: no evidence of pests inside the facility at the audit.']};
+const CSQ_MFG={code:'CSQ-MFG',name:'CSQ Standards (Manufacturing, Extraction, Cultivation)',publisher:'Cannabis Safety & Quality (ASI Global Standards, LLC)',version:'2.0',issued:'October 2025',
+  scope:'The CSQ Standard for Manufacturing, the CSQ Standard for Extraction and the CSQ Standard for Cultivation share Modules 1, 2A, 4A and 5 word for word; only Module 3 differs. Hendrix keeps them as one library so shared clauses are assessed once: Module 3A Cultivation applies only to cultivation (CUL) licenses; Modules 3B Extraction and 3C Manufacturing apply to manufacturing licenses.',
+  levels:[{level:1,name:'Level 1 - cGMP',modules:['1','2A','3'],audit:'Announced. At least 1 day onsite, 0.5 day report.'},
+    {level:2,name:'Level 2 - cGMP + HACCP',modules:['1','2A','3','4A'],audit:'Announced. At least 1.5 days onsite, 1 day report.'},
+    {level:3,name:'Level 3 - cGMP + HACCP + QMS',modules:['1','2A','3','4A','5'],audit:'UNANNOUNCED. At least 2 days onsite, 1 day report.'}],
+  modules:{'1':'Requirements for All Licensed Operations','2A':'Current Good Manufacturing Practices','3A':'Cultivation: cannabis plants and herbal material (CSQ Standard for Cultivation)','3B':'Extraction: cannabinoid substances (CSQ Standard for Extraction)','3C':'Manufacturing: cannabinoid products (CSQ Standard for Manufacturing)','4A':'Hazard Analysis Critical Control Points (HACCP)','5':'Advanced Safety and Quality Management Systems'},
+  notes:['Every initial certification audit adds a 1-day offsite documentation review.','A mock recall must be done every year and finish in under 2 hours; the auditor also runs a traceability exercise during the audit.','Pest program effectiveness: no evidence of pests inside the facility at the audit.','Cultivation licenses also train staff on current Good Agricultural and Collection Practices (cGACP): cGACP in the field, cGMP once plants are indoors.']};
+// Module 3 parts: which CSQ standard each is, and which license operation it is for
+const CSQ_PARTS={'3A':{name:'CSQ Standard for Cultivation',op:'cultivation'},'3B':{name:'CSQ Standard for Extraction',op:'manufacturing'},'3C':{name:'CSQ Standard for Manufacturing',op:'manufacturing'}};
+const LIC_OPS={manufacturing:'Manufacturing (processing, extraction, infusion)',cultivation:'Cultivation (CUL)',other:'Other (dispensary, lab, transport...)'};
+function licOp(l){if(!l)return 'other';if(l.operation)return l.operation;const n=String(l.license_number||''),t=String(l.license_type||'');
+  if(/^\s*CUL/i.test(n)||/cultiv|grow|nursery/i.test(t))return 'cultivation';if(/^\s*MAN/i.test(n)||/manufact|process|extract|infus/i.test(t))return 'manufacturing';return 'other';}
+function csqDefaultScopes(op){return op==='cultivation'?['3A']:op==='manufacturing'?['3C','3B']:[];}
+function csqScopes(adopt,lic){const s=adopt&&adopt.scopes;return s&&s.length?s:csqDefaultScopes(licOp(lic));}
+function csqAllowed(lic){const op=licOp(lic);return Object.keys(CSQ_PARTS).filter(function(k){return CSQ_PARTS[k].op===op;});}
+function stdModOk(m,scopes){return !/^3/.test(m)||scopes.indexOf(m)>=0;}
+function csqPartNames(scopes){return ['3C','3B','3A'].filter(function(k){return scopes.indexOf(k)>=0;}).map(function(k){return CSQ_PARTS[k].name;});}
 // [clause, module, title, summary, hendrix pages, what Hendrix already holds, planned Hendrix modules, applies to]
 const CSQ_MFG_CLAUSES=[
  ['1.1','1','Safety and quality management system','Keep a documented safety and quality system (paper or electronic) that covers the CSQ requirements, names the people and backups who maintain it, holds every SOP, program, form, log, diagram and training material plus local regulations, is available to staff, sets the rules for using the CSQ logo, and is kept up to date.',['sops','rulebook','logs','team'],'Hendrix is the electronic system; Rulebook holds each state\'s regulations; logs and records. SOP library: every SOP, numbered, versioned, approved and signed.',[]],
@@ -5463,13 +5519,51 @@ const CSQ_MFG_CLAUSES=[
  ['2A.12.8','2A','Product labeling and packaging','Label specs that meet CSQ and regulation; label content (potency, ingredients, allergens, warnings, claims, batch) verified against the batch; labels reviewed when materials, processes or rules change; only the labels and packaging a batch needs are issued, then reconciled; no mislabeled or damaged product; correct, inspected, clean packaging materials and tools.',['stickers','testing'],'Sticker templates per SKU and flavor with approval number; potency printed from the COA; every sticker print logged (batch, tag, count, who); template changes in the audit trail.',[]],
  ['2A.12.9','2A','Product sampling and testing','Finished product meets spec and regulation before release; samples are representative; samplers are competent; methods, frequency and limits are defined and results trended; held product is released after review; recognized methods; compliance labs accredited to ISO/IEC 17025; internal labs separated; retention samples kept when required.',['testing','batches','suppliers','holds'],'Testing: per final package tag, lab and lab license, COA stored privately, COA read by AI with tag check, retention samples (quantity, location, keep-until). Testing labs approved in Suppliers with ISO/IEC 17025 accreditation; labs used in Testing are checked against the approved list. Batches with a failed test and no passing retest cannot be released from hold or shipped.',[]],
  ['2A.13.1','2A','Personnel roles and responsibilities','Everyone in the facility is classified by role; each role has defined duties and requirements (certifications, education, experience, training).',['roles','team','training'],'Roles with duties, requirements (certifications, training, experience) and access per person. Each role\'s required training in the training matrix.',[]],
- ['2A.13.2','2A','Personnel training','Train everyone, including temps and contractors, before they work: minimum training for all, training per role, a training matrix, yearly refreshers, regular assessments, legal, cGMP, cannabis safety, hygiene, product defense and job training; at least one person with CSQ program overview training; qualified trainers; training in a language staff understand; records kept at least for the length of employment.',['sops','roles','training'],'Roles (the training matrix will hang off them). SOP signatures per person are part of the training record. Training matrix: required courses by role, refreshers, qualified trainers, assessments, certificates, SOP signatures; CSQ Program Overview holders counted.',[]],
+ ['2A.13.2','2A','Personnel training','Train everyone, including temps and contractors, before they work: minimum training for all, training per role, a training matrix, yearly refreshers, regular assessments, legal, cGMP (cultivation also current Good Agricultural and Collection Practices, cGACP), cannabis safety, hygiene, product defense and job training; at least one person with CSQ program overview training; qualified trainers; training in a language staff understand; records kept at least for the length of employment.',['sops','roles','training'],'Roles (the training matrix will hang off them). SOP signatures per person are part of the training record. Training matrix: required courses by role, refreshers, qualified trainers, assessments, certificates, SOP signatures; CSQ Program Overview holders counted.',[]],
  ['2A.13.3','2A','Personnel health (illness and injuries)','Staff know the symptoms that keep them off product and how to report them; no handling product with open wounds; minor cuts covered with bandage and glove; bodily fluid spills quarantined, cleaned and released by authorized people.',['sops'],'Health SOP signed by everyone.',[]],
  ['2A.13.4','2A','Personnel hygiene and cleanliness','Staff come to work clean; no false nails, nail polish or false eyelashes; no heavy perfume; eating, drinking and smoking only in permitted areas; protect product from sweat and skin medicines; smokers wash hands on return; hair can be contained.',['sops','training'],'GMP hygiene SOP signed by everyone. Hygiene training tracked per person.',[]],
  ['2A.13.5','2A','Clothing, jewelry and personal belongings','No jewelry except a plain band or medical bracelet; jewelry that cannot come off is covered; suitable outer garments; loose items removed and long hair tied back; storage for personal items.',['sops','training'],'GMP clothing and jewelry SOP signed by everyone. Hygiene training tracked per person.',[]],
  ['2A.13.6','2A','Personal protective equipment (PPE)','PPE defined by risk assessment for each task and available to staff and visitors, replaced and cleaned as needed, clean and dirty PPE kept apart, and hair nets, beard nets and gloves worn wherever product is exposed.',['sops','training'],'PPE SOP signed by everyone. PPE training tracked per person.',[]],
  ['2A.13.7','2A','Handwashing','Staff are trained and wash at the right times (after contamination risks, when soiled, when changing gloves, after breaks, eating, smoking or the restroom); stations are accessible with handwash signs in a language staff understand.',['sops','training'],'QR sign printing for posted signs. Handwashing SOP signed by everyone. Handwashing training tracked per person.',[]],
  ['2A.13.8','2A','Contractors, service providers and visitors','Visitors and contractors stay out of production when ill, acknowledge the facility\'s cGMP rules, wear suitable clothing and PPE, remove jewelry and loose items, and follow hygiene and handwashing rules.',['visitors'],'Visitor Log and QR kiosk: every visitor reads and accepts the GMP rules and answers an illness question before entering; anyone ill is marked to stay out of production.',[]],
+ ['3A.1.1','3A','Indoor cultivation','Indoor grows follow cGACP and protect plants from disease, pests, foreign matter and microbes: areas identified with signage; air quality specs; air conditioned, filtered, treated and monitored; air handling checked; airflow, humidity and temperature with min and max limits and no stagnant air.',['logs'],'Temp / Humidity Log with min and max per room.',['Cultivation records','Facility tests'],'Indoor grows'],
+ ['3A.1.2','3A','Outdoor cultivation','Outdoor sites are documented (area, intended use) and registered; the site and neighboring land are risk-assessed (land use history, topography, controls) and re-evaluated yearly; animals kept out of fields and water; handwashing and toilets (or other hygiene means) provided.',['sops','locations'],'',['Cultivation records','Risk register'],'Outdoor grows'],
+ ['3A.1.3','3A','Glasshouse and greenhouse cultivation','Greenhouses apply the indoor and outdoor cultivation requirements that fit them.',['sops'],'',['Cultivation records'],'Greenhouses'],
+ ['3A.1.4','3A','Cultivation equipment','Cultivation equipment and utensils are easy to clean and repair, identified for their use (color coded or labeled), stored apart from materials and product, hoses emptied and on racks off the floor, and field and transport vehicles clean and in good repair.',['logs'],'Equipment Maintenance Log.',['Equipment register'],'All cultivation'],
+ ['3A.1.5','3A','Cultivation inputs and controls','Every cultivation input is declared with safety and quality specs, and its use is controlled, recorded and tracked.',['suppliers','receiving'],'Inputs from approved suppliers received as numbered lots with COA.',['Cultivation records'],'All cultivation'],
+ ['3A.1.6','3A','Air, CO2 and other process gases','Gases used in the grow and in processing suit their use and their levels are monitored: filtered, dry and oil-free; at least 99.5% pure unless specified; CO2 beverage grade or better (never medical grade).',['suppliers','receiving'],'Gas suppliers approved with specs; gases received with COA.',[],'CO2 enrichment, processing gases'],
+ ['3A.1.7','3A','Growth additives, fertilizers, nutrients and soil amendments','An integrated nutrient management plan: approved list and who approves, inputs identified and stored away from water, use guided by sample analysis, organic where possible, organic and inorganic stored apart, no untreated manure, untreated amendments treated and verified.',['suppliers','receiving','sops'],'Approved nutrient suppliers and received lots; the nutrient plan as an SOP.',['Cultivation records'],'All cultivation'],
+ ['3A.1.8','3A','Grow media','Grow media are evaluated for hazards, never used untreated, and reused media are treated and verified against specs.',['receiving','sops'],'Grow media received as lots with specs.',['Cultivation records'],'Media-based grows'],
+ ['3A.1.9','3A','Soil safety and quality','Soil meets food crop requirements: characteristics known and evaluated as a contamination source, sampled and tested on a continuing basis, informed by past tests and land use, with erosion monitored.',[],'',['Facility tests'],'Soil grows'],
+ ['3A.1.10','3A','Water used during cultivation','Irrigation water meets food crop requirements, is evaluated as a contamination source, tested on a continuing basis, informed by past tests and land use, with wastewater monitored.',[],'',['Facility tests'],'All cultivation'],
+ ['3A.1.11','3A','Water ice and dry ice','Ice meets the water specs; ice machines installed to regulation with storage and production parts emptied and cleaned at least weekly; dry ice used sparingly, only for temperature, never touching product.',['sops','logs'],'',[],'Processes using ice or dry ice'],
+ ['3A.1.12','3A','Fertigation and irrigation systems','Water sources and system type identified; systems designed and installed safely with no lead pipes or fittings; tested for contaminants at a set frequency; maintained to avoid waste and wet media that grows mold; applied to plant needs without runoff; water use measured with reduction, retention and reclamation where possible.',['logs'],'Equipment Maintenance Log.',['Facility tests','Cultivation records'],'All cultivation'],
+ ['3A.1.13','3A','Cuttings, clones, seeds and propagation materials','Propagation material comes from licensed or approved sources (with specs and acceptance) or own plants, is kept healthy and from becoming a contamination source, is labeled with name, source, date and other details, and retention samples are kept when required.',['suppliers','receiving'],'Clone and seed suppliers approved; propagation material received as lots.',['Cultivation records'],'All cultivation'],
+ ['3A.1.14','3A','Crop maintenance and protection','Crop maintenance and protection follow each plant\'s growth and the plant part to be used.',['logs','sops'],'Pest Control Log.',['Cultivation records'],'All cultivation'],
+ ['3A.1.15','3A','Harvesting','Harvest protects fresh material from foreign matter and microbes: cGACP in the field, cGMP once indoors.',['sops'],'',['Cultivation records'],'All cultivation'],
+ ['3A.1.16','3A','Drying, curing and post-harvest','Drying, curing and other post-harvest work follow cGMP and protect material from foreign matter and microbes.',['logs','sops'],'Temp / Humidity Log for dry and cure rooms.',['Cultivation records'],'All cultivation'],
+ ['3A.1.17','3A','Grinding and milling','Grinding and milling follow cGMP; areas are monitored for dust and have dust handling and PPE.',['sops','logs'],'',[],'Trim and milling'],
+ ['3A.1.18','3A','Tissue culture','Tissue culture follows cGMP and protects cultures from foreign matter and microbes.',['sops'],'',[],'Tissue culture labs'],
+ ['3A.1.19','3A','Blending and mixing','Defined procedures and equipment; materials measured and added at the right step; parameters documented to spec; homogeneous batches; rework approved by qualified staff; equipment sized for the batch.',['batches'],'',[],'Blended herbal material'],
+ ['3A.2.1','3A','Live cannabis products','Live products such as seeds are protected from foreign matter, chemical and microbial contamination.',['sops'],'',[],'Seeds, clones for sale'],
+ ['3A.2.2','3A','Cannabinoid herbal material products','Dried or fresh frozen flower is protected from foreign matter, chemical and microbial contamination, kept frozen when required, and handled with airflow, ventilation and dust control.',['testing','logs'],'Lab results per batch in Testing; storage conditions in the Temp / Humidity Log.',[],'Flower and trim'],
+ ['3A.2.3','3A','Cannabinoid pre-roll products','Pre-rolls are protected from foreign matter, chemical and microbial contamination, with airflow, ventilation and dust control where they are made.',['batches','sops'],'',[],'Pre-rolls made at a cultivation license'],
+ ['3B.1.1','3B','Extraction and refinement activities','Extraction and refinement follow cGMP and protect product from adulterants, foreign matter and residual solvents: areas identified with signage, simultaneous activities segregated, spill kits next to every extraction area, closed-loop systems where applicable built to the safety standards for their use, equipment cleanable in place, and solvent and chemical levels in the final product within regulation and spec.',['batches','testing','sops'],'Ethanol and BHO extraction batch records; residual solvent results on COAs.',['Equipment register'],'All extraction'],
+ ['3B.1.2','3B','Solvent-based extraction and refinement','Solvent extraction is done by trained, competent staff: fire and life safety systems working and within maintenance and calibration before use; areas and equipment designed for the solvent used; cleaning suited to the solvent and its residues.',['batches','logs','training'],'Ethanol and BHO batch records; Equipment Maintenance Log; training per person.',['Equipment register','Line clearance'],'Hydrocarbon, ethanol and CO2 extraction'],
+ ['3B.1.3','3B','Solvent-free extraction and refinement','Solventless work (ice water, dry sift, rosin) is done by trained staff in separate areas: enough drainage, process water at least potable and to spec before use, water removed from the product to spec and from waste before disposal, equipment fit to carry that water, defined environmental conditions (walk-in coolers and freezers included).',['sops','logs'],'Temp / Humidity Log for the rooms used.',['Facility tests','Equipment register'],'Solventless (ice water, dry sift, rosin)'],
+ ['3B.1.4','3B','Extraction inputs and controls','Every extraction and refinement input is declared with safety and quality specs, and its use is controlled, recorded and tracked.',['receiving','suppliers','batches'],'Inputs from approved suppliers, received as numbered lots with COA and recorded against the extraction batches that use them.',[],'All extraction'],
+ ['3B.1.5','3B','Air, CO2, LPG and other process gases','Process gases (air, CO2, butane, propane, nitrogen...) suit their use and their levels are monitored in the area, on the person, in the process and in the product: filtered, dry and oil-free; at least 99.5% pure unless specified; CO2 beverage grade or better (never medical grade).',['suppliers','receiving'],'Gas suppliers approved with specs (purity, beverage grade CO2); gases received with COA / certificate of conformance.',['Facility tests'],'Processes using gases'],
+ ['3B.1.6','3B','Ethanol and other liquid organic solvents','Solvents suit their use and their levels are monitored: at least 99.5% pure; ethanol food grade and not denatured (approved denaturants reduced to legal levels if used); only ethanol may be an ingredient, and then it must be food grade and not denatured.',['batches','receiving','suppliers'],'Ethanol batch records track solvent use; solvents from approved suppliers received with COA.',[],'Processes using solvents'],
+ ['3B.1.7','3B','Water used during extraction and refinement','Process water is potable and at least 99.5% pure, evaluated as a contamination source, tested on a continuing basis, informed by past tests and land use, with wastewater monitored.',[],'',['Facility tests'],'Processes using water'],
+ ['3B.1.8','3B','Water ice and dry ice','Ice meets the water specs; ice machines installed to regulation with storage and production parts emptied and cleaned at least weekly; dry ice used sparingly, only for temperature, and never touching product.',['sops','logs'],'',[],'Ice water extraction, cold traps'],
+ ['3B.1.9','3B','Other solid and liquid processing inputs','Media, chemicals, catalysts and reactants are at least 99.5% pure and food grade, or justified by a toxicological risk assessment; non-food-grade inputs are declared and reduced to safe levels in the final product.',['suppliers','receiving'],'Processing input suppliers approved with specs; inputs received with COA.',[],'Filtration media, reagents'],
+ ['3B.1.10','3B','Non-cannabinoid ingredients','Terpenes and other ingredients added to extracts are food grade or justified by a toxicological risk assessment; non-food-grade ingredients are declared and reduced to safe levels.',['products','suppliers','receiving'],'Formulations list ingredients; ingredient suppliers approved with specs; ingredients received with COA.',[],'Formulated extracts'],
+ ['3B.1.11','3B','Indoor air quality, airflow and environment','Extraction and processing areas have air quality specs; air is conditioned, filtered, treated and monitored; air handling is checked; airflow, humidity and temperature have min and max limits and air never stagnates; milling and grinding areas are monitored for dust with dust handling and PPE.',['logs'],'Temp / Humidity Log: min and max per room; out-of-range readings need a corrective action.',['Facility tests'],'All extraction'],
+ ['3B.1.12','3B','Blending, compounding, formulation and mixing','Defined procedures and equipment for blending; every ingredient measured and added at the right step; parameters documented to spec; batches homogeneous before dispensing; rework approved by qualified staff; equipment sized for the batch.',['products','batches'],'Formulations; Batch Tracker calculations; changes to filled values need Full access and a reason.',[],'Blended and formulated extracts'],
+ ['3B.2.1','3B','Cannabinoid herbal materials (extraction input)','Dried or fresh frozen biomass is protected from foreign matter, chemical and microbial contamination, kept frozen until use when required, and handled with airflow, ventilation and dust control.',['receiving','logs'],'Biomass received as numbered lots; storage conditions in the Temp / Humidity Log.',[],'Biomass and fresh frozen'],
+ ['3B.2.2','3B','Cannabinoid substance products','Concentrates and extracts are protected from contamination; residual solvents (also in solventless products) stay within the stricter of regulation or internal spec.',['testing','batches','holds'],'Testing stores residual solvent results from COAs; a failed result puts the batch on hold.',[],'Concentrates, distillate, isolate'],
+ ['3B.2.2.3','3B','Manufactured cannabinoids','Cannabinoids made by conversion, synthesis or modified organisms are declared, have safety and quality specs, and their use is controlled, recorded and tracked.',['batches','products'],'Batch records and formulations record what is made and used.',[],'Converted or synthetic cannabinoids'],
+ ['3B.2.3','3B','Formulated cannabinoid substance products','Formulated substances are protected from contamination, risk-assessed for route of administration and labeled with it, carry allergen declarations when used as ingredients, and use inhalation-grade ingredients when meant for inhalation (food grade or GRAS alone is not enough).',['products','suppliers'],'SKU specs and formulations; inhalable ingredient suppliers approved with an inhalation-grade statement.',[],'Formulated extracts (cartridge oil)'],
  ['3C.1.1','3C','Manufacturing activities','Manufacturing follows cGMP and protects product from adulterants, foreign matter and residual solvents: areas identified with signage, simultaneous activities segregated, solvent and chemical levels in the final product within regulation and spec.',['batches','testing'],'Batch records; residual solvent results on COAs.',[],'All products'],
  ['3C.1.2','3C','Manufacturing inputs and controls','Every manufacturing input is declared with safety and quality specs, and its use is controlled, recorded and tracked.',['products','batches','receiving'],'Formulations; batch records capture inputs used. Inputs received as numbered lots and recorded against the batches that use them.',[],'All products'],
  ['3C.1.3','3C','Air, CO2 and other process gases','Process gases suit their use and are monitored: filtered, dry and oil-free; at least 99.5% pure unless specified; CO2 beverage grade or better (never medical grade).',['suppliers','receiving'],'Gas suppliers approved with specs (purity, beverage grade CO2). Gases received with COA / certificate of conformance.',[],'Processes using gases'],
@@ -5543,6 +5637,8 @@ async function addStandardLib(existing){
       scope:CSQ_MFG.scope,levels:CSQ_MFG.levels,modules:CSQ_MFG.modules,audit_notes:CSQ_MFG.notes});
     std=rows&&rows[0];
   }
+  else if(std.name!==CSQ_MFG.name||std.scope!==CSQ_MFG.scope||JSON.stringify(std.modules)!==JSON.stringify(CSQ_MFG.modules)||JSON.stringify(std.levels)!==JSON.stringify(CSQ_MFG.levels)||JSON.stringify(std.audit_notes||[])!==JSON.stringify(CSQ_MFG.notes)){
+    const r=await db.update('hx_standards',std.id,{name:CSQ_MFG.name,scope:CSQ_MFG.scope,modules:CSQ_MFG.modules,levels:CSQ_MFG.levels,audit_notes:CSQ_MFG.notes});std=(r&&r[0])||{...std,name:CSQ_MFG.name};}
   const have=await db.get('hx_standard_clauses','standard_id=eq.'+encodeURIComponent(std.id)+'&select=*');
   const got={};(have||[]).forEach(function(x){got[x.clause]=x;});
   // clauses already there: bring the Hendrix links up to date as new modules are built (status and evidence are never touched)
@@ -5557,13 +5653,17 @@ async function addStandardLib(existing){
 function stdClauseStale(x,c){return JSON.stringify(x.hx_pages||[])!==JSON.stringify(c[4]||[])||(x.hx_support||'')!==(c[5]||'')||JSON.stringify(x.hx_planned||[])!==JSON.stringify(c[6]||[])||(x.summary||'')!==c[3]||(x.title||'')!==c[2]||(x.applies_to||'')!==(c[7]||'');}
 function AdoptForm(props){
   const a=props.adopt||{};
-  const[f,setF]=useState({target_level:a.target_level||1,status:a.status||'Following',cert_body:a.cert_body||'',audit_date:a.audit_date||'',cert_number:a.cert_number||'',cert_expiry:a.cert_expiry||'',notes:a.notes||''});
+  const[f,setF]=useState({target_level:a.target_level||1,status:a.status||'Following',cert_body:a.cert_body||'',audit_date:a.audit_date||'',cert_number:a.cert_number||'',cert_expiry:a.cert_expiry||'',notes:a.notes||'',scopes:csqScopes(a,props.license).slice()});
+  const isCsq=props.std.code===CSQ_MFG.code,op=licOp(props.license),allowed=csqAllowed(props.license);
   const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
   const levels=(props.std.levels&&props.std.levels.length?props.std.levels:CSQ_MFG.levels);
   async function save(){
     setErr('');setBusy(true);
     try{
+      if(isCsq&&!allowed.length)throw new Error('CSQ applies to manufacturing and cultivation licenses. Set this license\'s operation under States and Licenses first.');
+      if(isCsq&&!f.scopes.filter(function(x){return allowed.indexOf(x)>=0;}).length)throw new Error('Pick at least one CSQ standard for this license.');
       const rec={target_level:Number(f.target_level),status:f.status,cert_body:f.cert_body.trim(),audit_date:f.audit_date||null,cert_number:f.cert_number.trim(),cert_expiry:f.cert_expiry||null,notes:f.notes.trim()};
+      if(isCsq)rec.scopes=f.scopes.filter(function(x){return allowed.indexOf(x)>=0;});
       if(a.id)await db.update('hx_license_standards',a.id,rec);
       else await db.insert('hx_license_standards',{...rec,id:newId('adopt'),state_id:props.state.id,license_id:props.license.id,standard_id:props.std.id});
       props.onDone();
@@ -5572,8 +5672,14 @@ function AdoptForm(props){
   }
   function inp(k,ph,type){return el('input',{type:type||'text',value:f[k]||'',placeholder:ph||'',onChange:function(e){setF({...f,[k]:e.target.value});}});}
   return el(Modal,{title:(a.id?'Edit adoption':'Adopt '+props.std.name)+' - '+props.license.name,onClose:props.onClose},
+    isCsq&&el('div',{className:'card',style:{padding:'10px 14px',marginBottom:10}},el('div',{className:'k'},'License operation: '+LIC_OPS[op]),
+      !allowed.length?el('div',{className:'msg err',style:{marginTop:6}},'CSQ applies to manufacturing and cultivation licenses. Set this license\'s operation under States and Licenses.'):
+      el('div',{style:{marginTop:6}},el('div',{className:'muted',style:{fontSize:12,marginBottom:4}},'Standards this license follows (Modules 1, 2A, 4A and 5 are shared and assessed once):'),
+        allowed.map(function(k){return el('label',{key:k,className:'ck',style:{display:'flex'}},el('input',{type:'checkbox',checked:f.scopes.indexOf(k)>=0,disabled:op==='cultivation',onChange:function(e){setF(function(p){const a2=p.scopes.filter(function(x){return x!==k;});if(e.target.checked)a2.push(k);return {...p,scopes:a2};});}}),
+          el('span',null,CSQ_PARTS[k].name+' (Module '+k+')'));}),
+        op==='cultivation'&&el('div',{className:'muted',style:{fontSize:12,marginTop:4}},'Cultivation licenses follow the CSQ Standard for Cultivation only.'))),
     el(Field,{label:'Target level'},el('select',{value:f.target_level,onChange:function(e){setF({...f,target_level:e.target.value});}},
-      levels.map(function(l){return el('option',{key:l.level,value:l.level},l.name+' (Modules '+l.modules.join(', ')+')');}))),
+      levels.map(function(l){return el('option',{key:l.level,value:l.level},l.name+' (Modules '+l.modules.map(function(m){return m==='3'?(isCsq?f.scopes.slice().sort().join(' + ')||'3':'3'):m;}).join(', ')+')');}))),
     el('div',{className:'muted',style:{fontSize:12,marginTop:-6,marginBottom:12}},(levels.find(function(l){return String(l.level)===String(f.target_level);})||{}).audit||''),
     el('div',{className:'grid',style:{gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:10}},
       el(Field,{label:'Status'},el('select',{value:f.status,onChange:function(e){setF({...f,status:e.target.value});}},ADOPT_STATUSES.map(function(s){return el('option',{key:s,value:s},s);}))),
@@ -5632,8 +5738,8 @@ function ConformanceForm(props){
 }
 function stdRegisterHtml(std,lic,st,adopt,clauses,conf,inScope,E){
   const e=esc3,c=stdCounts(inScope,conf),lv=(std.levels||[]).find(function(l){return l.level===(adopt&&adopt.target_level);});
-  const mods=Object.keys(std.modules||{});
-  let h='<div class="hxrec"><h2>'+e(std.name)+' v'+e(std.version)+' - Conformance register</h2><div class="m">'+e(std.publisher)+' &middot; '+e(std.issued)+'</div>'+
+  const pn=std.code===CSQ_MFG.code?csqPartNames(csqScopes(adopt,lic)):[],mods=Object.keys(std.modules||{}).filter(function(m){return !pn.length||stdModOk(m,csqScopes(adopt,lic));});
+  let h='<div class="hxrec"><h2>'+e(pn.length?pn.join(' + '):std.name)+' v'+e(std.version)+' - Conformance register</h2><div class="m">'+e(std.publisher)+' &middot; '+e(std.issued)+(pn.length?' &middot; Modules 1, 2A, 4A and 5 are shared by these standards and assessed once':'')+'</div>'+
     '<table><tr><th>Licensed operation</th><td>'+e(lic.name)+(lic.license_number?' ('+e(lic.license_number)+')':'')+' &middot; '+e(st.name)+'</td></tr>'+
     '<tr><th>Target level</th><td>'+e(lv?lv.name:'-')+'</td></tr><tr><th>Status</th><td>'+e((adopt&&adopt.status)||'-')+(adopt&&adopt.cert_body?' &middot; '+e(adopt.cert_body):'')+(adopt&&adopt.audit_date?' &middot; audit '+e(adopt.audit_date):'')+'</td></tr>'+
     '<tr><th>Clauses in scope</th><td>'+c.total+' &middot; Conforming '+c['Conforming']+' &middot; Partial '+c['Partial']+' &middot; Not conforming '+c['Not conforming']+' &middot; Not applicable '+c['Not applicable']+' &middot; Not assessed '+c['Not assessed']+' &middot; <b>'+c.pct+'% complete</b></td></tr>'+
@@ -5753,8 +5859,8 @@ async function loadStdEvidence(st,lic){
   if(can('intaudits',1))jobs.push(tryGet('intaudits',async function(){
     const a=((await db.get('hx_audits','license_id=eq.'+enc(lid)+'&select=id,status,audit_date,clauses,independent,shared_on,license_id'))||[]).filter(function(x){return x.license_id===lid;});
     const f=((await db.get('hx_audit_findings','license_id=eq.'+enc(lid)+'&select=id,status,due_date,deviation_id,license_id'))||[]).filter(function(x){return x.license_id===lid;});
-    let lvl=1;try{const ls=((await db.get('hx_license_standards','license_id=eq.'+enc(lid)+'&select=target_level,status,license_id'))||[]).filter(function(x){return x.license_id===lid&&x.status!=='Withdrawn';})[0];if(ls)lvl=ls.target_level;}catch(e){}
-    const cov=iaCoverage(a,lvl),done=a.filter(function(x){return (x.status==='completed'||x.status==='closed')&&x.audit_date>=since.slice(0,10);});
+    let lvl=1,ls0=null;try{ls0=((await db.get('hx_license_standards','license_id=eq.'+enc(lid)+'&select=target_level,status,scopes,license_id'))||[]).filter(function(x){return x.license_id===lid&&x.status!=='Withdrawn';})[0];if(ls0)lvl=ls0.target_level;}catch(e){}
+    const cov=iaCoverage(a,lvl,csqScopes(ls0,lic)),done=a.filter(function(x){return (x.status==='completed'||x.status==='closed')&&x.audit_date>=since.slice(0,10);});
     return {pct:cov.all.length?Math.round(cov.done*100/cov.all.length):0,done:cov.done,total:cov.all.length,audits:done.length,find:f.length,open:f.filter(function(x){return x.status==='open';}).length,late:f.filter(function(x){return x.status==='open'&&x.due_date&&x.due_date<todayStr();}).length,
       viaDev:f.filter(function(x){return x.deviation_id;}).length,shared:done.filter(function(x){return x.shared_on;}).length,last:done.map(function(x){return x.audit_date;}).sort().pop()||''};}));
   jobs.push(tryGet('roles',async function(){const rs=ACC.roles||[];return {n:rs.length,noReq:rs.filter(function(r){return !String(r.requirements||'').trim()||!String(r.description||'').trim();}).length};}));
@@ -5906,11 +6012,14 @@ function StandardsPage(props){
     catch(e){setMsg(stdErr(e));}
     setBusy('');
   }
-  async function uploadDoc(file){
+  async function uploadDoc(file,part){
     if(!file||!std)return;setMsg('');setBusy('Uploading the standard...');
     try{const ext=(file.name.split('.').pop()||'pdf').toLowerCase().replace(/[^a-z0-9]/g,'');
-      const path=await storagePut(file,'standards/library/'+std.id+'-'+Date.now()+'.'+ext);
-      await db.update('hx_standards',std.id,{file_path:path,file_name:file.name});setMsg('Standard document saved.');loadStds();}
+      const path=await storagePut(file,'standards/library/'+std.id+'-'+(part||'doc')+'-'+Date.now()+'.'+ext);
+      if(part){const docs=(std.docs||[]).filter(function(d){return d.part!==part;}).concat([{part:part,path:path,name:file.name}]);
+        await dbSave('hx_standards',std.id,part==='3C'?{docs:docs,file_path:path,file_name:file.name}:{docs:docs});}
+      else await db.update('hx_standards',std.id,{file_path:path,file_name:file.name});
+      setMsg('Standard document saved.');loadStds();}
     catch(e){setMsg(stdErr(e));}
     setBusy('');
   }
@@ -5925,33 +6034,39 @@ function StandardsPage(props){
   if(!std||clauses===null)return el('div',null,head,el('div',{className:'muted'},'Loading...'));
   const levels=std.levels||[],target=adopt&&adopt.status!=='Withdrawn'?adopt.target_level:null;
   const lv=levels.find(function(l){return l.level===target;});
-  const inScope=clauses.filter(function(x){return target?x.level<=target:true;});
-  const base=scope==='target'&&target?inScope:clauses;
+  const isCsq=std.code===CSQ_MFG.code,scopes=isCsq?(adopt?csqScopes(adopt,lic):csqAllowed(lic)):null;
+  const mine=isCsq&&lic?clauses.filter(function(x){return stdModOk(x.module,scopes);}):clauses;
+  const inScope=mine.filter(function(x){return target?x.level<=target:true;});
+  const base=scope==='target'&&target?inScope:mine;
   const ql=q.trim().toLowerCase();
   const shown=base.filter(function(x){const r=conf[x.id],s=(r&&r.status)||'Not assessed';
     if(mf!=='ALL'&&x.module!==mf)return false;
     if(sf==='OPEN'){if(s==='Conforming'||s==='Not applicable')return false;}else if(sf!=='ALL'&&s!==sf)return false;
     if(ql&&(x.clause+' '+x.title+' '+x.summary+' '+((r&&(r.owner+' '+r.evidence+' '+r.doc_ref))||'')).toLowerCase().indexOf(ql)<0)return false;return true;});
-  const c=stdCounts(target?inScope:clauses,conf),today=new Date().toISOString().slice(0,10);
+  const c=stdCounts(target?inScope:mine,conf),today=new Date().toISOString().slice(0,10);
+  const parts=isCsq&&scopes?csqPartNames(scopes):[];
   const libMap={};CSQ_MFG_CLAUSES.forEach(function(c){libMap[c[0]]=c;});
   const nMissing=CSQ_MFG.code===std.code?CSQ_MFG_CLAUSES.filter(function(c){return !clauses.some(function(x){return x.clause===c[0];});}).length:0;
   const nStale=CSQ_MFG.code===std.code?clauses.filter(function(x){return libMap[x.clause]&&stdClauseStale(x,libMap[x.clause]);}).length:0;
   const missing=nMissing>0||nStale>0;
-  const mods=Object.keys(std.modules||{});
+  const mods=Object.keys(std.modules||{}).filter(function(m){return !isCsq||!lic||stdModOk(m,scopes);});
   function go(p){if(props.go)props.go(p);}
   return el('div',null,
     el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},head,
       el('div',{className:'row'},
         stds.length>1&&el('select',{value:sel,onChange:function(e){setSel(e.target.value);}},stds.map(function(s){return el('option',{key:s.id,value:s.id},s.name+' v'+s.version);})),
-        std.file_path?el('button',{className:'btn ghost sm',onClick:function(){openStored(std.file_path,std.file_name).catch(function(e){setMsg(String(e.message||e));});}},'Open standard (PDF)'):null,
-        canF&&el('label',{className:'btn ghost sm',style:{display:'inline-block'}},std.file_path?'Replace PDF':'Upload licensed PDF',el('input',{type:'file',accept:'application/pdf',style:{display:'none'},onChange:function(e){uploadDoc(e.target.files[0]);e.target.value='';}})),
+        std.code===CSQ_MFG.code?(lic?csqAllowed(lic):Object.keys(CSQ_PARTS)).map(function(k){const d=(std.docs||[]).find(function(x){return x.part===k;})||(k==='3C'&&std.file_path?{path:std.file_path,name:std.file_name}:null),nm=CSQ_PARTS[k].name.replace('CSQ Standard for ','');
+          return el('span',{key:k,className:'row',style:{gap:4}},d&&el('button',{className:'btn ghost sm',onClick:function(){openStored(d.path,d.name).catch(function(e){setMsg(String(e.message||e));});}},nm+' (PDF)'),
+            canF&&el('label',{className:'btn ghost sm',style:{display:'inline-block'},title:'Upload the licensed CSQ Standard for '+nm+' PDF'},d?'Replace':'Upload '+nm+' PDF',el('input',{type:'file',accept:'application/pdf',style:{display:'none'},onChange:function(e){uploadDoc(e.target.files[0],k);e.target.value='';}})));}):[
+        std.file_path?el('button',{key:'o',className:'btn ghost sm',onClick:function(){openStored(std.file_path,std.file_name).catch(function(e){setMsg(String(e.message||e));});}},'Open standard (PDF)'):null,
+        canF&&el('label',{key:'u',className:'btn ghost sm',style:{display:'inline-block'}},std.file_path?'Replace PDF':'Upload licensed PDF',el('input',{type:'file',accept:'application/pdf',style:{display:'none'},onChange:function(e){uploadDoc(e.target.files[0]);e.target.value='';}}))],
         lic&&target&&el('button',{className:insp?'btn sm':'btn ghost sm',onClick:function(){setInsp(!insp);}},insp?'Exit inspector view':'Inspector view'),
-        lic&&target&&el('button',{className:'btn ghost sm',onClick:function(){printRecords(std.name+' conformance - '+lic.name,[stdRegisterHtml(std,lic,st,adopt,clauses,conf,inScope,ev)]);}},'Print register'))),
+        lic&&target&&el('button',{className:'btn ghost sm',onClick:function(){printRecords((parts.length?parts.join(' + '):std.name)+' conformance - '+lic.name,[stdRegisterHtml(std,lic,st,adopt,clauses,conf,inScope,ev)]);}},'Print register'))),
     msg&&el('div',{className:/^Added|^Updated|saved/.test(msg)?'msg':'msg err'},msg),
     insp&&adopt&&el('div',{className:'card gold',style:{borderWidth:2}},
       el('div',{className:'k'},'Inspector view \u00b7 read only'),
       el('div',{className:'v',style:{fontSize:20}},lic.name+(lic.license_number?' ('+lic.license_number+')':'')+' \u00b7 '+st.name),
-      el('div',{style:{marginTop:6,fontSize:14}},'Follows '+std.name+' v'+std.version+' ('+std.publisher+') \u00b7 '+(lv?lv.name:'Level '+target)+' \u00b7 '+adopt.status+(adopt.cert_body?' \u00b7 '+adopt.cert_body:'')+(adopt.cert_number?' \u00b7 Certificate '+adopt.cert_number:'')+(adopt.cert_expiry?' (expires '+adopt.cert_expiry+')':'')),
+      el('div',{style:{marginTop:6,fontSize:14}},'Follows '+(parts.length?parts.join(' + '):std.name)+' v'+std.version+' ('+std.publisher+') \u00b7 '+(lv?lv.name:'Level '+target)+' \u00b7 '+adopt.status+(adopt.cert_body?' \u00b7 '+adopt.cert_body:'')+(adopt.cert_number?' \u00b7 Certificate '+adopt.cert_number:'')+(adopt.cert_expiry?' (expires '+adopt.cert_expiry+')':'')),
       el('div',{className:'muted',style:{marginTop:6,fontSize:12}},'Every clause below shows the requirement, how this facility meets it, the documents and files, and the live Hendrix records behind it. Green dot = records are current; red = attention needed. All records are tamper-evident: changes keep who, when and why in the audit trail.')),
     target&&!insp&&el(StdAlerts,{ev:ev,inScope:inScope,conf:conf,today:today,go:go,onFilter:function(v){setSf(v);}}),
     missing&&canF&&el('div',{className:'msg'},(nMissing?nMissing+' clause'+(nMissing===1?' is':'s are')+' missing. ':'')+(nStale?'Hendrix has new records for '+nStale+' clause'+(nStale===1?'':'s')+'. ':''),el('button',{className:'btn sm',disabled:!!busy,onClick:addLib},busy||'Update the standard')),
@@ -5961,13 +6076,14 @@ function StandardsPage(props){
         el('div',{className:'muted',style:{marginTop:4,fontSize:12}},std.publisher),
         std.scope&&el('div',{className:'muted',style:{marginTop:8,fontSize:12,lineHeight:1.5}},std.scope)),
       el('div',{className:'card gold'},el('div',{className:'k'},lic?lic.name:'License'),
+        lic&&isCsq&&el('div',{style:{fontSize:12,margin:'2px 0 6px',color:'var(--gold-hi)'}},LIC_OPS[licOp(lic)]+(parts.length?' \u00b7 '+parts.join(' + '):'')),
         !lic?el('div',{className:'muted'},'Pick a license at the top to see its conformance.'):
         adopt?el('div',null,el('div',{className:'v'},lv?lv.name:'Level '+adopt.target_level),
           el('div',{style:{marginTop:6}},el('span',{className:'badge '+(adopt.status==='Certified'?'ok':adopt.status==='Suspended'||adopt.status==='Withdrawn'?'bad':'')},adopt.status)),
           el('div',{className:'muted',style:{marginTop:8,fontSize:12,lineHeight:1.6}},[adopt.cert_body&&('Certification body: '+adopt.cert_body),adopt.audit_date&&('Audit: '+adopt.audit_date),adopt.cert_number&&('Certificate: '+adopt.cert_number),adopt.cert_expiry&&('Expires: '+adopt.cert_expiry)].filter(Boolean).map(function(t){return el('div',{key:t},t);})),
           lv&&el('div',{className:'muted',style:{fontSize:12,marginTop:4}},lv.audit),
           canF&&el('button',{className:'btn ghost sm',style:{marginTop:10},onClick:function(){setModal({t:'adopt'});}},'Edit level and certification')):
-        el('div',null,el('div',{className:'muted',style:{margin:'4px 0 10px'}},'This license has not adopted '+std.name+' yet.'),
+        el('div',null,el('div',{className:'muted',style:{margin:'4px 0 10px'}},'This license has not adopted '+(parts.length?parts.join(' + '):std.name)+' yet.'),
           canF?el('button',{className:'btn sm',onClick:function(){setModal({t:'adopt'});}},'Adopt for this license'):el('div',{className:'muted',style:{fontSize:12}},'Someone with Full access to Standards adopts it.'))),
       el('div',{className:'card gold'},el('div',{className:'k'},target?'Conformance (Level '+target+' scope)':'Clauses'),
         el('div',{className:'v'},target?c.pct+'% complete':clauses.length+' clauses'),
@@ -6035,10 +6151,11 @@ function StdDashCard(props){
         const ad=((await db.get('hx_license_standards','license_id=eq.'+encodeURIComponent(lid)+'&select=*'))||[]).filter(function(a){return a.license_id===lid&&a.status!=='Withdrawn';});
         if(!ad.length){if(!dead)setD({none:true});return;}
         const a=ad[0],s=((await db.get('hx_standards','id=eq.'+encodeURIComponent(a.standard_id)+'&select=*'))||[])[0];
-        const cl=(await db.get('hx_standard_clauses','standard_id=eq.'+encodeURIComponent(a.standard_id)+'&select=id,level'))||[];
+        const cl=(await db.get('hx_standard_clauses','standard_id=eq.'+encodeURIComponent(a.standard_id)+'&select=id,level,module'))||[];
         const cf=(await db.get('hx_conformance','license_id=eq.'+encodeURIComponent(lid)+'&standard_id=eq.'+encodeURIComponent(a.standard_id)+'&select=clause_id,status'))||[];
         const m={};cf.forEach(function(x){m[x.clause_id]=x;});
-        if(!dead)setD({a:a,s:s,c:stdCounts(cl.filter(function(x){return x.level<=a.target_level;}),m)});
+        const sc=s&&s.code===CSQ_MFG.code?csqScopes(a,props.license):null;
+        if(!dead)setD({a:a,s:s,parts:sc?csqPartNames(sc):[],c:stdCounts(cl.filter(function(x){return x.level<=a.target_level&&(!sc||stdModOk(x.module,sc));}),m)});
       }catch(e){if(!dead)setD(null);}
     })();
     return function(){dead=true;};
@@ -6047,7 +6164,7 @@ function StdDashCard(props){
   const link=el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go('standards');}},'Open standards');
   if(d.none)return el('div',{className:'card gold'},el('div',{className:'k'},'Quality standard'),el('div',{className:'v'},'Not adopted'),el('div',{className:'muted',style:{margin:'4px 0 8px'}},'This license does not follow a published standard yet.'),link);
   const lv=((d.s&&d.s.levels)||[]).find(function(l){return l.level===d.a.target_level;});
-  return el('div',{className:'card gold'},el('div',{className:'k'},'Quality standard'),el('div',{className:'v'},d.s?d.s.name+' v'+d.s.version:'Standard'),
+  return el('div',{className:'card gold'},el('div',{className:'k'},'Quality standard'),el('div',{className:'v'},d.s?((d.parts&&d.parts.length?d.parts.join(' + '):d.s.name)+' v'+d.s.version):'Standard'),
     el('div',{className:'muted',style:{margin:'4px 0'}},(lv?lv.name:'Level '+d.a.target_level)+' \u00b7 '+d.a.status),
     el('div',{style:{margin:'8px 0 4px'}},el(StdBar,{c:d.c})),
     el('div',{className:'muted',style:{fontSize:12,marginBottom:6}},d.c.pct+'% complete \u00b7 '+(d.c.total-d.c.done)+' clause'+(d.c.total-d.c.done===1?'':'s')+' still open'),link);
