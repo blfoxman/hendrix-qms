@@ -170,7 +170,7 @@ async function sb(path,opt){
   if(!r.ok){
     const m=(j&&(j.message||j.hint||j.details))||txt||('Error '+r.status);
     if(/schema cache|Could not find the table|relation .* does not exist/i.test(m)&&!/Could not find the '[A-Za-z0-9_]+' column/.test(m)){
-      const step=/hx_equipment|hx_chemicals/.test(m)?'hendrix_step24.sql':/share_key|hx_training_shared/.test(m)?'hendrix_step23.sql':/hx_rule_sources/.test(m)?'hendrix_step22.sql':/hx_training_keys|hx_training_attempts|hx_course_submit|content_status/.test(m)?'hendrix_step20.sql':/hx_complaints|hx_audits|hx_audit_findings/.test(m)?'hendrix_step19.sql':/hx_recall|hx_trace_data/.test(m)?'hendrix_step18.sql':/hx_lots|hx_lot_uses|hx_holds|hx_shipments/.test(m)?'hendrix_step17.sql':/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
+      const step=/hx_line_clearances|hx_rework/.test(m)?'hendrix_step25.sql':/hx_equipment|hx_chemicals/.test(m)?'hendrix_step24.sql':/share_key|hx_training_shared/.test(m)?'hendrix_step23.sql':/hx_rule_sources/.test(m)?'hendrix_step22.sql':/hx_training_keys|hx_training_attempts|hx_course_submit|content_status/.test(m)?'hendrix_step20.sql':/hx_complaints|hx_audits|hx_audit_findings/.test(m)?'hendrix_step19.sql':/hx_recall|hx_trace_data/.test(m)?'hendrix_step18.sql':/hx_lots|hx_lot_uses|hx_holds|hx_shipments/.test(m)?'hendrix_step17.sql':/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
       throw new Error('Database tables are missing - run '+step+' in the Hendrix Supabase project.');
     }
     if(/row-level security|permission denied/i.test(m))throw new Error('Not allowed - your access level does not allow this here. Ask a system admin.');
@@ -279,7 +279,7 @@ function LoginScreen(props){
 }
 
 /* ---------- Dashboard ---------- */
-const MODULES_SOON=['Cultivation records (CUL)','Line clearance and Rework','HACCP','Time Clock and Badges','Production Planner'];
+const MODULES_SOON=['Cultivation records (CUL)','Facility air and water tests','HACCP','Time Clock and Badges','Production Planner'];
 function Dashboard(props){
   const st=props.state,lic=props.license;
   const isAdmin=props.profile.role==='admin';
@@ -310,6 +310,7 @@ function Dashboard(props){
       el(SupplierDashCard,{license:lic,go:props.go}),
       el(MatDashCard,{license:lic,go:props.go}),
       el(EqDashCard,{license:lic,go:props.go}),
+      el(LcDashCard,{license:lic,go:props.go}),
       el(ChemDashCard,{license:lic,go:props.go}),
       el(RecallDashCard,{license:lic,go:props.go}),
       el(StdDashCard,{license:lic,go:props.go})),
@@ -2339,7 +2340,7 @@ function Products(props){
 /* ---------- Audit trail: history, void, admin page ----------
    The database writes every change to hx_audit_log (append-only). Records are never deleted:
    they are voided with a reason. Every change to a record needs a reason for change. */
-const AUDIT_AREAS={hx_equipment:'Equipment',hx_equipment_events:'Equipment record',hx_chemicals:'Chemical',hx_complaints:'Complaint',hx_audits:'Internal audit',hx_audit_findings:'Audit finding',hx_recalls:'Recall / mock recall',hx_recall_contacts:'Recall contact',hx_lots:'Received lot',hx_lot_uses:'Lot use',hx_holds:'Hold',hx_shipments:'Shipment',hx_suppliers:'Supplier',hx_supplier_reviews:'Supplier review',hx_training_courses:'Training course',hx_training_records:'Training record',hx_deviations:'Deviation',hx_capas:'CAPA',hx_sops:'SOP',hx_sop_acks:'SOP signature',hx_label_prints:'Sticker print',hx_standards:'Standards',hx_standard_clauses:'Standard clauses',hx_license_standards:'Standard adoption',hx_conformance:'Standard conformance',hx_label_templates:'Label templates',hx_tests:'Testing record',hx_roles:'Roles',hx_batches:'Batch record',hx_facility_log:'Facility log entry',hx_visitor_log:'Visitor log',hx_log_lists:'Facility log lists',hx_rules:'Rulebook',hx_rule_sources:'Rulebook source PDF',
+const AUDIT_AREAS={hx_line_clearances:'Line clearance',hx_rework:'Rework',hx_equipment:'Equipment',hx_equipment_events:'Equipment record',hx_chemicals:'Chemical',hx_complaints:'Complaint',hx_audits:'Internal audit',hx_audit_findings:'Audit finding',hx_recalls:'Recall / mock recall',hx_recall_contacts:'Recall contact',hx_lots:'Received lot',hx_lot_uses:'Lot use',hx_holds:'Hold',hx_shipments:'Shipment',hx_suppliers:'Supplier',hx_supplier_reviews:'Supplier review',hx_training_courses:'Training course',hx_training_records:'Training record',hx_deviations:'Deviation',hx_capas:'CAPA',hx_sops:'SOP',hx_sop_acks:'SOP signature',hx_label_prints:'Sticker print',hx_standards:'Standards',hx_standard_clauses:'Standard clauses',hx_license_standards:'Standard adoption',hx_conformance:'Standard conformance',hx_label_templates:'Label templates',hx_tests:'Testing record',hx_roles:'Roles',hx_batches:'Batch record',hx_facility_log:'Facility log entry',hx_visitor_log:'Visitor log',hx_log_lists:'Facility log lists',hx_rules:'Rulebook',hx_rule_sources:'Rulebook source PDF',
   hx_states:'States',hx_licenses:'Licenses',hx_profiles:'Team and access',hx_skus:'SKUs',hx_flavors:'Flavors',hx_formulations:'Formulations',hx_cost_library:'Ingredient prices'};
 const AUDIT_SKIP=['voided_by','voided_at','updated_at','edit_reason'];
 function auditVal(v){
@@ -2887,6 +2888,14 @@ function BatchTracker(props){
       .then(function(rs){const m={};rs.reduce(function(a,b){return a.concat(b||[]);},[]).forEach(function(t){(m[t.batch_id]=m[t.batch_id]||[]).push(t);});setTests(m);});
   },[rows]);
   useEffect(loadTests,[loadTests]);
+  const[lcs,setLcs]=useState({});
+  const loadLcs=useCallback(function(){
+    if(!rows||!rows.length||!can('lineclear',1)){setLcs({});return;}
+    const ids=rows.map(function(r){return r.id;}),parts=[];for(let i=0;i<ids.length;i+=40)parts.push(ids.slice(i,i+40));
+    Promise.all(parts.map(function(p){return db.get('hx_line_clearances','batch_id=in.('+p.map(encodeURIComponent).join(',')+')&voided=eq.false&select=id,batch_id,number,result,checked_at').catch(function(){return [];});}))
+      .then(function(rs){const m={};rs.reduce(function(a,b){return a.concat(b||[]);},[]).forEach(function(t){(m[t.batch_id]=m[t.batch_id]||[]).push(t);});setLcs(m);});
+  },[rows]);
+  useEffect(loadLcs,[loadLcs]);
   if(!st||!lic)return el('div',null,el('h1',null,'Batch ',el('span',{className:'g'},'Tracker')),el('div',{className:'empty'},'Pick a state and a license at the top first. Every batch belongs to exactly one license.'));
   const allSkus=(cat&&cat.skus)||[];
   const usable=allSkus.filter(function(k){return k.product_type===type&&k.active&&(!(k.license_ids||[]).length||k.license_ids.indexOf(lid)>=0);});
@@ -2969,11 +2978,14 @@ function BatchTracker(props){
             el('div',{style:{fontSize:13}},[b.sku,b.flavor].filter(Boolean).join('  \u00b7  ')||(def.id==='ethanol_extraction'?(d.biomass_tags||[]).length+' biomass tag(s), '+(d.total_biomass_used||0)+' g':'')),
             def.fields.filter(function(f){return f.t==='display'&&btVisible(def.id,f,d,sk,b);}).map(function(f){const c=btCheck(def.id,f.k,d,sk);
               return c&&c[0]!=='none'&&c[0]!=='info'?el('span',{key:f.k,className:'badge '+(tone[c[0]]||''),style:{marginRight:6,marginTop:6}},btLabel(def.id,{l:BT_SHORT[f.k]||f.l},ts,sk)+': '+c[1]):null;}),
-            (tests[b.id]||[]).map(function(t){return el(TestBadge,{key:t.id,s:t.status,prefix:'Test: ',style:{marginRight:6,marginTop:6}});})),
+            (tests[b.id]||[]).map(function(t){return el(TestBadge,{key:t.id,s:t.status,prefix:'Test: ',style:{marginRight:6,marginTop:6}});}),
+            can('lineclear',1)&&!b.voided&&(function(){const c=(lcs[b.id]||[]).find(function(x){return x.result==='cleared';});
+              return el('span',{className:'badge '+(c?'ok':'bad'),style:{marginRight:6,marginTop:6},title:c?'Line cleared '+String(c.checked_at).slice(0,16).replace('T',' '):'No line clearance recorded for this batch'},c?'Line cleared \u00b7 '+c.number:'No line clearance');})()),
           el('div',{className:'row',style:{gap:6}},
             el('button',{className:'btn ghost sm',onClick:function(){view(b);}},'View'),
             !b.voided&&el(RaiseDeviation,{state:st,license:lic,prefill:{title:def.name+' batch '+b.batch_number+': ',dept:'Production',category:'Process / procedure',product_affected:[b.sku,b.flavor].filter(Boolean).join(' \u00b7 '),lot_number:b.batch_number,
               source_type:'batch',source_id:b.id,source_label:def.name+' batch '+b.batch_number,occurred_on:String((b.data||{}).date||b.created_at||'').slice(0,10)}}),
+            can('lineclear',2)&&!b.voided&&!(lcs[b.id]||[]).some(function(x){return x.result==='cleared';})&&el('button',{className:'btn ghost sm',onClick:function(){setModal({lc:b});}},'Line clearance'),
             can('testing',2)&&!b.voided&&!(tests[b.id]||[]).length&&testFinalTags(b).length>0&&el('button',{className:'btn sm',onClick:function(){submitTest(b);}},'Submit for testing'),
             !b.voided&&canAdd&&!isAdmin&&el('button',{className:'btn ghost sm',onClick:function(){openFull(b,'fill');}},'Continue'),
             !b.voided&&isAdmin&&el('button',{className:'btn ghost sm',onClick:function(){openFull(b,'edit');}},'Edit'),
@@ -2982,6 +2994,7 @@ function BatchTracker(props){
     modal&&modal.form&&el(Modal,{title:(modal.form==='new'?'New ':modal.form==='fill'?'Continue ':'Edit ')+def.name+' batch'+(modal.b?' \u00b7 '+modal.b.batch_number:''),wide:true,onClose:function(){setModal(null);}},
       el(BatchForm,{def:def,ts:ts,mode:modal.form,initial:modal.b||null,skus:usable,allSkus:allSkus,flavors:(cat&&cat.flavors)||[],formulas:canF?(cat&&cat.forms):null,defaultName:props.profile.name||'',
         onCancel:function(){setModal(null);},onSubmit:function(p){return modal.form==='new'?create(p):update(modal.b,p);}})),
+    modal&&modal.lc&&el(LineClearanceForm,{state:st,license:lic,batch:modal.lc,profile:props.profile,onClose:function(){setModal(null);},onDone:function(){setModal(null);loadLcs();}}),
     modal&&modal.voidb&&el(VoidModal,{what:'batch '+modal.voidb.batch_number,onClose:function(){setModal(null);},onVoid:function(why){return voidBatch(modal.voidb,why);}}),
     modal&&modal.view&&el(Modal,{title:def.name+' batch '+modal.view.batch_number,wide:true,onClose:function(){setModal(null);}},
       el('div',{dangerouslySetInnerHTML:{__html:REC_CSS+batchHtml(def,st,lic,modal.view,modal.sig,modal.hist,skuOf(modal.view))}}),
@@ -3011,6 +3024,8 @@ const ACCESS_MODULES=[
   {id:'recall',label:'Traceability and Recall',grp:'Production',help:'View traces, recalls and contacts / run mock recalls, keep the contact list / start and close real recalls and withdrawals, cancel'},
   {id:'equipment',label:'Equipment',grp:'Production',help:'View the equipment register / add equipment, record calibrations, validations, repairs, out of service / retire equipment, void records'},
   {id:'chemicals',label:'Chemicals and SDS',grp:'Production',help:'View the chemical list and SDS / add chemicals and SDS / approve, remove from use, delete never-approved'},
+  {id:'lineclear',label:'Line Clearance',grp:'Production',help:'View line clearances / record line clearances before batches / void line clearances'},
+  {id:'rework',label:'Rework',grp:'Production',help:'View rework / identify, inspect and use rework / approve rework for use, destroy'},
   {id:'batch',label:'Batch Tracker',grp:'Production',help:'View / create and continue (fill blanks) / change filled values with a reason and void'},
   {id:'products',label:'Products (SKUs and flavors)',grp:'Production',help:'View / add and edit / delete'},
   {id:'formbank',label:'Formulation Bank (recipes)',grp:'Production',help:'View / add and edit / delete'},
@@ -3172,18 +3187,18 @@ function Team(props){
 const LOGS_PROD=['logs_sanitation','logs_waste','logs_scale','logs_equipment','logs_temp','logs_env'];
 function pm(o,list,lv){const x={...o};(list||[]).forEach(function(k){x[k]=lv;});return x;}
 const STARTER_ROLES=[
-  ['General Manager','Leadership. Edit everywhere; Full on batches and every log; sees recipes, prices and the audit trail.',{training:'admin',qms:'admin',complaints:'admin',intaudits:'admin',sops:'admin',suppliers:'admin',equipment:'admin',chemicals:'admin',receiving:'admin',holds:'admin',shipping:'admin',recall:'admin',rulebook:'editor',standards:'editor',audit:'read',batch:'admin',testing:'admin',stickers:'admin',products:'editor',formbank:'read',cogs:'read',logs:'admin'}],
-  ['Assistant of General Manager','Leadership support. Edit on batches, products and every log; sees recipes and the audit trail.',{training:'editor',qms:'editor',complaints:'editor',intaudits:'editor',sops:'editor',suppliers:'editor',equipment:'editor',chemicals:'editor',receiving:'editor',holds:'editor',shipping:'editor',recall:'editor',rulebook:'editor',standards:'read',audit:'read',batch:'editor',testing:'editor',products:'editor',formbank:'read',logs:'editor'}],
-  ['Compliance Officer','Full on every log, the rulebook and standards (CSQ); sees batches, products and the audit trail.',{training:'admin',qms:'admin',complaints:'admin',intaudits:'admin',sops:'admin',suppliers:'admin',equipment:'admin',chemicals:'admin',receiving:'admin',holds:'admin',shipping:'read',recall:'admin',rulebook:'admin',standards:'admin',audit:'read',logs:'admin',batch:'read',testing:'admin',stickers:'admin',products:'read'}],
+  ['General Manager','Leadership. Edit everywhere; Full on batches and every log; sees recipes, prices and the audit trail.',{training:'admin',qms:'admin',complaints:'admin',intaudits:'admin',sops:'admin',suppliers:'admin',equipment:'admin',chemicals:'admin',lineclear:'admin',rework:'admin',receiving:'admin',holds:'admin',shipping:'admin',recall:'admin',rulebook:'editor',standards:'editor',audit:'read',batch:'admin',testing:'admin',stickers:'admin',products:'editor',formbank:'read',cogs:'read',logs:'admin'}],
+  ['Assistant of General Manager','Leadership support. Edit on batches, products and every log; sees recipes and the audit trail.',{training:'editor',qms:'editor',complaints:'editor',intaudits:'editor',sops:'editor',suppliers:'editor',equipment:'editor',chemicals:'editor',lineclear:'editor',rework:'editor',receiving:'editor',holds:'editor',shipping:'editor',recall:'editor',rulebook:'editor',standards:'read',audit:'read',batch:'editor',testing:'editor',products:'editor',formbank:'read',logs:'editor'}],
+  ['Compliance Officer','Full on every log, the rulebook and standards (CSQ); sees batches, products and the audit trail.',{training:'admin',qms:'admin',complaints:'admin',intaudits:'admin',sops:'admin',suppliers:'admin',equipment:'admin',chemicals:'admin',lineclear:'admin',rework:'admin',receiving:'admin',holds:'admin',shipping:'read',recall:'admin',rulebook:'admin',standards:'admin',audit:'read',logs:'admin',batch:'read',testing:'admin',stickers:'admin',products:'read'}],
   ['Security Manager','Full on the security and visitor logs.',{training:'editor',qms:'editor',complaints:'editor',sops:'read',rulebook:'read',logs_security:'admin',logs_visitor:'admin'}],
   ['Security Officer','Fills the security and visitor logs.',{training:'read',qms:'read',complaints:'read',sops:'read',rulebook:'read',logs_security:'editor',logs_visitor:'editor'}],
   ['Sanitation','Fills the sanitation, waste and pest control logs.',{chemicals:'read',training:'read',qms:'read',complaints:'read',sops:'read',logs_sanitation:'editor',logs_waste:'editor',logs_pest:'editor'}],
-  ['Team Member','Continues batches; fills the sanitation and temp / humidity logs.',{equipment:'read',chemicals:'read',training:'read',qms:'read',complaints:'read',sops:'read',holds:'editor',receiving:'read',batch:'editor',products:'read',logs_temp:'editor',logs_sanitation:'editor'}],
+  ['Team Member','Continues batches; fills the sanitation and temp / humidity logs.',{equipment:'read',chemicals:'read',lineclear:'editor',training:'read',qms:'read',complaints:'read',sops:'read',holds:'editor',receiving:'read',batch:'editor',products:'read',logs_temp:'editor',logs_sanitation:'editor'}],
   ['Inventory Manager','Sees products and batches; fills the waste log.',{training:'editor',qms:'editor',complaints:'editor',sops:'read',suppliers:'editor',receiving:'admin',holds:'editor',shipping:'admin',recall:'editor',products:'read',batch:'read',logs_waste:'editor'}],
-  ['Extraction Manager','Full on batches; fills the scale, equipment and temp / humidity logs.',{equipment:'editor',chemicals:'read',training:'editor',qms:'editor',complaints:'editor',sops:'editor',suppliers:'read',receiving:'editor',holds:'editor',batch:'admin',testing:'editor',products:'read',formbank:'read',logs_scale:'editor',logs_equipment:'editor',logs_temp:'editor'}],
-  ['Production Manager','Full on batches; edits products; fills the production logs.',pm({equipment:'editor',chemicals:'editor',batch:'admin',testing:'editor',stickers:'editor',products:'editor',formbank:'read',rulebook:'read',standards:'editor',sops:'editor',qms:'editor',complaints:'editor',intaudits:'read',training:'editor',suppliers:'editor',receiving:'editor',holds:'editor',shipping:'read',recall:'editor'},LOGS_PROD,'editor')],
+  ['Extraction Manager','Full on batches; fills the scale, equipment and temp / humidity logs.',{equipment:'editor',chemicals:'read',lineclear:'editor',rework:'editor',training:'editor',qms:'editor',complaints:'editor',sops:'editor',suppliers:'read',receiving:'editor',holds:'editor',batch:'admin',testing:'editor',products:'read',formbank:'read',logs_scale:'editor',logs_equipment:'editor',logs_temp:'editor'}],
+  ['Production Manager','Full on batches; edits products; fills the production logs.',pm({equipment:'editor',chemicals:'editor',lineclear:'editor',rework:'editor',batch:'admin',testing:'editor',stickers:'editor',products:'editor',formbank:'read',rulebook:'read',standards:'editor',sops:'editor',qms:'editor',complaints:'editor',intaudits:'read',training:'editor',suppliers:'editor',receiving:'editor',holds:'editor',shipping:'read',recall:'editor'},LOGS_PROD,'editor')],
   ['Sales Manager','Sees products; records shipments.',{training:'read',qms:'read',complaints:'read',sops:'read',products:'read',shipping:'editor',holds:'read',recall:'read'}],
-  ['Production Lead','Creates and continues batches; fills the production logs.',pm({equipment:'read',chemicals:'read',batch:'editor',testing:'read',stickers:'read',products:'read',sops:'read',qms:'editor',complaints:'read',training:'read',receiving:'read',holds:'editor'},['logs_sanitation','logs_scale','logs_equipment','logs_temp'],'editor')]];
+  ['Production Lead','Creates and continues batches; fills the production logs.',pm({equipment:'read',chemicals:'read',lineclear:'editor',rework:'editor',batch:'editor',testing:'read',stickers:'read',products:'read',sops:'read',qms:'editor',complaints:'read',training:'read',receiving:'read',holds:'editor'},['logs_sanitation','logs_scale','logs_equipment','logs_temp'],'editor')]];
 function accessSummary(perms){
   const p=perms||{},out=[];
   ACCESS_MODULES.forEach(function(m){if(has(p,m.id)&&lvRank(p[m.id]))out.push(m.label.replace(/ \(.*\)$/,'')+': '+LV_NAME[p[m.id]]);});
@@ -4776,6 +4791,203 @@ function ChemDashCard(props){
     el('div',{className:'muted',style:{margin:'4px 0 8px'}},d.n+' approved \u00b7 '+d.p+' waiting for approval'),link);
 }
 
+/* ---------- Line clearance (pre-operational inspection, CSQ 2A.12.3, 3B.1.2) and Rework (CSQ 2A.12.5) ---------- */
+const LC_ITEMS=[['removed','Previous product, labels, packaging and paperwork removed from the line and area'],['clean','Area and equipment cleaned and sanitized (sanitation record done)'],
+  ['equip','Equipment in good repair and within maintenance and calibration dates'],['materials','Correct materials, labels and packaging for this batch staged and checked'],
+  ['gmp','Staff dressed per cGMP (clean clothing, hair / beard nets, gloves, no jewelry) and hands washed'],['foreign','No pests, foreign matter, or broken glass / brittle plastic'],['tools','Tools and utensils counted and accounted for']];
+const LC_EXTRA=[['safety','Gas detection, fire and life safety systems working; ventilation on'],['solvent','Correct solvent / gas staged, within spec, with its COA']];
+function lcItems(batchType){return /extraction/.test(batchType||'')?LC_ITEMS.concat(LC_EXTRA):LC_ITEMS;}
+function lcErr(e){const m=String((e&&e.message)||e);return /hx_line_clearances|hx_rework/.test(m)&&/missing|does not exist|schema cache/i.test(m)?'Line clearance and rework are not set up yet - run hendrix_step25.sql in the Hendrix Supabase project.':m;}
+function lcBatchLabel(b){const t=BATCH_TYPES.find(function(x){return x.id===b.batch_type;});return (t?t.name+' ':'')+b.batch_number+([b.sku,b.flavor].filter(Boolean).length?' \u00b7 '+[b.sku,b.flavor].filter(Boolean).join(' '):'');}
+// equipment that would stop a line from being cleared
+function lcEqProblem(e){if(e.status!=='in_service')return EQ_STATUS[e.status];if(e.cal_required&&(!e.cal_due||e.cal_due<todayStr()))return 'calibration out of date';return '';}
+function LineClearanceForm(props){
+  const lic=props.license,st=props.state,b0=props.batch||null;
+  const[batches,setBatches]=useState(b0?[b0]:null);const[eqs,setEqs]=useState([]);
+  const[f,setF]=useState({batch_id:b0?b0.id:'',area:'',equipment_ids:[],checks:{},issues:'',corrections:'',checked_by:(props.profile&&props.profile.name)||'',verified_by:''});
+  const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  useEffect(function(){const L='license_id=eq.'+encodeURIComponent(lic.id);
+    if(!b0)db.get('hx_batches',L+'&voided=eq.false&select=id,batch_type,batch_number,sku,flavor,license_id,created_at&order=created_at.desc&limit=60').then(function(r){setBatches((r||[]).filter(function(x){return x.license_id===lic.id;}));}).catch(function(){setBatches([]);});
+    db.get('hx_equipment',L+'&status=neq.retired&select=id,number,name,category,location,status,cal_required,cal_due,license_id&order=number').then(function(r){setEqs((r||[]).filter(function(x){return x.license_id===lic.id&&x.status!=='retired';}));}).catch(function(){setEqs([]);});},[]);
+  function set(k,v){setF(function(p){return {...p,[k]:v};});}
+  const bat=(batches||[]).find(function(x){return x.id===f.batch_id;})||null,items=lcItems(bat?bat.batch_type:''),C=f.checks;
+  function setC(k,v){setF(function(p){const c={...p.checks};c[k]={...(c[k]||{}),...v};return {...p,checks:c};});}
+  const fails=items.filter(function(i){return C[i[0]]&&C[i[0]].r==='fail';}),unfixed=fails.filter(function(i){return !C[i[0]].fixed;});
+  const badEq=eqs.filter(function(e){return f.equipment_ids.indexOf(e.id)>=0&&lcEqProblem(e);});
+  const answered=items.every(function(i){return C[i[0]]&&C[i[0]].r;}),canClear=answered&&!unfixed.length&&!badEq.length;
+  async function save(result){setErr('');
+    if(!f.batch_id&&!f.area.trim()){setErr('Choose the batch or enter the room / line inspected.');return;}
+    if(!answered){setErr('Answer every item on the checklist.');return;}
+    if(!f.checked_by.trim()){setErr('Enter who did the inspection.');return;}
+    if(fails.length&&(!f.issues.trim()||!f.corrections.trim())){setErr('Describe each problem found and the correction or corrective action.');return;}
+    const ck={};items.forEach(function(i){ck[i[0]]={r:C[i[0]].r,fixed:!!C[i[0]].fixed,l:i[1]};});
+    setBusy(true);try{const rec={id:newId('lc'),state_id:st.id,license_id:lic.id,batch_id:f.batch_id||null,batch_label:bat?lcBatchLabel(bat):'',batch_type:bat?bat.batch_type:'',area:f.area.trim(),equipment_ids:f.equipment_ids,
+        checks:ck,issues:f.issues.trim(),corrections:f.corrections.trim(),result:result,checked_by:f.checked_by.trim(),verified_by:f.verified_by.trim()};
+      const r=await db.insert('hx_line_clearances',rec);props.onDone((result==='cleared'?'Line cleared':'Line NOT cleared')+((r&&r[0]&&r[0].number)?' \u00b7 '+r[0].number:'')+'.');}catch(e){setErr(lcErr(e));}setBusy(false);}
+  return el(Modal,{title:'Line clearance \u00b7 '+lic.name,wide:true,onClose:props.onClose},
+    el('div',{className:'muted',style:{fontSize:13,marginBottom:10}},'Pre-operational inspection before production starts (CSQ 2A.12.3). The line is cleared only when every item passes or was corrected and all equipment used is in service and in calibration.'),
+    el('div',{style:{display:'grid',gridTemplateColumns:'2fr 1fr',gap:10}},
+      el(Field,{label:'Batch'},b0?el('input',{value:lcBatchLabel(b0),disabled:true}):el('select',{value:f.batch_id,onChange:function(e){set('batch_id',e.target.value);}},el('option',{value:''},batches===null?'Loading...':'(no batch - a room or line)'),(batches||[]).map(function(x){return el('option',{key:x.id,value:x.id},lcBatchLabel(x));}))),
+      el(Field,{label:'Room / line'+(f.batch_id?'':' *')},el('input',{value:f.area,placeholder:'e.g. Cartridge filling line 1',onChange:function(e){set('area',e.target.value);}}))),
+    eqs.length>0&&el(Field,{label:'Equipment used',plain:true},el('div',{className:'row',style:{gap:6}},eqs.map(function(e){const on=f.equipment_ids.indexOf(e.id)>=0,p=lcEqProblem(e);
+      return el('label',{key:e.id,className:'ck',style:{border:'1px solid '+(on&&p?'var(--red)':'var(--line)'),borderRadius:8,padding:'4px 8px'}},el('input',{type:'checkbox',checked:on,onChange:function(){setF(function(q){const a=q.equipment_ids.slice(),i=a.indexOf(e.id);if(i>=0)a.splice(i,1);else a.push(e.id);return {...q,equipment_ids:a};});}}),
+        el('span',null,e.number+' '+e.name),p&&el('span',{className:'badge bad',style:{marginLeft:4}},p));}))),
+    el('div',{className:'card',style:{padding:'6px 12px'}},items.map(function(i){const c=C[i[0]]||{};
+      return el('div',{key:i[0],className:'row',style:{gap:8,padding:'6px 0',borderTop:'1px solid #1d1d1d',flexWrap:'nowrap',alignItems:'center'}},
+        el('span',{style:{flex:1,fontSize:13}},i[1]),
+        ['pass','fail','na'].map(function(r){return el('button',{key:r,type:'button',className:'btn sm'+(c.r===r?(r==='fail'?' danger':''):' ghost'),style:{minWidth:52},onClick:function(){setC(i[0],{r:r,fixed:r==='fail'?!!c.fixed:false});}},r==='pass'?'Pass':r==='fail'?'Fail':'N/A');}),
+        c.r==='fail'&&el('label',{className:'ck',style:{whiteSpace:'nowrap'}},el('input',{type:'checkbox',checked:!!c.fixed,onChange:function(e){setC(i[0],{fixed:e.target.checked});}}),el('span',null,'Corrected')));})),
+    fails.length>0&&el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}},el(Field,{label:'Problems found *'},el('textarea',{rows:2,value:f.issues,onChange:function(e){set('issues',e.target.value);}})),
+      el(Field,{label:'Corrections / corrective action *'},el('textarea',{rows:2,value:f.corrections,onChange:function(e){set('corrections',e.target.value);}}))),
+    el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}},el(Field,{label:'Inspected by *'},el('input',{value:f.checked_by,onChange:function(e){set('checked_by',e.target.value);}})),
+      el(Field,{label:'Verified by (supervisor, optional)'},el('input',{value:f.verified_by,onChange:function(e){set('verified_by',e.target.value);}}))),
+    answered&&!canClear&&el('div',{className:'msg err'},'Cannot be cleared: '+[unfixed.length?unfixed.length+' failed item'+(unfixed.length===1?'':'s')+' not corrected':'',badEq.map(function(e){return e.number+' '+e.name+' '+lcEqProblem(e);}).join(', ')].filter(Boolean).join(' \u00b7 ')+'. Fix it, or record the line as NOT cleared.'),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),
+      el('button',{className:'btn danger',disabled:busy||!answered,onClick:function(){save('not_cleared');}},'Record NOT cleared'),
+      el('button',{className:'btn',disabled:busy||!canClear,onClick:function(){save('cleared');}},busy?'Saving...':'Line cleared')));
+}
+function lcHtml(c,lic,eqs){const e=esc3;const E=(eqs||[]).filter(function(x){return (c.equipment_ids||[]).indexOf(x.id)>=0;});
+  return '<div class="hxrec"><h2>Line clearance '+e(c.number)+' \u2014 '+(c.result==='cleared'?'CLEARED':'NOT CLEARED')+'</h2><div class="m">'+e(lic.name)+' \u00b7 '+e(String(c.checked_at).slice(0,16).replace('T',' '))+(c.voided?' \u00b7 VOID: '+e(c.void_reason):'')+'</div><table>'+
+    [['Batch',c.batch_label||'-'],['Room / line',c.area||'-'],['Equipment',E.map(function(x){return x.number+' '+x.name;}).join(', ')||'-'],['Inspected by',c.checked_by],['Verified by',c.verified_by||'-'],['Recorded by',c.recorded_by]].map(function(r){return '<tr><th>'+e(r[0])+'</th><td>'+e(r[1])+'</td></tr>';}).join('')+'</table>'+
+    '<table><tr><th>Check</th><th>Result</th></tr>'+Object.keys(c.checks||{}).map(function(k){const x=c.checks[k];return '<tr><td>'+e(x.l||k)+'</td><td class="'+(x.r==='fail'?'bad':'ok')+'">'+(x.r==='pass'?'Pass':x.r==='na'?'N/A':'FAIL'+(x.fixed?' - corrected':''))+'</td></tr>';}).join('')+'</table>'+
+    (c.issues?'<p><b>Problems:</b> '+e(c.issues)+'<br><b>Corrections:</b> '+e(c.corrections)+'</p>':'')+'</div>';}
+const RW_STATUS={identified:'Identified',inspected:'Inspected',approved:'Approved for use',used:'Used',destroyed:'Destroyed'};
+const RW_TONE={identified:'warn',inspected:'warn',approved:'ok',used:'off',destroyed:'off'};
+function ReworkForm(props){
+  const lic=props.license,st=props.state,x=props.rw||{};
+  const[f,setF]=useState({source_kind:x.source_kind||'batch',source_batch_id:x.source_batch_id||'',source_hold_id:x.source_hold_id||'',source_text:x.source_text||'',material:x.material||'',product:x.product||'',quantity:x.quantity||'',unit:x.unit||'g',
+    reason:x.reason||'',identified_on:x.identified_on||todayStr(),tag:x.tag||'',location:x.location||'',expires_on:x.expires_on||'',notes:x.notes||'',files:(x.files||[]).slice()});
+  const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  function set(k,v){setF(function(p){const n={...p,[k]:v};if(k==='source_batch_id'){const b=(props.batches||[]).find(function(y){return y.id===v;});if(b&&!p.product)n.product=[b.sku,b.flavor].filter(Boolean).join(' ');}return n;});}
+  async function save(){setErr('');
+    if(!f.material.trim()||!f.reason.trim()){setErr('Describe the rework material and why it is reworked.');return;}
+    if(f.source_kind==='batch'&&!f.source_batch_id){setErr('Choose the batch the rework comes from.');return;}
+    if(f.source_kind==='hold'&&!f.source_hold_id){setErr('Choose the hold the rework comes from.');return;}
+    const rec={source_kind:f.source_kind,source_batch_id:f.source_kind==='batch'?f.source_batch_id:null,source_hold_id:f.source_kind==='hold'?f.source_hold_id:null,source_text:f.source_text.trim(),material:f.material.trim(),product:f.product.trim(),
+      quantity:f.quantity.trim(),unit:f.unit,reason:f.reason.trim(),identified_on:f.identified_on,tag:f.tag.trim(),location:f.location.trim(),expires_on:f.expires_on||null,notes:f.notes.trim(),files:f.files};
+    setBusy(true);try{if(x.id)await db.update('hx_rework',x.id,rec);else await db.insert('hx_rework',{...rec,id:newId('rw'),state_id:st.id,license_id:lic.id});props.onDone('Saved rework '+(x.number||'')+'.');}catch(e){setErr(lcErr(e));}setBusy(false);}
+  return el(Modal,{title:(x.id?'Rework '+x.number:'New rework')+' \u00b7 '+lic.name,wide:true,onClose:props.onClose},
+    el('div',{style:{display:'grid',gridTemplateColumns:'160px 1fr',gap:10}},el(Field,{label:'Comes from'},el('select',{value:f.source_kind,disabled:!!x.id,onChange:function(e){set('source_kind',e.target.value);}},el('option',{value:'batch'},'A batch'),el('option',{value:'hold'},'A hold'),el('option',{value:'other'},'Other'))),
+      f.source_kind==='batch'?el(Field,{label:'Batch *'},el('select',{value:f.source_batch_id,disabled:!!x.id,onChange:function(e){set('source_batch_id',e.target.value);}},el('option',{value:''},'Choose...'),(props.batches||[]).map(function(b){return el('option',{key:b.id,value:b.id},lcBatchLabel(b));}))):
+      f.source_kind==='hold'?el(Field,{label:'Hold *'},el('select',{value:f.source_hold_id,disabled:!!x.id,onChange:function(e){set('source_hold_id',e.target.value);}},el('option',{value:''},'Choose...'),(props.holds||[]).map(function(h){return el('option',{key:h.id,value:h.id},h.number+' \u00b7 '+(h.item||h.tag||'')+' \u00b7 '+h.status);}))):
+      el(Field,{label:'Source'},el('input',{value:f.source_text,onChange:function(e){set('source_text',e.target.value);}}))),
+    el('div',{style:{display:'grid',gridTemplateColumns:'2fr 1fr 90px 1fr',gap:10}},el(Field,{label:'Rework material *'},el('input',{value:f.material,placeholder:'e.g. Distillate recovered from overfilled carts',onChange:function(e){set('material',e.target.value);}})),
+      el(Field,{label:'Original product'},el('input',{value:f.product,onChange:function(e){set('product',e.target.value);}})),
+      el(Field,{label:'Unit'},el('select',{value:f.unit,onChange:function(e){set('unit',e.target.value);}},['g','kg','mL','L','units','lb'].map(function(u){return el('option',{key:u,value:u},u);}))),
+      el(Field,{label:'Quantity'},el('input',{value:f.quantity,onChange:function(e){set('quantity',e.target.value);}}))),
+    el(Field,{label:'Why it is reworked *'},el('input',{value:f.reason,placeholder:'e.g. Overfill recovered, label misprint, potency out of spec',onChange:function(e){set('reason',e.target.value);}})),
+    el('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:10}},el(Field,{label:'Identified on'},el('input',{type:'date',value:f.identified_on,max:todayStr(),onChange:function(e){set('identified_on',e.target.value);}})),
+      el(Field,{label:'Rework tag / METRC tag'},el('input',{value:f.tag,onChange:function(e){set('tag',e.target.value);}})),el(Field,{label:'Stored at'},el('input',{value:f.location,onChange:function(e){set('location',e.target.value);}})),
+      el(Field,{label:'Rework expires on'},el('input',{type:'date',value:f.expires_on,onChange:function(e){set('expires_on',e.target.value);}}))),
+    el(Field,{label:'Files (photos, COA)',plain:true},el(FileList,{files:f.files,folder:'rework/'+lic.id,onChange:function(v){set('files',v);},onErr:setErr})),
+    el(Field,{label:'Notes'},el('textarea',{rows:2,value:f.notes,onChange:function(e){set('notes',e.target.value);}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:save},busy?'Saving...':'Save')));
+}
+function ReworkStep(props){
+  const r=props.rw,step=props.step,lic=props.license;
+  const[f,setF]=useState({inspection:'',analysis:'',inspection_result:'pass',inspected_by:(props.profile&&props.profile.name)||'',like_to_like:false,like_note:'',expires_on:r.expires_on||'',target_batch_id:'',target_expires:'',used_qty:r.quantity||'',used_on:todayStr()});
+  const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  function set(k,v){setF(function(p){return {...p,[k]:v};});}
+  const late=step==='use'&&f.target_expires&&r.expires_on&&r.expires_on<f.target_expires;
+  async function save(){setErr('');let rec;
+    if(step==='inspect'){if(!f.inspection.trim()||!f.analysis.trim()){setErr('Record the inspection and the analysis (test results / COA).');return;}rec={status:'inspected',inspection:f.inspection.trim(),analysis:f.analysis.trim(),inspection_result:f.inspection_result,inspected_by:f.inspected_by.trim(),inspected_on:todayStr()};}
+    else if(step==='approve'){if(!f.like_to_like){setErr('Confirm the rework goes into the same product (like-to-like).');return;}if(!f.expires_on){setErr('Enter the rework expiry date.');return;}rec={status:'approved',like_to_like:true,like_note:f.like_note.trim(),expires_on:f.expires_on};}
+    else{if(!f.target_batch_id){setErr('Choose the batch the rework went into.');return;}if(late){setErr('The rework expires before the finished product. It cannot be used in this batch.');return;}rec={status:'used',target_batch_id:f.target_batch_id,target_expires:f.target_expires||null,used_qty:f.used_qty.trim(),used_on:f.used_on};}
+    setBusy(true);try{await db.update('hx_rework',r.id,rec);props.onDone(step==='inspect'?'Inspection recorded for '+r.number+'.':step==='approve'?'Approved '+r.number+' for use.':'Recorded '+r.number+' used in a batch.');}catch(e){setErr(lcErr(e));}setBusy(false);}
+  return el(Modal,{title:(step==='inspect'?'Inspect and analyze':step==='approve'?'Approve for use':'Use in a batch')+' \u00b7 '+r.number,onClose:props.onClose},
+    el('div',{className:'muted',style:{fontSize:13,marginBottom:8}},r.material+(r.quantity?' \u00b7 '+r.quantity+' '+r.unit:'')+' \u00b7 '+r.reason),
+    step==='inspect'&&el('div',null,el(Field,{label:'Inspection (what was checked) *'},el('textarea',{rows:2,value:f.inspection,onChange:function(e){set('inspection',e.target.value);}})),
+      el(Field,{label:'Analysis (test results / COA) *'},el('textarea',{rows:2,value:f.analysis,onChange:function(e){set('analysis',e.target.value);}})),
+      el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}},el(Field,{label:'Result'},el('select',{value:f.inspection_result,onChange:function(e){set('inspection_result',e.target.value);}},el('option',{value:'pass'},'Pass - can be approved'),el('option',{value:'fail'},'Fail - destroy'))),
+        el(Field,{label:'Inspected by'},el('input',{value:f.inspected_by,onChange:function(e){set('inspected_by',e.target.value);}})))),
+    step==='approve'&&el('div',null,el('div',{className:'muted',style:{fontSize:13,marginBottom:8}},'Inspection: '+r.inspection+' \u00b7 Analysis: '+r.analysis),
+      el('label',{className:'ck'},el('input',{type:'checkbox',checked:f.like_to_like,onChange:function(e){set('like_to_like',e.target.checked);}}),el('span',null,'Like-to-like: it goes back into the same product'+(r.product?' ('+r.product+')':'')+' and is safe to use')),
+      el(Field,{label:'Note'},el('input',{value:f.like_note,onChange:function(e){set('like_note',e.target.value);}})),
+      el(Field,{label:'Rework expires on *'},el('input',{type:'date',value:f.expires_on,onChange:function(e){set('expires_on',e.target.value);}}))),
+    step==='use'&&el('div',null,el(Field,{label:'Batch it went into *'},el('select',{value:f.target_batch_id,onChange:function(e){set('target_batch_id',e.target.value);}},el('option',{value:''},'Choose...'),(props.batches||[]).filter(function(b){return b.id!==r.source_batch_id||true;}).map(function(b){return el('option',{key:b.id,value:b.id},lcBatchLabel(b));}))),
+      el('div',{style:{display:'grid',gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:10}},el(Field,{label:'Finished product expires on'},el('input',{type:'date',value:f.target_expires,onChange:function(e){set('target_expires',e.target.value);}})),
+        el(Field,{label:'Quantity used'},el('input',{value:f.used_qty,onChange:function(e){set('used_qty',e.target.value);}})),el(Field,{label:'Used on'},el('input',{type:'date',value:f.used_on,max:todayStr(),onChange:function(e){set('used_on',e.target.value);}}))),
+      late&&el('div',{className:'msg err'},'The rework expires '+r.expires_on+', before this product ('+f.target_expires+'). CSQ 2A.12.5: rework must not expire before the finished product.')),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:save},busy?'Saving...':step==='inspect'?'Record inspection':step==='approve'?'Approve':'Record use')));
+}
+function LineReworkPage(props){
+  const st=props.state,lic=props.license,lid=lic?lic.id:'',canL=can('lineclear',1),canR=can('rework',1);
+  const[tab,setTab]=useState(props.tab&&canR?props.tab:canL?(lsGet('hx_lrtab')||'lc'):'rw');const[lcs,setLcs]=useState(null);const[rws,setRws]=useState(null);const[batches,setBatches]=useState([]);const[holds,setHolds]=useState([]);const[eqs,setEqs]=useState([]);
+  const[msg,setMsg]=useState('');const[modal,setModal]=useState(null);
+  const load=useCallback(function(){if(!lid)return;const L='license_id=eq.'+encodeURIComponent(lid);
+    if(canL)db.get('hx_line_clearances',L+'&select=*&order=checked_at.desc&limit=2000').then(function(r){setLcs((r||[]).filter(function(x){return x.license_id===lid;}));}).catch(function(e){setMsg(lcErr(e));setLcs([]);});
+    if(canR)db.get('hx_rework',L+'&select=*&order=created_at.desc&limit=2000').then(function(r){setRws((r||[]).filter(function(x){return x.license_id===lid;}));}).catch(function(e){setMsg(lcErr(e));setRws([]);});
+    db.get('hx_batches',L+'&voided=eq.false&select=id,batch_type,batch_number,sku,flavor,license_id,created_at&order=created_at.desc&limit=500').then(function(r){setBatches((r||[]).filter(function(x){return x.license_id===lid;}));}).catch(function(){setBatches([]);});
+    if(can('holds',1))db.get('hx_holds',L+'&select=id,number,item,tag,status,license_id&order=created_at.desc&limit=300').then(function(r){setHolds((r||[]).filter(function(x){return x.license_id===lid;}));}).catch(function(){setHolds([]);});
+    if(can('equipment',1))db.get('hx_equipment',L+'&select=id,number,name,license_id').then(function(r){setEqs(r||[]);}).catch(function(){setEqs([]);});
+  },[lid]);
+  useEffect(load,[load]);
+  if(!st||!lic)return el('div',null,el('h1',null,el('span',{className:'g'},'Line Clearance and Rework')),el('div',{className:'empty'},'Pick a state and a license at the top first.'));
+  function go(t){setTab(t);lsSet('hx_lrtab',t);}
+  const stat=function(l,v,tone,sub){return el('div',{key:l,className:'card gold',style:{marginBottom:0}},el('div',{className:'k'},l),el('div',{className:'v',style:{fontSize:26,color:tone}},v),sub&&el('div',{className:'muted',style:{fontSize:11,marginTop:2}},sub));};
+  const LC=(lcs||[]).filter(function(c){return !c.voided;}),d30=new Date(Date.now()-30*864e5).toISOString();
+  const recentB=batches.filter(function(b){return b.created_at>=d30;}),clearedB=recentB.filter(function(b){return LC.some(function(c){return c.batch_id===b.id&&c.result==='cleared';});});
+  const RW=rws||[],open=RW.filter(function(r){return ['identified','inspected','approved'].indexOf(r.status)>=0;}),soon=RW.filter(function(r){return r.status==='approved'&&r.expires_on&&eqDays(todayStr(),r.expires_on)<=30;});
+  const bName=function(id){const b=batches.find(function(x){return x.id===id;});return b?lcBatchLabel(b):'-';};
+  const canE=can(tab==='lc'?'lineclear':'rework',2),canF=can(tab==='lc'?'lineclear':'rework',3);
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,el('span',{className:'g'},'Line Clearance and Rework')),el('div',{className:'sub'},lic.name+' \u00b7 pre-operational inspections before every batch, rework traceable from source to use (CSQ 2A.12.3, 2A.12.5)')),
+      canE&&el('button',{className:'btn',onClick:function(){setModal({t:tab==='lc'?'lc':'rwnew'});}},tab==='lc'?'+ Line clearance':'+ Rework')),
+    msg&&el('div',{className:/^(Line cleared|Saved|Approved|Inspection|Recorded|Destroyed|Voided)/.test(msg)?'msg':'msg err'},msg),
+    el('div',{className:'tabs'},[canL&&['lc','Line clearances'],canR&&['rw','Rework']].filter(Boolean).map(function(t){return el('button',{key:t[0],className:tab===t[0]?'on':'',onClick:function(){go(t[0]);}},t[1]);})),
+    tab==='lc'?(lcs===null?el('div',{className:'muted'},'Loading...'):el('div',null,
+      el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',marginBottom:14}},
+        stat('Batches cleared (30 days)',clearedB.length+' / '+recentB.length,clearedB.length===recentB.length?'var(--green)':'var(--red)',recentB.length-clearedB.length?(recentB.length-clearedB.length)+' without a line clearance':'every batch cleared'),
+        stat('Inspections (30 days)',LC.filter(function(c){return c.checked_at>=d30;}).length,'var(--text)'),stat('Not cleared (30 days)',LC.filter(function(c){return c.checked_at>=d30&&c.result!=='cleared';}).length,'var(--gold-hi)','line stopped and fixed')),
+      !(lcs||[]).length?el('div',{className:'empty'},'No line clearances yet.'+(canE?' Record one before each batch (also from the Batch Tracker).':'')):
+      el('div',{className:'card',style:{overflowX:'auto',padding:0}},el('table',null,el('thead',null,el('tr',null,['No.','When','Batch / line','Result','Inspected by','',''].map(function(h,i){return el('th',{key:i},h);}))),
+        el('tbody',null,(lcs||[]).map(function(c){return el('tr',{key:c.id,className:c.voided?'voidrow':''},el('td',null,c.number),el('td',null,String(c.checked_at).slice(0,16).replace('T',' ')),el('td',null,c.batch_label||c.area,c.batch_label&&c.area&&el('div',{className:'muted',style:{fontSize:11}},c.area)),
+          el('td',null,c.voided?el('span',{className:'badge bad',title:c.void_reason},'Void'):el('span',{className:'badge '+(c.result==='cleared'?'ok':'bad')},c.result==='cleared'?'Cleared':'Not cleared'),Object.keys(c.checks||{}).some(function(k){return c.checks[k].r==='fail';})&&el('span',{className:'muted',style:{fontSize:11,marginLeft:4}},'problems corrected')),
+          el('td',null,c.checked_by+(c.verified_by?' \u00b7 verified '+c.verified_by:'')),
+          el('td',{style:{whiteSpace:'nowrap'}},el('button',{className:'btn ghost sm',onClick:function(){printRecords('Line clearance '+c.number,[lcHtml(c,lic,eqs)]);}},'Print'),
+            !c.voided&&c.result!=='cleared'&&el(RaiseDeviation,{state:st,license:lic,prefill:{title:'Line not cleared: '+(c.batch_label||c.area),dept:'Production',category:'Sanitation',lot_number:'',source_type:'line_clearance',source_id:c.id,source_label:'Line clearance '+c.number,occurred_on:String(c.checked_at).slice(0,10)}})),
+          el('td',null,!c.voided&&canF&&el('button',{className:'btn danger sm',onClick:function(){setModal({t:'lcvoid',c:c});}},'Void')));})))))):
+    (rws===null?el('div',{className:'muted'},'Loading...'):el('div',null,
+      el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',marginBottom:14}},
+        stat('Open rework',open.length,open.length?'var(--gold-hi)':'var(--green)','identified, inspected or approved'),stat('Waiting for inspection',RW.filter(function(r){return r.status==='identified';}).length,'var(--text)'),
+        stat('Expiring in 30 days',soon.length,soon.length?'var(--red)':'var(--green)','approved rework'),stat('Used in batches',RW.filter(function(r){return r.status==='used';}).length,'var(--text)','traceable')),
+      !RW.length?el('div',{className:'empty'},'No rework yet.'):
+      el('div',{className:'card',style:{overflowX:'auto',padding:0}},el('table',null,el('thead',null,el('tr',null,['No.','Identified','Rework','From','Status','Expires','Into batch',''].map(function(h,i){return el('th',{key:i},h);}))),
+        el('tbody',null,RW.map(function(r){const hold=holds.find(function(h){return h.id===r.source_hold_id;});return el('tr',{key:r.id,className:r.status==='destroyed'?'voidrow':''},
+          el('td',null,r.number,r.tag&&el('div',{className:'muted',style:{fontSize:11}},r.tag)),el('td',{style:{whiteSpace:'nowrap'}},r.identified_on),el('td',null,el('b',null,r.material),el('div',{className:'muted',style:{fontSize:11}},[r.quantity&&r.quantity+' '+r.unit,r.reason].filter(Boolean).join(' \u00b7 '))),
+          el('td',{style:{fontSize:13}},r.source_kind==='batch'?bName(r.source_batch_id):r.source_kind==='hold'?(hold?hold.number:'Hold'):r.source_text),
+          el('td',null,el('span',{className:'badge '+(r.inspection_result==='fail'&&r.status==='inspected'?'bad':RW_TONE[r.status]),title:r.destroyed_reason||''},RW_STATUS[r.status]+(r.status==='inspected'?' \u00b7 '+r.inspection_result:''))),
+          el('td',{style:{whiteSpace:'nowrap'}},r.expires_on||'-'),el('td',{style:{fontSize:13}},r.target_batch_id?bName(r.target_batch_id)+(r.used_on?' \u00b7 '+r.used_on:''):'-'),
+          el('td',{style:{whiteSpace:'nowrap'}},r.status==='identified'&&canE&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'rwedit',r:r});}},'Edit'),
+            r.status==='identified'&&canE&&el('button',{className:'btn sm',style:{marginLeft:4},onClick:function(){setModal({t:'rwstep',r:r,step:'inspect'});}},'Inspect'),
+            r.status==='inspected'&&r.inspection_result==='pass'&&canF&&el('button',{className:'btn sm',onClick:function(){setModal({t:'rwstep',r:r,step:'approve'});}},'Approve'),
+            r.status==='approved'&&canE&&el('button',{className:'btn sm',onClick:function(){setModal({t:'rwstep',r:r,step:'use'});}},'Use in batch'),
+            ['identified','inspected','approved'].indexOf(r.status)>=0&&canF&&el('button',{className:'btn danger sm',style:{marginLeft:4},onClick:function(){setModal({t:'rwdestroy',r:r});}},'Destroy')));})))))),
+    modal&&modal.t==='lc'&&el(LineClearanceForm,{state:st,license:lic,profile:props.profile,onClose:function(){setModal(null);},onDone:function(m){setModal(null);setMsg(m);load();}}),
+    modal&&modal.t==='lcvoid'&&el(VoidModal,{what:'line clearance '+modal.c.number,onClose:function(){setModal(null);},onVoid:function(why){return db.update('hx_line_clearances',modal.c.id,{voided:true,void_reason:why}).then(function(){setModal(null);setMsg('Voided.');load();});}}),
+    modal&&(modal.t==='rwnew'||modal.t==='rwedit')&&el(ReworkForm,{rw:modal.r,state:st,license:lic,batches:batches,holds:holds,onClose:function(){setModal(null);},onDone:function(m){setModal(null);setMsg(m);load();}}),
+    modal&&modal.t==='rwstep'&&el(ReworkStep,{rw:modal.r,step:modal.step,license:lic,profile:props.profile,batches:batches,onClose:function(){setModal(null);},onDone:function(m){setModal(null);setMsg(m);load();}}),
+    modal&&modal.t==='rwdestroy'&&el(SimpleReason,{title:'Destroy rework '+modal.r.number,label:'Why, and how it was destroyed (Waste log / METRC)',btn:'Destroy',onClose:function(){setModal(null);},
+      onGo:function(t){return db.update('hx_rework',modal.r.id,{status:'destroyed',destroyed_reason:t}).then(function(){setModal(null);setMsg('Destroyed '+modal.r.number+'.');load();});}}));
+}
+function LcDashCard(props){
+  const lid=props.license?props.license.id:'';const[d,setD]=useState(null);
+  useEffect(function(){if(!lid||!can('lineclear',1)){setD(null);return;}let dead=false;const L='license_id=eq.'+encodeURIComponent(lid),d7=new Date(Date.now()-7*864e5).toISOString();
+    Promise.all([db.get('hx_line_clearances',L+'&voided=eq.false&checked_at=gte.'+encodeURIComponent(d7)+'&select=batch_id,result,license_id'),db.get('hx_batches',L+'&voided=eq.false&created_at=gte.'+encodeURIComponent(d7)+'&select=id,license_id'),
+      can('rework',1)?db.get('hx_rework',L+'&status=in.(identified,inspected,approved)&select=id,license_id').catch(function(){return [];}):Promise.resolve([])])
+    .then(function(r){const c=(r[0]||[]).filter(function(x){return x.license_id===lid;}),b=(r[1]||[]).filter(function(x){return x.license_id===lid;});
+      const miss=b.filter(function(x){return !c.some(function(y){return y.batch_id===x.id&&y.result==='cleared';});}).length;if(!dead)setD({n:c.length,b:b.length,miss:miss,rw:(r[2]||[]).filter(function(x){return x.license_id===lid;}).length});})
+    .catch(function(){if(!dead)setD(null);});return function(){dead=true;};},[lid]);
+  if(!d)return null;
+  return el('div',{className:'card gold'},el('div',{className:'k'},'Line clearance'),el('div',{className:'v',style:{color:d.miss?'var(--red)':'var(--green)'}},d.miss?d.miss+' batch'+(d.miss===1?'':'es')+' not cleared':'All batches cleared'),
+    el('div',{className:'muted',style:{margin:'4px 0 8px'}},'Last 7 days: '+d.n+' inspection'+(d.n===1?'':'s')+' \u00b7 '+d.b+' batch'+(d.b===1?'':'es')+(can('rework',1)?' \u00b7 '+d.rw+' open rework':'')),
+    el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go('lineclear');}},'Open'));
+}
+
 /* ---------- Training (Black Fox / Michigan SOP training matrix + CSQ 2A.13.2 training program) ---------- */
 const TRAIN_TOPICS=['Required by law','cGMP','cGACP','Extraction','Cannabis safety','Personnel hygiene & safety','Product defense','Job-specific','Safety','CSQ program','HACCP','Other'];
 const TRAIN_METHODS=['Classroom','On the job','Online course','Read and sign','External certification'];
@@ -5386,7 +5598,7 @@ const QMS_STATUSES={open:'Open',in_progress:'In Progress',closed:'Closed',cancel
 const QMS_STATUS_TONE={open:'bad',in_progress:'warn',closed:'ok',cancelled:'off'};
 const QMS_PRI_TONE={critical:'bad',major:'warn',minor:''};
 const DEV_CATEGORIES=['Product quality','Process / procedure','Equipment','Environment / temperature','Sanitation','Pest','Security','Documentation','Labeling / packaging','Testing result','Supplier / material','Safety','Other'];
-const DEV_SOURCES={manual:'Reported',facility_log:'Facility log',batch:'Batch',test:'Lab test',visitor:'Visitor',standard:'Standard clause',complaint:'Complaint',audit:'Audit'};
+const DEV_SOURCES={line_clearance:'Line clearance',rework:'Rework',equipment:'Equipment',manual:'Reported',facility_log:'Facility log',batch:'Batch',test:'Lab test',visitor:'Visitor',standard:'Standard clause',complaint:'Complaint',audit:'Audit'};
 const DEV_SOURCE_PAGE={facility_log:'logs',batch:'batches',test:'testing',visitor:'visitors',standard:'standards'};
 const CAPA_EFF={effective:'Effective',partially:'Partially effective',ineffective:'Ineffective'};
 function qmsErr(e){const m=String((e&&e.message)||e);return /hx_deviations|hx_capas/.test(m)&&/missing|does not exist|schema cache/i.test(m)?'QMS is not set up yet - run hendrix_step14.sql in the Hendrix Supabase project.':m;}
@@ -6308,9 +6520,9 @@ const CSQ_MFG_CLAUSES=[
  ['2A.11','2A','Supplier approval and vendor qualification','Name each supplier and vendor type and the specs they must meet, verify them, select, approve and monitor them, keep an approved list, name who approves, allow emergency suppliers with checks, require ethical sourcing, audit contract manufacturers, and review all suppliers yearly.',['suppliers'],'Approved supplier list per license: supplier type, specs, credentials with expiry, who approved and on what basis, emergency suppliers with verification, ethical sourcing, contract manufacturer audits, yearly reviews (6 months for high risk), suspend and disqualify with reasons.',[]],
  ['2A.12.1','2A','Standard operating procedures','Documented SOPs for producing and processing cannabinoid materials and products that conform to CSQ and regulation.',['sops','batches'],'Batch Tracker records follow each process. SOP library for every production process; Batch Tracker records follow them.',[]],
  ['2A.12.2','2A','Process flow and segregation','Document how people and product move through the facility to keep segregation, with a map of area designations and their risks.',['sops'],'Process flow and area map attached to an SOP.',[]],
- ['2A.12.3','2A','Pre-operational inspections (line clearance)','Before production, record a check that areas and equipment are clean, within maintenance and calibration dates and ready, with any problem and correction noted.',[],'',['Line clearance']],
+ ['2A.12.3','2A','Pre-operational inspections (line clearance)','Before production, record a check that areas and equipment are clean, within maintenance and calibration dates and ready, with any problem and correction noted.',['lineclear'],'Line Clearance: a pre-operational inspection before each batch (previous product and labels removed, cleaned, equipment in date, materials staged, cGMP dress, no foreign matter, tools counted); every problem recorded with its correction; the line cannot be cleared with uncorrected failures or with equipment out of service or out of calibration.',[]],
  ['2A.12.4','2A','Materials and supplies','Every material and supply has specs and is identified by type, use and hazard; meets regulation and is approved for use; is fit for purpose; has a yearly risk assessment; label information is kept on file; and is stored and used to label instructions.',['products','suppliers','receiving'],'Products: ingredient price library and formulations. Material specs required of each supplier; only approved suppliers used. Materials received with specs, COA and inspection; used only after acceptance.',[]],
- ['2A.12.5','2A','Rework','Rework is identified and dated for traceability, each batch inspected and analyzed before use, used before it would expire in the finished product, safe, and like-to-like.',[],'',['Rework']],
+ ['2A.12.5','2A','Rework','Rework is identified and dated for traceability, each batch inspected and analyzed before use, used before it would expire in the finished product, safe, and like-to-like.',['rework'],'Rework: numbered, dated and tagged; source batch or hold; inspected and analyzed before release; approved by Full access as like-to-like; cannot be used in a product that expires after the rework; used in a traceable batch or destroyed with a reason.',[]],
  ['2A.12.6','2A','Cross-contamination controls','Keep foreign matter out: exclude contamination sources, no loose objects overhead, inspection of facility and tools, a list of sources that cannot be removed with protective measures, control of blades, glass and brittle items, dust and chemicals, cleanup and release of contaminated areas, decisions on affected product, detection and removal methods, investigation, and calibrated detection equipment.',['sops','qms'],'Contamination incidents reported as deviations with correction and root cause.',[]],
  ['2A.12.7','2A','Allergen management','Allergen labeling meets the law, allergen labels are verified, allergens from materials, suppliers, staff and visitors are risk-assessed, and cleaning, changeover and storage prevent cross-contact.',['stickers','products'],'Label templates carry an allergen declaration that prints on every sticker.',[]],
  ['2A.12.8','2A','Product labeling and packaging','Label specs that meet CSQ and regulation; label content (potency, ingredients, allergens, warnings, claims, batch) verified against the batch; labels reviewed when materials, processes or rules change; only the labels and packaging a batch needs are issued, then reconciled; no mislabeled or damaged product; correct, inspected, clean packaging materials and tools.',['stickers','testing'],'Sticker templates per SKU and flavor with approval number; potency printed from the COA; every sticker print logged (batch, tag, count, who); template changes in the audit trail.',[]],
@@ -6346,7 +6558,7 @@ const CSQ_MFG_CLAUSES=[
  ['3A.2.2','3A','Cannabinoid herbal material products','Dried or fresh frozen flower is protected from foreign matter, chemical and microbial contamination, kept frozen when required, and handled with airflow, ventilation and dust control.',['testing','logs'],'Lab results per batch in Testing; storage conditions in the Temp / Humidity Log.',[],'Flower and trim'],
  ['3A.2.3','3A','Cannabinoid pre-roll products','Pre-rolls are protected from foreign matter, chemical and microbial contamination, with airflow, ventilation and dust control where they are made.',['batches','sops'],'',[],'Pre-rolls made at a cultivation license'],
  ['3B.1.1','3B','Extraction and refinement activities','Extraction and refinement follow cGMP and protect product from adulterants, foreign matter and residual solvents: areas identified with signage, simultaneous activities segregated, spill kits next to every extraction area, closed-loop systems where applicable built to the safety standards for their use, equipment cleanable in place, and solvent and chemical levels in the final product within regulation and spec.',['batches','testing','sops','equipment'],'Ethanol and BHO extraction batch records; residual solvent results on COAs. Equipment register: extraction systems with maintenance, calibration and validation.',[],'All extraction'],
- ['3B.1.2','3B','Solvent-based extraction and refinement','Solvent extraction is done by trained, competent staff: fire and life safety systems working and within maintenance and calibration before use; areas and equipment designed for the solvent used; cleaning suited to the solvent and its residues.',['batches','logs','training','equipment'],'Ethanol and BHO batch records; Equipment Maintenance Log; training per person. Equipment register: gas detection and fire safety systems kept within maintenance and calibration; out-of-date equipment cannot be put back in service.',['Line clearance'],'Hydrocarbon, ethanol and CO2 extraction'],
+ ['3B.1.2','3B','Solvent-based extraction and refinement','Solvent extraction is done by trained, competent staff: fire and life safety systems working and within maintenance and calibration before use; areas and equipment designed for the solvent used; cleaning suited to the solvent and its residues.',['batches','logs','training','equipment','lineclear'],'Ethanol and BHO batch records; Equipment Maintenance Log; training per person. Equipment register: gas detection and fire safety systems kept within maintenance and calibration; out-of-date equipment cannot be put back in service. Line Clearance for extraction batches adds gas detection, fire and life safety, ventilation and solvent checks.',[],'Hydrocarbon, ethanol and CO2 extraction'],
  ['3B.1.3','3B','Solvent-free extraction and refinement','Solventless work (ice water, dry sift, rosin) is done by trained staff in separate areas: enough drainage, process water at least potable and to spec before use, water removed from the product to spec and from waste before disposal, equipment fit to carry that water, defined environmental conditions (walk-in coolers and freezers included).',['sops','logs'],'Temp / Humidity Log for the rooms used.',['Facility tests'],'Solventless (ice water, dry sift, rosin)'],
  ['3B.1.4','3B','Extraction inputs and controls','Every extraction and refinement input is declared with safety and quality specs, and its use is controlled, recorded and tracked.',['receiving','suppliers','batches'],'Inputs from approved suppliers, received as numbered lots with COA and recorded against the extraction batches that use them.',[],'All extraction'],
  ['3B.1.5','3B','Air, CO2, LPG and other process gases','Process gases (air, CO2, butane, propane, nitrogen...) suit their use and their levels are monitored in the area, on the person, in the process and in the product: filtered, dry and oil-free; at least 99.5% pure unless specified; CO2 beverage grade or better (never medical grade).',['suppliers','receiving'],'Gas suppliers approved with specs (purity, beverage grade CO2); gases received with COA / certificate of conformance.',['Facility tests'],'Processes using gases'],
@@ -6356,7 +6568,7 @@ const CSQ_MFG_CLAUSES=[
  ['3B.1.9','3B','Other solid and liquid processing inputs','Media, chemicals, catalysts and reactants are at least 99.5% pure and food grade, or justified by a toxicological risk assessment; non-food-grade inputs are declared and reduced to safe levels in the final product.',['suppliers','receiving'],'Processing input suppliers approved with specs; inputs received with COA.',[],'Filtration media, reagents'],
  ['3B.1.10','3B','Non-cannabinoid ingredients','Terpenes and other ingredients added to extracts are food grade or justified by a toxicological risk assessment; non-food-grade ingredients are declared and reduced to safe levels.',['products','suppliers','receiving'],'Formulations list ingredients; ingredient suppliers approved with specs; ingredients received with COA.',[],'Formulated extracts'],
  ['3B.1.11','3B','Indoor air quality, airflow and environment','Extraction and processing areas have air quality specs; air is conditioned, filtered, treated and monitored; air handling is checked; airflow, humidity and temperature have min and max limits and air never stagnates; milling and grinding areas are monitored for dust with dust handling and PPE.',['logs'],'Temp / Humidity Log: min and max per room; out-of-range readings need a corrective action.',['Facility tests'],'All extraction'],
- ['3B.1.12','3B','Blending, compounding, formulation and mixing','Defined procedures and equipment for blending; every ingredient measured and added at the right step; parameters documented to spec; batches homogeneous before dispensing; rework approved by qualified staff; equipment sized for the batch.',['products','batches'],'Formulations; Batch Tracker calculations; changes to filled values need Full access and a reason.',[],'Blended and formulated extracts'],
+ ['3B.1.12','3B','Blending, compounding, formulation and mixing','Defined procedures and equipment for blending; every ingredient measured and added at the right step; parameters documented to spec; batches homogeneous before dispensing; rework approved by qualified staff; equipment sized for the batch.',['products','batches','rework'],'Formulations; Batch Tracker calculations; changes to filled values need Full access and a reason. Rework to bring a batch into specification is approved by Full access (qualified person) before use.',[],'Blended and formulated extracts'],
  ['3B.2.1','3B','Cannabinoid herbal materials (extraction input)','Dried or fresh frozen biomass is protected from foreign matter, chemical and microbial contamination, kept frozen until use when required, and handled with airflow, ventilation and dust control.',['receiving','logs'],'Biomass received as numbered lots; storage conditions in the Temp / Humidity Log.',[],'Biomass and fresh frozen'],
  ['3B.2.2','3B','Cannabinoid substance products','Concentrates and extracts are protected from contamination; residual solvents (also in solventless products) stay within the stricter of regulation or internal spec.',['testing','batches','holds'],'Testing stores residual solvent results from COAs; a failed result puts the batch on hold.',[],'Concentrates, distillate, isolate'],
  ['3B.2.2.3','3B','Manufactured cannabinoids','Cannabinoids made by conversion, synthesis or modified organisms are declared, have safety and quality specs, and their use is controlled, recorded and tracked.',['batches','products'],'Batch records and formulations record what is made and used.',[],'Converted or synthetic cannabinoids'],
@@ -6406,9 +6618,9 @@ const STD_STATUSES=['Not assessed','Conforming','Partial','Not conforming','Not 
 const STD_TONE={'Not assessed':'off','Conforming':'ok','Partial':'warn','Not conforming':'bad','Not applicable':'off'};
 const STD_COLOR={'Conforming':'#5fbf8a','Partial':'#d4af37','Not conforming':'#e5645a','Not applicable':'#4a473f','Not assessed':'#2a2a2a'};
 const ADOPT_STATUSES=['Following','Audit scheduled','Certified','Suspended','Withdrawn'];
-const HX_PAGE_LABEL={equipment:'Equipment',chemicals:'Chemicals and SDS',complaints:'Complaints',intaudits:'Internal Audits',recall:'Traceability and Recall',receiving:'Receiving',inventory:'Inventory',holds:'Hold and Release',shipping:'Shipping',suppliers:'Suppliers',training:'Training',qms:'QMS (Deviations, CAPA)',sops:'SOPs',rulebook:'Rulebook',locations:'States and Licenses',audit:'Audit Trail',batches:'Batch Tracker',testing:'Testing',stickers:'Compliance Stickers',
+const HX_PAGE_LABEL={lineclear:'Line Clearance',rework:'Rework',equipment:'Equipment',chemicals:'Chemicals and SDS',complaints:'Complaints',intaudits:'Internal Audits',recall:'Traceability and Recall',receiving:'Receiving',inventory:'Inventory',holds:'Hold and Release',shipping:'Shipping',suppliers:'Suppliers',training:'Training',qms:'QMS (Deviations, CAPA)',sops:'SOPs',rulebook:'Rulebook',locations:'States and Licenses',audit:'Audit Trail',batches:'Batch Tracker',testing:'Testing',stickers:'Compliance Stickers',
   products:'Products',logs:'Facility Logs',visitors:'Visitor Log',roles:'Roles',team:'Team and Access'};
-const HX_PAGE_MOD={equipment:'equipment',chemicals:'chemicals',complaints:'complaints',intaudits:'intaudits',recall:'recall',receiving:'receiving',inventory:'receiving',holds:'holds',shipping:'shipping',suppliers:'suppliers',training:'training',qms:'qms',sops:'sops',rulebook:'rulebook',audit:'audit',batches:'batch',testing:'testing',stickers:'stickers',visitors:'logs_visitor'};
+const HX_PAGE_MOD={lineclear:'lineclear',rework:'rework',equipment:'equipment',chemicals:'chemicals',complaints:'complaints',intaudits:'intaudits',recall:'recall',receiving:'receiving',inventory:'receiving',holds:'holds',shipping:'shipping',suppliers:'suppliers',training:'training',qms:'qms',sops:'sops',rulebook:'rulebook',audit:'audit',batches:'batch',testing:'testing',stickers:'stickers',visitors:'logs_visitor'};
 function stdLevelOf(m){return m==='4A'?2:m==='5'?3:1;}
 function stdErr(e){
   const m=String((e&&e.message)||e);
@@ -6676,6 +6888,17 @@ async function loadStdEvidence(st,lic){
     const a=c.filter(function(x){return x.status==='approved';}),areas={};a.forEach(function(x){if(x.storage_area)areas[x.storage_area]=1;});
     return {n:a.length,pend:c.filter(function(x){return x.status==='pending';}).length,noSds:c.filter(function(x){return !(x.sds_files||[]).length;}).length,areas:Object.keys(areas).length,
       food:a.filter(function(x){return x.grade!=='non_food';}).length,pest:a.filter(function(x){return x.purpose==='Pesticide / crop protection';}).length,last:c.map(function(x){return String(x.updated_at||x.created_at||'').slice(0,10);}).sort().pop()||''};}));
+  if(can('lineclear',1))jobs.push(tryGet('lineclear',async function(){
+    const L='license_id=eq.'+enc(lid);
+    const c=((await db.get('hx_line_clearances',L+'&voided=eq.false&checked_at=gte.'+enc(since)+'&select=batch_id,batch_type,result,checked_at,checks,license_id'))||[]).filter(function(x){return x.license_id===lid;});
+    let b=[];try{b=((await db.get('hx_batches',L+'&voided=eq.false&created_at=gte.'+enc(new Date(Date.now()-90*864e5).toISOString())+'&select=id,batch_type,license_id'))||[]).filter(function(x){return x.license_id===lid;});}catch(e){b=[];}
+    const ok=b.filter(function(x){return c.some(function(y){return y.batch_id===x.id&&y.result==='cleared';});}),ext=b.filter(function(x){return /extraction/.test(x.batch_type);});
+    return {n:c.length,notc:c.filter(function(x){return x.result!=='cleared';}).length,fixed:c.filter(function(x){return Object.keys(x.checks||{}).some(function(k){return x.checks[k].r==='fail';});}).length,
+      b:b.length,ok:ok.length,ext:ext.length,extOk:ext.filter(function(x){return ok.indexOf(x)>=0;}).length,last:c.map(function(x){return x.checked_at;}).sort().pop()||''};}));
+  if(can('rework',1))jobs.push(tryGet('rework',async function(){
+    const r=((await db.get('hx_rework','license_id=eq.'+enc(lid)+'&select=status,inspection_result,like_to_like,expires_on,target_expires,identified_on,license_id'))||[]).filter(function(x){return x.license_id===lid;});
+    return {n:r.length,open:r.filter(function(x){return ['identified','inspected','approved'].indexOf(x.status)>=0;}).length,used:r.filter(function(x){return x.status==='used';}).length,destroyed:r.filter(function(x){return x.status==='destroyed';}).length,
+      insp:r.filter(function(x){return x.inspection_result;}).length,last:r.map(function(x){return x.identified_on;}).sort().pop()||''};}));
   jobs.push(tryGet('roles',async function(){const rs=ACC.roles||[];return {n:rs.length,noReq:rs.filter(function(r){return !String(r.requirements||'').trim()||!String(r.description||'').trim();}).length};}));
   await Promise.all(jobs);
   return E;
@@ -6761,6 +6984,12 @@ function clauseEvidence(x,E){
       if(x.clause==='2A.5.1')out.push({label:'Pest control chemicals',value:H.pest+' approved pesticide'+(H.pest===1?'':'s')+' with SDS and EPA registration',last:H.last,page:'chemicals'});
       else out.push({label:'Approved chemical list',value:H.n+' approved chemical'+(H.n===1?'':'s')+' \u00b7 SDS on file for '+(H.n+H.pend-H.noSds)+' of '+(H.n+H.pend)+' \u00b7 '+H.areas+' storage area list'+(H.areas===1?'':'s')+' \u00b7 '+H.food+' food grade / food-contact',last:H.last,page:'chemicals',
         warn:!H.n?'No approved chemicals listed':(H.noSds?H.noSds+' without an SDS':(H.pend?H.pend+' waiting for approval':''))});}
+    else if(p==='lineclear'&&E.lineclear){const K=E.lineclear;
+      if(x.clause==='3B.1.2')out.push({label:'Extraction line clearance',value:K.extOk+' of '+K.ext+' extraction batches in 90 days started after a line clearance (gas detection, fire and life safety, ventilation, solvent checked)',last:K.last,page:'lineclear',warn:K.ext&&K.extOk<K.ext?(K.ext-K.extOk)+' extraction batch'+(K.ext-K.extOk===1?'':'es')+' without a line clearance':''});
+      else out.push({label:'Line clearance',value:K.ok+' of '+K.b+' batches in 90 days cleared before production \u00b7 '+K.n+' inspection'+(K.n===1?'':'s')+' in 12 months \u00b7 '+K.fixed+' with problems found and corrected \u00b7 '+K.notc+' not cleared',last:K.last,page:'lineclear',
+        warn:!K.n?'No line clearances recorded':(K.ok<K.b?(K.b-K.ok)+' batch'+(K.b-K.ok===1?'':'es')+' without a line clearance':'')});}
+    else if(p==='rework'&&E.rework){const W=E.rework;
+      out.push({label:'Rework',value:W.n+' rework record'+(W.n===1?'':'s')+' (numbered, dated, tagged) \u00b7 '+W.insp+' inspected and analyzed \u00b7 '+W.used+' used like-to-like in traceable batches \u00b7 '+W.destroyed+' destroyed \u00b7 '+W.open+' open',last:W.last,page:'rework'});}
     else if(p==='roles'&&E.roles)out.push({label:'Roles',value:E.roles.n+' defined role'+(E.roles.n===1?'':'s')+(x.clause==='2A.13.1'?' \u00b7 '+(E.roles.n-E.roles.noReq)+' with duties and requirements':''),page:'roles',
       warn:!E.roles.n?'No roles defined':(x.clause==='2A.13.1'&&E.roles.noReq?E.roles.noReq+' role'+(E.roles.noReq===1?'':'s')+' missing duties or requirements':'')});
   });
@@ -7762,7 +7991,7 @@ function App(){
   if(isAdmin)nav.push({id:'team',label:'Team and Access'},{id:'roles',label:'Roles'});
   if(can('audit',1))nav.push({id:'audit',label:'Audit Trail'});
   const anyLog=LOG_TYPES.some(function(t){return can(LOG_MOD[t.id],1);});
-  const mods=[can('qms',1)&&['qms','QMS'],can('complaints',1)&&['complaints','Complaints'],can('intaudits',1)&&['intaudits','Internal Audits'],can('training',1)&&['training','Training'],can('sops',1)&&['sops','SOPs'],can('suppliers',1)&&['suppliers','Suppliers'],can('receiving',1)&&['receiving','Receiving'],can('holds',1)&&['holds','Hold and Release'],can('shipping',1)&&['shipping','Shipping'],can('recall',1)&&['recall','Traceability and Recall'],can('equipment',1)&&['equipment','Equipment'],can('chemicals',1)&&['chemicals','Chemicals and SDS'],can('logs_visitor',1)&&['visitors','Visitor Log'],anyLog&&['logs','Facility Logs'],(can('products',1)||can('formbank',1)||can('cogs',1))&&['products','Products'],can('batch',1)&&['batches','Batch Tracker'],can('testing',1)&&['testing','Testing'],can('stickers',1)&&['stickers','Compliance Stickers']].filter(Boolean);
+  const mods=[can('qms',1)&&['qms','QMS'],can('complaints',1)&&['complaints','Complaints'],can('intaudits',1)&&['intaudits','Internal Audits'],can('training',1)&&['training','Training'],can('sops',1)&&['sops','SOPs'],can('suppliers',1)&&['suppliers','Suppliers'],can('receiving',1)&&['receiving','Receiving'],can('holds',1)&&['holds','Hold and Release'],can('shipping',1)&&['shipping','Shipping'],can('recall',1)&&['recall','Traceability and Recall'],can('equipment',1)&&['equipment','Equipment'],can('chemicals',1)&&['chemicals','Chemicals and SDS'],(can('lineclear',1)||can('rework',1))&&['lineclear','Line Clearance and Rework'],can('logs_visitor',1)&&['visitors','Visitor Log'],anyLog&&['logs','Facility Logs'],(can('products',1)||can('formbank',1)||can('cogs',1))&&['products','Products'],can('batch',1)&&['batches','Batch Tracker'],can('testing',1)&&['testing','Testing'],can('stickers',1)&&['stickers','Compliance Stickers']].filter(Boolean);
   let body;
   if(page==='locations')body=el(Locations,{profile:profile,states:states,licenses:licenses,reload:loadData,openRulebook:function(id){pickState(id);setPage('rulebook');}});
   else if(page==='visitors'&&can('logs_visitor',1))body=el(VisitorLog,{key:licId,state:st,license:lic});
@@ -7776,6 +8005,7 @@ function App(){
   else if(page==='roles'&&isAdmin)body=el(Roles);
   else if(page==='audit'&&can('audit',1))body=el(AuditTrail,{state:st});
   else if((page==='receiving'&&can('receiving',1))||(page==='inventory'&&can('receiving',1))||(page==='holds'&&can('holds',1))||(page==='shipping'&&can('shipping',1)))body=el(MatPage,{key:licId,state:st,license:lic,tab:page,go:setPage});
+  else if((page==='lineclear'||page==='rework')&&(can('lineclear',1)||can('rework',1)))body=el(LineReworkPage,{key:licId+page,state:st,license:lic,profile:profile,go:setPage,tab:page==='rework'?'rw':null});
   else if(page==='equipment'&&can('equipment',1))body=el(EquipmentPage,{key:licId,state:st,license:lic,go:setPage});
   else if(page==='chemicals'&&can('chemicals',1))body=el(ChemicalsPage,{key:licId,state:st,license:lic,go:setPage});
   else if(page==='complaints'&&can('complaints',1))body=el(ComplaintsPage,{key:licId,state:st,license:lic,go:setPage});
