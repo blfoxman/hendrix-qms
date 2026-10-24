@@ -6627,7 +6627,8 @@ async function aiCall(body){
   try{r=await fetch(url,{method:'POST',headers:hdr,body:JSON.stringify(body)});}
   catch(e){throw new Error(await aiDiagnose(url,hdr,Date.now()-t0));}
   if(r.status===404)throw new Error('AI_NOT_SETUP');
-  if(r.status===401)throw new Error('The AI refused the sign-in. Sign out of Hendrix, sign in again and retry.');
+  if(r.status===401){const j1=await r.json().catch(function(){return {};});const m1=(j1.error&&j1.error.message)||j1.message||j1.msg||'';
+    throw new Error(/hendrix/i.test(m1)?m1:'Supabase refused the sign-in before the AI function ran'+(m1?' ('+m1+')':'')+'. Open the hendrix-ai function in Supabase > Settings, turn "Verify JWT with legacy secret" OFF and save, then retry.');}
   if(r.status===502||r.status===503||r.status===504||r.status===546)throw new Error('The AI took too long and Supabase stopped the request ('+r.status+'). Try again; if it keeps happening, the request is too large.');
   const j=await r.json().catch(function(){return {};});
   if(!r.ok||j.error)throw new Error((j.error&&j.error.message)||('AI request failed ('+r.status+')'));
@@ -6643,7 +6644,7 @@ async function aiDiagnose(url,hdr,ms){
     return 'The AI function is set up, but the connection closed after '+Math.round(ms/1000)+' seconds before the answer came back (the AI took too long or the internet connection dropped). Try again.';
   }catch(e){
     if(!navigator.onLine)return 'No internet connection. Reconnect and try again.';
-    return 'Hendrix cannot reach the AI. The hendrix-ai function is not deployed in Supabase (Edge Functions > Deploy a new function > Via Editor, name it exactly hendrix-ai, paste hendrix-ai.ts, keep Verify JWT on, and add the ANTHROPIC_API_KEY secret), or a browser extension / firewall is blocking supabase.co.';
+    return 'Hendrix cannot reach the AI. The hendrix-ai function is not deployed in Supabase (Edge Functions > Deploy a new function > Via Editor, name it exactly hendrix-ai, paste hendrix-ai.ts, turn Verify JWT off in its Settings, and add the ANTHROPIC_API_KEY secret), or a browser extension / firewall is blocking supabase.co.';
   }
 }
 async function readCoa(file){
