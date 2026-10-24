@@ -170,7 +170,7 @@ async function sb(path,opt){
   if(!r.ok){
     const m=(j&&(j.message||j.hint||j.details))||txt||('Error '+r.status);
     if(/schema cache|Could not find the table|relation .* does not exist/i.test(m)&&!/Could not find the '[A-Za-z0-9_]+' column/.test(m)){
-      const step=/hx_risk|hx_changes/.test(m)?'hendrix_step29.sql':/hx_haccp/.test(m)?'hendrix_step28.sql':/hx_grow_|hx_plant_batches/.test(m)?'hendrix_step27.sql':/hx_env_/.test(m)?'hendrix_step26.sql':/hx_line_clearances|hx_rework/.test(m)?'hendrix_step25.sql':/hx_equipment|hx_chemicals/.test(m)?'hendrix_step24.sql':/share_key|hx_training_shared/.test(m)?'hendrix_step23.sql':/hx_rule_sources/.test(m)?'hendrix_step22.sql':/hx_training_keys|hx_training_attempts|hx_course_submit|content_status/.test(m)?'hendrix_step20.sql':/hx_complaints|hx_audits|hx_audit_findings/.test(m)?'hendrix_step19.sql':/hx_recall|hx_trace_data/.test(m)?'hendrix_step18.sql':/hx_lots|hx_lot_uses|hx_holds|hx_shipments/.test(m)?'hendrix_step17.sql':/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
+      const step=/hx_org_positions|hx_objective|hx_qms_settings/.test(m)?'hendrix_step30.sql':/hx_risk|hx_changes/.test(m)?'hendrix_step29.sql':/hx_haccp/.test(m)?'hendrix_step28.sql':/hx_grow_|hx_plant_batches/.test(m)?'hendrix_step27.sql':/hx_env_/.test(m)?'hendrix_step26.sql':/hx_line_clearances|hx_rework/.test(m)?'hendrix_step25.sql':/hx_equipment|hx_chemicals/.test(m)?'hendrix_step24.sql':/share_key|hx_training_shared/.test(m)?'hendrix_step23.sql':/hx_rule_sources/.test(m)?'hendrix_step22.sql':/hx_training_keys|hx_training_attempts|hx_course_submit|content_status/.test(m)?'hendrix_step20.sql':/hx_complaints|hx_audits|hx_audit_findings/.test(m)?'hendrix_step19.sql':/hx_recall|hx_trace_data/.test(m)?'hendrix_step18.sql':/hx_lots|hx_lot_uses|hx_holds|hx_shipments/.test(m)?'hendrix_step17.sql':/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
       throw new Error('Database tables are missing - run '+step+' in the Hendrix Supabase project.');
     }
     if(/row-level security|permission denied/i.test(m))throw new Error('Not allowed - your access level does not allow this here. Ask a system admin.');
@@ -279,7 +279,7 @@ function LoginScreen(props){
 }
 
 /* ---------- Dashboard ---------- */
-const MODULES_SOON=['Level 3: org chart, KPIs, management review, verification schedule','Time Clock and Badges','Production Planner'];
+const MODULES_SOON=['Level 3: management review, verification schedule','Time Clock and Badges','Production Planner'];
 function Dashboard(props){
   const st=props.state,lic=props.license;
   const isAdmin=props.profile.role==='admin';
@@ -315,6 +315,7 @@ function Dashboard(props){
       el(CulDashCard,{license:lic,go:props.go}),
       el(HaccpDashCard,{license:lic,go:props.go}),
       el(RiskDashCard,{license:lic,go:props.go}),
+      el(ObjDashCard,{license:lic,go:props.go}),
       el(ChemDashCard,{license:lic,go:props.go}),
       el(RecallDashCard,{license:lic,go:props.go}),
       el(StdDashCard,{license:lic,go:props.go})),
@@ -2344,7 +2345,7 @@ function Products(props){
 /* ---------- Audit trail: history, void, admin page ----------
    The database writes every change to hx_audit_log (append-only). Records are never deleted:
    they are voided with a reason. Every change to a record needs a reason for change. */
-const AUDIT_AREAS={hx_risks:'Risk',hx_risk_reviews:'Risk review',hx_changes:'Change',hx_haccp_team:'HACCP team',hx_haccp_plans:'HACCP plan',hx_haccp_monitoring:'CCP monitoring',hx_haccp_verifications:'HACCP verification',hx_grow_areas:'Grow area',hx_plant_batches:'Plant batch',hx_grow_events:'Grow record',hx_env_points:'Facility test point',hx_env_tests:'Facility test result',hx_line_clearances:'Line clearance',hx_rework:'Rework',hx_equipment:'Equipment',hx_equipment_events:'Equipment record',hx_chemicals:'Chemical',hx_complaints:'Complaint',hx_audits:'Internal audit',hx_audit_findings:'Audit finding',hx_recalls:'Recall / mock recall',hx_recall_contacts:'Recall contact',hx_lots:'Received lot',hx_lot_uses:'Lot use',hx_holds:'Hold',hx_shipments:'Shipment',hx_suppliers:'Supplier',hx_supplier_reviews:'Supplier review',hx_training_courses:'Training course',hx_training_records:'Training record',hx_deviations:'Deviation',hx_capas:'CAPA',hx_sops:'SOP',hx_sop_acks:'SOP signature',hx_label_prints:'Sticker print',hx_standards:'Standards',hx_standard_clauses:'Standard clauses',hx_license_standards:'Standard adoption',hx_conformance:'Standard conformance',hx_label_templates:'Label templates',hx_tests:'Testing record',hx_roles:'Roles',hx_batches:'Batch record',hx_facility_log:'Facility log entry',hx_visitor_log:'Visitor log',hx_log_lists:'Facility log lists',hx_rules:'Rulebook',hx_rule_sources:'Rulebook source PDF',
+const AUDIT_AREAS={hx_org_positions:'Org chart',hx_qms_settings:'Quality policy',hx_objectives:'Quality objective',hx_objective_results:'KPI result',hx_risks:'Risk',hx_risk_reviews:'Risk review',hx_changes:'Change',hx_haccp_team:'HACCP team',hx_haccp_plans:'HACCP plan',hx_haccp_monitoring:'CCP monitoring',hx_haccp_verifications:'HACCP verification',hx_grow_areas:'Grow area',hx_plant_batches:'Plant batch',hx_grow_events:'Grow record',hx_env_points:'Facility test point',hx_env_tests:'Facility test result',hx_line_clearances:'Line clearance',hx_rework:'Rework',hx_equipment:'Equipment',hx_equipment_events:'Equipment record',hx_chemicals:'Chemical',hx_complaints:'Complaint',hx_audits:'Internal audit',hx_audit_findings:'Audit finding',hx_recalls:'Recall / mock recall',hx_recall_contacts:'Recall contact',hx_lots:'Received lot',hx_lot_uses:'Lot use',hx_holds:'Hold',hx_shipments:'Shipment',hx_suppliers:'Supplier',hx_supplier_reviews:'Supplier review',hx_training_courses:'Training course',hx_training_records:'Training record',hx_deviations:'Deviation',hx_capas:'CAPA',hx_sops:'SOP',hx_sop_acks:'SOP signature',hx_label_prints:'Sticker print',hx_standards:'Standards',hx_standard_clauses:'Standard clauses',hx_license_standards:'Standard adoption',hx_conformance:'Standard conformance',hx_label_templates:'Label templates',hx_tests:'Testing record',hx_roles:'Roles',hx_batches:'Batch record',hx_facility_log:'Facility log entry',hx_visitor_log:'Visitor log',hx_log_lists:'Facility log lists',hx_rules:'Rulebook',hx_rule_sources:'Rulebook source PDF',
   hx_states:'States',hx_licenses:'Licenses',hx_profiles:'Team and access',hx_skus:'SKUs',hx_flavors:'Flavors',hx_formulations:'Formulations',hx_cost_library:'Ingredient prices'};
 const AUDIT_SKIP=['voided_by','voided_at','updated_at','edit_reason'];
 function auditVal(v){
@@ -3051,6 +3052,8 @@ const ACCESS_MODULES=[
   {id:'haccp',label:'HACCP',grp:'General',help:'View plans and records / record CCP checks, draft plans, verify records / validate, activate, revise and retire plans, manage the team, void records'},
   {id:'risks',label:'Risk Register',grp:'General',help:'View the register / assess, review and control risks / close risks'},
   {id:'changes',label:'Change Control',grp:'General',help:'View changes / request changes and record the work / approve, reject, cancel and close changes'},
+  {id:'orgchart',label:'Org Chart',grp:'General',help:'View the org chart / add and edit positions / remove positions'},
+  {id:'objectives',label:'Quality Objectives',grp:'General',help:'View objectives and KPIs / set objectives and record results / link the quality policy, mark achieved or dropped'},
   {id:'batch',label:'Batch Tracker',grp:'Production',help:'View / create and continue (fill blanks) / change filled values with a reason and void'},
   {id:'products',label:'Products (SKUs and flavors)',grp:'Production',help:'View / add and edit / delete'},
   {id:'formbank',label:'Formulation Bank (recipes)',grp:'Production',help:'View / add and edit / delete'},
@@ -3212,18 +3215,18 @@ function Team(props){
 const LOGS_PROD=['logs_sanitation','logs_waste','logs_scale','logs_equipment','logs_temp','logs_env'];
 function pm(o,list,lv){const x={...o};(list||[]).forEach(function(k){x[k]=lv;});return x;}
 const STARTER_ROLES=[
-  ['General Manager','Leadership. Edit everywhere; Full on batches and every log; sees recipes, prices and the audit trail.',{training:'admin',qms:'admin',complaints:'admin',intaudits:'admin',sops:'admin',suppliers:'admin',equipment:'admin',chemicals:'admin',lineclear:'admin',rework:'admin',envtests:'admin',cultivation:'admin',haccp:'admin',risks:'admin',changes:'admin',receiving:'admin',holds:'admin',shipping:'admin',recall:'admin',rulebook:'editor',standards:'editor',audit:'read',batch:'admin',testing:'admin',stickers:'admin',products:'editor',formbank:'read',cogs:'read',logs:'admin'}],
-  ['Assistant of General Manager','Leadership support. Edit on batches, products and every log; sees recipes and the audit trail.',{training:'editor',qms:'editor',complaints:'editor',intaudits:'editor',sops:'editor',suppliers:'editor',equipment:'editor',chemicals:'editor',lineclear:'editor',rework:'editor',envtests:'editor',cultivation:'editor',haccp:'editor',risks:'editor',changes:'editor',receiving:'editor',holds:'editor',shipping:'editor',recall:'editor',rulebook:'editor',standards:'read',audit:'read',batch:'editor',testing:'editor',products:'editor',formbank:'read',logs:'editor'}],
-  ['Compliance Officer','Full on every log, the rulebook and standards (CSQ); sees batches, products and the audit trail.',{training:'admin',qms:'admin',complaints:'admin',intaudits:'admin',sops:'admin',suppliers:'admin',equipment:'admin',chemicals:'admin',lineclear:'admin',rework:'admin',envtests:'admin',cultivation:'admin',haccp:'admin',risks:'admin',changes:'admin',receiving:'admin',holds:'admin',shipping:'read',recall:'admin',rulebook:'admin',standards:'admin',audit:'read',logs:'admin',batch:'read',testing:'admin',stickers:'admin',products:'read'}],
+  ['General Manager','Leadership. Edit everywhere; Full on batches and every log; sees recipes, prices and the audit trail.',{training:'admin',qms:'admin',complaints:'admin',intaudits:'admin',sops:'admin',suppliers:'admin',equipment:'admin',chemicals:'admin',lineclear:'admin',rework:'admin',envtests:'admin',cultivation:'admin',haccp:'admin',risks:'admin',changes:'admin',orgchart:'admin',objectives:'admin',receiving:'admin',holds:'admin',shipping:'admin',recall:'admin',rulebook:'editor',standards:'editor',audit:'read',batch:'admin',testing:'admin',stickers:'admin',products:'editor',formbank:'read',cogs:'read',logs:'admin'}],
+  ['Assistant of General Manager','Leadership support. Edit on batches, products and every log; sees recipes and the audit trail.',{training:'editor',qms:'editor',complaints:'editor',intaudits:'editor',sops:'editor',suppliers:'editor',equipment:'editor',chemicals:'editor',lineclear:'editor',rework:'editor',envtests:'editor',cultivation:'editor',haccp:'editor',risks:'editor',changes:'editor',orgchart:'editor',objectives:'editor',receiving:'editor',holds:'editor',shipping:'editor',recall:'editor',rulebook:'editor',standards:'read',audit:'read',batch:'editor',testing:'editor',products:'editor',formbank:'read',logs:'editor'}],
+  ['Compliance Officer','Full on every log, the rulebook and standards (CSQ); sees batches, products and the audit trail.',{training:'admin',qms:'admin',complaints:'admin',intaudits:'admin',sops:'admin',suppliers:'admin',equipment:'admin',chemicals:'admin',lineclear:'admin',rework:'admin',envtests:'admin',cultivation:'admin',haccp:'admin',risks:'admin',changes:'admin',orgchart:'admin',objectives:'admin',receiving:'admin',holds:'admin',shipping:'read',recall:'admin',rulebook:'admin',standards:'admin',audit:'read',logs:'admin',batch:'read',testing:'admin',stickers:'admin',products:'read'}],
   ['Security Manager','Full on the security and visitor logs.',{training:'editor',qms:'editor',complaints:'editor',sops:'read',rulebook:'read',logs_security:'admin',logs_visitor:'admin'}],
   ['Security Officer','Fills the security and visitor logs.',{training:'read',qms:'read',complaints:'read',sops:'read',rulebook:'read',logs_security:'editor',logs_visitor:'editor'}],
   ['Sanitation','Fills the sanitation, waste and pest control logs.',{chemicals:'read',envtests:'editor',training:'read',qms:'read',complaints:'read',sops:'read',logs_sanitation:'editor',logs_waste:'editor',logs_pest:'editor'}],
-  ['Team Member','Continues batches; fills the sanitation and temp / humidity logs.',{equipment:'read',chemicals:'read',lineclear:'editor',training:'read',qms:'read',complaints:'read',sops:'read',holds:'editor',receiving:'read',batch:'editor',products:'read',logs_temp:'editor',logs_sanitation:'editor'}],
+  ['Team Member','Continues batches; fills the sanitation and temp / humidity logs.',{equipment:'read',chemicals:'read',lineclear:'editor',orgchart:'read',training:'read',qms:'read',complaints:'read',sops:'read',holds:'editor',receiving:'read',batch:'editor',products:'read',logs_temp:'editor',logs_sanitation:'editor'}],
   ['Inventory Manager','Sees products and batches; fills the waste log.',{training:'editor',qms:'editor',complaints:'editor',sops:'read',suppliers:'editor',receiving:'admin',holds:'editor',shipping:'admin',recall:'editor',products:'read',batch:'read',logs_waste:'editor'}],
-  ['Extraction Manager','Full on batches; fills the scale, equipment and temp / humidity logs.',{equipment:'editor',chemicals:'read',lineclear:'editor',rework:'editor',haccp:'editor',risks:'read',changes:'editor',training:'editor',qms:'editor',complaints:'editor',sops:'editor',suppliers:'read',receiving:'editor',holds:'editor',batch:'admin',testing:'editor',products:'read',formbank:'read',logs_scale:'editor',logs_equipment:'editor',logs_temp:'editor'}],
-  ['Production Manager','Full on batches; edits products; fills the production logs.',pm({equipment:'editor',chemicals:'editor',lineclear:'editor',rework:'editor',envtests:'editor',cultivation:'editor',haccp:'editor',risks:'editor',changes:'editor',batch:'admin',testing:'editor',stickers:'editor',products:'editor',formbank:'read',rulebook:'read',standards:'editor',sops:'editor',qms:'editor',complaints:'editor',intaudits:'read',training:'editor',suppliers:'editor',receiving:'editor',holds:'editor',shipping:'read',recall:'editor'},LOGS_PROD,'editor')],
+  ['Extraction Manager','Full on batches; fills the scale, equipment and temp / humidity logs.',{equipment:'editor',chemicals:'read',lineclear:'editor',rework:'editor',haccp:'editor',risks:'read',changes:'editor',orgchart:'read',objectives:'read',training:'editor',qms:'editor',complaints:'editor',sops:'editor',suppliers:'read',receiving:'editor',holds:'editor',batch:'admin',testing:'editor',products:'read',formbank:'read',logs_scale:'editor',logs_equipment:'editor',logs_temp:'editor'}],
+  ['Production Manager','Full on batches; edits products; fills the production logs.',pm({equipment:'editor',chemicals:'editor',lineclear:'editor',rework:'editor',envtests:'editor',cultivation:'editor',haccp:'editor',risks:'editor',changes:'editor',orgchart:'read',objectives:'editor',batch:'admin',testing:'editor',stickers:'editor',products:'editor',formbank:'read',rulebook:'read',standards:'editor',sops:'editor',qms:'editor',complaints:'editor',intaudits:'read',training:'editor',suppliers:'editor',receiving:'editor',holds:'editor',shipping:'read',recall:'editor'},LOGS_PROD,'editor')],
   ['Sales Manager','Sees products; records shipments.',{training:'read',qms:'read',complaints:'read',sops:'read',products:'read',shipping:'editor',holds:'read',recall:'read'}],
-  ['Production Lead','Creates and continues batches; fills the production logs.',pm({equipment:'read',chemicals:'read',lineclear:'editor',rework:'editor',haccp:'editor',changes:'read',batch:'editor',testing:'read',stickers:'read',products:'read',sops:'read',qms:'editor',complaints:'read',training:'read',receiving:'read',holds:'editor'},['logs_sanitation','logs_scale','logs_equipment','logs_temp'],'editor')]];
+  ['Production Lead','Creates and continues batches; fills the production logs.',pm({equipment:'read',chemicals:'read',lineclear:'editor',rework:'editor',haccp:'editor',changes:'read',orgchart:'read',objectives:'read',batch:'editor',testing:'read',stickers:'read',products:'read',sops:'read',qms:'editor',complaints:'read',training:'read',receiving:'read',holds:'editor'},['logs_sanitation','logs_scale','logs_equipment','logs_temp'],'editor')]];
 function accessSummary(perms){
   const p=perms||{},out=[];
   ACCESS_MODULES.forEach(function(m){if(has(p,m.id)&&lvRank(p[m.id]))out.push(m.label.replace(/ \(.*\)$/,'')+': '+LV_NAME[p[m.id]]);});
@@ -6104,6 +6107,298 @@ function RiskDashCard(props){
     el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go(d.rk?'risks':'changes');}},'Open'));
 }
 
+/* ---------- Org chart (CSQ 5.1.1) and Quality policy + objectives / KPIs (CSQ 1.2, 5.1.2, 5.1.4) ---------- */
+const ORG_ROLES=['Senior management','Quality / CSQ lead','Quality backup','HACCP team leader','Food safety / product defense','Recall coordinator','Regulatory contact (state / METRC)','Training coordinator','Internal auditor','Sanitation lead','Maintenance / calibration'];
+const ORG_KEY=['Senior management','Quality / CSQ lead','Quality backup'];
+function qsErr(e){const m=String((e&&e.message)||e);return /hx_org_positions|hx_objectives|hx_objective_results|hx_qms_settings/.test(m)&&/missing|does not exist|schema cache/i.test(m)?'Org chart and quality objectives are not set up yet - run hendrix_step30.sql in the Hendrix Supabase project.':m;}
+function orgTree(list){
+  const by={},kids={};list.forEach(function(p){by[p.id]=p;});
+  list.forEach(function(p){const k=p.reports_to&&by[p.reports_to]?p.reports_to:'';(kids[k]=kids[k]||[]).push(p);});
+  Object.keys(kids).forEach(function(k){kids[k].sort(function(a,b){return (a.sort||0)-(b.sort||0)||String(a.title).localeCompare(String(b.title));});});
+  return kids;
+}
+function orgBelow(list,id){const kids=orgTree(list),out={};(function walk(i){(kids[i]||[]).forEach(function(c){out[c.id]=1;walk(c.id);});})(id);return out;}
+function orgCut(s,n){s=String(s||'');return s.length>n?s.slice(0,n-1)+'\u2026':s;}
+// tree drawn as SVG: leaves side by side, parents centred over their people
+function orgSvg(list,forPrint){
+  const kids=orgTree(list),W=200,H=82,GX=16,GY=46,pos={};let col=0,maxD=0;
+  (function place(arr,d){arr.forEach(function(p){maxD=Math.max(maxD,d);const c=kids[p.id]||[];if(!c.length){pos[p.id]={x:col,y:d};col++;}else{place(c,d+1);pos[p.id]={x:(pos[c[0].id].x+pos[c[c.length-1].id].x)/2,y:d};}});})(kids['']||[],0);
+  if(!col)return '';
+  const X=function(id){return 10+pos[id].x*(W+GX);},Y=function(id){return 10+pos[id].y*(H+GY);};
+  const width=20+col*(W+GX)-GX,height=20+(maxD+1)*(H+GY)-GY,e=esc3;
+  const ink=forPrint?'#111':'#eee',sub=forPrint?'#444':'#9a9a9a',bg=forPrint?'#fff':'#141414',gold=forPrint?'#8a6d12':'#d4af37',line=forPrint?'#888':'#555';
+  let s='<svg xmlns="http://www.w3.org/2000/svg" width="'+width+'" height="'+height+'" viewBox="0 0 '+width+' '+height+'" font-family="Inter,Arial,sans-serif">';
+  list.forEach(function(p){if(!pos[p.id])return;(kids[p.id]||[]).forEach(function(c){const x1=X(p.id)+W/2,y1=Y(p.id)+H,x2=X(c.id)+W/2,y2=Y(c.id),my=y1+GY/2;
+    s+='<path d="M'+x1+' '+y1+' V'+my+' H'+x2+' V'+y2+'" fill="none" stroke="'+line+'" stroke-width="1.5"/>';});});
+  list.forEach(function(p){if(!pos[p.id])return;const x=X(p.id),y=Y(p.id),q=(p.quality_roles||[]).length>0;
+    s+='<g><rect x="'+x+'" y="'+y+'" width="'+W+'" height="'+H+'" rx="8" fill="'+bg+'" stroke="'+(q?gold:line)+'" stroke-width="'+(q?2:1)+'"/>'+
+      '<text x="'+(x+10)+'" y="'+(y+20)+'" font-size="12.5" font-weight="700" fill="'+gold+'">'+e(orgCut(p.title,28))+'</text>'+
+      '<text x="'+(x+10)+'" y="'+(y+38)+'" font-size="12" fill="'+(p.person_name?ink:'#e5645a')+'">'+e(orgCut(p.person_name||'Vacant',30))+'</text>'+
+      '<text x="'+(x+10)+'" y="'+(y+54)+'" font-size="10.5" fill="'+sub+'">'+e(orgCut(p.department||'',32))+'</text>'+
+      (q?'<text x="'+(x+10)+'" y="'+(y+71)+'" font-size="10" fill="'+gold+'">\u2605 '+e(orgCut(p.quality_roles.join(', '),34))+'</text>':'')+'</g>';});
+  return s+'</svg>';
+}
+function orgHtml(list,lic){const e=esc3,kids=orgTree(list),order=[];(function walk(i,d){(kids[i]||[]).forEach(function(p){order.push([p,d]);walk(p.id,d+1);});})('',0);
+  return '<div class="hxrec"><h2>Organization chart</h2><div class="m">'+e(lic.name)+(lic.license_number?' ('+e(lic.license_number)+')':'')+' \u00b7 printed '+e(new Date().toLocaleString())+' \u00b7 CSQ 5.1.1 \u00b7 \u2605 = safety / quality / CSQ role</div>'+
+    '<div style="overflow:visible">'+orgSvg(list,true)+'</div><table><tr><th>Position</th><th>Person</th><th>Reports to</th><th>Functions and responsibilities</th><th>Safety / quality / CSQ roles</th><th>Backup</th></tr>'+
+    order.map(function(o){const p=o[0],b=list.find(function(x){return x.id===p.reports_to;});return '<tr><td style="padding-left:'+(6+o[1]*14)+'px">'+e(p.title)+'</td><td>'+e(p.person_name||'Vacant')+'</td><td>'+e(b?b.title:'-')+'</td><td>'+e(p.responsibilities)+'</td><td>'+e((p.quality_roles||[]).join(', '))+'</td><td>'+e(p.backup_name)+'</td></tr>';}).join('')+'</table></div>';}
+function OrgForm(props){
+  const lic=props.license,st=props.state,x=props.pos||{},list=props.list||[],below=x.id?orgBelow(list,x.id):{};
+  const[f,setF]=useState({title:x.title||'',person_name:x.person_name||'',reports_to:x.reports_to||(props.under||''),department:x.department||'',responsibilities:x.responsibilities||'',quality_roles:(x.quality_roles||[]).slice(),backup_name:x.backup_name||'',sort:x.sort||0});
+  const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  function set(k,v){setF(function(p){return {...p,[k]:v};});}
+  async function save(){setErr('');if(!f.title.trim()){setErr('Enter the position.');return;}
+    const rec={title:f.title.trim(),person_name:f.person_name.trim(),reports_to:f.reports_to||null,department:f.department.trim(),responsibilities:f.responsibilities.trim(),quality_roles:f.quality_roles,backup_name:f.backup_name.trim(),sort:+f.sort||0};
+    setBusy(true);try{if(x.id)await db.update('hx_org_positions',x.id,rec);else await db.insert('hx_org_positions',{...rec,id:newId('op'),state_id:st.id,license_id:lic.id});props.onDone('Saved '+rec.title+'.');}catch(e){setErr(qsErr(e));}setBusy(false);}
+  const qv={};f.quality_roles.forEach(function(r){qv[r]=true;});
+  return el(Modal,{title:(x.id?'Position':'New position')+' \u00b7 '+lic.name,wide:true,onClose:props.onClose},
+    el('datalist',{id:'orgppl'},(props.people||[]).map(function(p){return el('option',{key:p.id,value:p.name});})),
+    el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}},el(Field,{label:'Position *'},el('input',{value:f.title,placeholder:'e.g. Quality Manager',onChange:function(e){set('title',e.target.value);}})),
+      el(Field,{label:'Person'},el('input',{value:f.person_name,list:'orgppl',placeholder:'Leave blank if vacant',onChange:function(e){set('person_name',e.target.value);}})),
+      el(Field,{label:'Department'},el('input',{value:f.department,onChange:function(e){set('department',e.target.value);}}))),
+    el('div',{style:{display:'grid',gridTemplateColumns:'2fr 1fr 90px',gap:10}},el(Field,{label:'Reports to'},el('select',{value:f.reports_to,onChange:function(e){set('reports_to',e.target.value);}},el('option',{value:''},'(top of the chart)'),
+        list.filter(function(p){return p.id!==x.id&&!below[p.id];}).map(function(p){return el('option',{key:p.id,value:p.id},p.title+(p.person_name?' - '+p.person_name:''));}))),
+      el(Field,{label:'Backup'},el('input',{value:f.backup_name,list:'orgppl',onChange:function(e){set('backup_name',e.target.value);}})),el(Field,{label:'Order'},el('input',{type:'number',value:f.sort,onChange:function(e){set('sort',e.target.value);}}))),
+    el(Field,{label:'Functions and responsibilities'},el('textarea',{rows:3,value:f.responsibilities,placeholder:'What this position is responsible for, including safety, quality and CSQ duties',onChange:function(e){set('responsibilities',e.target.value);}})),
+    el(Field,{label:'Safety, quality and CSQ roles',plain:true},el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'0 10px'}},ORG_ROLES.map(function(r){const on=!!qv[r];
+      return el('label',{key:r,className:'ck',style:{display:'flex',marginBottom:4}},el('input',{type:'checkbox',checked:on,onChange:function(e){set('quality_roles',e.target.checked?f.quality_roles.concat([r]):f.quality_roles.filter(function(q){return q!==r;}));}}),el('span',{style:{color:on?'':'var(--muted)'}},r));}))),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:save},busy?'Saving...':'Save')));
+}
+
+/* objectives: what can be measured straight from Hendrix records */
+const OBJ_CATS=[['food_safety','Food safety'],['quality','Quality'],['compliance','Compliance'],['customer','Customers'],['people','People and training'],['efficiency','Efficiency']];
+const OBJ_METRICS=[['manual','Entered by hand','','up',null],['capa_on_time','CAPAs closed on time','%','up','qms'],['deviations','Deviations recorded','deviations','down','qms'],['complaints','Complaints received','complaints','down','complaints'],
+  ['line_clear','Batches with a line clearance','%','up','lineclear'],['ccp_ok','CCP checks within limits','%','up','haccp'],['tests_pass','Batch tests passed','%','up','testing'],['env_pass','Facility tests passed','%','up','envtests'],['risk_reviews','Risk reviews on time (today)','%','up','risks']];
+function objMetric(k){return OBJ_METRICS.find(function(m){return m[0]===k;})||OBJ_METRICS[0];}
+function objPeriodRange(p){const y=+p.slice(0,4);let m0,m1;if(/Q/.test(p)){const q=+p.slice(6);m0=(q-1)*3+1;m1=m0+3;}else{m0=+p.slice(5,7);m1=m0+1;}
+  const f=function(yy,mm){if(mm>12){yy++;mm-=12;}return yy+'-'+pad2(mm)+'-01';};return [f(y,m0),f(y,m1)];}
+function objPeriods(freq,n){const d=new Date(),out=[];let y=d.getFullYear(),m=d.getMonth()+1;
+  if(freq==='quarterly'){let q=Math.ceil(m/3);for(let i=0;i<n;i++){out.push(y+'-Q'+q);q--;if(!q){q=4;y--;}}}else{for(let i=0;i<n;i++){out.push(y+'-'+pad2(m));m--;if(!m){m=12;y--;}}}return out;}
+function objPeriodLabel(p){if(/Q/.test(p))return p.replace('-',' ');const M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return M[+p.slice(5,7)-1]+' '+p.slice(0,4);}
+function objMet(o,v){return v==null||v===''||isNaN(+v)?null:(o.direction==='down'?+v<=+o.target:+v>=+o.target);}
+function objFmt(v,u){if(v==null||v==='')return '-';const n=+v;return (Math.round(n*10)/10)+(u==='%'?'%':u?' '+u:'');}
+// value of an automatic KPI for one period: {value, detail}
+async function objCompute(metric,lic,period){
+  const lid=lic.id,enc=encodeURIComponent,L='license_id=eq.'+enc(lid),r=objPeriodRange(period),a=r[0],b=r[1];
+  const inP=function(d){d=String(d||'').slice(0,10);return d>=a&&d<b;};const mine=function(x){return x.license_id===lid;};
+  const pct=function(n,d,what){return d?{value:Math.round(n/d*1000)/10,detail:n+' of '+d+' '+what}:{value:null,detail:'No '+what.replace(/^[a-z ]*? /,'')+' in this period'};};
+  if(metric==='capa_on_time'){const c=((await db.get('hx_capas',L+'&status=eq.closed&closed_at=gte.'+a+'&select=id,closed_at,due_date,license_id'))||[]).filter(function(x){return mine(x)&&inP(x.closed_at);});
+    return pct(c.filter(function(x){return !x.due_date||String(x.closed_at).slice(0,10)<=x.due_date;}).length,c.length,'CAPAs closed on time');}
+  if(metric==='deviations'){const c=((await db.get('hx_deviations',L+'&created_at=gte.'+a+'&select=id,created_at,status,license_id'))||[]).filter(function(x){return mine(x)&&inP(x.created_at)&&x.status!=='cancelled';});return {value:c.length,detail:c.length+' deviation'+(c.length===1?'':'s')+' recorded'};}
+  if(metric==='complaints'){const c=((await db.get('hx_complaints',L+'&received_on=gte.'+a+'&select=id,received_on,status,license_id'))||[]).filter(function(x){return mine(x)&&inP(x.received_on)&&x.status!=='cancelled';});return {value:c.length,detail:c.length+' complaint'+(c.length===1?'':'s')+' received'};}
+  if(metric==='line_clear'){const B=((await db.get('hx_batches',L+'&voided=eq.false&created_at=gte.'+a+'&select=id,created_at,license_id'))||[]).filter(function(x){return mine(x)&&inP(x.created_at);});
+    const C=B.length?((await db.get('hx_line_clearances',L+'&voided=eq.false&result=eq.cleared&select=batch_id,license_id'))||[]).filter(mine):[];
+    return pct(B.filter(function(x){return C.some(function(c){return c.batch_id===x.id;});}).length,B.length,'batches line cleared');}
+  if(metric==='ccp_ok'){const c=((await db.get('hx_haccp_monitoring',L+'&voided=eq.false&checked_at=gte.'+a+'&select=id,checked_at,within_limits,license_id'))||[]).filter(function(x){return mine(x)&&inP(x.checked_at);});
+    return pct(c.filter(function(x){return x.within_limits;}).length,c.length,'CCP checks within limits');}
+  if(metric==='tests_pass'){const c=((await db.get('hx_tests',L+'&voided=eq.false&result_at=gte.'+a+'&select=id,result_at,status,license_id'))||[]).filter(function(x){return mine(x)&&inP(x.result_at)&&(x.status==='Passed'||x.status==='Failed');});
+    return pct(c.filter(function(x){return x.status==='Passed';}).length,c.length,'batch tests passed');}
+  if(metric==='env_pass'){const c=((await db.get('hx_env_tests',L+'&voided=eq.false&sampled_on=gte.'+a+'&select=id,sampled_on,result,license_id'))||[]).filter(function(x){return mine(x)&&inP(x.sampled_on);});
+    return pct(c.filter(function(x){return x.result==='pass';}).length,c.length,'facility tests passed');}
+  if(metric==='risk_reviews'){const c=((await db.get('hx_risks',L+'&status=neq.closed&select=id,status,next_review,license_id'))||[]).filter(function(x){return mine(x)&&x.status!=='closed';});
+    return pct(c.filter(function(x){return !rkReviewDue(x);}).length,c.length,'risks reviewed on time');}
+  return {value:null,detail:''};
+}
+const OBJ_STARTER=[['CAPAs closed on time','quality','capa_on_time',90,'monthly'],['Deviations per month','quality','deviations',4,'monthly'],['Complaints per quarter','customer','complaints',3,'quarterly'],
+  ['Batches line cleared before production','food_safety','line_clear',100,'monthly'],['CCP checks within critical limits','food_safety','ccp_ok',98,'monthly'],['Batch tests passed first time','quality','tests_pass',95,'monthly'],
+  ['Facility tests passed','food_safety','env_pass',100,'quarterly'],['Risk reviews on time','compliance','risk_reviews',100,'quarterly']];
+function ObjectiveForm(props){
+  const lic=props.license,st=props.state,x=props.obj||{},me=(props.profile&&props.profile.name)||'';
+  const[f,setF]=useState({name:x.name||'',category:x.category||'quality',description:x.description||'',metric:x.metric||'manual',unit:x.unit||'',direction:x.direction||'up',target:x.target!=null?String(x.target):'',frequency:x.frequency||'monthly',
+    owner:x.owner||me,start_on:x.start_on||todayStr(),due_on:x.due_on||'',action_plan:x.action_plan||''});
+  const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  function set(k,v){setF(function(p){const n={...p,[k]:v};if(k==='metric'){const m=objMetric(v);if(v!=='manual'){n.unit=m[2];n.direction=m[3];if(!p.name.trim())n.name=m[1];}}return n;});}
+  async function save(){setErr('');if(!f.name.trim()||!f.owner.trim()||f.target===''||isNaN(+f.target)){setErr('Enter the objective, a number for the target and the owner.');return;}
+    const rec={name:f.name.trim(),category:f.category,description:f.description.trim(),metric:f.metric,unit:f.unit.trim(),direction:f.direction,target:+f.target,frequency:f.frequency,owner:f.owner.trim(),start_on:f.start_on,due_on:f.due_on||null,action_plan:f.action_plan.trim()};
+    setBusy(true);try{let r;if(x.id)r=await db.update('hx_objectives',x.id,rec);else r=await db.insert('hx_objectives',{...rec,id:newId('ob'),state_id:st.id,license_id:lic.id});props.onDone('Saved objective '+((r&&r[0]&&r[0].number)||x.number||'')+'.');}catch(e){setErr(qsErr(e));}setBusy(false);}
+  const avail=OBJ_METRICS.filter(function(m){return !m[4]||can(m[4],1)||m[0]===f.metric;});
+  return el(Modal,{title:(x.id?'Objective '+x.number:'New quality objective')+' \u00b7 '+lic.name,wide:true,onClose:props.onClose},
+    el('div',{style:{display:'grid',gridTemplateColumns:'2fr 1fr',gap:10}},el(Field,{label:'Objective *'},el('input',{value:f.name,placeholder:'e.g. CAPAs closed on time',onChange:function(e){set('name',e.target.value);}})),
+      el(Field,{label:'Category'},el('select',{value:f.category,onChange:function(e){set('category',e.target.value);}},OBJ_CATS.map(function(c){return el('option',{key:c[0],value:c[0]},c[1]);})))),
+    el('div',{style:{display:'grid',gridTemplateColumns:'2fr 1fr 1fr 1fr',gap:10}},el(Field,{label:'Measured by'},el('select',{value:f.metric,disabled:!!x.id&&x.metric!=='manual'&&false,onChange:function(e){set('metric',e.target.value);}},avail.map(function(m){return el('option',{key:m[0],value:m[0]},m[1]+(m[0]==='manual'?'':' (from Hendrix)'));}))),
+      el(Field,{label:'Target *'},el('input',{type:'number',step:'any',value:f.target,onChange:function(e){set('target',e.target.value);}})),
+      el(Field,{label:'Unit'},el('input',{value:f.unit,placeholder:'%, count, days',onChange:function(e){set('unit',e.target.value);}})),
+      el(Field,{label:'Good is'},el('select',{value:f.direction,onChange:function(e){set('direction',e.target.value);}},el('option',{value:'up'},'At or above target'),el('option',{value:'down'},'At or below target')))),
+    el('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:10}},el(Field,{label:'How often'},el('select',{value:f.frequency,onChange:function(e){set('frequency',e.target.value);}},el('option',{value:'monthly'},'Monthly'),el('option',{value:'quarterly'},'Quarterly'))),
+      el(Field,{label:'Owner *'},el('input',{value:f.owner,onChange:function(e){set('owner',e.target.value);}})),el(Field,{label:'From'},el('input',{type:'date',value:f.start_on,onChange:function(e){set('start_on',e.target.value);}})),
+      el(Field,{label:'Reach by'},el('input',{type:'date',value:f.due_on,onChange:function(e){set('due_on',e.target.value);}}))),
+    el(Field,{label:'Why it matters (link to the quality policy)'},el('textarea',{rows:2,value:f.description,onChange:function(e){set('description',e.target.value);}})),
+    el(Field,{label:'Plan to reach it'},el('textarea',{rows:2,value:f.action_plan,onChange:function(e){set('action_plan',e.target.value);}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:save},busy?'Saving...':'Save')));
+}
+function ObjResultForm(props){
+  const o=props.obj,lic=props.license,res=props.results||[],periods=objPeriods(o.frequency,o.frequency==='quarterly'?6:12);
+  const first=function(p){return res.find(function(r){return r.objective_id===o.id&&r.period===p;})||null;};
+  const p0=props.period||periods[1]||periods[0];
+  const[f,setF]=useState(function(){const r=first(p0);return {period:p0,value:r?String(r.value):'',comment:r?r.comment:'',action:r?r.action:''};});
+  const[calc,setCalc]=useState(null);const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  const auto=o.metric!=='manual';
+  function set(k,v){setF(function(p){return {...p,[k]:v};});}
+  function pick(p){const r=first(p);setCalc(null);setF({period:p,value:r?String(r.value):'',comment:r?r.comment:'',action:r?r.action:''});}
+  function fetchIt(){setErr('');setCalc({busy:true});objCompute(o.metric,lic,f.period).then(function(c){setCalc(c);if(c.value!=null)setF(function(p){return {...p,value:String(c.value),comment:p.comment||c.detail};});}).catch(function(e){setCalc(null);setErr(String(e.message||e));});}
+  useEffect(function(){if(auto&&!first(f.period))fetchIt();},[f.period]);
+  const met=objMet(o,f.value),ex=first(f.period);
+  async function save(){setErr('');if(f.value===''||isNaN(+f.value)){setErr('Enter the value.');return;}if(met===false&&!f.action.trim()){setErr('The target was missed: record the action that will be taken.');return;}
+    const rec={value:+f.value,comment:f.comment.trim(),action:f.action.trim(),auto:!!(auto&&calc&&calc.value!=null&&+f.value===calc.value)};
+    setBusy(true);try{if(ex)await db.update('hx_objective_results',ex.id,rec);else await db.insert('hx_objective_results',{...rec,id:newId('or'),state_id:o.state_id,license_id:o.license_id,objective_id:o.id,period:f.period});
+      props.onDone(objPeriodLabel(f.period)+': '+objFmt(f.value,o.unit)+(met?' - target met.':' - target missed.'));}catch(e){setErr(qsErr(e));}setBusy(false);}
+  return el(Modal,{title:'Result \u00b7 '+o.number+' '+o.name,onClose:props.onClose},
+    el('div',{className:'muted',style:{fontSize:13,marginBottom:8}},'Target '+(o.direction==='down'?'\u2264 ':'\u2265 ')+objFmt(o.target,o.unit)+' \u00b7 measured '+o.frequency+' \u00b7 owner '+o.owner),
+    el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}},el(Field,{label:'Period'},el('select',{value:f.period,onChange:function(e){pick(e.target.value);}},periods.map(function(p){return el('option',{key:p,value:p},objPeriodLabel(p)+(first(p)?' (recorded)':''));}))),
+      el(Field,{label:'Value'+(o.unit?' ('+o.unit+')':'')},el('input',{type:'number',step:'any',value:f.value,onChange:function(e){set('value',e.target.value);}}))),
+    auto&&el('div',{className:'row',style:{gap:8,marginBottom:8}},el('button',{type:'button',className:'btn ghost sm',onClick:fetchIt},'Get from Hendrix'),el('span',{className:'muted',style:{fontSize:12}},calc?(calc.busy?'Counting...':calc.detail):'')),
+    met!==null&&el('div',{style:{marginBottom:8}},el('span',{className:'badge '+(met?'ok':'bad')},met?'Target met':'Target missed')),
+    el(Field,{label:'Comment'},el('input',{value:f.comment,onChange:function(e){set('comment',e.target.value);}})),
+    met===false&&el(Field,{label:'Action to get back on target *'},el('textarea',{rows:2,value:f.action,onChange:function(e){set('action',e.target.value);}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:save},busy?'Saving...':ex?'Correct result':'Record result')));
+}
+// small bar chart: one bar per period, a dashed line at the target
+function objSpark(o,res,forPrint){
+  const ps=objPeriods(o.frequency,6).reverse(),vals=ps.map(function(p){const r=res.find(function(x){return x.objective_id===o.id&&x.period===p;});return r?+r.value:null;});
+  const mx=Math.max.apply(null,vals.filter(function(v){return v!=null;}).concat([+o.target||0,1]))*1.15,W=180,H=56,bw=W/ps.length;
+  const ty=H-(+o.target/mx)*H;let s='<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+(H+14)+'" viewBox="0 0 '+W+' '+(H+14)+'" font-family="Inter,Arial,sans-serif">';
+  vals.forEach(function(v,i){const x=i*bw+4,w=bw-8;if(v==null){s+='<rect x="'+x+'" y="'+(H-2)+'" width="'+w+'" height="2" fill="'+(forPrint?'#ccc':'#333')+'"/>';return;}
+    const h=Math.max(2,(v/mx)*H),ok=objMet(o,v);s+='<rect x="'+x+'" y="'+(H-h)+'" width="'+w+'" height="'+h+'" rx="2" fill="'+(ok?(forPrint?'#3c9a63':'#5fbf8a'):(forPrint?'#c0463d':'#e5645a'))+'"><title>'+objPeriodLabel(ps[i])+': '+objFmt(v,o.unit)+'</title></rect>';});
+  s+='<line x1="0" x2="'+W+'" y1="'+ty+'" y2="'+ty+'" stroke="'+(forPrint?'#8a6d12':'#d4af37')+'" stroke-dasharray="4 3" stroke-width="1.5"/>';
+  ps.forEach(function(p,i){s+='<text x="'+(i*bw+bw/2)+'" y="'+(H+11)+'" font-size="9" text-anchor="middle" fill="'+(forPrint?'#555':'#888')+'">'+(/Q/.test(p)?p.slice(5):objPeriodLabel(p).slice(0,3))+'</text>';});
+  return s+'</svg>';
+}
+function objBoardHtml(objs,res,lic,policy){const e=esc3;
+  return '<div class="hxrec"><h2>Quality objectives and KPIs</h2><div class="m">'+e(lic.name)+' \u00b7 printed '+e(new Date().toLocaleString())+' \u00b7 CSQ 1.2, 5.1.2, 5.1.4</div>'+(policy?'<p><b>Quality policy:</b> '+e(policy)+'</p>':'')+
+    '<table><tr><th>Objective</th><th>Target</th><th>Owner</th><th>Last result</th><th>Last 6 periods</th><th>Plan / action</th></tr>'+objs.map(function(o){const last=res.filter(function(r){return r.objective_id===o.id;}).sort(function(a,b){return a.period<b.period?1:-1;})[0];
+      return '<tr><td><b>'+e(o.number+' '+o.name)+'</b><br>'+e(o.description)+'</td><td>'+(o.direction==='down'?'\u2264 ':'\u2265 ')+e(objFmt(o.target,o.unit))+' '+e(o.frequency)+'</td><td>'+e(o.owner)+'</td><td class="'+(last?(last.met?'ok':'bad'):'')+'">'+(last?e(objPeriodLabel(last.period)+': '+objFmt(last.value,o.unit)+(last.met?' met':' MISSED')):'Not measured yet')+'</td><td>'+objSpark(o,res,true)+'</td><td>'+e((last&&!last.met&&last.action)||o.action_plan)+'</td></tr>';}).join('')+'</table></div>';}
+function objDue(o,res){const p=objPeriods(o.frequency,2)[1];return o.status==='active'&&o.start_on<=objPeriodRange(p)[1]&&!res.some(function(r){return r.objective_id===o.id&&r.period===p;});}
+
+function QualitySysPage(props){
+  const st=props.state,lic=props.license,lid=lic?lic.id:'',canO=can('orgchart',1),canK=can('objectives',1);
+  const[tab,setTab]=useState(props.tab==='kpi'&&canK?'kpi':canO?'org':'kpi');
+  useEffect(function(){if(props.tab==='kpi'&&canK)setTab('kpi');else if(props.tab==='org'&&canO)setTab('org');},[props.tab]);
+  const[pos,setPos]=useState(null);const[objs,setObjs]=useState(null);const[res,setRes]=useState([]);const[set0,setSet0]=useState(null);const[sops,setSops]=useState([]);const[people,setPeople]=useState([]);
+  const[msg,setMsg]=useState('');const[modal,setModal]=useState(null);const[showAll,setShowAll]=useState(false);
+  const load=useCallback(function(){if(!lid)return;const enc=encodeURIComponent,L='license_id=eq.'+enc(lid);
+    if(canO)db.get('hx_org_positions',L+'&select=*&order=sort').then(function(r){setPos((r||[]).filter(function(x){return x.license_id===lid;}));}).catch(function(e){setMsg(qsErr(e));setPos([]);});
+    if(canK){db.get('hx_objectives',L+'&select=*&order=number').then(function(r){setObjs((r||[]).filter(function(x){return x.license_id===lid;}));}).catch(function(e){setMsg(qsErr(e));setObjs([]);});
+      db.get('hx_objective_results',L+'&select=*&order=period.desc&limit=5000').then(function(r){setRes((r||[]).filter(function(x){return x.license_id===lid;}));}).catch(function(){setRes([]);});}
+    db.get('hx_qms_settings',L+'&select=*').then(function(r){setSet0(((r||[]).filter(function(x){return x.license_id===lid;}))[0]||{});}).catch(function(){setSet0({});});
+    if(can('sops',1))db.get('hx_sops','select=id,sop_number,title,version,status,license_id,license_ids&order=sop_number').then(function(r){setSops((r||[]).filter(function(s){return s.license_id===lid||(s.license_ids||[]).indexOf(lid)>=0;}));}).catch(function(){setSops([]);});
+    if(can('training',1))sb('rpc/hx_training_roster',{method:'POST',body:{p_lic:lid}}).then(function(r){setPeople(r||[]);}).catch(function(){setPeople([]);});
+  },[lid]);
+  useEffect(load,[load]);
+  if(!st||!lic)return el('div',null,el('h1',null,el('span',{className:'g'},'Org Chart and Objectives')),el('div',{className:'empty'},'Pick a state and a license at the top first.'));
+  function go(t){setTab(t);if(props.go)props.go(t==='kpi'?'objectives':'orgchart');}
+  function done(m){setModal(null);setMsg(m);load();}
+  const stat=function(l,v,tone,sub){return el('div',{key:l,className:'card gold',style:{marginBottom:0}},el('div',{className:'k'},l),el('div',{className:'v',style:{fontSize:26,color:tone}},v),sub&&el('div',{className:'muted',style:{fontSize:11,marginTop:2}},sub));};
+  const P=pos||[],holders=function(r){return P.filter(function(p){return (p.quality_roles||[]).indexOf(r)>=0;});};
+  const O=objs||[],act=O.filter(function(o){return o.status==='active';}),shownO=showAll?O:act;
+  const lastOf=function(o){return res.filter(function(r){return r.objective_id===o.id;}).sort(function(a,b){return a.period<b.period?1:-1;})[0]||null;};
+  const pol=set0&&set0.policy_sop_id?sops.find(function(s){return s.id===set0.policy_sop_id;})||{id:set0.policy_sop_id,title:'(SOP not visible)'}:null;
+  const polText=pol?((pol.sop_number?pol.sop_number+' ':'')+pol.title+(pol.version?' v'+pol.version:'')):'';
+  const canOE=can('orgchart',2),canOF=can('orgchart',3),canKE=can('objectives',2),canKF=can('objectives',3);
+  const isOk=/^(Saved|Removed|Added|Policy|Marked|[A-Z][a-z]{2} \d{4}|\d{4} Q\d)/.test(msg);
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,el('span',{className:'g'},tab==='kpi'?'Quality Objectives':'Org Chart')),el('div',{className:'sub'},lic.name+(tab==='kpi'?' \u00b7 quality policy, measurable objectives and KPIs reviewed every month or quarter (CSQ 1.2, 5.1.2, 5.1.4)':' \u00b7 reporting lines, responsibilities and everyone involved in safety, quality and CSQ (CSQ 5.1.1)'))),
+      el('div',{className:'row',style:{gap:6}},tab==='org'&&el('button',{className:'btn ghost',disabled:!P.length,onClick:function(){printRecords('Org chart',[orgHtml(P,lic)]);}},'Print org chart'),tab==='org'&&canOE&&el('button',{className:'btn',onClick:function(){setModal({t:'pos'});}},'+ Position'),
+        tab==='kpi'&&el('button',{className:'btn ghost',disabled:!act.length,onClick:function(){printRecords('Quality objectives',[objBoardHtml(act,res,lic,polText)]);}},'Print KPI board'),
+        tab==='kpi'&&canKE&&!O.length&&el('button',{className:'btn ghost',onClick:function(){setModal({t:'objstart'});}},'Suggested objectives'),tab==='kpi'&&canKE&&el('button',{className:'btn',onClick:function(){setModal({t:'obj'});}},'+ Objective'))),
+    msg&&el('div',{className:isOk?'msg':'msg err'},msg),
+    el('div',{className:'tabs'},[canO&&['org','Org chart'],canK&&['kpi','Quality objectives']].filter(Boolean).map(function(t){return el('button',{key:t[0],className:tab===t[0]?'on':'',onClick:function(){go(t[0]);}},t[1]);})),
+    tab==='org'?(pos===null?el('div',{className:'muted'},'Loading...'):el('div',null,
+      el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',marginBottom:14}},
+        stat('Positions',P.length,'var(--text)',P.filter(function(p){return !p.person_name;}).length+' vacant'),
+        stat('With responsibilities',P.filter(function(p){return p.responsibilities;}).length+' / '+P.length,P.some(function(p){return !p.responsibilities;})?'var(--gold-hi)':'var(--green)','functions written down'),
+        stat('Key CSQ roles',ORG_KEY.filter(function(r){return holders(r).some(function(p){return p.person_name;});}).length+' / '+ORG_KEY.length,ORG_KEY.every(function(r){return holders(r).some(function(p){return p.person_name;});})?'var(--green)':'var(--red)','senior management, quality lead, backup')),
+      !P.length?el('div',{className:'empty'},'No org chart yet.'+(canOE?' Start with the top position (owner / general manager), then add who reports to whom.':'')):
+      el('div',null,
+        el('div',{className:'card',style:{overflowX:'auto',padding:12}},el('div',{dangerouslySetInnerHTML:{__html:orgSvg(P,false)}})),
+        el('div',{className:'card',style:{padding:'10px 14px'}},el('div',{className:'k',style:{marginBottom:6}},'Safety, quality and CSQ roles'),
+          el('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))',gap:'4px 16px'}},ORG_ROLES.map(function(r){const h=holders(r),key=ORG_KEY.indexOf(r)>=0;
+            return el('div',{key:r,className:'row',style:{gap:6,fontSize:13,flexWrap:'nowrap'}},el('span',{style:{minWidth:190,color:key?'var(--gold-hi)':''}},r),
+              h.length?el('span',null,h.map(function(p){return (p.person_name||'Vacant')+' ('+p.title+')';}).join(', ')):el('span',{className:key?'badge bad':'muted',style:{fontSize:key?10:12}},key?'Not assigned':'-'));}))),
+        el('div',{className:'card',style:{overflowX:'auto',padding:0}},el('table',null,el('thead',null,el('tr',null,['Position','Person','Reports to','Responsibilities','Roles',''].map(function(h,i){return el('th',{key:i},h);}))),
+          el('tbody',null,(function(){const kids=orgTree(P),order=[];(function walk(i,d){(kids[i]||[]).forEach(function(p){order.push([p,d]);walk(p.id,d+1);});})('',0);return order;})().map(function(o){const p=o[0],b=P.find(function(x){return x.id===p.reports_to;});
+            return el('tr',{key:p.id},el('td',{style:{paddingLeft:12+o[1]*16}},el('b',null,p.title),p.department&&el('div',{className:'muted',style:{fontSize:11}},p.department)),
+              el('td',null,p.person_name||el('span',{className:'badge warn'},'Vacant'),p.backup_name&&el('div',{className:'muted',style:{fontSize:11}},'backup '+p.backup_name)),el('td',{style:{fontSize:13}},b?b.title:'-'),
+              el('td',{style:{fontSize:12,maxWidth:320,whiteSpace:'pre-wrap'}},p.responsibilities||el('span',{className:'muted'},'not written')),el('td',{style:{fontSize:11,maxWidth:200}},(p.quality_roles||[]).join(', ')),
+              el('td',{style:{whiteSpace:'nowrap'}},canOE&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'pos',p:p});}},'Edit'),canOE&&el('button',{className:'btn ghost sm',style:{marginLeft:4},onClick:function(){setModal({t:'pos',under:p.id});}},'+ Under'),
+                canOF&&el('button',{className:'btn danger sm',style:{marginLeft:4},onClick:function(){if(!window.confirm('Remove '+p.title+' from the org chart?'))return;db.remove('hx_org_positions',p.id).then(function(){done('Removed '+p.title+'.');}).catch(function(e){setMsg(qsErr(e));});}},'Remove')));}))))))):
+    (objs===null?el('div',{className:'muted'},'Loading...'):el('div',null,
+      el('div',{className:'card gold',style:{padding:'12px 16px'}},el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'center'}},
+        el('div',null,el('div',{className:'k'},'Quality policy'),pol?el('div',{style:{fontSize:15,marginTop:4}},el('b',null,polText),' ',el('span',{className:'badge '+(pol.status==='published'?'ok':'warn')},pol.status||'?')):el('div',{style:{marginTop:4,color:'var(--red)'}},'No quality policy linked'),
+          el('div',{className:'muted',style:{fontSize:12,marginTop:4}},(set0&&set0.policy_note)||'The policy is a signed SOP: every signature per version is in the SOP and Training records.')),
+        canKF&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'policy'});}},pol?'Change':'Link the policy SOP'))),
+      el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',margin:'14px 0'}},
+        stat('Active objectives',act.length,'var(--text)',O.filter(function(o){return o.status==='achieved';}).length+' achieved'),
+        stat('On target',act.filter(function(o){const l=lastOf(o);return l&&l.met;}).length+' / '+act.length,'var(--green)','last result'),
+        stat('Off target',act.filter(function(o){const l=lastOf(o);return l&&!l.met;}).length,act.some(function(o){const l=lastOf(o);return l&&!l.met;})?'var(--red)':'var(--green)','action recorded'),
+        stat('Results due',act.filter(function(o){return objDue(o,res);}).length,act.some(function(o){return objDue(o,res);})?'var(--gold-hi)':'var(--green)','last month / quarter')),
+      !O.length?el('div',{className:'empty'},'No quality objectives yet.'+(canKE?' Set measurable targets; most can be counted straight from Hendrix records.':'')):
+      el('div',null,el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))',gap:12}},shownO.map(function(o){const l=lastOf(o),due=objDue(o,res);
+          return el('div',{key:o.id,className:'card',style:{marginBottom:0,opacity:o.status==='active'?1:.6,borderColor:l&&!l.met&&o.status==='active'?'#5a2a26':null}},
+            el('div',{className:'row',style:{justifyContent:'space-between',flexWrap:'nowrap',alignItems:'flex-start'}},el('div',null,el('div',{className:'muted',style:{fontSize:11}},o.number+' \u00b7 '+((OBJ_CATS.find(function(c){return c[0]===o.category;})||[0,''])[1])+' \u00b7 '+o.frequency),el('b',null,o.name)),
+              o.status!=='active'?el('span',{className:'badge off',title:o.close_note||''},o.status):l?el('span',{className:'badge '+(l.met?'ok':'bad'),style:{whiteSpace:'nowrap'}},l.met?'On target':'Off target'):el('span',{className:'badge warn',style:{whiteSpace:'nowrap'}},'Not measured')),
+            el('div',{className:'row',style:{gap:14,alignItems:'flex-end',margin:'8px 0 4px',flexWrap:'nowrap'}},
+              el('div',null,el('div',{style:{fontSize:26,fontWeight:700,color:l?(l.met?'var(--green)':'var(--red)'):'var(--muted)'}},l?objFmt(l.value,o.unit):'-'),el('div',{className:'muted',style:{fontSize:11}},(l?objPeriodLabel(l.period)+' \u00b7 ':'')+'target '+(o.direction==='down'?'\u2264 ':'\u2265 ')+objFmt(o.target,o.unit))),
+              el('div',{dangerouslySetInnerHTML:{__html:objSpark(o,res,false)}})),
+            el('div',{className:'muted',style:{fontSize:12}},'Owner '+o.owner+(o.metric!=='manual'?' \u00b7 counted from Hendrix':'')+(o.due_on?' \u00b7 by '+o.due_on:'')),
+            l&&!l.met&&l.action&&el('div',{style:{fontSize:12,marginTop:4}},'Action: '+l.action),
+            o.status==='active'&&el('div',{className:'row',style:{gap:4,marginTop:8}},canKE&&el('button',{className:due?'btn sm':'btn ghost sm',onClick:function(){setModal({t:'res',o:o});}},due?'Record '+objPeriodLabel(objPeriods(o.frequency,2)[1]):'Record result'),
+              canKE&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'obj',o:o});}},'Edit'),canKF&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'objclose',o:o,s:'achieved'});}},'Achieved'),
+              canKF&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'objclose',o:o,s:'dropped'});}},'Drop')));})),
+        O.length>act.length&&el('div',{style:{marginTop:10}},el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();setShowAll(!showAll);}},showAll?'Hide achieved and dropped':'Show achieved and dropped ('+(O.length-act.length)+')'))))),
+    modal&&modal.t==='pos'&&el(OrgForm,{pos:modal.p,under:modal.under,list:P,people:people,state:st,license:lic,onClose:function(){setModal(null);},onDone:done}),
+    modal&&modal.t==='obj'&&el(ObjectiveForm,{obj:modal.o,state:st,license:lic,profile:props.profile,onClose:function(){setModal(null);},onDone:done}),
+    modal&&modal.t==='res'&&el(ObjResultForm,{obj:modal.o,results:res,license:lic,onClose:function(){setModal(null);},onDone:done}),
+    modal&&modal.t==='objstart'&&el(ObjStarter,{state:st,license:lic,profile:props.profile,onClose:function(){setModal(null);},onDone:done}),
+    modal&&modal.t==='policy'&&el(PolicyPick,{sops:sops,cur:set0||{},state:st,license:lic,onClose:function(){setModal(null);},onDone:done}),
+    modal&&modal.t==='objclose'&&el(SimpleReason,{title:(modal.s==='achieved'?'Achieved: ':'Drop: ')+modal.o.number+' '+modal.o.name,label:modal.s==='achieved'?'What was achieved':'Why it is dropped',btn:modal.s==='achieved'?'Mark achieved':'Drop objective',onClose:function(){setModal(null);},
+      onGo:function(t){return db.update('hx_objectives',modal.o.id,{status:modal.s,close_note:t}).then(function(){done('Marked '+modal.o.number+' '+modal.s+'.');}).catch(function(e){throw new Error(qsErr(e));});}}));
+}
+function ObjStarter(props){
+  const lic=props.license,st=props.state,list=OBJ_STARTER.filter(function(x){const m=objMetric(x[2]);return !m[4]||can(m[4],1);});
+  const[sel,setSel]=useState(function(){const s={};list.forEach(function(x,i){s[i]=true;});return s;});const[tg,setTg]=useState(function(){return list.map(function(x){return String(x[3]);});});
+  const[owner,setOwner]=useState((props.profile&&props.profile.name)||'');const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  async function go(){setErr('');if(!owner.trim()){setErr('Enter the owner.');return;}let n=0;setBusy(true);
+    try{for(let i=0;i<list.length;i++){if(!sel[i])continue;const x=list[i],m=objMetric(x[2]);
+        await db.insert('hx_objectives',{id:newId('ob'),state_id:st.id,license_id:lic.id,name:x[0],category:x[1],metric:x[2],unit:m[2],direction:m[3],target:+tg[i],frequency:x[4],owner:owner.trim(),start_on:todayStr()});n++;}
+      props.onDone('Added '+n+' objective'+(n===1?'':'s')+'.');}catch(e){setErr(qsErr(e));if(n)props.onDone('Added '+n+'.');}setBusy(false);}
+  return el(Modal,{title:'Suggested objectives',wide:true,onClose:props.onClose},
+    el('div',{className:'muted',style:{fontSize:13,marginBottom:8}},'Each one is counted straight from your Hendrix records. Set targets your team agrees with.'),
+    el('div',{className:'card',style:{padding:'4px 12px'}},list.map(function(x,i){const m=objMetric(x[2]);return el('div',{key:i,className:'row',style:{gap:8,padding:'6px 0',borderTop:i?'1px solid #1d1d1d':'none',flexWrap:'nowrap'}},
+      el('input',{type:'checkbox',checked:!!sel[i],onChange:function(e){setSel(function(p){return {...p,[i]:e.target.checked};});}}),el('span',{style:{flex:1}},x[0],el('span',{className:'muted',style:{fontSize:12}},' \u00b7 '+x[4])),
+      el('span',{className:'muted',style:{fontSize:12}},m[3]==='down'?'\u2264':'\u2265'),el('input',{type:'number',value:tg[i],style:{width:80},onChange:function(e){const v=tg.slice();v[i]=e.target.value;setTg(v);}}),el('span',{className:'muted',style:{fontSize:12,minWidth:70}},m[2]));})),
+    el(Field,{label:'Owner *'},el('input',{value:owner,onChange:function(e){setOwner(e.target.value);}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:go},busy?'Adding...':'Add selected')));
+}
+function PolicyPick(props){
+  const lic=props.license,st=props.state;const[id,setId]=useState(props.cur.policy_sop_id||'');const[note,setNote]=useState(props.cur.policy_note||'');const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  async function go(){setErr('');setBusy(true);const rec={policy_sop_id:id||null,policy_note:note.trim()};
+    try{if(props.cur.license_id)await sb('hx_qms_settings?license_id=eq.'+encodeURIComponent(lic.id),{method:'PATCH',body:rec,prefer:'return=representation'});else await db.insert('hx_qms_settings',{...rec,license_id:lic.id,state_id:st.id});props.onDone('Policy saved.');}catch(e){setErr(qsErr(e));}setBusy(false);}
+  return el(Modal,{title:'Quality policy \u00b7 '+lic.name,onClose:props.onClose},
+    el('div',{className:'muted',style:{fontSize:13,marginBottom:8}},'Write the safety, quality and compliance policy as an SOP (with measurable objectives, signed by senior management and everyone it applies to), then link it here.'),
+    el(Field,{label:'Policy SOP'},el('select',{value:id,onChange:function(e){setId(e.target.value);}},el('option',{value:''},props.sops.length?'(none)':'(no SOPs yet)'),props.sops.map(function(s){return el('option',{key:s.id,value:s.id},(s.sop_number?s.sop_number+' ':'')+s.title+(s.status?' ('+s.status+')':''));}))),
+    el(Field,{label:'How it is shared with staff'},el('input',{value:note,placeholder:'e.g. Posted in the break room, signed by all staff, reviewed every year',onChange:function(e){setNote(e.target.value);}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:go},busy?'Saving...':'Save')));
+}
+function ObjDashCard(props){
+  const lid=props.license?props.license.id:'';const[d,setD]=useState(null);
+  useEffect(function(){if(!lid||!can('objectives',1)){setD(null);return;}let dead=false;const L='license_id=eq.'+encodeURIComponent(lid);
+    Promise.all([db.get('hx_objectives',L+'&status=eq.active&select=id,frequency,start_on,status,license_id'),db.get('hx_objective_results',L+'&select=objective_id,period,met,license_id&order=period.desc&limit=2000')])
+    .then(function(r){if(dead)return;const O=(r[0]||[]).filter(function(x){return x.license_id===lid&&x.status==='active';}),R=(r[1]||[]).filter(function(x){return x.license_id===lid;});
+      const last=function(o){return R.filter(function(x){return x.objective_id===o.id;}).sort(function(a,b){return a.period<b.period?1:-1;})[0];};
+      setD({n:O.length,on:O.filter(function(o){const l=last(o);return l&&l.met;}).length,off:O.filter(function(o){const l=last(o);return l&&!l.met;}).length,due:O.filter(function(o){return objDue(o,R);}).length});}).catch(function(){if(!dead)setD(null);});
+    return function(){dead=true;};},[lid]);
+  if(!d)return null;
+  return el('div',{className:'card gold'},el('div',{className:'k'},'Quality objectives'),el('div',{className:'v',style:{color:!d.n?'var(--gold-hi)':d.off?'var(--red)':'var(--green)'}},!d.n?'No objectives set':d.on+' of '+d.n+' on target'),
+    el('div',{className:'muted',style:{margin:'4px 0 8px'}},d.n?(d.off+' off target \u00b7 '+d.due+' result'+(d.due===1?'':'s')+' due'):'Set measurable objectives (CSQ 5.1.2)'),
+    el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go('objectives');}},'Open'));
+}
+
 /* ---------- Training (Black Fox / Michigan SOP training matrix + CSQ 2A.13.2 training program) ---------- */
 const TRAIN_TOPICS=['Required by law','cGMP','cGACP','Extraction','Cannabis safety','Personnel hygiene & safety','Product defense','Job-specific','Safety','CSQ program','HACCP','Other'];
 const TRAIN_METHODS=['Classroom','On the job','Online course','Read and sign','External certification'];
@@ -7601,7 +7896,7 @@ function csqPartNames(scopes){return ['3C','3B','3A'].filter(function(k){return 
 // [clause, module, title, summary, hendrix pages, what Hendrix already holds, planned Hendrix modules, applies to]
 const CSQ_MFG_CLAUSES=[
  ['1.1','1','Safety and quality management system','Keep a documented safety and quality system (paper or electronic) that covers the CSQ requirements, names the people and backups who maintain it, holds every SOP, program, form, log, diagram and training material plus local regulations, is available to staff, sets the rules for using the CSQ logo, and is kept up to date.',['sops','rulebook','logs','team'],'Hendrix is the electronic system; Rulebook holds each state\'s regulations; logs and records. SOP library: every SOP, numbered, versioned, approved and signed.',[]],
- ['1.2','1','Management commitment','Have a written safety, quality and compliance policy with measurable objectives, shared with staff, backed by resources, that keeps staff informed of new science and regulation and is reviewed regularly.',['sops'],'Write the safety, quality and compliance policy as an SOP; everyone signs it.',['KPIs']],
+ ['1.2','1','Management commitment','Have a written safety, quality and compliance policy with measurable objectives, shared with staff, backed by resources, that keeps staff informed of new science and regulation and is reviewed regularly.',['sops','objectives'],'Write the safety, quality and compliance policy as an SOP; everyone signs it. Quality policy (signed SOP) linked on Quality Objectives, with measurable objectives, owners and targets.',[]],
  ['1.3','1','Regulatory compliance','Procedures that keep all operations and products compliant where they are made and sold, with compliance staff trained and current on regulations.',['rulebook','locations','training'],'Rulebook per state; licenses per state. Regulatory training tracked per person.',[]],
  ['1.4','1','Documentation and recordkeeping','Control documents and records: a master list, document type and current version, approved changes and replacement of old versions, legible and available records, secure storage for at least 1 year past the date on the label (or longer if required), ink only and no white-out on paper.',['sops','audit'],'Audit trail: every change kept with who, when and why; records are voided, never deleted. SOP library: master list, document numbers, versions, approval by Full access, every earlier version kept unchanged, review dates; audit trail on every record.',[]],
  ['1.5','1','Internal audits','Audit every applicable CSQ requirement at least once a year with competent auditors who do not audit their own work; record findings and corrective actions, share results, and close findings through CAPA.',['intaudits'],'Internal Audits: annual program of every CSQ clause in scope with coverage shown per clause, auditor named with qualification and confirmed independent, checklist results with evidence, a finding for every nonconformity, findings closed through deviations / CAPA with verification, results shared with staff before closing.',[]],
@@ -7717,10 +8012,10 @@ const CSQ_MFG_CLAUSES=[
  ['4A.9','4A','Corrective actions','Specific corrective actions for each CCP that bring it back under control and keep affected product from consumers.',['qms','haccp'],'Out-of-control CCPs handled as deviations and CAPAs. HACCP: a CCP out of limits needs the corrective action and the product disposition; a deviation can be raised from it.',[]],
  ['4A.10','4A','HACCP validation','Validate control measures and critical limits before use and again after significant product or process changes.',['haccp','changes'],'HACCP: validation evidence required before a plan is activated; revising a plan clears the validation. Change control: a change that affects HACCP cannot be implemented until the plan is reviewed and revalidated.',[]],
  ['4A.11','4A','HACCP verification','Ongoing verification that HACCP is followed and works, with a full reanalysis yearly or after significant change.',['haccp','changes'],'HACCP: verification records (records review, calibration, yearly reanalysis) with findings; reanalysis due date per plan. Change control: changes affecting HACCP trigger the plan review.',[]],
- ['5.1.1','5','Quality system personnel and org chart','An organizational chart showing reporting lines and everyone involved in safety, quality and CSQ conformance, with their functions and responsibilities.',['team','roles'],'Team members with roles.',['Org chart']],
- ['5.1.2','5','Quality policies and objectives','Quality policies and measurable objectives suited to the business, with a process to change, review and keep improving them.',[],'',['KPIs']],
+ ['5.1.1','5','Quality system personnel and org chart','An organizational chart showing reporting lines and everyone involved in safety, quality and CSQ conformance, with their functions and responsibilities.',['team','roles','orgchart'],'Team members with roles. Org chart: positions with reporting lines, the person and backup, functions and responsibilities, and who holds each safety / quality / CSQ role (senior management, quality lead and backup flagged when missing).',[]],
+ ['5.1.2','5','Quality policies and objectives','Quality policies and measurable objectives suited to the business, with a process to change, review and keep improving them.',['objectives'],'Quality objectives: measurable targets with owners, counted from Hendrix records where possible; targets changed or dropped only with a recorded reason.',[]],
  ['5.1.3','5','Management review','Senior management reviews the system at least yearly: previous actions, complaints and feedback, internal, external and regulatory audits, risks and corrective actions, resources, CSQ conformance, and changes; minutes kept and shared.',[],'',['Management review']],
- ['5.1.4','5','Continuous improvement','Measurable improvement goals with KPIs and effectiveness checks, continuing education per role, shared with staff and reviewed at least quarterly.',['training'],'Continued education per role in the training matrix.',['KPIs']],
+ ['5.1.4','5','Continuous improvement','Measurable improvement goals with KPIs and effectiveness checks, continuing education per role, shared with staff and reviewed at least quarterly.',['training','objectives'],'Continued education per role in the training matrix. KPIs measured every month or quarter; a missed target needs the action taken; KPI board printed to share with staff.',[]],
  ['5.1.5','5','Change management','A change management plan for people, processes and products: what each change affects, how it is documented and approved, training before use, and who is told (including regulators and the certification body).',['audit','changes'],'Audit trail records every change with a reason. Change control: impact assessment, approval by Full access, actions, training before use, notifications (regulator, certification body, customers) and an effectiveness check; approved changes cannot be rewritten.',[]],
  ['5.1.6','5','Risk management','Risk procedures: the hazard, its root cause, the owner, immediate action, timescale for a permanent fix, verification, and routine surveillance of product safety and quality.',['qms','risks'],'Risk register: each risk with the hazard, root cause, owner, rating (likelihood x severity), immediate action and target date for the permanent fix; controlled only with verification; routine review on a schedule with every review kept.',[]],
  ['5.1.7','5','Validation','Validate facilities and equipment with installation, operational and performance qualification (IQ, OQ, PQ), materials through supplier approval, and revalidate yearly and whenever critical limits, cGMPs or CSQ conformance change.',['suppliers','equipment'],'Materials validated through supplier approval. Equipment register: IQ, OQ and PQ recorded per piece of equipment with yearly revalidation.',[]],
@@ -7734,9 +8029,9 @@ const STD_STATUSES=['Not assessed','Conforming','Partial','Not conforming','Not 
 const STD_TONE={'Not assessed':'off','Conforming':'ok','Partial':'warn','Not conforming':'bad','Not applicable':'off'};
 const STD_COLOR={'Conforming':'#5fbf8a','Partial':'#d4af37','Not conforming':'#e5645a','Not applicable':'#4a473f','Not assessed':'#2a2a2a'};
 const ADOPT_STATUSES=['Following','Audit scheduled','Certified','Suspended','Withdrawn'];
-const HX_PAGE_LABEL={risks:'Risk Register',changes:'Change Control',haccp:'HACCP',cultivation:'Cultivation',envtests:'Facility Tests',lineclear:'Line Clearance',rework:'Rework',equipment:'Equipment',chemicals:'Chemicals and SDS',complaints:'Complaints',intaudits:'Internal Audits',recall:'Traceability and Recall',receiving:'Receiving',inventory:'Inventory',holds:'Hold and Release',shipping:'Shipping',suppliers:'Suppliers',training:'Training',qms:'QMS (Deviations, CAPA)',sops:'SOPs',rulebook:'Rulebook',locations:'States and Licenses',audit:'Audit Trail',batches:'Batch Tracker',testing:'Testing',stickers:'Compliance Stickers',
+const HX_PAGE_LABEL={orgchart:'Org Chart',objectives:'Quality Objectives',risks:'Risk Register',changes:'Change Control',haccp:'HACCP',cultivation:'Cultivation',envtests:'Facility Tests',lineclear:'Line Clearance',rework:'Rework',equipment:'Equipment',chemicals:'Chemicals and SDS',complaints:'Complaints',intaudits:'Internal Audits',recall:'Traceability and Recall',receiving:'Receiving',inventory:'Inventory',holds:'Hold and Release',shipping:'Shipping',suppliers:'Suppliers',training:'Training',qms:'QMS (Deviations, CAPA)',sops:'SOPs',rulebook:'Rulebook',locations:'States and Licenses',audit:'Audit Trail',batches:'Batch Tracker',testing:'Testing',stickers:'Compliance Stickers',
   products:'Products',logs:'Facility Logs',visitors:'Visitor Log',roles:'Roles',team:'Team and Access'};
-const HX_PAGE_MOD={risks:'risks',changes:'changes',haccp:'haccp',cultivation:'cultivation',envtests:'envtests',lineclear:'lineclear',rework:'rework',equipment:'equipment',chemicals:'chemicals',complaints:'complaints',intaudits:'intaudits',recall:'recall',receiving:'receiving',inventory:'receiving',holds:'holds',shipping:'shipping',suppliers:'suppliers',training:'training',qms:'qms',sops:'sops',rulebook:'rulebook',audit:'audit',batches:'batch',testing:'testing',stickers:'stickers',visitors:'logs_visitor'};
+const HX_PAGE_MOD={orgchart:'orgchart',objectives:'objectives',risks:'risks',changes:'changes',haccp:'haccp',cultivation:'cultivation',envtests:'envtests',lineclear:'lineclear',rework:'rework',equipment:'equipment',chemicals:'chemicals',complaints:'complaints',intaudits:'intaudits',recall:'recall',receiving:'receiving',inventory:'receiving',holds:'holds',shipping:'shipping',suppliers:'suppliers',training:'training',qms:'qms',sops:'sops',rulebook:'rulebook',audit:'audit',batches:'batch',testing:'testing',stickers:'stickers',visitors:'logs_visitor'};
 function stdLevelOf(m){return m==='4A'?2:m==='5'?3:1;}
 function stdErr(e){
   const m=String((e&&e.message)||e);
@@ -8067,6 +8362,23 @@ async function loadStdEvidence(st,lic){
       pp:pp.length,ppd:ppd.length,trial:ppd.filter(function(c){return c.trial_required&&c.trial_result==='pass';}).length,trialN:ppd.filter(function(c){return c.trial_required;}).length,
       hz:done.filter(function(c){return (c.impacts||{}).haccp;}).length,hzOk:done.filter(function(c){return (c.impacts||{}).haccp&&c.haccp_reviewed;}).length,
       last:C.map(function(c){return c.implemented_on||c.requested_on;}).sort().pop()||''};}));
+  if(can('orgchart',1))jobs.push(tryGet('orgchart',async function(){
+    const P=((await db.get('hx_org_positions','license_id=eq.'+enc(lid)+'&select=*'))||[]).filter(function(x){return x.license_id===lid;});
+    const miss=ORG_KEY.filter(function(r){return !P.some(function(p){return p.person_name&&(p.quality_roles||[]).indexOf(r)>=0;});});
+    return {n:P.length,resp:P.filter(function(p){return p.responsibilities;}).length,lines:P.filter(function(p){return p.reports_to;}).length,q:P.filter(function(p){return (p.quality_roles||[]).length;}).length,miss:miss,
+      last:P.map(function(p){return String(p.updated_at||'').slice(0,10);}).sort().pop()||''};}));
+  if(can('objectives',1))jobs.push(tryGet('objectives',async function(){
+    const L='license_id=eq.'+enc(lid);
+    const O=((await db.get('hx_objectives',L+'&select=*'))||[]).filter(function(x){return x.license_id===lid;}),A=O.filter(function(o){return o.status==='active';});
+    const R=((await db.get('hx_objective_results',L+'&select=objective_id,period,met,created_at,updated_at,license_id'))||[]).filter(function(x){return x.license_id===lid;});
+    const S=((await db.get('hx_qms_settings',L+'&select=*'))||[]).filter(function(x){return x.license_id===lid;})[0]||{};
+    let pol=null;if(S.policy_sop_id){try{pol=((await db.get('hx_sops','id=eq.'+enc(S.policy_sop_id)+'&select=id,sop_number,title,version,status'))||[])[0]||null;}catch(e){pol=null;}if(!pol)pol={title:'linked SOP',status:''};}
+    const q90=eqAddDays(todayStr(),-92),recent=R.filter(function(r){return String(r.updated_at||r.created_at).slice(0,10)>=q90;});
+    const lastOf=function(o){return R.filter(function(r){return r.objective_id===o.id;}).sort(function(a,b){return a.period<b.period?1:-1;})[0];};
+    return {n:A.length,auto:A.filter(function(o){return o.metric!=='manual';}).length,rev:A.filter(function(o){return recent.some(function(r){return r.objective_id===o.id;});}).length,
+      on:A.filter(function(o){const l=lastOf(o);return l&&l.met;}).length,meas:A.filter(function(o){return lastOf(o);}).length,achieved:O.filter(function(o){return o.status==='achieved';}).length,
+      pol:pol,polText:pol?((pol.sop_number?pol.sop_number+' ':'')+pol.title+(pol.version?' v'+pol.version:'')):'',share:S.policy_note||'',
+      last:R.map(function(r){return String(r.updated_at||r.created_at).slice(0,10);}).sort().pop()||''};}));
   jobs.push(tryGet('roles',async function(){const rs=ACC.roles||[];return {n:rs.length,noReq:rs.filter(function(r){return !String(r.requirements||'').trim()||!String(r.description||'').trim();}).length};}));
   await Promise.all(jobs);
   return E;
@@ -8194,6 +8506,13 @@ function clauseEvidence(x,E){
       else if(cl==='4A.10'||cl==='4A.11')out.push({label:'Changes affecting HACCP',value:Z.hz+' change'+(Z.hz===1?'':'s')+' affecting HACCP \u00b7 '+Z.hzOk+' with the plan reviewed before use',last:Z.last,page:'changes',warn:Z.hzOk<Z.hz?(Z.hz-Z.hzOk)+' without review':''});
       else out.push({label:'Change control',value:Z.n+' change'+(Z.n===1?'':'s')+' in 12 months \u00b7 '+Z.appr+' of '+Z.done+' implemented were approved first \u00b7 training before use '+Z.tr+'/'+Z.trN+' \u00b7 notified '+Z.not+'/'+Z.notN+' \u00b7 '+Z.closed+' closed after the effectiveness check',
         last:Z.last,page:'changes',warn:!Z.n?'No changes recorded':(Z.effDue?Z.effDue+' effectiveness check'+(Z.effDue===1?'':'s')+' overdue':'')});}
+    else if(p==='orgchart'&&E.orgchart){const Z=E.orgchart;
+      out.push({label:'Org chart',value:Z.n+' position'+(Z.n===1?'':'s')+' with reporting lines \u00b7 '+Z.resp+' with functions and responsibilities \u00b7 '+Z.q+' holding safety / quality / CSQ roles',last:Z.last,page:'orgchart',
+        warn:!Z.n?'No org chart':Z.miss.length?'Not assigned: '+Z.miss.join(', '):(Z.resp<Z.n?(Z.n-Z.resp)+' without responsibilities':'')});}
+    else if(p==='objectives'&&E.objectives){const Z=E.objectives,cl=x.clause;
+      if(cl==='5.1.4')out.push({label:'KPIs reviewed',value:Z.rev+' of '+Z.n+' active objectives measured in the last quarter \u00b7 '+Z.on+' on target \u00b7 '+Z.achieved+' achieved',last:Z.last,page:'objectives',warn:!Z.n?'No measurable objectives':(Z.rev<Z.n?(Z.n-Z.rev)+' not reviewed this quarter':'')});
+      else out.push({label:'Quality policy and objectives',value:(Z.pol?'Policy: '+Z.polText+(Z.pol.status?' ('+Z.pol.status+')':''):'No policy linked')+' \u00b7 '+Z.n+' measurable objective'+(Z.n===1?'':'s')+' with targets and owners ('+Z.auto+' counted from records)'+(Z.share?' \u00b7 shared: '+Z.share:''),
+        last:Z.last,page:'objectives',warn:!Z.pol?'Link the quality policy SOP':!Z.n?'No measurable objectives':(Z.pol.status&&Z.pol.status!=='published'?'Policy SOP is not published':'')});}
     else if(p==='roles'&&E.roles)out.push({label:'Roles',value:E.roles.n+' defined role'+(E.roles.n===1?'':'s')+(x.clause==='2A.13.1'?' \u00b7 '+(E.roles.n-E.roles.noReq)+' with duties and requirements':''),page:'roles',
       warn:!E.roles.n?'No roles defined':(x.clause==='2A.13.1'&&E.roles.noReq?E.roles.noReq+' role'+(E.roles.noReq===1?'':'s')+' missing duties or requirements':'')});
   });
@@ -9195,7 +9514,7 @@ function App(){
   if(isAdmin)nav.push({id:'team',label:'Team and Access'},{id:'roles',label:'Roles'});
   if(can('audit',1))nav.push({id:'audit',label:'Audit Trail'});
   const anyLog=LOG_TYPES.some(function(t){return can(LOG_MOD[t.id],1);});
-  const mods=[can('qms',1)&&['qms','QMS'],can('complaints',1)&&['complaints','Complaints'],can('intaudits',1)&&['intaudits','Internal Audits'],can('haccp',1)&&['haccp','HACCP'],can('risks',1)&&['risks','Risk Register'],can('changes',1)&&['changes','Change Control'],can('training',1)&&['training','Training'],can('sops',1)&&['sops','SOPs'],can('suppliers',1)&&['suppliers','Suppliers'],can('receiving',1)&&['receiving','Receiving'],can('holds',1)&&['holds','Hold and Release'],can('shipping',1)&&['shipping','Shipping'],can('recall',1)&&['recall','Traceability and Recall'],can('equipment',1)&&['equipment','Equipment'],can('chemicals',1)&&['chemicals','Chemicals and SDS'],(can('lineclear',1)||can('rework',1))&&['lineclear','Line Clearance and Rework'],can('envtests',1)&&['envtests','Facility Tests'],can('cultivation',1)&&licOp(lic)==='cultivation'&&['cultivation','Cultivation'],can('logs_visitor',1)&&['visitors','Visitor Log'],anyLog&&['logs','Facility Logs'],(can('products',1)||can('formbank',1)||can('cogs',1))&&['products','Products'],can('batch',1)&&['batches','Batch Tracker'],can('testing',1)&&['testing','Testing'],can('stickers',1)&&['stickers','Compliance Stickers']].filter(Boolean);
+  const mods=[can('qms',1)&&['qms','QMS'],can('complaints',1)&&['complaints','Complaints'],can('intaudits',1)&&['intaudits','Internal Audits'],can('haccp',1)&&['haccp','HACCP'],can('risks',1)&&['risks','Risk Register'],can('changes',1)&&['changes','Change Control'],can('orgchart',1)&&['orgchart','Org Chart'],can('objectives',1)&&['objectives','Quality Objectives'],can('training',1)&&['training','Training'],can('sops',1)&&['sops','SOPs'],can('suppliers',1)&&['suppliers','Suppliers'],can('receiving',1)&&['receiving','Receiving'],can('holds',1)&&['holds','Hold and Release'],can('shipping',1)&&['shipping','Shipping'],can('recall',1)&&['recall','Traceability and Recall'],can('equipment',1)&&['equipment','Equipment'],can('chemicals',1)&&['chemicals','Chemicals and SDS'],(can('lineclear',1)||can('rework',1))&&['lineclear','Line Clearance and Rework'],can('envtests',1)&&['envtests','Facility Tests'],can('cultivation',1)&&licOp(lic)==='cultivation'&&['cultivation','Cultivation'],can('logs_visitor',1)&&['visitors','Visitor Log'],anyLog&&['logs','Facility Logs'],(can('products',1)||can('formbank',1)||can('cogs',1))&&['products','Products'],can('batch',1)&&['batches','Batch Tracker'],can('testing',1)&&['testing','Testing'],can('stickers',1)&&['stickers','Compliance Stickers']].filter(Boolean);
   let body;
   if(page==='locations')body=el(Locations,{profile:profile,states:states,licenses:licenses,reload:loadData,openRulebook:function(id){pickState(id);setPage('rulebook');}});
   else if(page==='visitors'&&can('logs_visitor',1))body=el(VisitorLog,{key:licId,state:st,license:lic});
@@ -9209,6 +9528,7 @@ function App(){
   else if(page==='roles'&&isAdmin)body=el(Roles);
   else if(page==='audit'&&can('audit',1))body=el(AuditTrail,{state:st});
   else if((page==='receiving'&&can('receiving',1))||(page==='inventory'&&can('receiving',1))||(page==='holds'&&can('holds',1))||(page==='shipping'&&can('shipping',1)))body=el(MatPage,{key:licId,state:st,license:lic,tab:page,go:setPage});
+  else if((page==='orgchart'||page==='objectives')&&(can('orgchart',1)||can('objectives',1)))body=el(QualitySysPage,{key:licId,state:st,license:lic,profile:profile,go:setPage,tab:page==='objectives'?'kpi':'org'});
   else if((page==='risks'||page==='changes')&&(can('risks',1)||can('changes',1)))body=el(RiskChangePage,{key:licId,state:st,license:lic,profile:profile,go:setPage,tab:page==='changes'?'cc':'rk'});
   else if(page==='haccp'&&can('haccp',1))body=el(HaccpPage,{key:licId,state:st,license:lic,profile:profile,go:setPage});
   else if(page==='cultivation'&&can('cultivation',1))body=el(CultivationPage,{key:licId,state:st,license:lic,profile:profile,go:setPage});
