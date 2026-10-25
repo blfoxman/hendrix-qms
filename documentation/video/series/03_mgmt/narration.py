@@ -1,0 +1,70 @@
+# Video 03: HACCP and the management system. (key, text). Captions use the text; speech uses SAY.
+NARR = [
+    ('i1', "Hendrix QMS training, video 3: HACCP and the management system."),
+    ('i2', "This video covers seven modules: HACCP, the Risk Register, Change Control, the Org Chart, Quality Objectives, the Management Review and the Verification Schedule. Together, they're your evidence for CSQ Module 4A and Module 5."),
+
+    ('h1', "HACCP holds your food safety plan: the HACCP team, one plan per product or process, the CCP monitoring records and HACCP verification. Open it from the left menu."),
+    ('h2', "The counters show active plans, certified team members, checks out of limits in the last 30 days, records waiting for a second-person review, and plans due for their yearly reanalysis."),
+    ('h3', "To start a plan, click HACCP plan. Name it, and pick the batch type it covers. The box at the bottom lists what's still needed before the plan can be validated."),
+    ('h4', "Click Start from a draft for this batch type. Hendrix fills in a starting product description, flow, hazards and CCPs. The draft is only a starting point: your team checks every step, limit and control against your own process."),
+    ('h5', "The Process flow tab lists every step, and Hendrix draws the flow diagram, with the CCPs highlighted."),
+    ('h5b', "The CCPs tab holds each critical limit, how it's monitored, the corrective action and the verification."),
+    ('h6', "Hendrix checks: only Full access can validate or activate a plan, and only when it's complete, its validation is recorded, and two team members are HACCP certified. For now, click Save draft."),
+    ('h7', "To record a CCP check, click CCP check. Pick the plan, the CCP and the batch. Hendrix shows the critical limit and how to monitor it."),
+    ('h8', "Enter the measured value. This one is above the limit, so choose No, deviation. Hendrix won't record it without the corrective action and what happened to the product."),
+    ('h9', "Click Record. A monitoring record can't be changed afterwards: to fix a mistake, Full access voids it with a reason, and you record it again."),
+    ('h10', "On the CCP monitoring tab, filter Not verified yet, and click Verify on each record. Records are always verified by someone other than the person who did the check."),
+    ('h11', "Tip: on an out-of-limit check, click Deviation, so the root cause goes through CAPA."),
+
+    ('r1', "The Risk Register lists every risk to product safety, quality and the business: the hazard, its root cause, the owner, the rating, the actions and a routine review."),
+    ('r2', "The rating is likelihood times severity. Ten or more is high, and fifteen or more is critical. The heat map counts risks by their current rating, and By category shows the assessments CSQ asks for."),
+    ('r3', "To add a risk, click Risk. Enter the risk, the hazard and its root cause, and how it was found, here through a deviation."),
+    ('r4', "Pick the likelihood and the severity. The rating updates as you go: four times four is sixteen, critical."),
+    ('r5', "Hendrix checks: a high or critical risk can't be saved without an immediate action and a target date for the permanent fix. Enter both, and click Save."),
+    ('r6', "When a risk is due, click Review. Rate it today, and say whether the controls are in place and working. If they're not, the notes must say what will be done."),
+    ('r7', "Click Record review. Each review is kept, and moves the next review date. Tip: start from Suggested risks, then fit every rating and control to your facility."),
+
+    ('c1', "Change Control makes sure every change to a product, process, piece of equipment, material, supplier, SOP or the team is assessed and approved before it's used, and checked afterwards."),
+    ('c2', "A change moves from Requested, to Approved, to Implemented, to Closed. The Next step column tells you what each change needs."),
+    ('c3', "To request a change, click Change. Enter a short title, and pick the type. A new product or formulation ticks the trial run for you. Then say what changes, and why."),
+    ('c4', "In the impact assessment, tick everything the change affects: here, allergens, labels, the formulation and the HACCP plan. Then say what the trial must show."),
+    ('c5', "Add the actions that put the change in place, and who does each one. Then click Request change. Hendrix gives it the next number."),
+    ('c6', "Someone with Full access clicks Approve, reviews the summary, adds a note, and approves. Once approved, what the change is can't be rewritten."),
+    ('c7', "On an approved change, click Work, and record the progress: each action as it's done, the training, the trial run, the HACCP review, and when the regulator was told."),
+    ('c8', "Hendrix checks: Mark implemented stays greyed out while anything is listed under Before it can be implemented. Tip: request the change before you change anything on the floor."),
+
+    ('o1', "The Org Chart shows every position, who holds it, who it reports to, and the safety, quality and CSQ roles they hold. Hendrix draws the chart: gold borders mark a safety or quality role, and a vacant position shows in red."),
+    ('o2', "The counters check that senior management, a quality lead and a quality backup are named. Below the chart, a missing key role shows as Not assigned."),
+    ('o3', "A new maintenance technician has started. Click Edit on the position, and enter the person. You can also change the backup, the responsibilities and the roles here."),
+    ('o5', "To add a position, click Under on the manager's row, and the manager is picked for you. When an inspector asks, Print org chart gives the drawing, and a table of every position with its responsibilities."),
+    ('o4', "Click Save. Hendrix checks: a reporting line can never loop back on itself, and a position can't be removed while people still report to it."),
+
+    ('q1', "Quality Objectives links your quality policy, and tracks measurable objectives with targets, owners and a result for every month or quarter. Most are counted straight from Hendrix records."),
+    ('q2', "Each card shows the latest value, the target and the last six periods: green met, red missed. Results due counts the objectives still waiting for a result."),
+    ('q3', "Click Record September on the card. Hendrix counts the value for you: three of four CAPAs were closed on time, so seventy-five percent."),
+    ('q4', "Hendrix checks: when the target is missed, you must record the action that will get it back on target. Then click Record result."),
+    ('q5', "To add an objective, click Objective. Name it, and pick how it's measured: here, counted from the line clearance records. Set the target and the date to reach it, and click Save."),
+    ('q6', "Tip: for something Hendrix can't count, like on-time delivery, choose Entered by hand."),
+
+    ('m1', "Senior management reviews the whole quality system at least once a year. The counters show the last review, when the next one is due, open actions, and whether the minutes were shared."),
+    ('m2', "Click Management review. Hendrix fills in the facts for each input from your records, for the period since the last review."),
+    ('m3', "Enter who attended. Then, for each input, check the facts on the left, and type the discussion on the right."),
+    ('m4', "Inputs marked with a star are required. Do the same for complaints, audits, deviations and CAPAs, risks, CSQ conformance, changes and resources."),
+    ('m5', "Record the decisions and conclusions, and add the actions with who does them. The next review is set within twelve months."),
+    ('m6', "Click Sign as held. Hendrix checks: only Full access can sign, and only once the chair and attendees are entered, every required input is discussed, and the decisions are recorded."),
+    ('m7', "After the meeting, click Follow-up. Tick actions as they're done, record who the minutes were shared with and when, and click Save."),
+
+    ('v1', "The Verification Schedule lists every verification activity: what's verified, how, by whom, and how often."),
+    ('v2', "For most activities, Last done comes straight from the linked records, so overdue verifications show up on their own: amber when due within seven days, and red when overdue."),
+    ('v2b', "Click Edit to set who does an activity, how often, and where its last date comes from: recorded here, or a linked record, like the sanitation log or the CCP records."),
+    ('v3', "Labels checked against the batch is recorded here, and it's overdue. Click Record, and enter who did it. This check found a problem, so choose Issues found."),
+    ('v4', "Hendrix checks: issues need the findings and the action taken, and the date can't be in the future. Click Record. The next due date moves on."),
+    ('v5', "Click History to see every check recorded here. On a record with issues, click Deviation to raise a linked deviation."),
+    ('v6', "Tip: most activities need no typing here at all. Keep the linked logs current, and the schedule keeps itself."),
+
+    ('e1', "That's video 3. Next, in video 4: suppliers, materials and traceability. For every field and every check in these seven modules, see chapter 4 of the Hendrix QMS User Manual."),
+    ('e2', "Thank you for watching."),
+]
+
+SAY = [('CAPAs', 'kay-pahs'), ('CAPA', 'kay-pa'), ('COA', 'C O A'), ('SKU', 'S K U'), ('CSV', 'C S V'), ('HACCP', 'hassip'), ('read only', 'read-only'),
+       ('Module 4A', 'Module four A'), ('SOP', 'S O P')]

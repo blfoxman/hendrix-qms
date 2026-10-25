@@ -3,7 +3,8 @@
 // drafts online training courses from the state Rulebook (Training), organizes an
 // uploaded rules PDF into the state Rulebook (Rulebook), estimates ingredients for
 // flavors with no saved formulation (Production Planner) and matches spreadsheet
-// columns for the Excel / Google Sheets import (Import).
+// columns for the Excel / Google Sheets import (Import). Settings > System Health uses
+// module "health" (admins only) to test the key, the credit and the model with a tiny request.
 //
 // Security: only a signed-in, approved Hendrix user with at least Edit access to the
 // module making the request (Testing, SOPs, Rulebook, Production Planner or the module an import goes into; Full access for Training) can use it, checked with the user's own
@@ -44,20 +45,22 @@ Deno.serve(async (req) => {
     const IMPORT_TARGETS = ["suppliers", "equipment", "chemicals", "products", "complaints", "risks", "orgchart"];
     // spreadsheet import: the user needs Edit on the module the rows go into
     const mod = body.module === "import" ? (IMPORT_TARGETS.includes(String(body.target)) ? String(body.target) : "none")
-      : body.module === "sops" ? "sops" : body.module === "training" ? "training" : body.module === "rulebook" ? "rulebook" : body.module === "planner" ? "planner" : "testing";
-    const need = mod === "training" ? 3 : 2;
+      : body.module === "health" ? "settings" : body.module === "sops" ? "sops" : body.module === "training" ? "training" : body.module === "rulebook" ? "rulebook" : body.module === "planner" ? "planner" : "testing";
+    const need = mod === "training" || mod === "settings" ? 3 : 2;
     const { data: lvl, error: perr } = await sb.rpc("hx_perm", { p_mod: mod });
     if (perr) return json({ error: { message: "Access check failed: " + perr.message } }, 500);
     if (!lvl || lvl < need) {
-      return json({ error: { message: mod === "sops" ? "You need Edit access to SOPs to use the AI SOP tools." : mod === "training" ? "You need Full access to Training to draft courses with AI." : mod === "rulebook" ? "You need Edit access to the Rulebook to organize a rules PDF with AI." : mod === "planner" ? "You need Edit access to the Production Planner to estimate recipes with AI." : body.module === "import" ? "You need Edit access to the module you are importing into." : "You need Edit access to Testing to read COAs." } }, 403);
+      return json({ error: { message: mod === "settings" ? "Only an admin (Full access on Settings) can run the AI health check." : mod === "sops" ? "You need Edit access to SOPs to use the AI SOP tools." : mod === "training" ? "You need Full access to Training to draft courses with AI." : mod === "rulebook" ? "You need Edit access to the Rulebook to organize a rules PDF with AI." : mod === "planner" ? "You need Edit access to the Production Planner to estimate recipes with AI." : body.module === "import" ? "You need Edit access to the module you are importing into." : "You need Edit access to Testing to read COAs." } }, 403);
     }
 
     const key = Deno.env.get("ANTHROPIC_API_KEY");
     if (!key) return json({ error: { message: "ANTHROPIC_API_KEY is not set in Supabase Edge Function secrets." } }, 500);
 
+    const model = Deno.env.get("HX_AI_MODEL") || "claude-sonnet-5-5";
+    if (body.module === "health") body.messages = [{ role: "user", content: "Reply with the single word OK." }], body.max_tokens = 5;
     if (!Array.isArray(body.messages)) return json({ error: { message: "messages missing" } }, 400);
     const payload = {
-      model: Deno.env.get("HX_AI_MODEL") || "claude-sonnet-4-6",
+      model,
       max_tokens: Math.min(Number(body.max_tokens) || 4000, 8000),
       system: typeof body.system === "string" ? body.system : undefined,
       messages: body.messages,
@@ -72,6 +75,14 @@ Deno.serve(async (req) => {
     }
     if (r.status === 400 && (await r.clone().text()).includes("credit balance")) {
       return json({ error: { message: "The Anthropic account has no credit. Add credit at console.anthropic.com > Billing and retry." } }, 502);
+    }
+    if (r.status === 404) {
+      return json({ error: { message: "The AI model \"" + model + "\" is not available to this Anthropic account. Set the secret HX_AI_MODEL to a current model (see docs.claude.com > Models) and retry." } }, 502);
+    }
+    if (body.module === "health") {
+      const t = await r.text();
+      if (!r.ok) return new Response(t, { status: r.status, headers: { ...cors, "Content-Type": "application/json" } });
+      return json({ ok: true, model, version: "hendrix-ai 37" });
     }
     return new Response(await r.text(), { status: r.status, headers: { ...cors, "Content-Type": "application/json" } });
   } catch (e) {

@@ -1,0 +1,76 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Hendrix QMS training</title>
+<style>
+:root{--gold:#d4af37;--gold2:#f0d78a;--ink:#0a0a0a;--fg:#f3efe4;--mut:#9a9488}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;background:var(--ink);color:var(--fg);font-family:Inter,'Inter Display',sans-serif;overflow:hidden}
+body{background:radial-gradient(ellipse 70% 60% at 50% 38%,rgba(212,175,55,.13),rgba(212,175,55,0) 70%),linear-gradient(180deg,#0d0d0c,#070707)}
+.wrap{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding-bottom:40px}
+.logo{display:flex;align-items:center;gap:22px;opacity:0;transform:translateY(10px);transition:opacity 1s ease,transform 1s ease}
+.logo.on{opacity:1;transform:none}
+.logo svg{width:84px;height:84px}
+.logo svg polygon,.logo svg path{stroke-dasharray:140;stroke-dashoffset:140;transition:stroke-dashoffset 1.8s ease .2s}
+.logo.on svg polygon,.logo.on svg path{stroke-dashoffset:0}
+.word b{display:block;font-weight:700;font-size:46px;letter-spacing:.32em;color:var(--gold);line-height:1}
+.word span{display:block;margin-top:10px;font-size:15px;letter-spacing:.62em;color:#cfc8b6}
+.kick{margin-top:34px;font-size:17px;letter-spacing:.34em;color:var(--gold2);opacity:0;transition:opacity 1s ease .5s;text-transform:uppercase}
+.kick.on{opacity:1}
+.rule{width:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);margin:22px 0 24px;transition:width 1.4s ease .6s}
+.rule.on{width:620px}
+h1{font-size:46px;font-weight:600;letter-spacing:-.01em;opacity:0;transition:opacity 1s ease .9s;text-align:center}
+h1.on{opacity:1}
+p.sub{margin-top:14px;font-size:21px;color:var(--mut);opacity:0;transition:opacity 1s ease 1.2s;text-align:center;max-width:980px}
+p.sub.on{opacity:1}
+.list{margin-top:34px;display:grid;grid-template-columns:repeat(3,minmax(0,300px));gap:14px 34px}
+.it{display:flex;align-items:center;gap:13px;font-size:20px;color:#e8e2d2;opacity:0;transform:translateX(-10px);transition:opacity .6s ease,transform .6s ease}
+.it.on{opacity:1;transform:none}
+.it i{font-style:normal;flex:none;width:32px;height:32px;border:1.5px solid var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--gold);font-weight:600}
+.book{margin-top:34px;display:flex;gap:22px;align-items:center;border:1px solid rgba(212,175,55,.45);border-radius:14px;padding:22px 30px;background:rgba(20,18,12,.7);opacity:0;transition:opacity 1s ease}
+.book.on{opacity:1}
+.book svg{width:46px;height:46px;flex:none}
+.book b{display:block;font-size:23px;color:var(--gold2);font-weight:600}
+.book span{display:block;font-size:17px;color:var(--mut);margin-top:6px}
+.thanks{margin-top:36px;font-size:38px;font-weight:600;color:var(--gold);opacity:0;transition:opacity 1.2s ease;display:none}
+.thanks.on{opacity:1}
+</style></head>
+<body>
+<div class="wrap">
+  <div class="logo" id="logo">
+    <svg viewBox="0 0 40 40" fill="none" stroke="#d4af37" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round">
+      <polygon points="20,2 36,11 36,29 20,38 4,29 4,11"/><path d="M13 12v16M27 12v16M13 20h14"/>
+    </svg>
+    <div class="word"><b>HENDRIX</b><span>QUALITY MANAGEMENT</span></div>
+  </div>
+  <div class="kick" id="kick"></div>
+  <div class="rule" id="rule"></div>
+  <h1 id="h1"></h1>
+  <p class="sub" id="sub"></p>
+  <div class="list" id="list"></div>
+  <div class="book" id="book" style="display:none">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#d4af37" stroke-width="1.6" stroke-linejoin="round"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H19v15H5.5A1.5 1.5 0 0 0 4 19.5z"/><path d="M4 19.5A1.5 1.5 0 0 0 5.5 21H19v-3"/><path d="M8 7h7M8 10h5"/></svg>
+    <div><b>Full details in the User Manual, Chapter 2</b><span>Setting up and running Hendrix: every page, field and Hendrix check, module by module</span></div>
+  </div>
+  <div class="thanks" id="thanks">Thank you</div>
+</div>
+<script>
+const mode = location.pathname.includes('end') ? 'end' : 'title';
+const $ = id => document.getElementById(id);
+const ITEMS = ['Dashboard','States and Licenses','Rulebook','Standards (CSQ)','Team and Access','Roles','Audit Trail','Settings','Import (Excel / Sheets)'];
+if (mode === 'title') {
+  $('kick').textContent = 'Hendrix QMS training · Video 01';
+  $('h1').textContent = 'Setting up and running Hendrix';
+  ITEMS.forEach((t, i) => { const d = document.createElement('div'); d.className = 'it'; d.innerHTML = '<i>' + (i + 1) + '</i><span>' + t + '</span>'; $('list').appendChild(d); });
+} else {
+  $('kick').textContent = 'Hendrix QMS training · Next';
+  $('h1').textContent = 'Next: Video 02 · Quality system';
+  $('sub').textContent = 'Deviations and CAPA, complaints, internal audits, SOPs and training';
+  $('book').style.display = 'flex'; $('thanks').style.display = 'block'; $('list').style.display = 'none';
+}
+window.step = function (n) {
+  if (n === 0) { ['logo', 'kick', 'rule', 'h1', 'sub'].forEach(k => $(k).classList.add('on')); }
+  if (n === 1 && mode === 'title') { [...document.querySelectorAll('.it')].forEach((e, i) => setTimeout(() => e.classList.add('on'), 300 + i * 650)); }
+  if (n === 1 && mode === 'end') { $('book').classList.add('on'); }
+  if (n === 2) { $('thanks').classList.add('on'); }
+};
+</script>
+</body></html>
