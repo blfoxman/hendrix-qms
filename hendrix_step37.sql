@@ -2,7 +2,7 @@
 -- Hendrix QMS  -  Step 37: System Health
 -- One admin-only function, hx_system_health(), that checks the installation the
 -- way an auditor's Installation Qualification (IQ) does:
---   * which database steps are installed (4 to 38)
+--   * which database steps are installed (4 to 39)
 --   * row level security switched on for every Hendrix table
 --   * every Hendrix table written to the audit trail, and the audit trail locked
 --   * the private file bucket exists and is not public
@@ -39,7 +39,7 @@ begin
       (24,'Equipment and chemicals','t','hx_equipment'),(25,'Line clearance and rework','t','hx_line_clearances'),(26,'Facility tests','t','hx_env_points'),(27,'Cultivation','t','hx_grow_areas'),
       (28,'HACCP','t','hx_haccp_team'),(29,'Risk register and change control','t','hx_risks'),(30,'Org chart and objectives','t','hx_org_positions'),(31,'Management review and verification','t','hx_mgmt_reviews'),
       (32,'Time clock and badges','t','hx_badges'),(33,'Production planner','t','hx_production_plans'),(34,'Settings','t','hx_license_settings'),(36,'Line Map','f','hx_line_map'),
-      (37,'System health','f','hx_system_health'),(38,'Security: e-signatures, two-step sign-in','t','hx_esignatures')) as s(step, name, kind, obj)
+      (37,'System health','f','hx_system_health'),(38,'Security: e-signatures, two-step sign-in','t','hx_esignatures'),(39,'My Tasks and email alerts','t','hx_notify_queue')) as s(step, name, kind, obj)
   loop
     v_ok := case r.kind
       when 't' then to_regclass('public.' || r.obj) is not null
@@ -57,9 +57,9 @@ begin
                  where n.nspname = 'public' and c.relkind = 'r' and c.relname like 'hx\_%' and not c.relrowsecurity), '[]'::jsonb),
     'not_audited', coalesce((select jsonb_agg(c.relname order by c.relname) from pg_class c join pg_namespace n on n.oid = c.relnamespace
                  where n.nspname = 'public' and c.relkind = 'r' and c.relname like 'hx\_%'
-                   and c.relname not in ('hx_audit_log', 'hx_badges', 'hx_training_keys', 'hx_sop_versions', 'hx_training_attempts')
+                   and c.relname not in ('hx_audit_log', 'hx_badges', 'hx_training_keys', 'hx_sop_versions', 'hx_training_attempts', 'hx_notify_queue', 'hx_notify_log')
                    and not exists (select 1 from pg_trigger t join pg_proc p on p.oid = t.tgfoid where t.tgrelid = c.oid and not t.tgisinternal and p.proname = 'hx_audit')), '[]'::jsonb),
-    'audit_by_design', '["hx_badges (badge codes are secret)", "hx_training_keys (answer keys are secret)", "hx_sop_versions (frozen copies, insert only)", "hx_training_attempts (quiz attempts, insert only)"]'::jsonb,
+    'audit_by_design', '["hx_badges (badge codes are secret)", "hx_training_keys (answer keys are secret)", "hx_sop_versions (frozen copies, insert only)", "hx_training_attempts (quiz attempts, insert only)", "hx_notify_queue and hx_notify_log (email outbox and email log, written by the system)"]'::jsonb,
     'audit_locked', exists (select 1 from pg_trigger t join pg_proc p on p.oid = t.tgfoid where t.tgrelid = to_regclass('public.hx_audit_log') and p.proname = 'hx_audit_lock'),
     'audit_rows', (select count(*) from hx_audit_log),
     'bucket', (select jsonb_build_object('exists', count(*) > 0, 'public', coalesce(bool_or(b.public), false)) from storage.buckets b where b.id = 'hendrix-files'),
