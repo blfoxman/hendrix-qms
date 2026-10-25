@@ -70,7 +70,7 @@ Hendrix enforces its rules **in the database**, not only on screen. The database
 - "cannot be released or used" checks;
 - license separation.
 
-The rules are installed by numbered SQL step files (steps 4 to 36; step 35 needs none). Steps 13 to 36 are also in one file, `hendrix_install_13_to_36.sql`.
+The rules are installed by numbered SQL step files (steps 4 to 41; step 35 needs none). Steps 13 to 41 are also in one file, `hendrix_install_13_to_41.sql`.
 
 ### Not in scope
 
