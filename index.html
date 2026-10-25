@@ -170,7 +170,7 @@ async function sb(path,opt){
   if(!r.ok){
     const m=(j&&(j.message||j.hint||j.details))||txt||('Error '+r.status);
     if(/schema cache|Could not find the table|relation .* does not exist/i.test(m)&&!/Could not find the '[A-Za-z0-9_]+' column/.test(m)){
-      const step=/hx_license_settings/.test(m)?'hendrix_step34.sql':/hx_production_plans|hx_planner_recipes/.test(m)?'hendrix_step33.sql':/hx_time_clock|hx_badge|hx_kiosk_clock|hx_clock_fix/.test(m)?'hendrix_step32.sql':/hx_mgmt_reviews|hx_verification_/.test(m)?'hendrix_step31.sql':/hx_org_positions|hx_objective|hx_qms_settings/.test(m)?'hendrix_step30.sql':/hx_risk|hx_changes/.test(m)?'hendrix_step29.sql':/hx_haccp/.test(m)?'hendrix_step28.sql':/hx_grow_|hx_plant_batches/.test(m)?'hendrix_step27.sql':/hx_env_/.test(m)?'hendrix_step26.sql':/hx_line_clearances|hx_rework/.test(m)?'hendrix_step25.sql':/hx_equipment|hx_chemicals/.test(m)?'hendrix_step24.sql':/share_key|hx_training_shared/.test(m)?'hendrix_step23.sql':/hx_rule_sources/.test(m)?'hendrix_step22.sql':/hx_training_keys|hx_training_attempts|hx_course_submit|content_status/.test(m)?'hendrix_step20.sql':/hx_complaints|hx_audits|hx_audit_findings/.test(m)?'hendrix_step19.sql':/hx_recall|hx_trace_data/.test(m)?'hendrix_step18.sql':/hx_lots|hx_lot_uses|hx_holds|hx_shipments/.test(m)?'hendrix_step17.sql':/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
+      const step=/hx_line_map|linemap_idle/.test(m)?'hendrix_step36.sql':/hx_license_settings/.test(m)?'hendrix_step34.sql':/hx_production_plans|hx_planner_recipes/.test(m)?'hendrix_step33.sql':/hx_time_clock|hx_badge|hx_kiosk_clock|hx_clock_fix/.test(m)?'hendrix_step32.sql':/hx_mgmt_reviews|hx_verification_/.test(m)?'hendrix_step31.sql':/hx_org_positions|hx_objective|hx_qms_settings/.test(m)?'hendrix_step30.sql':/hx_risk|hx_changes/.test(m)?'hendrix_step29.sql':/hx_haccp/.test(m)?'hendrix_step28.sql':/hx_grow_|hx_plant_batches/.test(m)?'hendrix_step27.sql':/hx_env_/.test(m)?'hendrix_step26.sql':/hx_line_clearances|hx_rework/.test(m)?'hendrix_step25.sql':/hx_equipment|hx_chemicals/.test(m)?'hendrix_step24.sql':/share_key|hx_training_shared/.test(m)?'hendrix_step23.sql':/hx_rule_sources/.test(m)?'hendrix_step22.sql':/hx_training_keys|hx_training_attempts|hx_course_submit|content_status/.test(m)?'hendrix_step20.sql':/hx_complaints|hx_audits|hx_audit_findings/.test(m)?'hendrix_step19.sql':/hx_recall|hx_trace_data/.test(m)?'hendrix_step18.sql':/hx_lots|hx_lot_uses|hx_holds|hx_shipments/.test(m)?'hendrix_step17.sql':/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
       throw new Error('Database tables are missing - run '+step+' in the Hendrix Supabase project.');
     }
     if(/row-level security|permission denied/i.test(m))throw new Error('Not allowed - your access level does not allow this here. Ask a system admin.');
@@ -318,6 +318,7 @@ function Dashboard(props){
       el(ObjDashCard,{license:lic,go:props.go}),
       el(MvDashCard,{license:lic,go:props.go}),
       el(TimeClockDashCard,{license:lic,go:props.go}),
+      el(LineMapDashCard,{license:lic,go:props.go}),
       el(PlannerDashCard,{license:lic,go:props.go}),
       el(ChemDashCard,{license:lic,go:props.go}),
       el(RecallDashCard,{license:lic,go:props.go}),
@@ -3060,6 +3061,7 @@ const ACCESS_MODULES=[
   {id:'objectives',label:'Quality Objectives',grp:'General',help:'View objectives and KPIs / set objectives and record results / link the quality policy, mark achieved or dropped'},
   {id:'mgmtreview',label:'Management Review',grp:'General',help:'View reviews / prepare reviews and update actions / sign reviews, cancel drafts'},
   {id:'verification',label:'Verification Schedule',grp:'General',help:'View the schedule / add activities and record verifications / turn activities off, void records'},
+  {id:'linemap',label:'Line Map',grp:'General',help:'See the live production line map: every batch, where it is and why it stopped (View is all it needs)'},
   {id:'timeclock',label:'Time Clock and Badges',grp:'General',help:'View the sign-in sheet and who is on site / make and print badges / re-issue lost badges, void punches, add missed punches'},
   {id:'planner',label:'Production Planner',grp:'Production',help:'View plans / calculate, save plans and start batches / cancel plans'},
   {id:'settings',label:'Settings',grp:'General',help:'See the license settings / (Edit = View) / change business details, logo, break limits, log and review cycles'},
@@ -3224,18 +3226,18 @@ function Team(props){
 const LOGS_PROD=['logs_sanitation','logs_waste','logs_scale','logs_equipment','logs_temp','logs_env'];
 function pm(o,list,lv){const x={...o};(list||[]).forEach(function(k){x[k]=lv;});return x;}
 const STARTER_ROLES=[
-  ['General Manager','Leadership. Edit everywhere; Full on batches and every log; sees recipes, prices and the audit trail.',{training:'admin',qms:'admin',complaints:'admin',intaudits:'admin',sops:'admin',suppliers:'admin',equipment:'admin',chemicals:'admin',lineclear:'admin',rework:'admin',envtests:'admin',cultivation:'admin',haccp:'admin',risks:'admin',changes:'admin',orgchart:'admin',objectives:'admin',mgmtreview:'admin',verification:'admin',timeclock:'admin',planner:'admin',settings:'admin',receiving:'admin',holds:'admin',shipping:'admin',recall:'admin',rulebook:'editor',standards:'editor',audit:'read',batch:'admin',testing:'admin',stickers:'admin',products:'editor',formbank:'read',cogs:'read',logs:'admin'}],
-  ['Assistant of General Manager','Leadership support. Edit on batches, products and every log; sees recipes and the audit trail.',{training:'editor',qms:'editor',complaints:'editor',intaudits:'editor',sops:'editor',suppliers:'editor',equipment:'editor',chemicals:'editor',lineclear:'editor',rework:'editor',envtests:'editor',cultivation:'editor',haccp:'editor',risks:'editor',changes:'editor',orgchart:'editor',objectives:'editor',mgmtreview:'editor',verification:'editor',timeclock:'editor',planner:'editor',receiving:'editor',holds:'editor',shipping:'editor',recall:'editor',rulebook:'editor',standards:'read',audit:'read',batch:'editor',testing:'editor',products:'editor',formbank:'read',logs:'editor'}],
-  ['Compliance Officer','Full on every log, the rulebook and standards (CSQ); sees batches, products and the audit trail.',{training:'admin',qms:'admin',complaints:'admin',intaudits:'admin',sops:'admin',suppliers:'admin',equipment:'admin',chemicals:'admin',lineclear:'admin',rework:'admin',envtests:'admin',cultivation:'admin',haccp:'admin',risks:'admin',changes:'admin',orgchart:'admin',objectives:'admin',mgmtreview:'admin',verification:'admin',timeclock:'admin',planner:'admin',settings:'admin',receiving:'admin',holds:'admin',shipping:'read',recall:'admin',rulebook:'admin',standards:'admin',audit:'read',logs:'admin',batch:'read',testing:'admin',stickers:'admin',products:'read'}],
+  ['General Manager','Leadership. Edit everywhere; Full on batches and every log; sees recipes, prices and the audit trail.',{linemap:'read',training:'admin',qms:'admin',complaints:'admin',intaudits:'admin',sops:'admin',suppliers:'admin',equipment:'admin',chemicals:'admin',lineclear:'admin',rework:'admin',envtests:'admin',cultivation:'admin',haccp:'admin',risks:'admin',changes:'admin',orgchart:'admin',objectives:'admin',mgmtreview:'admin',verification:'admin',timeclock:'admin',planner:'admin',settings:'admin',receiving:'admin',holds:'admin',shipping:'admin',recall:'admin',rulebook:'editor',standards:'editor',audit:'read',batch:'admin',testing:'admin',stickers:'admin',products:'editor',formbank:'read',cogs:'read',logs:'admin'}],
+  ['Assistant of General Manager','Leadership support. Edit on batches, products and every log; sees recipes and the audit trail.',{linemap:'read',training:'editor',qms:'editor',complaints:'editor',intaudits:'editor',sops:'editor',suppliers:'editor',equipment:'editor',chemicals:'editor',lineclear:'editor',rework:'editor',envtests:'editor',cultivation:'editor',haccp:'editor',risks:'editor',changes:'editor',orgchart:'editor',objectives:'editor',mgmtreview:'editor',verification:'editor',timeclock:'editor',planner:'editor',receiving:'editor',holds:'editor',shipping:'editor',recall:'editor',rulebook:'editor',standards:'read',audit:'read',batch:'editor',testing:'editor',products:'editor',formbank:'read',logs:'editor'}],
+  ['Compliance Officer','Full on every log, the rulebook and standards (CSQ); sees batches, products and the audit trail.',{linemap:'read',training:'admin',qms:'admin',complaints:'admin',intaudits:'admin',sops:'admin',suppliers:'admin',equipment:'admin',chemicals:'admin',lineclear:'admin',rework:'admin',envtests:'admin',cultivation:'admin',haccp:'admin',risks:'admin',changes:'admin',orgchart:'admin',objectives:'admin',mgmtreview:'admin',verification:'admin',timeclock:'admin',planner:'admin',settings:'admin',receiving:'admin',holds:'admin',shipping:'read',recall:'admin',rulebook:'admin',standards:'admin',audit:'read',logs:'admin',batch:'read',testing:'admin',stickers:'admin',products:'read'}],
   ['Security Manager','Full on the security and visitor logs.',{training:'editor',qms:'editor',complaints:'editor',sops:'read',rulebook:'read',logs_security:'admin',logs_visitor:'admin',timeclock:'admin'}],
   ['Security Officer','Fills the security and visitor logs.',{training:'read',qms:'read',complaints:'read',sops:'read',rulebook:'read',logs_security:'editor',logs_visitor:'editor',timeclock:'read'}],
   ['Sanitation','Fills the sanitation, waste and pest control logs.',{chemicals:'read',envtests:'editor',training:'read',qms:'read',complaints:'read',sops:'read',logs_sanitation:'editor',logs_waste:'editor',logs_pest:'editor'}],
   ['Team Member','Continues batches; fills the sanitation and temp / humidity logs.',{equipment:'read',chemicals:'read',lineclear:'editor',orgchart:'read',training:'read',qms:'read',complaints:'read',sops:'read',holds:'editor',receiving:'read',batch:'editor',products:'read',logs_temp:'editor',logs_sanitation:'editor'}],
-  ['Inventory Manager','Sees products and batches; fills the waste log.',{training:'editor',qms:'editor',complaints:'editor',sops:'read',suppliers:'editor',receiving:'admin',holds:'editor',shipping:'admin',recall:'editor',products:'read',batch:'read',logs_waste:'editor'}],
-  ['Extraction Manager','Full on batches; fills the scale, equipment and temp / humidity logs.',{equipment:'editor',chemicals:'read',lineclear:'editor',rework:'editor',haccp:'editor',risks:'read',changes:'editor',orgchart:'read',objectives:'read',mgmtreview:'read',verification:'editor',planner:'editor',training:'editor',qms:'editor',complaints:'editor',sops:'editor',suppliers:'read',receiving:'editor',holds:'editor',batch:'admin',testing:'editor',products:'read',formbank:'read',logs_scale:'editor',logs_equipment:'editor',logs_temp:'editor'}],
-  ['Production Manager','Full on batches; edits products; fills the production logs.',pm({equipment:'editor',chemicals:'editor',lineclear:'editor',rework:'editor',envtests:'editor',cultivation:'editor',haccp:'editor',risks:'editor',changes:'editor',orgchart:'read',objectives:'editor',mgmtreview:'read',verification:'editor',timeclock:'read',planner:'admin',batch:'admin',testing:'editor',stickers:'editor',products:'editor',formbank:'read',rulebook:'read',standards:'editor',sops:'editor',qms:'editor',complaints:'editor',intaudits:'read',training:'editor',suppliers:'editor',receiving:'editor',holds:'editor',shipping:'read',recall:'editor'},LOGS_PROD,'editor')],
-  ['Sales Manager','Sees products; records shipments.',{training:'read',qms:'read',complaints:'read',sops:'read',products:'read',shipping:'editor',holds:'read',recall:'read'}],
-  ['Production Lead','Creates and continues batches; fills the production logs.',pm({equipment:'read',chemicals:'read',lineclear:'editor',rework:'editor',haccp:'editor',changes:'read',orgchart:'read',objectives:'read',planner:'read',batch:'editor',testing:'read',stickers:'read',products:'read',sops:'read',qms:'editor',complaints:'read',training:'read',receiving:'read',holds:'editor'},['logs_sanitation','logs_scale','logs_equipment','logs_temp'],'editor')]];
+  ['Inventory Manager','Sees products and batches; fills the waste log.',{linemap:'read',training:'editor',qms:'editor',complaints:'editor',sops:'read',suppliers:'editor',receiving:'admin',holds:'editor',shipping:'admin',recall:'editor',products:'read',batch:'read',logs_waste:'editor'}],
+  ['Extraction Manager','Full on batches; fills the scale, equipment and temp / humidity logs.',{linemap:'read',equipment:'editor',chemicals:'read',lineclear:'editor',rework:'editor',haccp:'editor',risks:'read',changes:'editor',orgchart:'read',objectives:'read',mgmtreview:'read',verification:'editor',planner:'editor',training:'editor',qms:'editor',complaints:'editor',sops:'editor',suppliers:'read',receiving:'editor',holds:'editor',batch:'admin',testing:'editor',products:'read',formbank:'read',logs_scale:'editor',logs_equipment:'editor',logs_temp:'editor'}],
+  ['Production Manager','Full on batches; edits products; fills the production logs.',pm({linemap:'read',equipment:'editor',chemicals:'editor',lineclear:'editor',rework:'editor',envtests:'editor',cultivation:'editor',haccp:'editor',risks:'editor',changes:'editor',orgchart:'read',objectives:'editor',mgmtreview:'read',verification:'editor',timeclock:'read',planner:'admin',batch:'admin',testing:'editor',stickers:'editor',products:'editor',formbank:'read',rulebook:'read',standards:'editor',sops:'editor',qms:'editor',complaints:'editor',intaudits:'read',training:'editor',suppliers:'editor',receiving:'editor',holds:'editor',shipping:'read',recall:'editor'},LOGS_PROD,'editor')],
+  ['Sales Manager','Sees products; records shipments.',{linemap:'read',training:'read',qms:'read',complaints:'read',sops:'read',products:'read',shipping:'editor',holds:'read',recall:'read'}],
+  ['Production Lead','Creates and continues batches; fills the production logs.',pm({linemap:'read',equipment:'read',chemicals:'read',lineclear:'editor',rework:'editor',haccp:'editor',changes:'read',orgchart:'read',objectives:'read',planner:'read',batch:'editor',testing:'read',stickers:'read',products:'read',sops:'read',qms:'editor',complaints:'read',training:'read',receiving:'read',holds:'editor'},['logs_sanitation','logs_scale','logs_equipment','logs_temp'],'editor')]];
 function accessSummary(perms){
   const p=perms||{},out=[];
   ACCESS_MODULES.forEach(function(m){if(has(p,m.id)&&lvRank(p[m.id]))out.push(m.label.replace(/ \(.*\)$/,'')+': '+LV_NAME[p[m.id]]);});
@@ -7161,8 +7163,8 @@ function SettingsPage(props){
   const[tab,setTab]=useState('general');const[row,setRow]=useState(null);const[f,setF]=useState(null);const[msg,setMsg]=useState('');const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
   const load=useCallback(function(){if(!lid)return;db.get('hx_license_settings','license_id=eq.'+encodeURIComponent(lid)+'&select=*').then(function(r){const x=((r||[]).filter(function(y){return y.license_id===lid;}))[0]||null;setRow(x);
       const s=x||{};setF({legal_name:s.legal_name||'',dba:s.dba||'',address:s.address||'',phone:s.phone||'',email:s.email||'',print_footer:s.print_footer||'',logo:s.logo||null,
-        break1_min:String(s.break1_min||15),break2_min:String(s.break2_min||30),break3_min:String(s.break3_min||15),log_due:{...(s.log_due||{})},review_days:{...(s.review_days||{})}});})
-    .catch(function(e){const m=String(e.message||e);setErr(/hx_license_settings/.test(m)?'Settings are not set up yet - run hendrix_step34.sql in the Hendrix Supabase project.':m);setF({legal_name:'',dba:'',address:'',phone:'',email:'',print_footer:'',logo:null,break1_min:'15',break2_min:'30',break3_min:'15',log_due:{},review_days:{}});});},[lid]);
+        break1_min:String(s.break1_min||15),break2_min:String(s.break2_min||30),break3_min:String(s.break3_min||15),log_due:{...(s.log_due||{})},review_days:{...(s.review_days||{})},idle:String(s.linemap_idle_hours||4),idle0:String(s.linemap_idle_hours||4),hasIdle:!!x&&x.linemap_idle_hours!==undefined});})
+    .catch(function(e){const m=String(e.message||e);setErr(/hx_license_settings/.test(m)?'Settings are not set up yet - run hendrix_step34.sql in the Hendrix Supabase project.':m);setF({legal_name:'',dba:'',address:'',phone:'',email:'',print_footer:'',logo:null,break1_min:'15',break2_min:'30',break3_min:'15',log_due:{},review_days:{},idle:'4',idle0:'4',hasIdle:false});});},[lid]);
   useEffect(load,[load]);
   if(!st||!lic)return el('div',null,el('h1',null,el('span',{className:'g'},'Settings')),el('div',{className:'empty'},'Pick a state and a license at the top first.'));
   function set(k,v){setF(function(p){return {...p,[k]:v};});}
@@ -7173,9 +7175,10 @@ function SettingsPage(props){
     const b=[n(f.break1_min),n(f.break2_min),n(f.break3_min)];if(b.some(function(x){return !x||x<1||x>240;})){setErr('Break limits must be between 1 and 240 minutes.');return;}
     const ld={},rv={};Object.keys(f.log_due).forEach(function(k){const v=n(f.log_due[k]);if(v)ld[k]=v;});Object.keys(f.review_days).forEach(function(k){const v=n(f.review_days[k]);if(v)rv[k]=v;});
     const rec={legal_name:f.legal_name.trim(),dba:f.dba.trim(),address:f.address.trim(),phone:f.phone.trim(),email:f.email.trim(),print_footer:f.print_footer.trim(),logo:f.logo||null,break1_min:b[0],break2_min:b[1],break3_min:b[2],log_due:ld,review_days:rv};
+    const ih=n(f.idle);if(!ih||ih<1||ih>72){setErr('Line Map: hours without an update must be between 1 and 72.');return;}if(f.hasIdle||String(ih)!==f.idle0)rec.linemap_idle_hours=ih;
     setBusy(true);try{if(row)await sb('hx_license_settings?license_id=eq.'+encodeURIComponent(lid),{method:'PATCH',body:rec,prefer:'return=representation'});else await db.insert('hx_license_settings',{...rec,license_id:lid,state_id:st.id});
       setMsg('Settings saved for '+lic.name+'.');load();if(props.onSaved)props.onSaved();}catch(e){setErr(String(e.message||e));}setBusy(false);}
-  const tabs=[['general','General'],['timeclock','Time clock'],['logs','Facility logs'],['reviews','Review cycles'],['more','Everything else']];
+  const tabs=[['general','General'],['timeclock','Time clock'],['logs','Facility logs'],['reviews','Review cycles'],['linemap','Line Map'],['more','Everything else']];
   const dis=!canF,inp=function(k,ph,type){return el('input',{type:type||'text',value:f[k],placeholder:ph||'',disabled:dis,onChange:function(e){set(k,e.target.value);}});};
   const link=function(page,title,what){return el('div',{key:page,className:'card',style:{marginBottom:0}},el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'center'}},el('b',null,title),
     el('button',{className:'btn ghost sm',onClick:function(){props.go(page);}},'Open')),el('div',{className:'muted',style:{fontSize:12,marginTop:4}},what));};
@@ -7203,6 +7206,8 @@ function SettingsPage(props){
       return el('div',{key:t.id,className:'row',style:{gap:10,alignItems:'center',padding:'4px 0',borderTop:'1px solid #1d1d1d',flexWrap:'nowrap'}},el('span',{style:{flex:1,fontSize:13}},t.name),
         el('input',{type:'number',min:1,max:400,value:f.log_due[t.id]!==undefined?f.log_due[t.id]:'',placeholder:String(def),disabled:dis,style:{width:90},onChange:function(e){const v={...f.log_due};if(e.target.value==='')delete v[t.id];else v[t.id]=e.target.value;set('log_due',v);}}),
         el('span',{className:'muted',style:{fontSize:12,width:110}},'days (default '+def+')'));}));
+  else if(tab==='linemap')body=el('div',{className:'card'},el('div',{className:'k',style:{marginBottom:6}},'Line Map: a batch is stopped after'),el('div',{className:'muted',style:{fontSize:12,marginBottom:10}},'When a batch in production has no update for this many hours, the Line Map shows it as stopped ("No update"). Default 4 hours.'),
+    el('div',{className:'row',style:{gap:10,alignItems:'center'}},el('input',{type:'number',min:1,max:72,value:f.idle,disabled:dis,style:{width:90},onChange:function(e){set('idle',e.target.value);},'aria-label':'Hours without an update'}),el('span',{className:'muted',style:{fontSize:12}},'hours (1 to 72)')));
   else if(tab==='reviews')body=el('div',{className:'card'},el('div',{className:'k',style:{marginBottom:6}},'Risk register: review every'),el('div',{className:'muted',style:{fontSize:12,marginBottom:10}},'The default review cycle for a new risk, by its rating. Each risk can still be changed on its own.'),
     [['critical','Critical (15-25)'],['high','High (10-14)'],['medium','Medium (5-9)'],['low','Low (1-4)']].map(function(r){const def=(HX_SET_DEF?HX_SET_DEF.rk:RK_REVIEW)[r[0]];
       return el('div',{key:r[0],className:'row',style:{gap:10,alignItems:'center',padding:'4px 0',borderTop:'1px solid #1d1d1d',flexWrap:'nowrap'}},el('span',{style:{flex:1,fontSize:13}},r[1]),
@@ -7395,6 +7400,225 @@ function ImportPage(props){
             tg.fields.filter(function(f){return map[f[0]]!==undefined;}).map(function(f){const v=r.rec[f[0]];const o=f[2]==='enum'&&v?(f[4].find(function(x){return x[0]===v;})||[0,v])[1]:f[2]==='bool'?(v?'Yes':'No'):v;
               return el('td',{key:f[0],style:{fontSize:12,maxWidth:220,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'},title:String(o==null?'':o)},o==null||o===''?el('span',{className:'muted'},'-'):String(o));}),
             el('td',{style:{fontSize:11}},r.errs.length?el('span',{style:{color:'var(--red)'}},r.errs.join('; ')):dup?el('span',{className:'muted'},'Already in Hendrix - skipped'):r.warns.length?el('span',{style:{color:'var(--gold-hi)'}},r.warns.join('; ')):el('span',{style:{color:'var(--green)'}},'OK')));}))))));
+}
+
+/* ---------- Production Line Map (step 36): a live subway map of every batch, and why it stopped ---------- */
+const LM_COLORS={cartridges:'#d4af37',gummies:'#e8894a',pre_rolls:'#5fbf8a',ethanol_extraction:'#5b9cf0',butane_extraction:'#9b8cf2',infused_flower:'#4fc1c9',moon_rocks:'#d47ad8',snow_caps:'#c9d2dc'};
+const LM_TRUNK=['Lab testing','QC release','Labels','Shipped'];
+const LM_LIVE_MIN=30,LM_SHIP_DAYS=3,LM_W=1180,LM_BEND=730,LM_X0=175,LM_X1=670,LM_TX=[800,905,1010,1112];
+const LM_TAG={hold:'ON HOLD',test:'FAILED TEST',status:'QC HOLD',lc:'LINE CLEARANCE',equipment:'EQUIPMENT',deviation:'DEVIATION',ccp:'CCP',idle:'NO UPDATE'};
+function lmErr(e){const m=String((e&&e.message)||e);return /hx_line_map|linemap/.test(m)&&/missing|does not exist|schema cache|Could not find/i.test(m)?'The Line Map is not set up yet - run hendrix_step36.sql in the Hendrix Supabase project.':m;}
+function lmFilled(v){if(v===null||v===undefined)return false;if(typeof v==='boolean')return v;if(typeof v==='number')return true;if(typeof v==='string')return v.trim()!=='';
+  if(Array.isArray(v))return v.some(lmFilled);if(typeof v==='object')return Object.keys(v).some(function(k){return lmFilled(v[k]);});return false;}
+function lmSections(type){const def=BATCH_TYPES.find(function(t){return t.id===type;});if(!def)return [];const out=[],seen={};let cur=null;
+  def.fields.forEach(function(f){if(f.t==='section'){let n=f.l;seen[n]=(seen[n]||0)+1;if(seen[n]>1)n=n+' ('+seen[n]+')';cur={name:n,keys:[]};out.push(cur);}
+    else if(cur&&f.k&&f.t!=='auto'&&f.t!=='display'&&f.k!=='status'&&f.k!=='notes')cur.keys.push(f.k);});
+  return out.filter(function(s){return s.keys.length;});}
+function lmTypeName(type){const d=BATCH_TYPES.find(function(t){return t.id===type;});return d?d.name:type;}
+function lmDur(ms){if(!(ms>=0))return '';const m=Math.round(ms/60000);if(m<60)return m+' min';const h=Math.floor(m/60);if(h<48)return h+' h'+(m%60&&h<10?' '+(m%60)+' min':'');return Math.floor(h/24)+' days';}
+function lmTime(iso){if(!iso)return '';const d=new Date(/^\d{4}-\d{2}-\d{2}$/.test(iso)?iso+'T12:00:00':iso);const t=Date.now()-d.getTime();
+  return t<20*3600000&&t>-3600000?d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):d.toLocaleDateString([],{month:'short',day:'numeric'});}
+function lmStations(type){return ['Planned','Line clearance'].concat(lmSections(type).map(function(s){return s.name;}));}
+
+/* turns the hx_line_map payload into trains on lines */
+function lmModel(d,now){
+  const eqBad={};(d.equipment_issues||[]).forEach(function(e){eqBad[e.id]=e;});
+  const idleMs=(d.idle_hours||4)*3600000,trains=[];
+  (d.batches||[]).forEach(function(b){
+    if(!BATCH_TYPES.some(function(t){return t.id===b.batch_type;}))return;
+    const secs=lmSections(b.batch_type),ships=b.shipments||[],lastShip=ships.length?ships[ships.length-1]:null;
+    if(lastShip&&lastShip.ship_date&&now-new Date(lastShip.ship_date+'T23:59:59').getTime()>LM_SHIP_DAYS*864e5)return;
+    const tests=b.tests||[],passes=tests.filter(function(t){return t.status==='Passed';}),fails=tests.filter(function(t){return t.status==='Failed';});
+    const lastFail=fails.length?fails[fails.length-1]:null,failedOpen=!!lastFail&&!passes.some(function(p){return p.created_at>lastFail.created_at;});
+    const atLab=tests.filter(function(t){return ['Pending','Submitted','Retest'].indexOf(t.status)>=0;});
+    let lastSec=-1;secs.forEach(function(s,i){if(s.keys.some(function(k){return lmFilled((b.data||{})[k]);}))lastSec=i;});
+    const lcs=b.clearances||[],lc=lcs.length?lcs[lcs.length-1]:null;
+    let where;
+    if(ships.length)where={trunk:3};else if(b.labels&&+b.labels.count>0)where={trunk:2};
+    else if(passes.length&&!failedOpen&&!atLab.length)where={trunk:1};else if(tests.length)where={trunk:0};
+    else if(lastSec>=0)where={st:2+lastSec};else if(lc&&lc.result==='cleared'&&secs.length)where={st:2};else where={st:1};
+    const inProd=where.st!==undefined,R=[];
+    (b.holds||[]).filter(function(h){return h.status==='open';}).forEach(function(h){R.push({kind:'hold',text:'On hold: '+(h.reason||'no reason given'),source:'Hold '+(h.number||''),page:'holds',mod:'holds',since:h.created_at,owner:h.placed_by||'',clears:'Someone with Full access decides the hold in Hold and Release.'});});
+    if(failedOpen)R.push({kind:'test',text:'Failed test'+(lastFail.tag?' on tag '+lastFail.tag:'')+'; no passing retest yet',source:'Testing'+(lastFail.lab_name?' · '+lastFail.lab_name:''),page:'testing',mod:'testing',since:lastFail.result_at||lastFail.updated_at,owner:'QA',clears:'A passing retest recorded in Testing.'});
+    if(b.status==='QC Hold'||b.status==='Failed')R.push({kind:'status',text:b.status==='Failed'?'The batch record is marked Failed':'The batch record status is QC Hold',source:'Batch '+b.batch_number,page:'batches',mod:'batch',since:b.updated_at,owner:b.performed_by||'',clears:b.status==='Failed'?'A decision on the batch: hold, rework or destroy.':'Change the status in Batch Tracker when QC is done.'});
+    if(inProd){
+      if(lc&&lc.result!=='cleared')R.push({kind:'lc',text:'Line clearance not cleared'+(lc.issues?': '+lc.issues:''),source:'Line clearance '+(lc.number||''),page:'lineclear',mod:'lineclear',since:lc.created_at,owner:lc.recorded_by||'',clears:'Fix the issues and record a line clearance that passes.'});
+      else if(!lc)R.push({kind:'lc',text:'No line clearance recorded for this batch',source:'Line Clearance',page:'lineclear',mod:'lineclear',since:b.created_at,owner:b.performed_by||'',clears:'Record a line clearance before production continues.'});
+      if(lc)(lc.equipment_ids||[]).forEach(function(id){const e=eqBad[id];if(e)R.push({kind:'equipment',text:e.number+' '+e.name+' is '+e.issue,source:'Equipment '+e.number,page:'equipment',mod:'equipment',since:e.status!=='in_service'?null:(e.cal_due?e.cal_due+'T00:00:00':null),owner:'Maintenance',clears:e.status!=='in_service'?'Return the equipment to service in Equipment.':'Record a passing calibration in Equipment.'});});
+    }
+    (b.deviations||[]).forEach(function(v){R.push({kind:'deviation',text:'Open deviation: '+v.title,source:v.number||'Deviation',page:'qms',mod:'qms',since:v.created_at,owner:v.owner_name||'',clears:'Close the deviation in QMS.'});});
+    (b.ccp_out||[]).forEach(function(m){R.push({kind:'ccp',text:'CCP '+m.ccp_name+' out of limits ('+m.value+'), waiting for verification',source:'HACCP monitoring',page:'haccp',mod:'haccp',since:m.created_at,owner:'',clears:'A second person verifies the CCP record in HACCP.'});});
+    const last=new Date(b.last_activity||b.updated_at||b.created_at).getTime();
+    if(inProd&&now-last>idleMs)R.push({kind:'idle',text:'No update for '+lmDur(now-last),source:'Batch '+b.batch_number,page:'batches',mod:'batch',since:new Date(last).toISOString(),owner:b.performed_by||'',clears:'Continue the batch record, or put the batch on hold.'});
+    const born=b.created_at||'';R.forEach(function(r){if(r.since&&born&&r.since<born)r.since=born;});
+    let state=R.length?'stopped':(where.trunk===3?'done':(where.trunk===0&&atLab.length?'waiting':'moving'));
+    const info=state==='waiting'?{kind:'lab',text:'Samples at the lab'+(atLab[0].lab_name?' ('+atLab[0].lab_name+')':'')+'; waiting for the COA',source:'Testing',page:'testing',mod:'testing',since:atLab[0].submitted_at||atLab[0].created_at,owner:'QA',clears:'The result and COA are entered in Testing.'}:null;
+    const since=R.length?R.map(function(r){return r.since;}).filter(Boolean).sort()[0]||null:(info?info.since:null);
+    const jt={};jt['Line clearance']=lc?lc.created_at:null;
+    if(tests.length)jt['Lab testing']=tests[0].submitted_at||tests[0].created_at;if(passes.length)jt['QC release']=passes[passes.length-1].result_at||passes[passes.length-1].updated_at;
+    if(b.labels&&b.labels.last_at)jt['Labels']=b.labels.last_at;if(lastShip)jt['Shipped']=lastShip.ship_date;
+    trains.push({key:'b:'+b.id,id:b.id,label:b.batch_number,type:b.batch_type,where:where,state:state,reasons:R,info:info,since:since,live:state==='moving'&&now-last<LM_LIVE_MIN*60000,
+      product:[b.sku,b.flavor].filter(Boolean).join(' · ')||lmTypeName(b.batch_type),started:b.created_at,last:new Date(last).toISOString(),lastSec:lastSec,jt:jt,
+      status:b.status||'',ship:lastShip});
+  });
+  (d.plans||[]).forEach(function(p){if(!BATCH_TYPES.some(function(t){return t.id===p.product_type;}))return;
+    trains.push({key:'p:'+p.id,id:p.id,label:p.number||'Plan',type:p.product_type,where:{st:0},state:'planned',reasons:[],info:null,since:null,live:false,
+      product:(p.sku_name||lmTypeName(p.product_type))+((p.flavors||[]).length?' · '+p.flavors.join(', '):''),planned_for:p.planned_for,units:p.units_per_flavor,jt:{Planned:p.planned_for},plan:true});});
+  return trains;
+}
+const LM_RANK={stopped:0,waiting:1,moving:2,planned:3,done:4};
+function lmLook(state,color){
+  if(state==='stopped')return {bg:'#e5645a',fg:'#0a0a0a',bd:'2px solid #e5645a'};
+  if(state==='waiting')return {bg:'#121212',fg:'#f2efe6',bd:'2px dashed #c8c2b0'};
+  if(state==='planned')return {bg:'#0d0d0d',fg:color,bd:'2px solid '+color};
+  if(state==='done')return {bg:'#232323',fg:'#c9c4b6',bd:'2px solid #3a3a3a'};
+  return {bg:color,fg:'#0a0a0a',bd:'2px solid '+color};
+}
+function lmTagOf(t){if(t.state==='stopped')return LM_TAG[t.reasons[0].kind]||'STOPPED';if(t.state==='waiting')return 'AT LAB';if(t.state==='planned')return t.planned_for?'PLANNED '+lmTime(t.planned_for).toUpperCase():'PLANNED';
+  if(t.state==='done')return 'SHIPPED';return t.live?'WORKING NOW':'MOVING';}
+
+function LineMapPage(props){
+  const lic=props.license,lid=lic?lic.id:'';
+  const[d,setD]=useState(null);const[err,setErr]=useState('');const[sel,setSel]=useState(null);const[stopsOnly,setStopsOnly]=useState(false);const[at,setAt]=useState(0);const boxRef=useRef(null);const[bw,setBw]=useState(LM_W);
+  useEffect(function(){function m(){if(boxRef.current)setBw(boxRef.current.clientWidth||LM_W);}m();window.addEventListener('resize',m);document.addEventListener('fullscreenchange',m);return function(){window.removeEventListener('resize',m);document.removeEventListener('fullscreenchange',m);};},[d]);
+  const load=useCallback(function(){if(!lid)return;sb('rpc/hx_line_map',{method:'POST',body:{p_lic:lid}}).then(function(r){setD(r||{});setErr('');setAt(Date.now());}).catch(function(e){setErr(lmErr(e));});},[lid]);
+  useEffect(function(){load();const t=setInterval(load,60000);return function(){clearInterval(t);};},[load]);
+  if(!lic)return el('div',null,el('h1',null,el('span',{className:'g'},'Line Map')),el('div',{className:'empty'},'Pick a state and a license at the top first.'));
+  const now=d&&d.now?new Date(d.now).getTime()+(Date.now()-at):Date.now();
+  const trains=d?lmModel(d,now):[];
+  const types=BATCH_TYPES.map(function(t){return t.id;}).filter(function(id){return trains.some(function(x){return x.type===id;});});
+  const L=types.length;
+  const lineY={},slot={};types.forEach(function(t,i){lineY[t]=70+i*100;});
+  const trunkY=70+(L-1)*50;types.forEach(function(t,i){slot[t]=trunkY+(i-(L-1)/2)*10;});
+  const pillH=Math.max(1,L)*10+26,pillTop=trunkY-pillH/2,H=Math.max(70+(L-1)*100+70,pillTop+pillH+50);
+  function sx(type,i){const n=lmStations(type).length;return LM_X0+i*(LM_X1-LM_X0)/Math.max(1,n-1);}
+  function sp(type){const n=lmStations(type).length;return (LM_X1-LM_X0)/Math.max(1,n-1);}
+  /* group trains sharing a station */
+  const groups={};trains.forEach(function(t){const k=t.where.trunk!==undefined?'T'+t.where.trunk:t.type+':'+t.where.st;(groups[k]=groups[k]||[]).push(t);});
+  Object.keys(groups).forEach(function(k){groups[k].sort(function(a,b){return LM_RANK[a.state]-LM_RANK[b.state]||String(a.since||'').localeCompare(String(b.since||''));});});
+  const byKey={};trains.forEach(function(t){byKey[t.key]=t;});
+  const selT=sel&&sel.indexOf('G:')!==0?byKey[sel]:null,selG=sel&&sel.indexOf('G:')===0?groups[sel.slice(2)]:null;
+  const act=trains.filter(function(t){return t.state==='moving'||t.state==='stopped'||t.state==='waiting';});
+  const stopped=trains.filter(function(t){return t.state==='stopped';}),waiting=trains.filter(function(t){return t.state==='waiting';});
+  const longest=stopped.slice().sort(function(a,b){return String(a.since||'z').localeCompare(String(b.since||'z'));})[0];
+  const shipped=trains.filter(function(t){return t.state==='done';}),planned=trains.filter(function(t){return t.state==='planned';});
+  const kpi=function(label,val,sub,color,bad){return el('div',{className:'card',style:{marginBottom:0,borderTop:'2px solid '+(color||'var(--gold)'),background:bad?'#160d0c':undefined,borderColor:bad?'#4a2320':undefined}},
+    el('div',{className:'k',style:{color:color||undefined}},label),el('div',{style:{fontSize:28,fontWeight:600,marginTop:2,color:bad?'var(--red)':(color==='#5fbf8a'?'#5fbf8a':undefined)}},val),el('div',{className:'muted',style:{fontSize:12}},sub));};
+  /* map pieces */
+  const parts=[];
+  types.forEach(function(t){const c=LM_COLORS[t]||'#d4af37',y=lineY[t],s=slot[t],st=lmStations(t),w=Math.min(110,sp(t)-6);
+    const bar=function(k,l,tp,wd,ht){parts.push(el('div',{key:k,style:{position:'absolute',left:l,top:tp,width:wd,height:ht,background:c,borderRadius:3}}));};
+    bar(t+'h',130,y-3,LM_BEND-130+3,6);bar(t+'v',LM_BEND,Math.min(y,s)-3,6,Math.abs(s-y)+6);bar(t+'t',LM_BEND,s-3,LM_W-20-LM_BEND,6);
+    const nIn=trains.filter(function(x){return x.type===t&&(x.state==='moving'||x.state==='stopped'||x.state==='waiting');}).length,nSt=trains.filter(function(x){return x.type===t&&x.state==='stopped';}).length;
+    parts.push(el('div',{key:t+'lab',style:{position:'absolute',left:0,top:y-36,width:125}},el('div',{style:{fontWeight:700,fontSize:14,color:c}},lmTypeName(t)),
+      el('div',{className:'muted',style:{fontSize:11}},nIn+' in work'+(nSt?' · ':''),nSt?el('span',{style:{color:'var(--red)'}},nSt+' stopped'):null)));
+    st.forEach(function(name,i){const x=sx(t,i);parts.push(el('div',{key:t+'s'+i,style:{position:'absolute',left:x-9,top:y-9,width:18,height:18,borderRadius:'50%',background:'#f2efe6',border:'4px solid '+c,boxSizing:'border-box'}}),
+      el('div',{key:t+'n'+i,style:{position:'absolute',left:x-w/2,top:y+13,width:w,textAlign:'center',fontSize:10.5,lineHeight:'13px',color:'#c9c4b6'}},name));});
+  });
+  if(L)LM_TRUNK.forEach(function(name,i){const x=LM_TX[i];parts.push(el('div',{key:'tk'+i,style:{position:'absolute',left:x-15,top:pillTop,width:30,height:pillH,borderRadius:15,background:'#f2efe6',border:'3px solid #0a0a0a',boxShadow:'0 0 0 2px #f2efe6',boxSizing:'border-box'}}),
+    el('div',{key:'tn'+i,style:{position:'absolute',left:x-55,top:pillTop+pillH+8,width:110,textAlign:'center',fontSize:12,fontWeight:600,color:'#f2efe6'}},name));});
+  Object.keys(groups).forEach(function(k){const g=groups[k],t0=g[0],trunk=t0.where.trunk!==undefined;
+    const x=trunk?LM_TX[t0.where.trunk]:sx(t0.type,t0.where.st),y=trunk?pillTop-50:lineY[t0.type]-52,w=trunk?104:Math.max(80,Math.min(112,sp(t0.type)-6));
+    const c=LM_COLORS[t0.type]||'#d4af37';const multi=g.length>1;const look=lmLook(t0.state,multi&&trunk?'#d4af37':c);
+    const visible=!stopsOnly||g.some(function(t){return t.state==='stopped'||t.state==='waiting';});
+    const key=multi?'G:'+k:t0.key,on=sel===key;
+    const nStop=g.filter(function(t){return t.state==='stopped';}).length;
+    parts.push(el('button',{key:'tr'+k,type:'button','aria-label':multi?g.length+' batches at '+(trunk?LM_TRUNK[t0.where.trunk]:lmStations(t0.type)[t0.where.st]):t0.label+', '+t0.state+(t0.reasons.length?': '+t0.reasons[0].text:''),
+      onClick:function(){setSel(key);},style:{position:'absolute',left:x-w/2,top:y,width:w,minHeight:38,padding:'3px 5px',borderRadius:9,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:1,cursor:'pointer',
+      fontFamily:'inherit',background:look.bg,color:look.fg,border:look.bd,boxShadow:on?'0 0 0 3px #0a0a0a,0 0 0 5px #f2efe6':'none',zIndex:on?3:1,opacity:visible?1:.2}},
+      el('span',{style:{display:'flex',alignItems:'center',gap:5,fontWeight:700,fontSize:11,whiteSpace:'nowrap',maxWidth:'100%',overflow:'hidden',textOverflow:'ellipsis'}},
+        !multi&&t0.live?el('span',{className:'lm-live',style:{width:7,height:7,borderRadius:'50%',background:'#0a0a0a',display:'inline-block',flex:'none'}}):null,
+        multi?g.length+' batches':t0.label),
+      el('span',{style:{fontSize:8.5,letterSpacing:.8,fontWeight:600,opacity:.85,whiteSpace:'nowrap'}},multi?(nStop?nStop+' STOPPED':lmTagOf(t0)):lmTagOf(t0))));
+  });
+  /* detail */
+  function jumpBtn(r){return can(r.mod,1)&&props.go?el('button',{key:'j'+r.kind+r.source,className:'btn ghost sm',onClick:function(){props.go(r.page);}},'Open '+(HX_PAGE_LABEL[r.page]||r.page)):null;}
+  function detail(t){const c=LM_COLORS[t.type]||'#d4af37',st=lmStations(t.type).concat(LM_TRUNK),cur=t.where.trunk!==undefined?lmStations(t.type).length+t.where.trunk:t.where.st;
+    const stationName=st[cur],badgeC={stopped:'#e5645a',waiting:'#c8c2b0',moving:'#5fbf8a',planned:'#d4af37',done:'#9a968a'}[t.state];
+    const head=t.state==='stopped'?'Stopped'+(t.since?' for '+lmDur(now-new Date(t.since).getTime()):'')+' at '+stationName:t.state==='waiting'?'Waiting'+(t.since?' '+lmDur(now-new Date(t.since).getTime()):'')+' at '+stationName:
+      t.state==='planned'?'Planned'+(t.planned_for?' for '+fmtDay(t.planned_for):'')+(t.units?' · '+t.units+' units per flavor':''):t.state==='done'?'Shipped'+(t.ship?' '+fmtDay(t.ship.ship_date)+' to '+t.ship.customer+' ('+t.ship.number+')':''):
+      (t.live?'Being worked now':'Moving')+' at '+stationName+' · last update '+lmDur(now-new Date(t.last).getTime())+' ago';
+    const list=t.reasons.length?t.reasons:(t.info?[t.info]:[]);
+    return el('div',null,
+      el('div',{className:'row',style:{gap:12,alignItems:'flex-start',flexWrap:'nowrap'}},el('div',{style:{width:10,alignSelf:'stretch',borderRadius:5,background:c}}),
+        el('div',{style:{flex:1}},el('div',{className:'k',style:{color:'var(--muted)'}},lmTypeName(t.type)+' line'),el('div',{style:{fontSize:21,fontWeight:700,marginTop:2}},t.label),el('div',{className:'muted'},t.product)),
+        el('span',{className:'badge',style:{borderColor:badgeC,color:badgeC}},{stopped:'Stopped',waiting:'Waiting',moving:'Moving',planned:'Planned',done:'Shipped'}[t.state])),
+      el('div',{style:{fontSize:15,margin:'12px 0'}},head),
+      list.map(function(r,i){const stop=t.state==='stopped';return el('div',{key:i,style:{background:stop?'#1d0f0e':'#151515',border:'1px solid '+(stop?'#5a2a26':'#3a3a3a'),borderRadius:10,padding:'12px 14px',marginBottom:10}},
+        el('div',{style:{fontSize:10,letterSpacing:'.16em',fontWeight:700,color:stop?'#f08a80':'#c8c2b0',marginBottom:4}},stop?'WHY IT IS STOPPED':'WHY IT IS WAITING'),
+        el('div',{style:{fontWeight:600,fontSize:14.5}},r.text),
+        el('div',{style:{display:'grid',gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:'6px 14px',marginTop:8,fontSize:12.5,color:'#c9c4b6'}},
+          el('div',null,el('div',{className:'muted',style:{fontSize:11}},'Source record'),r.source),el('div',null,el('div',{className:'muted',style:{fontSize:11}},stop?'Stopped for':'Waiting for'),r.since?lmDur(now-new Date(r.since).getTime()):'-'),
+          el('div',null,el('div',{className:'muted',style:{fontSize:11}},'Owner'),r.owner||'-'),el('div',null,el('div',{className:'muted',style:{fontSize:11}},'What clears it'),r.clears)),
+        el('div',{style:{marginTop:8}},jumpBtn(r)));}),
+      !t.plan&&el('div',{style:{marginTop:6}},el('div',{className:'k',style:{color:'var(--muted)',marginBottom:6}},'Journey'),
+        st.map(function(name,i){if(i===0&&!t.jt.Planned)return null;const past=i<cur,here=i===cur,dc=here?(t.state==='stopped'?'#e5645a':c):(past?c:'#2a2a2a');
+          return el('div',{key:i,className:'row',style:{gap:10,alignItems:'center',flexWrap:'nowrap',padding:'3px 0'}},
+            el('span',{style:{width:12,height:12,borderRadius:'50%',flex:'none',boxSizing:'border-box',background:past?dc:'transparent',border:'3px solid '+dc}}),
+            el('span',{style:{flex:1,fontSize:13,fontWeight:here?700:400,color:here?'#f2efe6':(past?'#c9c4b6':'#6c685e')}},name),
+            el('span',{className:'muted',style:{fontSize:12}},t.jt[name]?lmTime(t.jt[name]):(here?(t.state==='stopped'?'stopped':(t.state==='waiting'?'waiting':'now')):'')));})),
+      el('div',{className:'row',style:{gap:8,marginTop:12}},!t.plan&&can('batch',1)&&props.go&&el('button',{className:'btn sm',onClick:function(){props.go('batches');}},'Open Batch Tracker'),
+        t.plan&&can('planner',1)&&props.go&&el('button',{className:'btn sm',onClick:function(){props.go('planner');}},'Open Production Planner')));
+  }
+  const stopRows=trains.filter(function(t){return t.state==='stopped'||t.state==='waiting';}).sort(function(a,b){return LM_RANK[a.state]-LM_RANK[b.state]||String(a.since||'z').localeCompare(String(b.since||'z'));});
+  const where=function(t){return t.where.trunk!==undefined?LM_TRUNK[t.where.trunk]:lmStations(t.type)[t.where.st];};
+  return el('div',{id:'lm-wall',style:{background:'var(--bg)'}},
+    el('style',null,'@keyframes lmpulse{0%{box-shadow:0 0 0 0 rgba(95,191,138,.75)}70%{box-shadow:0 0 0 9px rgba(95,191,138,0)}100%{box-shadow:0 0 0 0 rgba(95,191,138,0)}}.lm-live{animation:lmpulse 1.8s infinite}#lm-wall:fullscreen{padding:24px;overflow:auto}'),
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-end',gap:12,flexWrap:'wrap'}},
+      el('div',null,el('h1',null,el('span',{className:'g'},'Production Line Map')),
+        el('div',{className:'sub',style:{display:'flex',alignItems:'center',gap:8}},el('span',{className:'lm-live',style:{width:9,height:9,borderRadius:'50%',background:'#5fbf8a',display:'inline-block'}}),
+          'Live · '+lic.name+(lic.license_number?' · '+lic.license_number:'')+' · every batch from plan to shipment'+(at?' · updated '+new Date(at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):''))),
+      el('div',{className:'row',style:{gap:8}},
+        el('div',{className:'tabs',style:{margin:0}},el('button',{className:stopsOnly?'':'on',onClick:function(){setStopsOnly(false);}},'All batches'),el('button',{className:stopsOnly?'on':'',onClick:function(){setStopsOnly(true);}},'Stops only')),
+        el('button',{className:'btn ghost sm',onClick:load},'Refresh'),
+        el('button',{className:'btn ghost sm',onClick:function(){const w=document.getElementById('lm-wall');if(document.fullscreenElement)document.exitFullscreen();else if(w&&w.requestFullscreen)w.requestFullscreen();}},'Wall display'))),
+    err&&el('div',{className:'msg err'},err),
+    !d&&!err&&el('div',{className:'muted'},'Loading the line map...'),
+    d&&el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:10,marginBottom:14}},
+      kpi('In production',act.length,'batches on the lines'),
+      kpi('Moving',trains.filter(function(t){return t.state==='moving';}).length,trains.filter(function(t){return t.live;}).length+' worked on in the last '+LM_LIVE_MIN+' min','#5fbf8a'),
+      kpi('Stopped',stopped.length,longest&&longest.since?'longest: '+lmDur(now-new Date(longest.since).getTime())+' ('+(LM_TAG[longest.reasons[0].kind]||'').toLowerCase()+')':'nothing stopped','#e5645a',stopped.length>0),
+      kpi('At the lab',waiting.length,'waiting on a COA','#c8c2b0'),
+      kpi('Shipped',shipped.length,'last '+LM_SHIP_DAYS+' days · '+planned.length+' planned'),
+      d.on_floor!==null&&d.on_floor!==undefined&&kpi('On the floor',d.on_floor,'clocked in (Time Clock)')),
+    d&&!L&&el('div',{className:'empty'},'No batches or plans in the last 45 days at this license. Batches from Batch Tracker and plans from Production Planner appear here automatically.'),
+    d&&L>0&&el('div',{className:'card',style:{padding:'16px 16px 8px'}},
+      el('div',{className:'row',style:{gap:16,fontSize:12,color:'var(--muted)',marginBottom:6,flexWrap:'wrap'}},
+        [['Moving',{background:'#d4af37'}],['Stopped',{background:'#e5645a'}],['Waiting',{border:'2px dashed #c8c2b0'}],['Planned',{border:'2px solid #d4af37'}],['Shipped',{background:'#232323',border:'2px solid #3a3a3a'}]].map(function(x){
+          return el('span',{key:x[0],className:'row',style:{gap:6,alignItems:'center'}},el('span',{style:{width:22,height:12,borderRadius:6,display:'inline-block',boxSizing:'border-box',...x[1]}}),x[0]);}),
+        el('span',{className:'row',style:{gap:6,alignItems:'center'}},el('span',{className:'lm-live',style:{width:9,height:9,borderRadius:'50%',background:'#5fbf8a',display:'inline-block'}}),'Worked on now'),
+        el('span',{style:{flex:1}}),'Click a batch to see where it is and why it stopped'),
+      el('div',{ref:boxRef,style:{overflowX:'auto'}},(function(){const sc=Math.max(.72,Math.min(1.25,bw/LM_W));return el('div',{style:{width:LM_W*sc,height:H*sc}},el('div',{style:{position:'relative',width:LM_W,height:H,transform:'scale('+sc+')',transformOrigin:'top left'}},parts));})())),
+    d&&L>0&&el('div',{className:'row',style:{gap:14,alignItems:'flex-start',flexWrap:'wrap'}},
+      el('div',{className:'card',style:{flex:'1 1 380px',minWidth:0,borderColor:selT&&selT.state==='stopped'?'#5a2a26':undefined}},
+        selT?detail(selT):selG?el('div',null,el('div',{className:'k',style:{marginBottom:8}},selG.length+' batches at '+where(selG[0])),
+          selG.map(function(t){const lk=lmLook(t.state,LM_COLORS[t.type]||'#d4af37');return el('button',{key:t.key,type:'button',onClick:function(){setSel(t.key);},style:{display:'flex',gap:10,alignItems:'center',width:'100%',textAlign:'left',background:'#0f0f0f',border:'1px solid #262626',borderRadius:9,padding:'9px 10px',marginBottom:6,color:'#f2efe6',cursor:'pointer',fontFamily:'inherit'}},
+            el('span',{style:{width:14,height:14,borderRadius:4,background:lk.bg,border:lk.bd,boxSizing:'border-box',flex:'none'}}),el('b',null,t.label),el('span',{className:'muted',style:{flex:1,fontSize:12}},t.product),
+            el('span',{style:{fontSize:11,color:t.state==='stopped'?'var(--red)':'var(--muted)'}},lmTagOf(t)));})):
+        el('div',{className:'muted'},'Click a batch on the map, or a stop on the right, to see its journey and why it stopped.')),
+      el('div',{className:'card',style:{flex:'1 1 420px',minWidth:0}},
+        el('div',{className:'row',style:{gap:10,alignItems:'baseline',marginBottom:10}},el('h3',{style:{margin:0}},'Stops right now'),el('span',{className:'muted',style:{fontSize:12}},'longest first · each one names the record that stopped it')),
+        stopRows.length?stopRows.map(function(t){const r=t.reasons[0]||t.info,st=t.state==='stopped';return el('button',{key:t.key,type:'button',onClick:function(){setSel(t.key);},
+            style:{display:'flex',gap:12,alignItems:'stretch',width:'100%',textAlign:'left',cursor:'pointer',fontFamily:'inherit',color:'#f2efe6',background:sel===t.key?'#1d1a10':'#0f0f0f',border:'1px solid '+(sel===t.key?'var(--gold)':'#262626'),borderRadius:10,padding:'10px 12px',marginBottom:8}},
+            el('span',{style:{width:6,borderRadius:3,background:LM_COLORS[t.type]||'#d4af37',flex:'none'}}),
+            el('span',{style:{flex:1,display:'flex',flexDirection:'column',gap:3}},el('span',null,el('b',null,t.label),el('span',{className:'muted',style:{fontSize:12}},' at '+where(t))),
+              el('span',{style:{fontSize:13}},r.text+(t.reasons.length>1?' (+'+(t.reasons.length-1)+' more)':'')),el('span',{className:'muted',style:{fontSize:11.5}},r.source+(r.owner?' · '+r.owner:''))),
+            el('span',{style:{whiteSpace:'nowrap',fontWeight:700,fontSize:13,color:st?'var(--red)':'#c8c2b0'}},t.since?lmDur(now-new Date(t.since).getTime()):''));}):
+          el('div',{className:'muted'},'Nothing is stopped. Every batch is moving.'),
+        el('div',{className:'muted',style:{fontSize:12,marginTop:10,paddingTop:10,borderTop:'1px solid var(--line)',lineHeight:1.6}},
+          'A batch stops on its own when Hendrix sees: an open hold · a failed test with no passing retest · batch status QC Hold or Failed · no line clearance, or one not cleared · equipment out of service or past calibration · an open deviation on the batch · a CCP out of limits not yet verified · no update for '+((d&&d.idle_hours)||4)+' hours (Settings).'))));
+}
+function LineMapDashCard(props){
+  const lid=props.license?props.license.id:'';const[m,setM]=useState(null);
+  useEffect(function(){if(!lid||!can('linemap',1)){setM(null);return;}let dead=false;
+    sb('rpc/hx_line_map',{method:'POST',body:{p_lic:lid}}).then(function(d){if(dead)return;const t=lmModel(d||{},Date.now());
+      setM({act:t.filter(function(x){return x.state==='moving'||x.state==='stopped'||x.state==='waiting';}).length,stop:t.filter(function(x){return x.state==='stopped';}),mov:t.filter(function(x){return x.state==='moving';}).length});}).catch(function(){if(!dead)setM(null);});
+    return function(){dead=true;};},[lid]);
+  if(!m)return null;
+  const top=m.stop[0];
+  return el('div',{className:'card gold'},el('div',{className:'k'},'Line map'),el('div',{className:'v',style:{color:m.stop.length?'var(--red)':undefined}},m.stop.length?m.stop.length+' batch'+(m.stop.length===1?'':'es')+' stopped':m.act+' in production'),
+    el('div',{className:'muted',style:{margin:'4px 0 8px'}},m.act+' in production · '+m.mov+' moving'+(top?' · '+top.label+': '+top.reasons[0].text:'')),
+    el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go('linemap');}},'Open line map'));
 }
 
 /* ---------- Training (Black Fox / Michigan SOP training matrix + CSQ 2A.13.2 training program) ---------- */
@@ -9027,9 +9251,9 @@ const STD_STATUSES=['Not assessed','Conforming','Partial','Not conforming','Not 
 const STD_TONE={'Not assessed':'off','Conforming':'ok','Partial':'warn','Not conforming':'bad','Not applicable':'off'};
 const STD_COLOR={'Conforming':'#5fbf8a','Partial':'#d4af37','Not conforming':'#e5645a','Not applicable':'#4a473f','Not assessed':'#2a2a2a'};
 const ADOPT_STATUSES=['Following','Audit scheduled','Certified','Suspended','Withdrawn'];
-const HX_PAGE_LABEL={planner:'Production Planner',timeclock:'Time Clock and Badges',mgmtreview:'Management Review',verification:'Verification Schedule',orgchart:'Org Chart',objectives:'Quality Objectives',risks:'Risk Register',changes:'Change Control',haccp:'HACCP',cultivation:'Cultivation',envtests:'Facility Tests',lineclear:'Line Clearance',rework:'Rework',equipment:'Equipment',chemicals:'Chemicals and SDS',complaints:'Complaints',intaudits:'Internal Audits',recall:'Traceability and Recall',receiving:'Receiving',inventory:'Inventory',holds:'Hold and Release',shipping:'Shipping',suppliers:'Suppliers',training:'Training',qms:'QMS (Deviations, CAPA)',sops:'SOPs',rulebook:'Rulebook',locations:'States and Licenses',audit:'Audit Trail',batches:'Batch Tracker',testing:'Testing',stickers:'Compliance Stickers',
+const HX_PAGE_LABEL={linemap:'Line Map',planner:'Production Planner',timeclock:'Time Clock and Badges',mgmtreview:'Management Review',verification:'Verification Schedule',orgchart:'Org Chart',objectives:'Quality Objectives',risks:'Risk Register',changes:'Change Control',haccp:'HACCP',cultivation:'Cultivation',envtests:'Facility Tests',lineclear:'Line Clearance',rework:'Rework',equipment:'Equipment',chemicals:'Chemicals and SDS',complaints:'Complaints',intaudits:'Internal Audits',recall:'Traceability and Recall',receiving:'Receiving',inventory:'Inventory',holds:'Hold and Release',shipping:'Shipping',suppliers:'Suppliers',training:'Training',qms:'QMS (Deviations, CAPA)',sops:'SOPs',rulebook:'Rulebook',locations:'States and Licenses',audit:'Audit Trail',batches:'Batch Tracker',testing:'Testing',stickers:'Compliance Stickers',
   products:'Products',logs:'Facility Logs',visitors:'Visitor Log',roles:'Roles',team:'Team and Access'};
-const HX_PAGE_MOD={planner:'planner',timeclock:'timeclock',mgmtreview:'mgmtreview',verification:'verification',orgchart:'orgchart',objectives:'objectives',risks:'risks',changes:'changes',haccp:'haccp',cultivation:'cultivation',envtests:'envtests',lineclear:'lineclear',rework:'rework',equipment:'equipment',chemicals:'chemicals',complaints:'complaints',intaudits:'intaudits',recall:'recall',receiving:'receiving',inventory:'receiving',holds:'holds',shipping:'shipping',suppliers:'suppliers',training:'training',qms:'qms',sops:'sops',rulebook:'rulebook',audit:'audit',batches:'batch',testing:'testing',stickers:'stickers',visitors:'logs_visitor'};
+const HX_PAGE_MOD={linemap:'linemap',planner:'planner',timeclock:'timeclock',mgmtreview:'mgmtreview',verification:'verification',orgchart:'orgchart',objectives:'objectives',risks:'risks',changes:'changes',haccp:'haccp',cultivation:'cultivation',envtests:'envtests',lineclear:'lineclear',rework:'rework',equipment:'equipment',chemicals:'chemicals',complaints:'complaints',intaudits:'intaudits',recall:'recall',receiving:'receiving',inventory:'receiving',holds:'holds',shipping:'shipping',suppliers:'suppliers',training:'training',qms:'qms',sops:'sops',rulebook:'rulebook',audit:'audit',batches:'batch',testing:'testing',stickers:'stickers',visitors:'logs_visitor'};
 function stdLevelOf(m){return m==='4A'?2:m==='5'?3:1;}
 function stdErr(e){
   const m=String((e&&e.message)||e);
@@ -10546,7 +10770,7 @@ function App(){
   if(isAdmin||can('settings',1))nav.push({id:'settings',label:'Settings'});
   if(['suppliers','equipment','chemicals','products','complaints','risks','orgchart'].some(function(m){return can(m,2);}))nav.push({id:'import',label:'Import (Excel / Sheets)'});
   const anyLog=LOG_TYPES.some(function(t){return can(LOG_MOD[t.id],1);});
-  const mods=[can('qms',1)&&['qms','QMS'],can('complaints',1)&&['complaints','Complaints'],can('intaudits',1)&&['intaudits','Internal Audits'],can('haccp',1)&&['haccp','HACCP'],can('risks',1)&&['risks','Risk Register'],can('changes',1)&&['changes','Change Control'],can('orgchart',1)&&['orgchart','Org Chart'],can('objectives',1)&&['objectives','Quality Objectives'],can('mgmtreview',1)&&['mgmtreview','Management Review'],can('verification',1)&&['verification','Verification Schedule'],can('timeclock',1)&&['timeclock','Time Clock and Badges'],can('training',1)&&['training','Training'],can('sops',1)&&['sops','SOPs'],can('suppliers',1)&&['suppliers','Suppliers'],can('receiving',1)&&['receiving','Receiving'],can('holds',1)&&['holds','Hold and Release'],can('shipping',1)&&['shipping','Shipping'],can('recall',1)&&['recall','Traceability and Recall'],can('equipment',1)&&['equipment','Equipment'],can('chemicals',1)&&['chemicals','Chemicals and SDS'],(can('lineclear',1)||can('rework',1))&&['lineclear','Line Clearance and Rework'],can('envtests',1)&&['envtests','Facility Tests'],can('cultivation',1)&&licOp(lic)==='cultivation'&&['cultivation','Cultivation'],can('logs_visitor',1)&&['visitors','Visitor Log'],anyLog&&['logs','Facility Logs'],(can('products',1)||can('formbank',1)||can('cogs',1))&&['products','Products'],can('planner',1)&&['planner','Production Planner'],can('batch',1)&&['batches','Batch Tracker'],can('testing',1)&&['testing','Testing'],can('stickers',1)&&['stickers','Compliance Stickers']].filter(Boolean);
+  const mods=[can('linemap',1)&&['linemap','Line Map'],can('qms',1)&&['qms','QMS'],can('complaints',1)&&['complaints','Complaints'],can('intaudits',1)&&['intaudits','Internal Audits'],can('haccp',1)&&['haccp','HACCP'],can('risks',1)&&['risks','Risk Register'],can('changes',1)&&['changes','Change Control'],can('orgchart',1)&&['orgchart','Org Chart'],can('objectives',1)&&['objectives','Quality Objectives'],can('mgmtreview',1)&&['mgmtreview','Management Review'],can('verification',1)&&['verification','Verification Schedule'],can('timeclock',1)&&['timeclock','Time Clock and Badges'],can('training',1)&&['training','Training'],can('sops',1)&&['sops','SOPs'],can('suppliers',1)&&['suppliers','Suppliers'],can('receiving',1)&&['receiving','Receiving'],can('holds',1)&&['holds','Hold and Release'],can('shipping',1)&&['shipping','Shipping'],can('recall',1)&&['recall','Traceability and Recall'],can('equipment',1)&&['equipment','Equipment'],can('chemicals',1)&&['chemicals','Chemicals and SDS'],(can('lineclear',1)||can('rework',1))&&['lineclear','Line Clearance and Rework'],can('envtests',1)&&['envtests','Facility Tests'],can('cultivation',1)&&licOp(lic)==='cultivation'&&['cultivation','Cultivation'],can('logs_visitor',1)&&['visitors','Visitor Log'],anyLog&&['logs','Facility Logs'],(can('products',1)||can('formbank',1)||can('cogs',1))&&['products','Products'],can('planner',1)&&['planner','Production Planner'],can('batch',1)&&['batches','Batch Tracker'],can('testing',1)&&['testing','Testing'],can('stickers',1)&&['stickers','Compliance Stickers']].filter(Boolean);
   let body;
   if(page==='locations')body=el(Locations,{profile:profile,states:states,licenses:licenses,reload:loadData,openRulebook:function(id){pickState(id);setPage('rulebook');}});
   else if(page==='visitors'&&can('logs_visitor',1))body=el(VisitorLog,{key:licId,state:st,license:lic});
@@ -10562,6 +10786,7 @@ function App(){
   else if(page==='roles'&&isAdmin)body=el(Roles);
   else if(page==='audit'&&can('audit',1))body=el(AuditTrail,{state:st});
   else if((page==='receiving'&&can('receiving',1))||(page==='inventory'&&can('receiving',1))||(page==='holds'&&can('holds',1))||(page==='shipping'&&can('shipping',1)))body=el(MatPage,{key:licId,state:st,license:lic,tab:page,go:setPage});
+  else if(page==='linemap'&&can('linemap',1))body=el(LineMapPage,{key:licId,state:st,license:lic,profile:profile,go:setPage});
   else if(page==='planner'&&can('planner',1))body=el(ProductionPlanner,{key:licId,state:st,license:lic,profile:profile,go:setPage});
   else if(page==='timeclock'&&can('timeclock',1))body=el(TimeClockPage,{key:licId,state:st,license:lic,profile:profile,go:setPage});
   else if(['orgchart','objectives','mgmtreview','verification'].indexOf(page)>=0&&(can('orgchart',1)||can('objectives',1)||can('mgmtreview',1)||can('verification',1)))body=el(QualitySysPage,{key:licId,state:st,license:lic,profile:profile,go:setPage,tab:{orgchart:'org',objectives:'kpi',mgmtreview:'mr',verification:'ver'}[page]});
