@@ -170,7 +170,7 @@ async function sb(path,opt){
   if(!r.ok){
     const m=(j&&(j.message||j.hint||j.details))||txt||('Error '+r.status);
     if(/schema cache|Could not find the table|relation .* does not exist/i.test(m)&&!/Could not find the '[A-Za-z0-9_]+' column/.test(m)){
-      const step=/hx_time_clock|hx_badge|hx_kiosk_clock|hx_clock_fix/.test(m)?'hendrix_step32.sql':/hx_mgmt_reviews|hx_verification_/.test(m)?'hendrix_step31.sql':/hx_org_positions|hx_objective|hx_qms_settings/.test(m)?'hendrix_step30.sql':/hx_risk|hx_changes/.test(m)?'hendrix_step29.sql':/hx_haccp/.test(m)?'hendrix_step28.sql':/hx_grow_|hx_plant_batches/.test(m)?'hendrix_step27.sql':/hx_env_/.test(m)?'hendrix_step26.sql':/hx_line_clearances|hx_rework/.test(m)?'hendrix_step25.sql':/hx_equipment|hx_chemicals/.test(m)?'hendrix_step24.sql':/share_key|hx_training_shared/.test(m)?'hendrix_step23.sql':/hx_rule_sources/.test(m)?'hendrix_step22.sql':/hx_training_keys|hx_training_attempts|hx_course_submit|content_status/.test(m)?'hendrix_step20.sql':/hx_complaints|hx_audits|hx_audit_findings/.test(m)?'hendrix_step19.sql':/hx_recall|hx_trace_data/.test(m)?'hendrix_step18.sql':/hx_lots|hx_lot_uses|hx_holds|hx_shipments/.test(m)?'hendrix_step17.sql':/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
+      const step=/hx_production_plans|hx_planner_recipes/.test(m)?'hendrix_step33.sql':/hx_time_clock|hx_badge|hx_kiosk_clock|hx_clock_fix/.test(m)?'hendrix_step32.sql':/hx_mgmt_reviews|hx_verification_/.test(m)?'hendrix_step31.sql':/hx_org_positions|hx_objective|hx_qms_settings/.test(m)?'hendrix_step30.sql':/hx_risk|hx_changes/.test(m)?'hendrix_step29.sql':/hx_haccp/.test(m)?'hendrix_step28.sql':/hx_grow_|hx_plant_batches/.test(m)?'hendrix_step27.sql':/hx_env_/.test(m)?'hendrix_step26.sql':/hx_line_clearances|hx_rework/.test(m)?'hendrix_step25.sql':/hx_equipment|hx_chemicals/.test(m)?'hendrix_step24.sql':/share_key|hx_training_shared/.test(m)?'hendrix_step23.sql':/hx_rule_sources/.test(m)?'hendrix_step22.sql':/hx_training_keys|hx_training_attempts|hx_course_submit|content_status/.test(m)?'hendrix_step20.sql':/hx_complaints|hx_audits|hx_audit_findings/.test(m)?'hendrix_step19.sql':/hx_recall|hx_trace_data/.test(m)?'hendrix_step18.sql':/hx_lots|hx_lot_uses|hx_holds|hx_shipments/.test(m)?'hendrix_step17.sql':/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
       throw new Error('Database tables are missing - run '+step+' in the Hendrix Supabase project.');
     }
     if(/row-level security|permission denied/i.test(m))throw new Error('Not allowed - your access level does not allow this here. Ask a system admin.');
@@ -279,7 +279,7 @@ function LoginScreen(props){
 }
 
 /* ---------- Dashboard ---------- */
-const MODULES_SOON=['Production Planner'];
+const MODULES_SOON=['Settings','AI import of Excel / Google Sheets'];
 function Dashboard(props){
   const st=props.state,lic=props.license;
   const isAdmin=props.profile.role==='admin';
@@ -318,6 +318,7 @@ function Dashboard(props){
       el(ObjDashCard,{license:lic,go:props.go}),
       el(MvDashCard,{license:lic,go:props.go}),
       el(TimeClockDashCard,{license:lic,go:props.go}),
+      el(PlannerDashCard,{license:lic,go:props.go}),
       el(ChemDashCard,{license:lic,go:props.go}),
       el(RecallDashCard,{license:lic,go:props.go}),
       el(StdDashCard,{license:lic,go:props.go})),
@@ -2347,7 +2348,7 @@ function Products(props){
 /* ---------- Audit trail: history, void, admin page ----------
    The database writes every change to hx_audit_log (append-only). Records are never deleted:
    they are voided with a reason. Every change to a record needs a reason for change. */
-const AUDIT_AREAS={hx_time_clock:'Time clock',hx_badges:'Badge',hx_mgmt_reviews:'Management review',hx_verification_plan:'Verification activity',hx_verification_records:'Verification',hx_org_positions:'Org chart',hx_qms_settings:'Quality policy',hx_objectives:'Quality objective',hx_objective_results:'KPI result',hx_risks:'Risk',hx_risk_reviews:'Risk review',hx_changes:'Change',hx_haccp_team:'HACCP team',hx_haccp_plans:'HACCP plan',hx_haccp_monitoring:'CCP monitoring',hx_haccp_verifications:'HACCP verification',hx_grow_areas:'Grow area',hx_plant_batches:'Plant batch',hx_grow_events:'Grow record',hx_env_points:'Facility test point',hx_env_tests:'Facility test result',hx_line_clearances:'Line clearance',hx_rework:'Rework',hx_equipment:'Equipment',hx_equipment_events:'Equipment record',hx_chemicals:'Chemical',hx_complaints:'Complaint',hx_audits:'Internal audit',hx_audit_findings:'Audit finding',hx_recalls:'Recall / mock recall',hx_recall_contacts:'Recall contact',hx_lots:'Received lot',hx_lot_uses:'Lot use',hx_holds:'Hold',hx_shipments:'Shipment',hx_suppliers:'Supplier',hx_supplier_reviews:'Supplier review',hx_training_courses:'Training course',hx_training_records:'Training record',hx_deviations:'Deviation',hx_capas:'CAPA',hx_sops:'SOP',hx_sop_acks:'SOP signature',hx_label_prints:'Sticker print',hx_standards:'Standards',hx_standard_clauses:'Standard clauses',hx_license_standards:'Standard adoption',hx_conformance:'Standard conformance',hx_label_templates:'Label templates',hx_tests:'Testing record',hx_roles:'Roles',hx_batches:'Batch record',hx_facility_log:'Facility log entry',hx_visitor_log:'Visitor log',hx_log_lists:'Facility log lists',hx_rules:'Rulebook',hx_rule_sources:'Rulebook source PDF',
+const AUDIT_AREAS={hx_production_plans:'Production plan',hx_time_clock:'Time clock',hx_badges:'Badge',hx_mgmt_reviews:'Management review',hx_verification_plan:'Verification activity',hx_verification_records:'Verification',hx_org_positions:'Org chart',hx_qms_settings:'Quality policy',hx_objectives:'Quality objective',hx_objective_results:'KPI result',hx_risks:'Risk',hx_risk_reviews:'Risk review',hx_changes:'Change',hx_haccp_team:'HACCP team',hx_haccp_plans:'HACCP plan',hx_haccp_monitoring:'CCP monitoring',hx_haccp_verifications:'HACCP verification',hx_grow_areas:'Grow area',hx_plant_batches:'Plant batch',hx_grow_events:'Grow record',hx_env_points:'Facility test point',hx_env_tests:'Facility test result',hx_line_clearances:'Line clearance',hx_rework:'Rework',hx_equipment:'Equipment',hx_equipment_events:'Equipment record',hx_chemicals:'Chemical',hx_complaints:'Complaint',hx_audits:'Internal audit',hx_audit_findings:'Audit finding',hx_recalls:'Recall / mock recall',hx_recall_contacts:'Recall contact',hx_lots:'Received lot',hx_lot_uses:'Lot use',hx_holds:'Hold',hx_shipments:'Shipment',hx_suppliers:'Supplier',hx_supplier_reviews:'Supplier review',hx_training_courses:'Training course',hx_training_records:'Training record',hx_deviations:'Deviation',hx_capas:'CAPA',hx_sops:'SOP',hx_sop_acks:'SOP signature',hx_label_prints:'Sticker print',hx_standards:'Standards',hx_standard_clauses:'Standard clauses',hx_license_standards:'Standard adoption',hx_conformance:'Standard conformance',hx_label_templates:'Label templates',hx_tests:'Testing record',hx_roles:'Roles',hx_batches:'Batch record',hx_facility_log:'Facility log entry',hx_visitor_log:'Visitor log',hx_log_lists:'Facility log lists',hx_rules:'Rulebook',hx_rule_sources:'Rulebook source PDF',
   hx_states:'States',hx_licenses:'Licenses',hx_profiles:'Team and access',hx_skus:'SKUs',hx_flavors:'Flavors',hx_formulations:'Formulations',hx_cost_library:'Ingredient prices'};
 const AUDIT_SKIP=['voided_by','voided_at','updated_at','edit_reason'];
 function auditVal(v){
@@ -2716,7 +2717,7 @@ function openAttachment(a){const x=document.createElement('a');x.href=a.data;x.d
 /* The batch form: new batch, admin edit (reason required), or "continue" (fill blanks only) */
 function BatchForm(props){
   const def=props.def,init=props.initial,mode=props.mode||'new',ts=props.ts;
-  const[top,setTop]=useState(function(){return init?{batch_number:init.batch_number||'',sku_id:init.sku_id||'',flavor_id:init.flavor_id||'',flavor:init.flavor||''}:{batch_number:'',sku_id:'',flavor_id:'',flavor:''};});
+  const[top,setTop]=useState(function(){const pf=props.prefill||{};return init?{batch_number:init.batch_number||'',sku_id:init.sku_id||'',flavor_id:init.flavor_id||'',flavor:init.flavor||''}:{batch_number:'',sku_id:pf.sku_id||'',flavor_id:pf.flavor_id||'',flavor:pf.flavor||''};});
   const findSku=function(id){return props.allSkus.find(function(k){return k.id===id;})||null;};
   const[d,setD]=useState(function(){
     if(init)return {...(init.data||{})};
@@ -2886,6 +2887,7 @@ function BatchTracker(props){
       .catch(function(e){setErr(/hx_batches/.test(String(e.message))?'Database tables are missing - run hendrix_step7.sql in the Hendrix Supabase project.':String(e.message||e));setRows([]);});
   },[lid,sid,type,from,to]);
   useEffect(function(){loadCat();},[loadCat]);
+  useEffect(function(){const raw=lsGet('hx_batch_prefill');if(!raw||!cat||!canAdd)return;lsSet('hx_batch_prefill','');let p=null;try{p=JSON.parse(raw);}catch(e){p=null;}if(!p)return;if(p.type&&p.type!==type)setType(p.type);setModal({form:'new',prefill:p});},[cat]);
   useEffect(function(){setRows(null);setErr('');loadRows();},[loadRows]);
   const[tests,setTests]=useState({});
   const loadTests=useCallback(function(){
@@ -3014,7 +3016,7 @@ function BatchTracker(props){
             !b.voided&&isAdmin&&el('button',{className:'btn danger sm',onClick:function(){setModal({voidb:b});}},'Void'))));
     }),
     modal&&modal.form&&el(Modal,{title:(modal.form==='new'?'New ':modal.form==='fill'?'Continue ':'Edit ')+def.name+' batch'+(modal.b?' \u00b7 '+modal.b.batch_number:''),wide:true,onClose:function(){setModal(null);}},
-      el(BatchForm,{def:def,ts:ts,mode:modal.form,initial:modal.b||null,skus:usable,allSkus:allSkus,flavors:(cat&&cat.flavors)||[],formulas:canF?(cat&&cat.forms):null,defaultName:props.profile.name||'',
+      el(BatchForm,{def:def,ts:ts,mode:modal.form,initial:modal.b||null,prefill:modal.prefill||null,skus:usable,allSkus:allSkus,flavors:(cat&&cat.flavors)||[],formulas:canF?(cat&&cat.forms):null,defaultName:props.profile.name||'',
         onCancel:function(){setModal(null);},onSubmit:function(p){return modal.form==='new'?create(p):update(modal.b,p);}})),
     modal&&modal.ccp&&el(HaccpMonForm,{plans:hps,planId:(hpFor(modal.ccp)||{}).id,batchId:modal.ccp.id,batches:[modal.ccp],state:st,license:lic,profile:props.profile,onClose:function(){setModal(null);},onDone:function(){setModal(null);loadHp();}}),
     modal&&modal.lc&&el(LineClearanceForm,{state:st,license:lic,batch:modal.lc,profile:props.profile,onClose:function(){setModal(null);},onDone:function(){setModal(null);loadLcs();}}),
@@ -3059,6 +3061,7 @@ const ACCESS_MODULES=[
   {id:'mgmtreview',label:'Management Review',grp:'General',help:'View reviews / prepare reviews and update actions / sign reviews, cancel drafts'},
   {id:'verification',label:'Verification Schedule',grp:'General',help:'View the schedule / add activities and record verifications / turn activities off, void records'},
   {id:'timeclock',label:'Time Clock and Badges',grp:'General',help:'View the sign-in sheet and who is on site / make and print badges / re-issue lost badges, void punches, add missed punches'},
+  {id:'planner',label:'Production Planner',grp:'Production',help:'View plans / calculate, save plans and start batches / cancel plans'},
   {id:'batch',label:'Batch Tracker',grp:'Production',help:'View / create and continue (fill blanks) / change filled values with a reason and void'},
   {id:'products',label:'Products (SKUs and flavors)',grp:'Production',help:'View / add and edit / delete'},
   {id:'formbank',label:'Formulation Bank (recipes)',grp:'Production',help:'View / add and edit / delete'},
@@ -3220,18 +3223,18 @@ function Team(props){
 const LOGS_PROD=['logs_sanitation','logs_waste','logs_scale','logs_equipment','logs_temp','logs_env'];
 function pm(o,list,lv){const x={...o};(list||[]).forEach(function(k){x[k]=lv;});return x;}
 const STARTER_ROLES=[
-  ['General Manager','Leadership. Edit everywhere; Full on batches and every log; sees recipes, prices and the audit trail.',{training:'admin',qms:'admin',complaints:'admin',intaudits:'admin',sops:'admin',suppliers:'admin',equipment:'admin',chemicals:'admin',lineclear:'admin',rework:'admin',envtests:'admin',cultivation:'admin',haccp:'admin',risks:'admin',changes:'admin',orgchart:'admin',objectives:'admin',mgmtreview:'admin',verification:'admin',timeclock:'admin',receiving:'admin',holds:'admin',shipping:'admin',recall:'admin',rulebook:'editor',standards:'editor',audit:'read',batch:'admin',testing:'admin',stickers:'admin',products:'editor',formbank:'read',cogs:'read',logs:'admin'}],
-  ['Assistant of General Manager','Leadership support. Edit on batches, products and every log; sees recipes and the audit trail.',{training:'editor',qms:'editor',complaints:'editor',intaudits:'editor',sops:'editor',suppliers:'editor',equipment:'editor',chemicals:'editor',lineclear:'editor',rework:'editor',envtests:'editor',cultivation:'editor',haccp:'editor',risks:'editor',changes:'editor',orgchart:'editor',objectives:'editor',mgmtreview:'editor',verification:'editor',timeclock:'editor',receiving:'editor',holds:'editor',shipping:'editor',recall:'editor',rulebook:'editor',standards:'read',audit:'read',batch:'editor',testing:'editor',products:'editor',formbank:'read',logs:'editor'}],
-  ['Compliance Officer','Full on every log, the rulebook and standards (CSQ); sees batches, products and the audit trail.',{training:'admin',qms:'admin',complaints:'admin',intaudits:'admin',sops:'admin',suppliers:'admin',equipment:'admin',chemicals:'admin',lineclear:'admin',rework:'admin',envtests:'admin',cultivation:'admin',haccp:'admin',risks:'admin',changes:'admin',orgchart:'admin',objectives:'admin',mgmtreview:'admin',verification:'admin',timeclock:'admin',receiving:'admin',holds:'admin',shipping:'read',recall:'admin',rulebook:'admin',standards:'admin',audit:'read',logs:'admin',batch:'read',testing:'admin',stickers:'admin',products:'read'}],
+  ['General Manager','Leadership. Edit everywhere; Full on batches and every log; sees recipes, prices and the audit trail.',{training:'admin',qms:'admin',complaints:'admin',intaudits:'admin',sops:'admin',suppliers:'admin',equipment:'admin',chemicals:'admin',lineclear:'admin',rework:'admin',envtests:'admin',cultivation:'admin',haccp:'admin',risks:'admin',changes:'admin',orgchart:'admin',objectives:'admin',mgmtreview:'admin',verification:'admin',timeclock:'admin',planner:'admin',receiving:'admin',holds:'admin',shipping:'admin',recall:'admin',rulebook:'editor',standards:'editor',audit:'read',batch:'admin',testing:'admin',stickers:'admin',products:'editor',formbank:'read',cogs:'read',logs:'admin'}],
+  ['Assistant of General Manager','Leadership support. Edit on batches, products and every log; sees recipes and the audit trail.',{training:'editor',qms:'editor',complaints:'editor',intaudits:'editor',sops:'editor',suppliers:'editor',equipment:'editor',chemicals:'editor',lineclear:'editor',rework:'editor',envtests:'editor',cultivation:'editor',haccp:'editor',risks:'editor',changes:'editor',orgchart:'editor',objectives:'editor',mgmtreview:'editor',verification:'editor',timeclock:'editor',planner:'editor',receiving:'editor',holds:'editor',shipping:'editor',recall:'editor',rulebook:'editor',standards:'read',audit:'read',batch:'editor',testing:'editor',products:'editor',formbank:'read',logs:'editor'}],
+  ['Compliance Officer','Full on every log, the rulebook and standards (CSQ); sees batches, products and the audit trail.',{training:'admin',qms:'admin',complaints:'admin',intaudits:'admin',sops:'admin',suppliers:'admin',equipment:'admin',chemicals:'admin',lineclear:'admin',rework:'admin',envtests:'admin',cultivation:'admin',haccp:'admin',risks:'admin',changes:'admin',orgchart:'admin',objectives:'admin',mgmtreview:'admin',verification:'admin',timeclock:'admin',planner:'admin',receiving:'admin',holds:'admin',shipping:'read',recall:'admin',rulebook:'admin',standards:'admin',audit:'read',logs:'admin',batch:'read',testing:'admin',stickers:'admin',products:'read'}],
   ['Security Manager','Full on the security and visitor logs.',{training:'editor',qms:'editor',complaints:'editor',sops:'read',rulebook:'read',logs_security:'admin',logs_visitor:'admin',timeclock:'admin'}],
   ['Security Officer','Fills the security and visitor logs.',{training:'read',qms:'read',complaints:'read',sops:'read',rulebook:'read',logs_security:'editor',logs_visitor:'editor',timeclock:'read'}],
   ['Sanitation','Fills the sanitation, waste and pest control logs.',{chemicals:'read',envtests:'editor',training:'read',qms:'read',complaints:'read',sops:'read',logs_sanitation:'editor',logs_waste:'editor',logs_pest:'editor'}],
   ['Team Member','Continues batches; fills the sanitation and temp / humidity logs.',{equipment:'read',chemicals:'read',lineclear:'editor',orgchart:'read',training:'read',qms:'read',complaints:'read',sops:'read',holds:'editor',receiving:'read',batch:'editor',products:'read',logs_temp:'editor',logs_sanitation:'editor'}],
   ['Inventory Manager','Sees products and batches; fills the waste log.',{training:'editor',qms:'editor',complaints:'editor',sops:'read',suppliers:'editor',receiving:'admin',holds:'editor',shipping:'admin',recall:'editor',products:'read',batch:'read',logs_waste:'editor'}],
-  ['Extraction Manager','Full on batches; fills the scale, equipment and temp / humidity logs.',{equipment:'editor',chemicals:'read',lineclear:'editor',rework:'editor',haccp:'editor',risks:'read',changes:'editor',orgchart:'read',objectives:'read',mgmtreview:'read',verification:'editor',training:'editor',qms:'editor',complaints:'editor',sops:'editor',suppliers:'read',receiving:'editor',holds:'editor',batch:'admin',testing:'editor',products:'read',formbank:'read',logs_scale:'editor',logs_equipment:'editor',logs_temp:'editor'}],
-  ['Production Manager','Full on batches; edits products; fills the production logs.',pm({equipment:'editor',chemicals:'editor',lineclear:'editor',rework:'editor',envtests:'editor',cultivation:'editor',haccp:'editor',risks:'editor',changes:'editor',orgchart:'read',objectives:'editor',mgmtreview:'read',verification:'editor',timeclock:'read',batch:'admin',testing:'editor',stickers:'editor',products:'editor',formbank:'read',rulebook:'read',standards:'editor',sops:'editor',qms:'editor',complaints:'editor',intaudits:'read',training:'editor',suppliers:'editor',receiving:'editor',holds:'editor',shipping:'read',recall:'editor'},LOGS_PROD,'editor')],
+  ['Extraction Manager','Full on batches; fills the scale, equipment and temp / humidity logs.',{equipment:'editor',chemicals:'read',lineclear:'editor',rework:'editor',haccp:'editor',risks:'read',changes:'editor',orgchart:'read',objectives:'read',mgmtreview:'read',verification:'editor',planner:'editor',training:'editor',qms:'editor',complaints:'editor',sops:'editor',suppliers:'read',receiving:'editor',holds:'editor',batch:'admin',testing:'editor',products:'read',formbank:'read',logs_scale:'editor',logs_equipment:'editor',logs_temp:'editor'}],
+  ['Production Manager','Full on batches; edits products; fills the production logs.',pm({equipment:'editor',chemicals:'editor',lineclear:'editor',rework:'editor',envtests:'editor',cultivation:'editor',haccp:'editor',risks:'editor',changes:'editor',orgchart:'read',objectives:'editor',mgmtreview:'read',verification:'editor',timeclock:'read',planner:'admin',batch:'admin',testing:'editor',stickers:'editor',products:'editor',formbank:'read',rulebook:'read',standards:'editor',sops:'editor',qms:'editor',complaints:'editor',intaudits:'read',training:'editor',suppliers:'editor',receiving:'editor',holds:'editor',shipping:'read',recall:'editor'},LOGS_PROD,'editor')],
   ['Sales Manager','Sees products; records shipments.',{training:'read',qms:'read',complaints:'read',sops:'read',products:'read',shipping:'editor',holds:'read',recall:'read'}],
-  ['Production Lead','Creates and continues batches; fills the production logs.',pm({equipment:'read',chemicals:'read',lineclear:'editor',rework:'editor',haccp:'editor',changes:'read',orgchart:'read',objectives:'read',batch:'editor',testing:'read',stickers:'read',products:'read',sops:'read',qms:'editor',complaints:'read',training:'read',receiving:'read',holds:'editor'},['logs_sanitation','logs_scale','logs_equipment','logs_temp'],'editor')]];
+  ['Production Lead','Creates and continues batches; fills the production logs.',pm({equipment:'read',chemicals:'read',lineclear:'editor',rework:'editor',haccp:'editor',changes:'read',orgchart:'read',objectives:'read',planner:'read',batch:'editor',testing:'read',stickers:'read',products:'read',sops:'read',qms:'editor',complaints:'read',training:'read',receiving:'read',holds:'editor'},['logs_sanitation','logs_scale','logs_equipment','logs_temp'],'editor')]];
 function accessSummary(perms){
   const p=perms||{},out=[];
   ACCESS_MODULES.forEach(function(m){if(has(p,m.id)&&lvRank(p[m.id]))out.push(m.label.replace(/ \(.*\)$/,'')+': '+LV_NAME[p[m.id]]);});
@@ -6962,6 +6965,179 @@ function BadgeCheck(){
       el('div',{style:{marginTop:16,fontWeight:700,color:r.valid?'var(--green)':'var(--red)'}},r.valid?'\u2713 Valid Hendrix badge \u00b7 ID '+r.badge_no:'\u2717 This badge is not valid')));
 }
 
+/* ---------- Production Planner (from Black Fox / Michigan): ingredients per flavor, worksheets, saved plans ---------- */
+function ppErr(e){const m=String((e&&e.message)||e);return /hx_production_plans|hx_planner_recipes/.test(m)&&/missing|does not exist|schema cache|Could not find/i.test(m)?'The Production Planner is not set up yet - run hendrix_step33.sql in the Hendrix Supabase project.':m;}
+function ppNum(v){const n=parseFloat(String(v==null?'':v).replace(/,/g,''));return isNaN(n)?0:n;}
+function ppR(n){return String(Math.round(n*100)/100);}
+const PP_STATUS={planned:'Planned',in_progress:'In production',completed:'Completed',cancelled:'Cancelled'};
+const PP_TONE={planned:'warn',in_progress:'warn',completed:'ok',cancelled:'off'};
+// the blanks on the worksheet (Black Fox sets for pre-rolls and infused flower; a general set for the rest)
+function ppTrack(type,sku){
+  if(type==='infused_flower')return [['if_total_weight','Total infused flower weight'],['if_bags_filled','Total bags filled'],['if_waste','Total infused flower waste'],['if_remaining','Remaining infused flower']];
+  if(type==='pre_rolls')return [['infused_flower_wt','Infused flower wt'],['infused_flower_waste','Infused flower waste'],['infused_preroll_produced','Infused pre-roll produced'],['kief_used','Kief used'],['infused_preroll_waste','Infused pre-roll waste'],['infused_kiefed_produced','Infused kiefed pre-roll produced'],['infused_kiefed_waste','Infused kiefed pre-roll waste']];
+  if(type==='cartridges')return [['oil_used','Oil used'],['units_filled','Cartridges filled'],['units_rejected','Cartridges rejected'],['oil_waste','Oil waste']];
+  if(type==='gummies')return [['mix_weight','Gummy mixture weight'],['gummies_made','Gummies made'],['gummies_rejected','Gummies rejected'],['packages','Packages filled']];
+  return [['input_used','Input used'],['produced','Produced'],['waste','Waste'],['remaining','Remaining']];
+}
+function ppIfSize(sku){const s=sku&&sku.spec&&ppNum(sku.spec.unit_size);return s||(/7\s*g/i.test((sku&&sku.name)||'')?7:3.5);}
+function ppTval(trk,key,type,sku){if(type==='infused_flower'&&key==='if_remaining'&&!(trk.if_remaining||'').trim()){const w=trk.if_total_weight,b=trk.if_bags_filled,ws=trk.if_waste;
+    if([w,b,ws].every(function(x){return String(x||'').trim()!=='';}))return ppR(ppNum(w)-ppNum(b)*ppIfSize(sku)-ppNum(ws));return '';}return trk[key]||'';}
+function ppGrand(lines){const s={};lines.forEach(function(l){(l.ingredients||[]).forEach(function(i){const k=String(i.name||'').toLowerCase()+'|'+(i.unit||'g');if(!s[k])s[k]={name:i.name,unit:i.unit||'g',qty:0};s[k].qty+=ppNum(i.qty);});});
+  return Object.keys(s).map(function(k){return s[k];}).sort(function(a,b){return String(a.name).localeCompare(String(b.name));}).map(function(x){return {name:x.name,qty:ppR(x.qty),unit:x.unit};});}
+// grams / milliliters for the inventory check
+function ppBase(q,u){u=String(u||'').toLowerCase();const n=ppNum(q);if(u==='kg')return [n*1000,'g'];if(u==='mg')return [n/1000,'g'];if(u==='lb')return [n*453.592,'g'];if(u==='oz')return [n*28.3495,'g'];if(u==='l')return [n*1000,'ml'];
+  if(u==='ml')return [n,'ml'];if(u==='g')return [n,'g'];return [n,u||'each'];}
+function ppOnHand(name,unit,lots){const want=String(name||'').toLowerCase().replace(/\s+/g,' ').trim(),bu=ppBase(1,unit)[1];let t=0,found=false;
+  (lots||[]).forEach(function(l){const it=String(l.item||'').toLowerCase().replace(/\s+/g,' ').trim();if(!it||!(it===want||it.indexOf(want)>=0||want.indexOf(it)>=0))return;const b=ppBase(lotLeft(l),l.unit);if(b[1]!==bu)return;t+=b[0];found=true;});
+  return found?t:null;}
+// one flavor: its own formulation, else the SKU's base recipe (terpene named for the flavor)
+function ppFromRecipe(rec,units,mult,flavor){const k=units/ppNum(rec.batch_size)*mult;
+  return (rec.raw_materials||[]).filter(function(m){return m&&m.name;}).map(function(m){let n=m.name;if(flavor&&flavor!=='Standard'&&/terp/i.test(n)&&n.toLowerCase().indexOf(flavor.toLowerCase())<0)n=n.replace(/\s*[-\u2013].*$/,'')+' - '+flavor;
+    return {name:n,qty:ppR(ppNum(m.qty)*k),unit:m.unit||'g'};});}
+async function ppCalculate(o){
+  // o: {lic, sku, type, flavors:[{id,name}], units, notes}
+  const recs=(await sb('rpc/hx_planner_recipes',{method:'POST',body:{p_lic:o.lic.id,p_sku:o.sku.id}}))||[];
+  const ci=String(o.notes||'').trim(),bufM=ci.match(/(\d+(?:\.\d+)?)\s*%\s*(?:(?:waste|buffer|extra|overage|overrun|allowance)\b\s*)+/i),rest=bufM?ci.replace(bufM[0],''):ci;
+  const needsAiForNotes=/[a-z0-9]/i.test(rest.replace(/\b(add|and|plus|with|a|an|the|of|extra)\b/gi,'')),mult=bufM?1+parseFloat(bufM[1])/100:1;
+  const usable=function(r){return r&&ppNum(r.batch_size)>0&&(r.raw_materials||[]).length>0;};
+  const base=recs.find(function(r){return !r.flavor_id&&usable(r);});
+  const lines=[],needAi=[];
+  o.flavors.forEach(function(fl){const own=fl.id&&recs.find(function(r){return r.flavor_id===fl.id&&usable(r);});
+    if(!needsAiForNotes&&own)lines.push({flavor_id:fl.id||null,flavor:fl.name,units:o.units,source:'recipe',recipe:own.name||'',ingredients:ppFromRecipe(own,o.units,mult,'')});
+    else if(!needsAiForNotes&&base)lines.push({flavor_id:fl.id||null,flavor:fl.name,units:o.units,source:'base',recipe:base.name||'',ingredients:ppFromRecipe(base,o.units,mult,fl.name)});
+    else{needAi.push(fl);lines.push({flavor_id:fl.id||null,flavor:fl.name,units:o.units,source:'ai',ingredients:[]});}});
+  if(needAi.length){
+    const data=recs.filter(usable).length?JSON.stringify(recs.filter(usable).map(function(r){return {name:r.name,flavor:(o.flavors.find(function(f){return f.id===r.flavor_id;})||{}).name||(r.flavor_id?'other':'base'),batch_size:r.batch_size,raw_materials:r.raw_materials};})):'No saved recipes.';
+    const prompt='You are a cannabis production ingredient calculator for '+o.lic.name+'.\n\nPRODUCT: '+ptName(o.type)+'\nSKU: '+o.sku.name+'\nSKU SETTINGS: '+JSON.stringify(o.sku.spec||{})+'\nFLAVORS: '+needAi.map(function(f){return f.name;}).join(', ')+'\nUNITS PER FLAVOR: '+o.units+'\n\nSAVED RECIPES:\n'+data+'\n\n'+(ci?'NOTES: '+ci+'\n\n':'')+
+      'RESPOND WITH ONLY a JSON object (no markdown, no explanation). Format:\n{"flavors":{"FlavorName":[{"name":"Ingredient","qty":"amount","unit":"g"}]}}\n\nRules:\n- ONLY ingredients and quantities. No labor, no packaging, no costs.\n- Use saved recipe ratios scaled to '+o.units+' units. If no recipe for a flavor, use the closest matching recipe and the SKU settings, and name the flavor-specific ingredient (e.g. "Terpene - Berry Blast").\n- Include ALL raw materials: flower, trim, THCA, kief, terpene, distillate, etc.';
+    const j=await aiCall({module:'planner',max_tokens:6000,system:'You output ONLY valid, parseable JSON. Never include prose, explanation, or markdown fences.',messages:[{role:'user',content:prompt}]});
+    const p=parseJsonLoose((j.content&&j.content[0]&&j.content[0].text)||'')||{},m=p.flavors||{};
+    lines.forEach(function(l){if(l.source!=='ai')return;const k=Object.keys(m).find(function(x){return x.trim().toLowerCase()===l.flavor.trim().toLowerCase();});
+      l.ingredients=(k?m[k]:[]).filter(function(i){return i&&i.name;}).map(function(i){return {name:String(i.name),qty:ppR(ppNum(i.qty)),unit:i.unit||'g'};});});
+  }
+  return {lines:lines,grand_total:ppGrand(lines)};
+}
+function ppWorksheetPdf(plan,lic,sku,track,only){
+  if(!window.jspdf){window.alert('The PDF library did not load.');return;}
+  const doc=pdfSafeDoc(new window.jspdf.jsPDF({unit:'mm',format:'letter'})),W=215.9,m=14,tf=ppTrack(plan.product_type,sku);
+  const list=(plan.lines||[]).filter(function(l){return !only||l.flavor===only;});
+  list.forEach(function(l,ix){if(ix)doc.addPage();let y=16;
+    doc.setFont('helvetica','bold');doc.setFontSize(18);doc.text('Production Worksheet',m,y);y+=7;
+    doc.setFont('helvetica','normal');doc.setFontSize(10);doc.text(lic.name+(lic.license_number?' ('+lic.license_number+')':'')+' | '+(plan.number||'Draft plan')+' | planned for '+(plan.planned_for||todayStr()),m,y);y+=5;
+    doc.text(ptName(plan.product_type)+' | '+(plan.sku_name||'')+' | '+l.flavor,m,y);y+=5;doc.text('Target: '+l.units+' units'+(l.source==='ai'?'   (AI estimate - check before use)':l.source==='base'?'   (base recipe)':''),m,y);y+=7;
+    doc.setDrawColor(180);doc.line(m,y,W-m,y);y+=7;
+    doc.setFont('helvetica','bold');doc.setFontSize(12);doc.text('Required ingredients',m,y);y+=6;doc.setFontSize(9);doc.text('Ingredient',m,y);doc.text('Quantity',W-m-24,y);doc.text('Lot / tag used',W-m-70,y);y+=3;doc.line(m,y,W-m,y);y+=5;
+    doc.setFont('helvetica','normal');(l.ingredients||[]).forEach(function(i){doc.text(String(i.name||''),m,y);doc.text('______________',W-m-70,y);doc.text((i.qty||'')+' '+(i.unit||''),W-m-24,y);y+=6;});
+    y+=3;doc.line(m,y,W-m,y);y+=8;doc.setFont('helvetica','bold');doc.setFontSize(12);doc.text('Production tracking',m,y);y+=7;doc.setFontSize(9);
+    const trk=(track&&track[l.flavor])||{};
+    tf.forEach(function(t){doc.setFont('helvetica','bold');doc.text(t[1]+':',m,y);doc.setFont('helvetica','normal');doc.text(ppTval(trk,t[0],plan.product_type,sku)||'____________________',m+70,y);y+=7;});
+    y+=8;doc.text('Batch #: ____________________     METRC tag: ____________________',m,y);y+=16;
+    doc.line(m,y,m+70,y);doc.line(W-m-70,y,W-m,y);y+=4;doc.setFontSize(8);doc.text('Operator signature / date',m,y);doc.text('Manager signature / date',W-m-70,y);});
+  doc.save(String((plan.number||'plan')+'_'+(plan.sku_name||'')+(only?'_'+only:'')).replace(/[^a-z0-9]+/gi,'_')+'_worksheets.pdf');
+}
+function PlanResults(props){
+  const plan=props.plan,lic=props.license,sku=props.sku,lots=props.lots,track=props.track,setTrack=props.setTrack,tf=ppTrack(plan.product_type,sku),batches=props.batches||[];
+  const short=lots?(plan.grand_total||[]).filter(function(g){const h=ppOnHand(g.name,g.unit,lots);return h!==null&&h<ppBase(g.qty,g.unit)[0];}).length:0;
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'center',marginBottom:10}},
+      el('h3',{style:{margin:0}},(plan.sku_name||'')+' \u2014 '+(plan.lines||[]).length+' flavor'+((plan.lines||[]).length===1?'':'s')+' \u00d7 '+plan.units_per_flavor+' units'),
+      el('div',{className:'row',style:{gap:6}},props.actions,el('button',{className:'btn ghost',onClick:function(){ppWorksheetPdf(plan,lic,sku,track);}},'Worksheets PDF ('+(plan.lines||[]).length+')'))),
+    el('div',{className:'card gold',style:{padding:'12px 16px'}},el('div',{className:'row',style:{justifyContent:'space-between'}},el('div',{className:'k'},'Grand total \u2014 all flavors'),lots&&el('span',{className:'badge '+(short?'bad':'ok')},short?short+' short in inventory':'Checked against inventory')),
+      el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))',gap:8,marginTop:8}},(plan.grand_total||[]).map(function(g,i){const h=lots?ppOnHand(g.name,g.unit,lots):null,need=ppBase(g.qty,g.unit),low=h!==null&&h<need[0];
+        return el('div',{key:i,style:{background:'rgba(255,255,255,.04)',border:'1px solid '+(low?'#5a2a26':'#2a2a2a'),borderRadius:8,padding:'8px 10px'}},el('div',{className:'muted',style:{fontSize:11}},g.name),el('div',{style:{fontSize:17,fontWeight:800}},g.qty+' '+g.unit),
+          lots&&el('div',{style:{fontSize:10,color:h===null?'var(--muted)':low?'var(--red)':'var(--green)'}},h===null?'not in inventory':(low?'short ':'on hand ')+ppR(h)+' '+need[1]));}))),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(340px,1fr))',gap:12,marginTop:12}},(plan.lines||[]).map(function(l){const trk=track[l.flavor]||{},bs=batches.filter(function(b){return l.flavor_id?b.flavor_id===l.flavor_id:String(b.flavor||'').toLowerCase()===l.flavor.toLowerCase();});
+      return el('div',{key:l.flavor,className:'card',style:{marginBottom:0}},
+        el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'center'}},el('div',{className:'row',style:{gap:6,alignItems:'center'}},el('b',null,l.flavor),
+            el('span',{className:'badge '+(l.source==='ai'?'warn':'ok'),style:{fontSize:9},title:l.recipe||''},l.source==='recipe'?'Formulation':l.source==='base'?'Base recipe':'AI estimate')),
+          el('div',{className:'row',style:{gap:4}},el('button',{className:'btn ghost sm',onClick:function(){ppWorksheetPdf(plan,lic,sku,track,l.flavor);}},'PDF'),props.onStart&&el('button',{className:'btn sm',onClick:function(){props.onStart(l);}},'Start batch'))),
+        el('div',{className:'k',style:{margin:'8px 0 4px'}},'Ingredients'),
+        !(l.ingredients||[]).length?el('div',{className:'muted',style:{fontSize:12}},'No ingredients - add a formulation for this SKU in Products.'):(l.ingredients||[]).map(function(i,j){return el('div',{key:j,className:'row',style:{justifyContent:'space-between',fontSize:13,borderBottom:'1px solid #1d1d1d',padding:'2px 0'}},el('span',{className:'muted'},i.name),el('b',null,i.qty+' '+(i.unit||'')));}),
+        bs.length>0&&el('div',{style:{fontSize:12,marginTop:8}},'Batches: ',bs.map(function(b){return el('span',{key:b.id,className:'badge off',style:{marginRight:4}},b.batch_number+' \u00b7 '+b.status);})),
+        el('div',{className:'k',style:{margin:'10px 0 4px'}},'Production tracking (prints on the worksheet)'),
+        tf.map(function(t){return el('div',{key:t[0],className:'row',style:{gap:8,flexWrap:'nowrap',marginBottom:3}},el('span',{style:{fontSize:11,width:180,flexShrink:0}},t[1]),
+          el('input',{value:ppTval(trk,t[0],plan.product_type,sku),placeholder:t[0]==='if_remaining'?'auto: weight - bags \u00d7 '+ppIfSize(sku)+' - waste':'',style:{flex:1,padding:'4px 8px',fontSize:12},onChange:function(e){setTrack(l.flavor,t[0],e.target.value);}}));}));})));
+}
+function ProductionPlanner(props){
+  const st=props.state,lic=props.license,lid=lic?lic.id:'',sid=st?st.id:'';
+  const[tab,setTab]=useState('new');const[skus,setSkus]=useState([]);const[fls,setFls]=useState([]);const[lots,setLots]=useState(null);const[plans,setPlans]=useState(null);const[batches,setBatches]=useState([]);
+  const[type,setType]=useState(lsGet('hx_pptype')||'pre_rolls');const[skuId,setSkuId]=useState('');const[sel,setSel]=useState([]);const[units,setUnits]=useState('');const[notes,setNotes]=useState('');const[when,setWhen]=useState(todayStr());
+  const[res,setRes]=useState(null);const[busy,setBusy]=useState(false);const[err,setErr]=useState('');const[msg,setMsg]=useState('');const[track,setTrackS]=useState({});const[open,setOpen]=useState(null);const[modal,setModal]=useState(null);const[recInfo,setRecInfo]=useState(null);
+  const load=useCallback(function(){if(!lid)return;const S='state_id=eq.'+encodeURIComponent(sid),L='license_id=eq.'+encodeURIComponent(lid);
+    db.get('hx_skus',S+'&active=eq.true&select=*&order=sort,name').then(function(r){setSkus((r||[]).filter(function(k){return k.state_id===sid&&k.active&&(!(k.license_ids||[]).length||k.license_ids.indexOf(lid)>=0);}));}).catch(function(){setSkus([]);});
+    db.get('hx_flavors',S+'&select=*&order=sort,name').then(function(r){setFls((r||[]).filter(function(f){return f.state_id===sid&&f.active!==false;}));}).catch(function(){setFls([]);});
+    if(can('receiving',1))db.get('hx_lots',L+'&status=eq.accepted&select=id,item,unit,quantity,qty_used,status,license_id').then(function(r){setLots((r||[]).filter(function(x){return x.license_id===lid&&x.status==='accepted';}));}).catch(function(){setLots(null);});
+    db.get('hx_production_plans',L+'&select=*&order=created_at.desc&limit=500').then(function(r){setPlans((r||[]).filter(function(x){return x.license_id===lid;}));}).catch(function(e){setErr(ppErr(e));setPlans([]);});
+    if(can('batch',1))db.get('hx_batches',L+'&voided=eq.false&select=id,batch_number,batch_type,sku_id,flavor_id,flavor,status,created_at,license_id&order=created_at.desc&limit=1000').then(function(r){setBatches((r||[]).filter(function(x){return x.license_id===lid;}));}).catch(function(){setBatches([]);});
+  },[lid,sid]);
+  useEffect(load,[load]);
+  const typeSkus=skus.filter(function(k){return k.product_type===type;}),sku=skus.find(function(k){return k.id===skuId;})||null,flOpts=fls.filter(function(f){return f.sku_id===skuId;});
+  useEffect(function(){if(!sku){setRecInfo(null);return;}sb('rpc/hx_planner_recipes',{method:'POST',body:{p_lic:lid,p_sku:sku.id}}).then(function(r){setRecInfo(r||[]);}).catch(function(){setRecInfo(null);});},[skuId]);
+  if(!st||!lic)return el('div',null,el('h1',null,el('span',{className:'g'},'Production Planner')),el('div',{className:'empty'},'Pick a state and a license at the top first.'));
+  function setTrack(fl,k,v){setTrackS(function(p){return {...p,[fl]:{...(p[fl]||{}),[k]:v}};});}
+  function pickType(t){setType(t);lsSet('hx_pptype',t);setSkuId('');setSel([]);setRes(null);}
+  function pickSku(id){setSkuId(id);setSel([]);setRes(null);}
+  const all=flOpts.length>0&&sel.length===flOpts.length;
+  async function calc(){setErr('');setMsg('');if(!sku){setErr('Select a SKU.');return;}const u=parseInt(units,10);
+    const flavors=flOpts.length?flOpts.filter(function(f){return sel.indexOf(f.id)>=0;}).map(function(f){return {id:f.id,name:f.name};}):[{id:null,name:'Standard'}];
+    if(!flavors.length){setErr('Select at least one flavor.');return;}if(!u||u<1){setErr('Enter units per flavor.');return;}
+    setBusy(true);setRes(null);try{const r=await ppCalculate({lic:lic,sku:sku,type:type,flavors:flavors,units:u,notes:notes});
+      setRes({product_type:type,sku_id:sku.id,sku_name:sku.name,units_per_flavor:u,instructions:notes.trim(),planned_for:when,lines:r.lines,grand_total:r.grand_total});const t={};r.lines.forEach(function(l){t[l.flavor]={};});setTrackS(t);}
+    catch(e){setErr(e.message==='AI_NOT_SETUP'?'Some flavors have no formulation and the AI is not set up. Add a base recipe for this SKU in Products, or set up hendrix-ai.':'Calculation failed: '+ppErr(e));}setBusy(false);}
+  async function save(){setErr('');setBusy(true);try{const r=await db.insert('hx_production_plans',{id:newId('pp'),state_id:sid,license_id:lid,...res});const p=(r&&r[0])||res;setMsg('Saved plan '+(p.number||'')+'.');setRes(null);setSel([]);setUnits('');setNotes('');load();setTab('plans');setOpen(p.id);}
+    catch(e){setErr(ppErr(e));}setBusy(false);}
+  function startBatch(plan,l){lsSet('hx_batch_prefill',JSON.stringify({type:plan.product_type,sku_id:plan.sku_id,flavor_id:l.flavor_id||'',flavor:l.flavor_id?'':(l.flavor==='Standard'?'':l.flavor),plan:plan.number||''}));lsSet('hx_btype',plan.product_type);
+    if(plan.id&&plan.status==='planned')db.update('hx_production_plans',plan.id,{status:'in_progress'}).catch(function(){});if(props.go)props.go('batches');}
+  const have=recInfo?recInfo.filter(function(r){return ppNum(r.batch_size)>0&&(r.raw_materials||[]).length;}):[],hasBase=have.some(function(r){return !r.flavor_id;});
+  const covered=flOpts.length?sel.filter(function(id){return hasBase||have.some(function(r){return r.flavor_id===id;});}).length:(have.length?1:0),wanted=flOpts.length?sel.length:1;
+  const P=plans||[],openP=open&&P.find(function(p){return p.id===open;}),openSku=openP&&skus.find(function(k){return k.id===openP.sku_id;});
+  const bFor=function(p){return batches.filter(function(b){return b.sku_id===p.sku_id&&b.created_at>=p.created_at;});};
+  const canE=can('planner',2),canF=can('planner',3);
+  return el('div',null,
+    el('div',null,el('h1',null,el('span',{className:'g'},'Production Planner')),el('div',{className:'sub'},lic.name+' \u00b7 ingredients per flavor from your formulations, checked against inventory, with production worksheets')),
+    msg&&el('div',{className:'msg'},msg),err&&el('div',{className:'msg err'},err),
+    el('div',{className:'tabs'},[['new','New plan'],['plans','Plans'+(P.filter(function(p){return p.status==='planned'||p.status==='in_progress';}).length?' ('+P.filter(function(p){return p.status==='planned'||p.status==='in_progress';}).length+' open)':'')]].map(function(t){return el('button',{key:t[0],className:tab===t[0]?'on':'',onClick:function(){setTab(t[0]);}},t[1]);})),
+    tab==='new'?el('div',null,
+      el('div',{className:'card'},
+        el('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:10}},
+          el(Field,{label:'Product type'},el('select',{value:type,onChange:function(e){pickType(e.target.value);}},PRODUCT_TYPES.map(function(t){return el('option',{key:t.id,value:t.id},t.name);}))),
+          el(Field,{label:'SKU'},el('select',{value:skuId,onChange:function(e){pickSku(e.target.value);}},el('option',{value:''},typeSkus.length?'Select SKU...':'No SKUs switched on for this license'),typeSkus.map(function(k){return el('option',{key:k.id,value:k.id},k.name);}))),
+          el(Field,{label:'Units per flavor'},el('input',{type:'number',min:1,value:units,placeholder:'e.g. 2000',onChange:function(e){setUnits(e.target.value);}})),
+          el(Field,{label:'Planned for'},el('input',{type:'date',value:when,onChange:function(e){setWhen(e.target.value);}}))),
+        flOpts.length>0&&el('div',{style:{marginBottom:10}},el('div',{className:'row',style:{justifyContent:'space-between'}},el('span',{className:'k'},'Flavors ('+sel.length+'/'+flOpts.length+')'),
+            el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:12},onClick:function(e){e.preventDefault();setSel(all?[]:flOpts.map(function(f){return f.id;}));}},all?'Deselect all':'Select all')),
+          el('div',{className:'row',style:{gap:6,marginTop:6}},flOpts.map(function(f){const on=sel.indexOf(f.id)>=0;return el('button',{key:f.id,type:'button',className:'btn sm'+(on?'':' ghost'),onClick:function(){setSel(on?sel.filter(function(x){return x!==f.id;}):sel.concat([f.id]));}},f.name);}))),
+        el(Field,{label:'Additional instructions (optional)'},el('textarea',{rows:2,value:notes,placeholder:'e.g. "5% waste buffer" (applied exactly) or "use 1.5 g flower per joint" (goes to the AI)',onChange:function(e){setNotes(e.target.value);}})),
+        el('div',{className:'row',style:{gap:12,alignItems:'center'}},el('button',{className:'btn',disabled:busy||!canE&&false,onClick:calc},busy?'Calculating...':'Calculate ingredients'),
+          sku&&recInfo&&el('span',{style:{fontSize:12,color:!have.length?'var(--gold-hi)':'var(--green)'}},!have.length?'No formulation for this SKU yet \u2014 the AI will estimate':(covered===wanted&&wanted>0?'Exact amounts from saved formulations':(have.length+' formulation'+(have.length===1?'':'s')+' for this SKU \u2014 '+covered+' of '+wanted+' selected flavors covered; the rest are AI-estimated'))+(hasBase?' (base recipe covers every flavor)':'')))),
+      res&&el(PlanResults,{plan:res,license:lic,sku:sku,lots:lots,track:track,setTrack:setTrack,actions:canE&&el('button',{className:'btn',disabled:busy,onClick:save},'Save plan')})):
+    (plans===null?el('div',{className:'muted'},'Loading...'):openP?el('div',null,
+      el('div',{className:'row',style:{gap:8,marginBottom:10,alignItems:'center'}},el('button',{className:'btn ghost sm',onClick:function(){setOpen(null);}},'\u2190 All plans'),el('b',null,openP.number),el('span',{className:'badge '+PP_TONE[openP.status]},PP_STATUS[openP.status]),
+        el('span',{className:'muted',style:{fontSize:12}},'planned for '+openP.planned_for+' \u00b7 by '+openP.created_by+(openP.instructions?' \u00b7 '+openP.instructions:'')+(openP.close_note?' \u00b7 '+openP.close_note:''))),
+      el(PlanResults,{plan:openP,license:lic,sku:openSku,lots:openP.status==='completed'||openP.status==='cancelled'?null:lots,track:track,setTrack:setTrack,batches:bFor(openP),
+        onStart:canE&&can('batch',2)&&(openP.status==='planned'||openP.status==='in_progress')?function(l){startBatch(openP,l);}:null,
+        actions:el(React.Fragment,null,canE&&openP.status==='in_progress'&&el('button',{className:'btn',onClick:function(){db.update('hx_production_plans',openP.id,{status:'completed'}).then(function(){setMsg('Completed '+openP.number+'.');load();}).catch(function(e){setErr(ppErr(e));});}},'Mark completed'),
+          canF&&(openP.status==='planned'||openP.status==='in_progress')&&el('button',{className:'btn danger',onClick:function(){setModal({t:'cancel',p:openP});}},'Cancel plan'))})):
+      !P.length?el('div',{className:'empty'},'No saved plans yet. Calculate a plan and save it.'):
+      el('div',{className:'card',style:{overflowX:'auto',padding:0}},el('table',null,el('thead',null,el('tr',null,['No.','Planned for','Product','Flavors','Batches','Status',''].map(function(h,i){return el('th',{key:i},h);}))),
+        el('tbody',null,P.map(function(p){const bs=bFor(p);return el('tr',{key:p.id,className:p.status==='cancelled'?'voidrow':''},el('td',null,p.number),el('td',null,p.planned_for),el('td',null,el('b',null,p.sku_name),el('div',{className:'muted',style:{fontSize:11}},ptName(p.product_type))),
+          el('td',{style:{fontSize:12}},(p.lines||[]).length+' \u00d7 '+p.units_per_flavor+' units',el('div',{className:'muted',style:{fontSize:11}},(p.lines||[]).map(function(l){return l.flavor;}).join(', '))),
+          el('td',null,bs.length?el('span',{className:'badge off'},bs.length+' batch'+(bs.length===1?'':'es')):'-'),el('td',null,el('span',{className:'badge '+PP_TONE[p.status]},PP_STATUS[p.status])),
+          el('td',null,el('button',{className:'btn ghost sm',onClick:function(){setOpen(p.id);const t={};(p.lines||[]).forEach(function(l){t[l.flavor]={};});setTrackS(t);}},'Open')));}))))),
+    modal&&modal.t==='cancel'&&el(SimpleReason,{title:'Cancel '+modal.p.number,label:'Reason',btn:'Cancel plan',onClose:function(){setModal(null);},
+      onGo:function(t){return db.update('hx_production_plans',modal.p.id,{status:'cancelled',close_note:t}).then(function(){setModal(null);setMsg('Cancelled '+modal.p.number+'.');load();}).catch(function(e){throw new Error(ppErr(e));});}}));
+}
+function PlannerDashCard(props){
+  const lid=props.license?props.license.id:'';const[d,setD]=useState(null);
+  useEffect(function(){if(!lid||!can('planner',1)){setD(null);return;}let dead=false;
+    db.get('hx_production_plans','license_id=eq.'+encodeURIComponent(lid)+'&status=in.(planned,in_progress)&select=id,number,planned_for,status,sku_name,license_id&order=planned_for').then(function(r){if(dead)return;const P=(r||[]).filter(function(x){return x.license_id===lid&&(x.status==='planned'||x.status==='in_progress');});
+      setD({n:P.length,today:P.filter(function(p){return p.planned_for<=todayStr();}).length,next:P[0]||null});}).catch(function(){if(!dead)setD(null);});return function(){dead=true;};},[lid]);
+  if(!d)return null;
+  return el('div',{className:'card gold'},el('div',{className:'k'},'Production plans'),el('div',{className:'v'},d.n?d.n+' open plan'+(d.n===1?'':'s'):'Nothing planned'),
+    el('div',{className:'muted',style:{margin:'4px 0 8px'}},d.next?'Next: '+d.next.number+' '+d.next.sku_name+' \u00b7 '+d.next.planned_for+(d.today?' \u00b7 '+d.today+' due today or earlier':''):'Plan a run from your formulations'),
+    el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go('planner');}},'Open'));
+}
+
 /* ---------- Training (Black Fox / Michigan SOP training matrix + CSQ 2A.13.2 training program) ---------- */
 const TRAIN_TOPICS=['Required by law','cGMP','cGACP','Extraction','Cannabis safety','Personnel hygiene & safety','Product defense','Job-specific','Safety','CSQ program','HACCP','Other'];
 const TRAIN_METHODS=['Classroom','On the job','Online course','Read and sign','External certification'];
@@ -8592,9 +8768,9 @@ const STD_STATUSES=['Not assessed','Conforming','Partial','Not conforming','Not 
 const STD_TONE={'Not assessed':'off','Conforming':'ok','Partial':'warn','Not conforming':'bad','Not applicable':'off'};
 const STD_COLOR={'Conforming':'#5fbf8a','Partial':'#d4af37','Not conforming':'#e5645a','Not applicable':'#4a473f','Not assessed':'#2a2a2a'};
 const ADOPT_STATUSES=['Following','Audit scheduled','Certified','Suspended','Withdrawn'];
-const HX_PAGE_LABEL={timeclock:'Time Clock and Badges',mgmtreview:'Management Review',verification:'Verification Schedule',orgchart:'Org Chart',objectives:'Quality Objectives',risks:'Risk Register',changes:'Change Control',haccp:'HACCP',cultivation:'Cultivation',envtests:'Facility Tests',lineclear:'Line Clearance',rework:'Rework',equipment:'Equipment',chemicals:'Chemicals and SDS',complaints:'Complaints',intaudits:'Internal Audits',recall:'Traceability and Recall',receiving:'Receiving',inventory:'Inventory',holds:'Hold and Release',shipping:'Shipping',suppliers:'Suppliers',training:'Training',qms:'QMS (Deviations, CAPA)',sops:'SOPs',rulebook:'Rulebook',locations:'States and Licenses',audit:'Audit Trail',batches:'Batch Tracker',testing:'Testing',stickers:'Compliance Stickers',
+const HX_PAGE_LABEL={planner:'Production Planner',timeclock:'Time Clock and Badges',mgmtreview:'Management Review',verification:'Verification Schedule',orgchart:'Org Chart',objectives:'Quality Objectives',risks:'Risk Register',changes:'Change Control',haccp:'HACCP',cultivation:'Cultivation',envtests:'Facility Tests',lineclear:'Line Clearance',rework:'Rework',equipment:'Equipment',chemicals:'Chemicals and SDS',complaints:'Complaints',intaudits:'Internal Audits',recall:'Traceability and Recall',receiving:'Receiving',inventory:'Inventory',holds:'Hold and Release',shipping:'Shipping',suppliers:'Suppliers',training:'Training',qms:'QMS (Deviations, CAPA)',sops:'SOPs',rulebook:'Rulebook',locations:'States and Licenses',audit:'Audit Trail',batches:'Batch Tracker',testing:'Testing',stickers:'Compliance Stickers',
   products:'Products',logs:'Facility Logs',visitors:'Visitor Log',roles:'Roles',team:'Team and Access'};
-const HX_PAGE_MOD={timeclock:'timeclock',mgmtreview:'mgmtreview',verification:'verification',orgchart:'orgchart',objectives:'objectives',risks:'risks',changes:'changes',haccp:'haccp',cultivation:'cultivation',envtests:'envtests',lineclear:'lineclear',rework:'rework',equipment:'equipment',chemicals:'chemicals',complaints:'complaints',intaudits:'intaudits',recall:'recall',receiving:'receiving',inventory:'receiving',holds:'holds',shipping:'shipping',suppliers:'suppliers',training:'training',qms:'qms',sops:'sops',rulebook:'rulebook',audit:'audit',batches:'batch',testing:'testing',stickers:'stickers',visitors:'logs_visitor'};
+const HX_PAGE_MOD={planner:'planner',timeclock:'timeclock',mgmtreview:'mgmtreview',verification:'verification',orgchart:'orgchart',objectives:'objectives',risks:'risks',changes:'changes',haccp:'haccp',cultivation:'cultivation',envtests:'envtests',lineclear:'lineclear',rework:'rework',equipment:'equipment',chemicals:'chemicals',complaints:'complaints',intaudits:'intaudits',recall:'recall',receiving:'receiving',inventory:'receiving',holds:'holds',shipping:'shipping',suppliers:'suppliers',training:'training',qms:'qms',sops:'sops',rulebook:'rulebook',audit:'audit',batches:'batch',testing:'testing',stickers:'stickers',visitors:'logs_visitor'};
 function stdLevelOf(m){return m==='4A'?2:m==='5'?3:1;}
 function stdErr(e){
   const m=String((e&&e.message)||e);
@@ -10105,7 +10281,7 @@ function App(){
   if(isAdmin)nav.push({id:'team',label:'Team and Access'},{id:'roles',label:'Roles'});
   if(can('audit',1))nav.push({id:'audit',label:'Audit Trail'});
   const anyLog=LOG_TYPES.some(function(t){return can(LOG_MOD[t.id],1);});
-  const mods=[can('qms',1)&&['qms','QMS'],can('complaints',1)&&['complaints','Complaints'],can('intaudits',1)&&['intaudits','Internal Audits'],can('haccp',1)&&['haccp','HACCP'],can('risks',1)&&['risks','Risk Register'],can('changes',1)&&['changes','Change Control'],can('orgchart',1)&&['orgchart','Org Chart'],can('objectives',1)&&['objectives','Quality Objectives'],can('mgmtreview',1)&&['mgmtreview','Management Review'],can('verification',1)&&['verification','Verification Schedule'],can('timeclock',1)&&['timeclock','Time Clock and Badges'],can('training',1)&&['training','Training'],can('sops',1)&&['sops','SOPs'],can('suppliers',1)&&['suppliers','Suppliers'],can('receiving',1)&&['receiving','Receiving'],can('holds',1)&&['holds','Hold and Release'],can('shipping',1)&&['shipping','Shipping'],can('recall',1)&&['recall','Traceability and Recall'],can('equipment',1)&&['equipment','Equipment'],can('chemicals',1)&&['chemicals','Chemicals and SDS'],(can('lineclear',1)||can('rework',1))&&['lineclear','Line Clearance and Rework'],can('envtests',1)&&['envtests','Facility Tests'],can('cultivation',1)&&licOp(lic)==='cultivation'&&['cultivation','Cultivation'],can('logs_visitor',1)&&['visitors','Visitor Log'],anyLog&&['logs','Facility Logs'],(can('products',1)||can('formbank',1)||can('cogs',1))&&['products','Products'],can('batch',1)&&['batches','Batch Tracker'],can('testing',1)&&['testing','Testing'],can('stickers',1)&&['stickers','Compliance Stickers']].filter(Boolean);
+  const mods=[can('qms',1)&&['qms','QMS'],can('complaints',1)&&['complaints','Complaints'],can('intaudits',1)&&['intaudits','Internal Audits'],can('haccp',1)&&['haccp','HACCP'],can('risks',1)&&['risks','Risk Register'],can('changes',1)&&['changes','Change Control'],can('orgchart',1)&&['orgchart','Org Chart'],can('objectives',1)&&['objectives','Quality Objectives'],can('mgmtreview',1)&&['mgmtreview','Management Review'],can('verification',1)&&['verification','Verification Schedule'],can('timeclock',1)&&['timeclock','Time Clock and Badges'],can('training',1)&&['training','Training'],can('sops',1)&&['sops','SOPs'],can('suppliers',1)&&['suppliers','Suppliers'],can('receiving',1)&&['receiving','Receiving'],can('holds',1)&&['holds','Hold and Release'],can('shipping',1)&&['shipping','Shipping'],can('recall',1)&&['recall','Traceability and Recall'],can('equipment',1)&&['equipment','Equipment'],can('chemicals',1)&&['chemicals','Chemicals and SDS'],(can('lineclear',1)||can('rework',1))&&['lineclear','Line Clearance and Rework'],can('envtests',1)&&['envtests','Facility Tests'],can('cultivation',1)&&licOp(lic)==='cultivation'&&['cultivation','Cultivation'],can('logs_visitor',1)&&['visitors','Visitor Log'],anyLog&&['logs','Facility Logs'],(can('products',1)||can('formbank',1)||can('cogs',1))&&['products','Products'],can('planner',1)&&['planner','Production Planner'],can('batch',1)&&['batches','Batch Tracker'],can('testing',1)&&['testing','Testing'],can('stickers',1)&&['stickers','Compliance Stickers']].filter(Boolean);
   let body;
   if(page==='locations')body=el(Locations,{profile:profile,states:states,licenses:licenses,reload:loadData,openRulebook:function(id){pickState(id);setPage('rulebook');}});
   else if(page==='visitors'&&can('logs_visitor',1))body=el(VisitorLog,{key:licId,state:st,license:lic});
@@ -10119,6 +10295,7 @@ function App(){
   else if(page==='roles'&&isAdmin)body=el(Roles);
   else if(page==='audit'&&can('audit',1))body=el(AuditTrail,{state:st});
   else if((page==='receiving'&&can('receiving',1))||(page==='inventory'&&can('receiving',1))||(page==='holds'&&can('holds',1))||(page==='shipping'&&can('shipping',1)))body=el(MatPage,{key:licId,state:st,license:lic,tab:page,go:setPage});
+  else if(page==='planner'&&can('planner',1))body=el(ProductionPlanner,{key:licId,state:st,license:lic,profile:profile,go:setPage});
   else if(page==='timeclock'&&can('timeclock',1))body=el(TimeClockPage,{key:licId,state:st,license:lic,profile:profile,go:setPage});
   else if(['orgchart','objectives','mgmtreview','verification'].indexOf(page)>=0&&(can('orgchart',1)||can('objectives',1)||can('mgmtreview',1)||can('verification',1)))body=el(QualitySysPage,{key:licId,state:st,license:lic,profile:profile,go:setPage,tab:{orgchart:'org',objectives:'kpi',mgmtreview:'mr',verification:'ver'}[page]});
   else if((page==='risks'||page==='changes')&&(can('risks',1)||can('changes',1)))body=el(RiskChangePage,{key:licId,state:st,license:lic,profile:profile,go:setPage,tab:page==='changes'?'cc':'rk'});
