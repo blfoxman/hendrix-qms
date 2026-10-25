@@ -42,6 +42,12 @@ URS = [
  ('URS-39','AI','AI suggestions are drafts; a person reviews and saves; the AI key is never exposed to the browser.','Medium','OQ-13; t, sop'),
  ('URS-41','Line Map','Management sees every batch of the license on a live map from plan to shipment, with every stop, its reason, source record and owner, without needing access to every module.','Medium','OQ-19; lm'),
  ('URS-40','Printing','Every record can be printed with the license header and footer for inspectors.','Medium','st'),
+ ('URS-42','System health','An admin can check the installation (steps, access rules, audit coverage and lock, storage, people, email, kiosks, AI) and print it as IQ evidence.','Medium','OQ-20; sh'),
+ ('URS-43','Electronic signatures','Approvals, releases, decisions and read-and-sign need the password again (and the authenticator code with two-step sign-in); each signature is kept permanently with signer, meaning, record and server time.','High','OQ-21; sec'),
+ ('URS-44','Sign-in security','Two-step sign-in can be required per person and is then enforced by the database; idle sessions are signed out after the license\'s limit.','High','OQ-22; sec'),
+ ('URS-45','Tasks and alerts','Each person sees the work waiting for them and their decisions; daily task email and urgent alerts reach the right people; every email is logged.','Medium','OQ-23; tk, notify'),
+ ('URS-46','Kiosks offline','Kiosk scans and entries made without internet keep their real time, are sent once when the connection returns and are marked offline; refused items are shown.','High','OQ-24; off'),
+ ('URS-47','METRC reconciliation','Differences between METRC packages and Hendrix records (lab status, holds, shipments, lots, quantities) are listed for correction.','High','OQ-25; mc, metrc'),
 ]
 
 SUITES = [
@@ -53,14 +59,15 @@ SUITES = [
  ('eq','Equipment and Chemicals'),('lc','Line Clearance and Rework'),('env','Facility Tests'),('cul','Cultivation'),('haccp','HACCP'),
  ('rc','Risk Register and Change Control'),('qs','Org Chart and Quality Objectives'),('mv','Management Review and Verification'),
  ('tc','Time Clock and Badges'),('lm','Production Line Map'),('pp','Production Planner'),('st','Settings'),('im','Import'),
+ ('sh','System Health'),('sec','Electronic signatures, two-step sign-in, sign-out'),('tk','My Tasks and email'),('off','Kiosks without internet'),('mc','METRC Check'),
 ]
 
 IQ = [
- ('IQ-01','Confirm the release','Open the repository main branch; note the commit id and date of index.html, hendrix-ai.ts and the SQL files.','Commit matches the release in the Validation Summary (e.g. da353c5).'),
+ ('IQ-01','Confirm the release','Open the repository main branch; note the commit id and date of index.html, hendrix-ai.ts and the SQL files.','Commit matches the release in the Validation Summary (e.g. 9cdb4e9).'),
  ('IQ-02','Hosting','Open the Hendrix web address over HTTPS.','The sign-in page loads with the Hendrix logo; the browser shows a secure (padlock) connection.'),
  ('IQ-03','Database steps 1-12','In the Supabase SQL editor run steps 1-12 if not yet run.','Each file finishes without errors.'),
- ('IQ-04','Database steps 13-36','Run hendrix_install_13_to_36.sql.','Finishes with "Hendrix steps 13-36 installed".'),
- ('IQ-05','Re-run safety','Run hendrix_install_13_to_36.sql a second time.','Finishes again without errors; no data changed.'),
+ ('IQ-04','Database steps 13-41','Run hendrix_install_13_to_41.sql.','Finishes with "Hendrix steps 13-41 installed".'),
+ ('IQ-05','Re-run safety','Run hendrix_install_13_to_41.sql a second time.','Finishes again without errors; no data changed.'),
  ('IQ-06','AI function','Deploy hendrix-ai.ts as Edge Function "hendrix-ai" (Verify JWT off); set secret ANTHROPIC_API_KEY.','Function shows as deployed; key is stored as a secret, not in the app.'),
  ('IQ-07','Row level security','In Supabase > Table editor, open three hx_ tables (e.g. hx_batches, hx_deviations, hx_audit_log).','Each shows "RLS enabled".'),
  ('IQ-08','Audit trail lock','As admin in the SQL editor try: update hx_audit_log set reason = \'x\' where id = (select min(id) from hx_audit_log);','Refused: "The audit trail cannot be changed or deleted."'),
@@ -69,6 +76,11 @@ IQ = [
  ('IQ-11','Time zone','Create any test record and compare its time with a clock.','Time shown is correct for the license time zone.'),
  ('IQ-12','Settings','Settings > General: enter legal name, address, logo, print footer for each license; print any record.','Printout carries the business header, logo and footer.'),
  ('IQ-13','Standards loaded','Standards: click Update the standard; adopt the scopes per license.','130 clauses present; scopes match each license (manufacturing: 3B + 3C; cultivation: 3A).'),
+ ('IQ-15','System Health','As admin open System Health; click Test the AI connection; click Print IQ evidence and attach the printout.','Database steps 4-41 installed; RLS, audit coverage and lock, private storage pass; AI working; printout signed.'),
+ ('IQ-16','Two-step sign-in','Supabase > Authentication > Multi-factor: TOTP enabled. In Team and Access tick Require two-step sign-in for every admin; each admin sets it up in My account.','System Health shows Every admin uses two-step sign-in.'),
+ ('IQ-17','Email','Deploy hendrix-notify.ts (Verify JWT off); secrets RESEND_API_KEY, HX_MAIL_FROM, HX_CRON_SECRET; run the two cron.schedule lines of step 39. My Tasks > Email me this list.','Test email received; Settings > Email shows it as sent.'),
+ ('IQ-18','METRC (optional)','Deploy hendrix-metrc.ts (Verify JWT off); secrets METRC_VENDOR_KEY and METRC_USER_KEYS. METRC Check > Read from METRC now. Without keys: upload the METRC export.','A METRC check is listed with the package count of the license.'),
+ ('IQ-19','Kiosk tablets','Open each kiosk link once with internet on each tablet; turn Wi-Fi off and reload.','The kiosk opens again without internet and shows Scan your badge / the log form.'),
  ('IQ-14','Supported devices','Open Hendrix on each device type in use (PC browser, tablet kiosk, phone).','Pages render and sign-in works on each; list devices here: ________'),
 ]
 
@@ -91,6 +103,12 @@ OQ = [
  ('OQ-16','Inspector view','Open Standards inspector view for a license.','Read-only clause list with linked live records; no edit buttons.','std'),
  ('OQ-17','Change control','Raise a change, approve (Full), try to implement with training not done; complete it and close with effectiveness check.','Implementation blocked while required training/trial/notifications are open; closes only with effectiveness check.','rc'),
  ('OQ-18','Printing','Print a batch record, an SOP and the risk register.','Each printout has the business header, logo, footer and page content complete.','st'),
+ ('OQ-20','System Health','Open System Health as admin; open it as a non-admin.','Admin sees every check with pass / check / fail and can print it; non-admins do not see the page.','sh'),
+ ('OQ-21','Electronic signature','Approve a test SOP: cancel the signature box; then type a wrong password; then the right one. Open Audit Trail.','Cancel and wrong password save nothing; the right password publishes the SOP and keeps a signature with your name, meaning and time.','sec'),
+ ('OQ-22','Two-step sign-in and sign-out','Require two-step sign-in for a test user; sign in with password only; then with the code. Set sign-out to 1 minute on the test license and wait.','No access until the code is entered; the user is warned and then signed out after 1 minute idle.','sec'),
+ ('OQ-23','My Tasks and alerts','Make a test user responsible for a CAPA due yesterday; open their My Tasks. Place a test hold.','The CAPA is listed first as overdue; an alert email reaches people with Full access on Hold and Release within 10 minutes and is in Settings > Email.','tk'),
+ ('OQ-24','Kiosk without internet','On a test kiosk turn Wi-Fi off; scan a badge and fill a log entry; turn Wi-Fi on.','Both are saved on the tablet, then appear in Hendrix with the real time and marked offline (O); nothing is recorded twice.','off'),
+ ('OQ-25','METRC Check','Upload a METRC export where one package is on hold in METRC but not in Hendrix.','The difference is listed as Fix now with the tag; the report prints with sign-off lines.','mc'),
  ('OQ-19','Line Map','Put a test batch on hold; open Line Map; click the batch; release the hold and click Refresh.','The batch turns red at its station with the hold number and reason; after release it moves again.','lm'),
 ]
 
@@ -104,3 +122,5 @@ PQ = [
  ('PQ-07','Inspector walk-through','QA walks a mock inspector through Standards and three clauses with the inspector view.','Evidence found for each clause within 5 minutes.'),
  ('PQ-08','User feedback','Collect feedback from 5 users of different roles.','Issues raised as change requests or closed; none affects record integrity.'),
 ]
+
+IQ.sort(key=lambda r: int(r[0][3:])); OQ.sort(key=lambda r: int(r[0][3:]))

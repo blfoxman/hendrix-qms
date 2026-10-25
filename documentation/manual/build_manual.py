@@ -13,6 +13,7 @@ CHAPS = [
  ('supply', 'Suppliers, materials and traceability', 'From approved supplier to accepted lot, holds and releases, shipments, traces and recalls.'),
  ('facility', 'Facility, equipment and people on site', 'Daily logs, visitors, equipment, chemicals, facility tests, line clearance and rework, the time clock and badges.'),
  ('prod', 'Products, production and cultivation', 'The live Line Map, products and formulations, planning, batch records, testing, compliance stickers and cultivation records.'),
+ ('secure', 'Tasks, security, kiosks and METRC', 'My Tasks and email alerts, two-step sign-in and electronic signatures, kiosks that keep working without internet, METRC Check and System Health (releases 37 to 41).'),
 ]
 
 EXTRA = """
@@ -92,12 +93,12 @@ def build_manual():
     # page refs inside the situation index: two-step: build once to learn pages, then fill
     cov = cover('User manual', 'The <em>Hendrix QMS</em><br>user manual',
                 'Every page, every form and every field: what to fill in, when, and why. For production, QA, compliance and management.',
-                'Release 36 · October 2026', 'Missouri · Michigan', os.path.join(D, 'shots', 'prod_linemap_overview.png'))
+                'Release 41 · October 2026', 'Missouri · Michigan', os.path.join(D, 'shots', 'prod_linemap_overview.png'))
     out = os.path.join(SP, 'Hendrix_QMS_User_Manual.pdf')
     body1 = re.sub(r'\{\{P:(m\d+)\}\}', '00', body)
-    pages = build(out, cov, body1, toc, 'User Manual · Release 36', 'Hendrix QMS: User Manual')
+    pages = build(out, cov, body1, toc, 'User Manual · Release 41', 'Hendrix QMS: User Manual')
     body2 = re.sub(r'\{\{P:(m\d+)\}\}', lambda m: pages.get(m.group(1), ''), body)
-    pages2 = build(out, cov, body2, toc, 'User Manual · Release 36', 'Hendrix QMS: User Manual')
+    pages2 = build(out, cov, body2, toc, 'User Manual · Release 41', 'Hendrix QMS: User Manual')
     print('modules', mid, 'situations', len(sit_all), 'pages same:', pages == pages2)
 
 if __name__ == '__main__':

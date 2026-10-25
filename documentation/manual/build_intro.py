@@ -94,7 +94,7 @@ def pages():
 <h1 style="font-size:50pt">Hendrix <em>QMS</em></h1>
 <p class="lead">The quality system that runs every cannabis license you operate, and proves it to any inspector, any day.</p><div class="bar"></div></div>
 <div style="position:absolute;left:0.7in;right:0.7in;bottom:0.85in">%s</div>
-<div class="foot"><span>Missouri · Michigan</span><span>CSQ Levels 1–3 · Release 36 · October 2026</span></div></div>''' % (logo(620), brand(), shot('b_prod_linemap_overview.png')))
+<div class="foot"><span>Missouri · Michigan</span><span>CSQ Levels 1–3 · Release 41 · October 2026</span></div></div>''' % (logo(620), brand(), shot('b_prod_linemap_overview.png')))
     # 2 why
     P.append('''<div class="pg"><div class="kick">Why Hendrix</div><h1>One system.<br>Every license.<br><em>Always audit-ready.</em></h1><div class="bar"></div>
 <p class="lead">Paper logs, scattered spreadsheets and a binder for every audit don't scale across licenses and states. Hendrix puts every quality record of every license into one place. Each record is signed, dated and locked the moment it is saved. Each one is linked to the CSQ clause it proves.</p>
@@ -157,7 +157,7 @@ def pages():
 <div class="st"><div><h3>Adopt the standard</h3><p>Load the CSQ standard, adopt it for each license and upload your state's rulebook.</p></div></div>
 <div class="st"><div><h3>Put tablets on the floor</h3><p>Print badges, place the log, visitor and time clock kiosks, and start recording.</p></div></div></div>
 <div class="quote">"Every record signed, dated, locked and linked to the clause it proves."</div>
-<div style="position:absolute;left:0.7in;right:0.7in;bottom:0.9in;display:flex;justify-content:space-between;align-items:flex-end">%s<div style="text-align:right;font-size:8.5pt;color:#8f8670;line-height:1.6">Hendrix QMS · Release 36<br>User Manual and Validation and Certification Pack available</div></div>%s</div>''' % (brand(), foot(10)))
+<div style="position:absolute;left:0.7in;right:0.7in;bottom:0.9in;display:flex;justify-content:space-between;align-items:flex-end">%s<div style="text-align:right;font-size:8.5pt;color:#8f8670;line-height:1.6">Hendrix QMS · Release 41<br>User Manual and Validation and Certification Pack available</div></div>%s</div>''' % (brand(), foot(10)))
     return P
 
 if __name__ == '__main__':
