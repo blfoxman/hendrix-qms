@@ -1,11 +1,12 @@
 // Hendrix QMS - Supabase Edge Function "hendrix-ai"
 // Claude for the Hendrix app: reads lab COAs (Testing), writes / revises SOPs (SOPs),
 // drafts online training courses from the state Rulebook (Training), organizes an
-// uploaded rules PDF into the state Rulebook (Rulebook) and estimates ingredients for
-// flavors with no saved formulation (Production Planner).
+// uploaded rules PDF into the state Rulebook (Rulebook), estimates ingredients for
+// flavors with no saved formulation (Production Planner) and matches spreadsheet
+// columns for the Excel / Google Sheets import (Import).
 //
 // Security: only a signed-in, approved Hendrix user with at least Edit access to the
-// module making the request (Testing, SOPs, Rulebook or Production Planner; Full access for Training) can use it, checked with the user's own
+// module making the request (Testing, SOPs, Rulebook, Production Planner or the module an import goes into; Full access for Training) can use it, checked with the user's own
 // login through hx_perm. The Anthropic key stays in Supabase secrets and never reaches
 // the browser. After changing this file, deploy it again (same name: hendrix-ai).
 //
@@ -40,12 +41,15 @@ Deno.serve(async (req) => {
     const { data: u, error: uerr } = await sb.auth.getUser(token);
     if (uerr || !u || !u.user) return json({ error: { message: "Hendrix sign-in was not accepted by the AI function" + (uerr ? " (" + uerr.message + ")" : "") + ". Sign out of Hendrix, sign in again and retry." } }, 401);
     const body = await req.json();
-    const mod = body.module === "sops" ? "sops" : body.module === "training" ? "training" : body.module === "rulebook" ? "rulebook" : body.module === "planner" ? "planner" : "testing";
+    const IMPORT_TARGETS = ["suppliers", "equipment", "chemicals", "products", "complaints", "risks", "orgchart"];
+    // spreadsheet import: the user needs Edit on the module the rows go into
+    const mod = body.module === "import" ? (IMPORT_TARGETS.includes(String(body.target)) ? String(body.target) : "none")
+      : body.module === "sops" ? "sops" : body.module === "training" ? "training" : body.module === "rulebook" ? "rulebook" : body.module === "planner" ? "planner" : "testing";
     const need = mod === "training" ? 3 : 2;
     const { data: lvl, error: perr } = await sb.rpc("hx_perm", { p_mod: mod });
     if (perr) return json({ error: { message: "Access check failed: " + perr.message } }, 500);
     if (!lvl || lvl < need) {
-      return json({ error: { message: mod === "sops" ? "You need Edit access to SOPs to use the AI SOP tools." : mod === "training" ? "You need Full access to Training to draft courses with AI." : mod === "rulebook" ? "You need Edit access to the Rulebook to organize a rules PDF with AI." : mod === "planner" ? "You need Edit access to the Production Planner to estimate recipes with AI." : "You need Edit access to Testing to read COAs." } }, 403);
+      return json({ error: { message: mod === "sops" ? "You need Edit access to SOPs to use the AI SOP tools." : mod === "training" ? "You need Full access to Training to draft courses with AI." : mod === "rulebook" ? "You need Edit access to the Rulebook to organize a rules PDF with AI." : mod === "planner" ? "You need Edit access to the Production Planner to estimate recipes with AI." : body.module === "import" ? "You need Edit access to the module you are importing into." : "You need Edit access to Testing to read COAs." } }, 403);
     }
 
     const key = Deno.env.get("ANTHROPIC_API_KEY");
