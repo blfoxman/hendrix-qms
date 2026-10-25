@@ -29,8 +29,8 @@ jobs:
         run: |
           pip install playwright==1.56.0
           python -m playwright install --with-deps chromium
-      - name: Install PostgreSQL client
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Install PostgreSQL client and pdftotext
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client poppler-utils
       - name: Run all tests (database rules + browser suites)
         run: tests/run_all.sh
       - name: Keep failure details
