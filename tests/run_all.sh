@@ -3,7 +3,7 @@
 # Usage: tests/run_all.sh            (all)      tests/run_all.sh mat qms   (only those browser suites)
 # Env: HX_CHROME=<chromium binary> (optional), HX_SKIP_DB=1 to skip PostgreSQL parts.
 cd "$(dirname "$0")"
-SUITES=${*:-"off tk sec lm sh im st pp tc mv qs rc haccp cul env lc eq share training online tr_upgrade scope rulebook std ops cmp recall mat suppliers qms sop s t acc b fl3 p2 a w"}
+SUITES=${*:-"mc off tk sec lm sh im st pp tc mv qs rc haccp cul env lc eq share training online tr_upgrade scope rulebook std ops cmp recall mat suppliers qms sop s t acc b fl3 p2 a w"}
 # on GitHub Actions, failures are also written as annotations (readable without the log)
 note(){ [ -n "$GITHUB_ACTIONS" ] && echo "::error title=$1::$(echo "$2" | tr '\n' '|' | cut -c1-900)"; return 0; }
 FAILED=0; TOTAL=0; LOG=browser/work/summary.log; mkdir -p browser/work; : > $LOG
@@ -15,11 +15,13 @@ if [ "$HX_SKIP_DB" != "1" ] && command -v psql >/dev/null; then
   db/setup_db.sh hxtest > browser/work/setup_hxtest.txt 2>&1 || { FAILED=1; note "database setup (hxtest)" "$(tail -8 browser/work/setup_hxtest.txt)"; }
   export HX_PGDB=hxtest
 else
-  echo "database checks skipped" | tee -a $LOG; SUITES=$(echo " $SUITES " | sed 's/ lm / /; s/ sh / /; s/ tk / /; s/ off / /')
+  echo "database checks skipped" | tee -a $LOG; SUITES=$(echo " $SUITES " | sed 's/ lm / /; s/ sh / /; s/ tk / /; s/ off / /; s/ mc / /')
 fi
 if command -v node >/dev/null; then
-  eo=$(node --experimental-strip-types --no-warnings edge/test_notify.mjs 2>&1); echo "$eo" | tail -1 | tee -a $LOG
-  echo "$eo" | grep -q ', 0 failed' || { FAILED=1; echo "$eo" > browser/work/fail_edge.txt; note "hendrix-notify" "$(echo "$eo" | grep -E '^FAIL|Error' | head -6)"; }
+  for ef in notify metrc; do
+    eo=$(node --experimental-strip-types --no-warnings edge/test_$ef.mjs 2>&1); echo "$eo" | tail -1 | tee -a $LOG
+    echo "$eo" | grep -q ', 0 failed' || { FAILED=1; echo "$eo" > browser/work/fail_edge_$ef.txt; note "hendrix-$ef" "$(echo "$eo" | grep -E '^FAIL|Error' | head -6)"; }
+  done
 fi
 for t in $SUITES; do
   out=$(timeout 900 python3 browser/test_$t.py 2>&1)

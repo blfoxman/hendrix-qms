@@ -36,7 +36,7 @@ h = _j.loads(q('select hx_system_health()::text').split('\n')[-1])
 def chk(cond, msg):
     print(('PASS ' if cond else 'FAIL ') + msg)
     if not cond: fails.append(msg)
-chk(len(h['steps']) == 36 and all(x['ok'] for x in h['steps']), 'health: all 36 database steps (4-40) detected')
+chk(len(h['steps']) == 37 and all(x['ok'] for x in h['steps']), 'health: all 37 database steps (4-41) detected')
 chk(set(h['rls_off']) <= {'hx_licenses', 'hx_profiles', 'hx_states'}, 'health: row level security on every table created by steps 4-37')
 chk(h['not_audited'] == [] and h['audit_locked'], 'health: every record table audited and the audit trail locked')
 chk(h['bucket'] == {'exists': True, 'public': False}, 'health: private file bucket')
@@ -108,5 +108,19 @@ e40(r'permission denied for table hx_kiosk_receipts', 'kiosk receipts closed to 
 e40(r'^L3 performed_at\|t\|t\|t$', 'facility log keeps when it was done on the tablet')
 e40(r'^V2 time in\|t\|t$', 'visitor time in = when they signed in on the tablet')
 e40(r'^H1 health\|t\|t$', 'System Health counts offline kiosk items')
+# ---- step 41: METRC check
+r41 = subprocess.run(['psql', '-X', '-q', '-At', '-d', DB, '-f', os.path.join(HERE, 't41.sql')], capture_output=True, text=True)
+o41 = r41.stdout + r41.stderr
+def e41(pattern, msg):
+    chk(re.search(pattern, o41, re.M) is not None, msg)
+e41(r'^M2 packages\|9\|csv\|packages.csv$', 'METRC export saved (duplicates and rows without a tag left out)')
+e41(r'^M3 findings\|hold:1A40-HOLD,hold:1A40-MHOLD,lab:1A40-TEST3,lab:1a40 test1,lot:1A40-LOT2,quantity:1A40-LOT1,shipped:1A40-SHIP,unknown:1A40-MHOLD,unknown:1A40-NEW$', 'METRC check finds every difference (lab, holds, shipped, lots, quantity, unknown); tags matched without spaces or dashes')
+e41(r'^M4 first is high\|high$', 'most serious differences first')
+e41(r'^M5 titles\|Quantity: Hendrix 800 g, METRC 700 Grams$', 'quantity compared in the same unit (g = Grams)')
+e41(r'^M5 titles\|Passed in Hendrix, METRC lab status is SubmittedForTesting$', 'lab status difference explained')
+e41(r'No METRC packages found in the file', 'empty METRC file refused')
+e41(r'You need Edit access to METRC Check at this license', 'METRC upload needs Edit access')
+e41(r'METRC check not found', 'METRC checks hidden from people without access')
+e41(r'^M7 audited\|[1-9]', 'METRC uploads in the audit trail')
 print('\nDB checks:', 'all passed' if not fails else '%d failed' % len(fails))
 sys.exit(1 if fails else 0)
