@@ -170,7 +170,7 @@ async function sb(path,opt){
   if(!r.ok){
     const m=(j&&(j.message||j.hint||j.details))||txt||('Error '+r.status);
     if(/schema cache|Could not find the table|relation .* does not exist/i.test(m)&&!/Could not find the '[A-Za-z0-9_]+' column/.test(m)){
-      const step=/hx_mgmt_reviews|hx_verification_/.test(m)?'hendrix_step31.sql':/hx_org_positions|hx_objective|hx_qms_settings/.test(m)?'hendrix_step30.sql':/hx_risk|hx_changes/.test(m)?'hendrix_step29.sql':/hx_haccp/.test(m)?'hendrix_step28.sql':/hx_grow_|hx_plant_batches/.test(m)?'hendrix_step27.sql':/hx_env_/.test(m)?'hendrix_step26.sql':/hx_line_clearances|hx_rework/.test(m)?'hendrix_step25.sql':/hx_equipment|hx_chemicals/.test(m)?'hendrix_step24.sql':/share_key|hx_training_shared/.test(m)?'hendrix_step23.sql':/hx_rule_sources/.test(m)?'hendrix_step22.sql':/hx_training_keys|hx_training_attempts|hx_course_submit|content_status/.test(m)?'hendrix_step20.sql':/hx_complaints|hx_audits|hx_audit_findings/.test(m)?'hendrix_step19.sql':/hx_recall|hx_trace_data/.test(m)?'hendrix_step18.sql':/hx_lots|hx_lot_uses|hx_holds|hx_shipments/.test(m)?'hendrix_step17.sql':/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
+      const step=/hx_time_clock|hx_badge|hx_kiosk_clock|hx_clock_fix/.test(m)?'hendrix_step32.sql':/hx_mgmt_reviews|hx_verification_/.test(m)?'hendrix_step31.sql':/hx_org_positions|hx_objective|hx_qms_settings/.test(m)?'hendrix_step30.sql':/hx_risk|hx_changes/.test(m)?'hendrix_step29.sql':/hx_haccp/.test(m)?'hendrix_step28.sql':/hx_grow_|hx_plant_batches/.test(m)?'hendrix_step27.sql':/hx_env_/.test(m)?'hendrix_step26.sql':/hx_line_clearances|hx_rework/.test(m)?'hendrix_step25.sql':/hx_equipment|hx_chemicals/.test(m)?'hendrix_step24.sql':/share_key|hx_training_shared/.test(m)?'hendrix_step23.sql':/hx_rule_sources/.test(m)?'hendrix_step22.sql':/hx_training_keys|hx_training_attempts|hx_course_submit|content_status/.test(m)?'hendrix_step20.sql':/hx_complaints|hx_audits|hx_audit_findings/.test(m)?'hendrix_step19.sql':/hx_recall|hx_trace_data/.test(m)?'hendrix_step18.sql':/hx_lots|hx_lot_uses|hx_holds|hx_shipments/.test(m)?'hendrix_step17.sql':/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
       throw new Error('Database tables are missing - run '+step+' in the Hendrix Supabase project.');
     }
     if(/row-level security|permission denied/i.test(m))throw new Error('Not allowed - your access level does not allow this here. Ask a system admin.');
@@ -279,7 +279,7 @@ function LoginScreen(props){
 }
 
 /* ---------- Dashboard ---------- */
-const MODULES_SOON=['Time Clock and Badges','Production Planner'];
+const MODULES_SOON=['Production Planner'];
 function Dashboard(props){
   const st=props.state,lic=props.license;
   const isAdmin=props.profile.role==='admin';
@@ -317,6 +317,7 @@ function Dashboard(props){
       el(RiskDashCard,{license:lic,go:props.go}),
       el(ObjDashCard,{license:lic,go:props.go}),
       el(MvDashCard,{license:lic,go:props.go}),
+      el(TimeClockDashCard,{license:lic,go:props.go}),
       el(ChemDashCard,{license:lic,go:props.go}),
       el(RecallDashCard,{license:lic,go:props.go}),
       el(StdDashCard,{license:lic,go:props.go})),
@@ -2346,7 +2347,7 @@ function Products(props){
 /* ---------- Audit trail: history, void, admin page ----------
    The database writes every change to hx_audit_log (append-only). Records are never deleted:
    they are voided with a reason. Every change to a record needs a reason for change. */
-const AUDIT_AREAS={hx_mgmt_reviews:'Management review',hx_verification_plan:'Verification activity',hx_verification_records:'Verification',hx_org_positions:'Org chart',hx_qms_settings:'Quality policy',hx_objectives:'Quality objective',hx_objective_results:'KPI result',hx_risks:'Risk',hx_risk_reviews:'Risk review',hx_changes:'Change',hx_haccp_team:'HACCP team',hx_haccp_plans:'HACCP plan',hx_haccp_monitoring:'CCP monitoring',hx_haccp_verifications:'HACCP verification',hx_grow_areas:'Grow area',hx_plant_batches:'Plant batch',hx_grow_events:'Grow record',hx_env_points:'Facility test point',hx_env_tests:'Facility test result',hx_line_clearances:'Line clearance',hx_rework:'Rework',hx_equipment:'Equipment',hx_equipment_events:'Equipment record',hx_chemicals:'Chemical',hx_complaints:'Complaint',hx_audits:'Internal audit',hx_audit_findings:'Audit finding',hx_recalls:'Recall / mock recall',hx_recall_contacts:'Recall contact',hx_lots:'Received lot',hx_lot_uses:'Lot use',hx_holds:'Hold',hx_shipments:'Shipment',hx_suppliers:'Supplier',hx_supplier_reviews:'Supplier review',hx_training_courses:'Training course',hx_training_records:'Training record',hx_deviations:'Deviation',hx_capas:'CAPA',hx_sops:'SOP',hx_sop_acks:'SOP signature',hx_label_prints:'Sticker print',hx_standards:'Standards',hx_standard_clauses:'Standard clauses',hx_license_standards:'Standard adoption',hx_conformance:'Standard conformance',hx_label_templates:'Label templates',hx_tests:'Testing record',hx_roles:'Roles',hx_batches:'Batch record',hx_facility_log:'Facility log entry',hx_visitor_log:'Visitor log',hx_log_lists:'Facility log lists',hx_rules:'Rulebook',hx_rule_sources:'Rulebook source PDF',
+const AUDIT_AREAS={hx_time_clock:'Time clock',hx_badges:'Badge',hx_mgmt_reviews:'Management review',hx_verification_plan:'Verification activity',hx_verification_records:'Verification',hx_org_positions:'Org chart',hx_qms_settings:'Quality policy',hx_objectives:'Quality objective',hx_objective_results:'KPI result',hx_risks:'Risk',hx_risk_reviews:'Risk review',hx_changes:'Change',hx_haccp_team:'HACCP team',hx_haccp_plans:'HACCP plan',hx_haccp_monitoring:'CCP monitoring',hx_haccp_verifications:'HACCP verification',hx_grow_areas:'Grow area',hx_plant_batches:'Plant batch',hx_grow_events:'Grow record',hx_env_points:'Facility test point',hx_env_tests:'Facility test result',hx_line_clearances:'Line clearance',hx_rework:'Rework',hx_equipment:'Equipment',hx_equipment_events:'Equipment record',hx_chemicals:'Chemical',hx_complaints:'Complaint',hx_audits:'Internal audit',hx_audit_findings:'Audit finding',hx_recalls:'Recall / mock recall',hx_recall_contacts:'Recall contact',hx_lots:'Received lot',hx_lot_uses:'Lot use',hx_holds:'Hold',hx_shipments:'Shipment',hx_suppliers:'Supplier',hx_supplier_reviews:'Supplier review',hx_training_courses:'Training course',hx_training_records:'Training record',hx_deviations:'Deviation',hx_capas:'CAPA',hx_sops:'SOP',hx_sop_acks:'SOP signature',hx_label_prints:'Sticker print',hx_standards:'Standards',hx_standard_clauses:'Standard clauses',hx_license_standards:'Standard adoption',hx_conformance:'Standard conformance',hx_label_templates:'Label templates',hx_tests:'Testing record',hx_roles:'Roles',hx_batches:'Batch record',hx_facility_log:'Facility log entry',hx_visitor_log:'Visitor log',hx_log_lists:'Facility log lists',hx_rules:'Rulebook',hx_rule_sources:'Rulebook source PDF',
   hx_states:'States',hx_licenses:'Licenses',hx_profiles:'Team and access',hx_skus:'SKUs',hx_flavors:'Flavors',hx_formulations:'Formulations',hx_cost_library:'Ingredient prices'};
 const AUDIT_SKIP=['voided_by','voided_at','updated_at','edit_reason'];
 function auditVal(v){
@@ -3057,6 +3058,7 @@ const ACCESS_MODULES=[
   {id:'objectives',label:'Quality Objectives',grp:'General',help:'View objectives and KPIs / set objectives and record results / link the quality policy, mark achieved or dropped'},
   {id:'mgmtreview',label:'Management Review',grp:'General',help:'View reviews / prepare reviews and update actions / sign reviews, cancel drafts'},
   {id:'verification',label:'Verification Schedule',grp:'General',help:'View the schedule / add activities and record verifications / turn activities off, void records'},
+  {id:'timeclock',label:'Time Clock and Badges',grp:'General',help:'View the sign-in sheet and who is on site / make and print badges / re-issue lost badges, void punches, add missed punches'},
   {id:'batch',label:'Batch Tracker',grp:'Production',help:'View / create and continue (fill blanks) / change filled values with a reason and void'},
   {id:'products',label:'Products (SKUs and flavors)',grp:'Production',help:'View / add and edit / delete'},
   {id:'formbank',label:'Formulation Bank (recipes)',grp:'Production',help:'View / add and edit / delete'},
@@ -3218,16 +3220,16 @@ function Team(props){
 const LOGS_PROD=['logs_sanitation','logs_waste','logs_scale','logs_equipment','logs_temp','logs_env'];
 function pm(o,list,lv){const x={...o};(list||[]).forEach(function(k){x[k]=lv;});return x;}
 const STARTER_ROLES=[
-  ['General Manager','Leadership. Edit everywhere; Full on batches and every log; sees recipes, prices and the audit trail.',{training:'admin',qms:'admin',complaints:'admin',intaudits:'admin',sops:'admin',suppliers:'admin',equipment:'admin',chemicals:'admin',lineclear:'admin',rework:'admin',envtests:'admin',cultivation:'admin',haccp:'admin',risks:'admin',changes:'admin',orgchart:'admin',objectives:'admin',mgmtreview:'admin',verification:'admin',receiving:'admin',holds:'admin',shipping:'admin',recall:'admin',rulebook:'editor',standards:'editor',audit:'read',batch:'admin',testing:'admin',stickers:'admin',products:'editor',formbank:'read',cogs:'read',logs:'admin'}],
-  ['Assistant of General Manager','Leadership support. Edit on batches, products and every log; sees recipes and the audit trail.',{training:'editor',qms:'editor',complaints:'editor',intaudits:'editor',sops:'editor',suppliers:'editor',equipment:'editor',chemicals:'editor',lineclear:'editor',rework:'editor',envtests:'editor',cultivation:'editor',haccp:'editor',risks:'editor',changes:'editor',orgchart:'editor',objectives:'editor',mgmtreview:'editor',verification:'editor',receiving:'editor',holds:'editor',shipping:'editor',recall:'editor',rulebook:'editor',standards:'read',audit:'read',batch:'editor',testing:'editor',products:'editor',formbank:'read',logs:'editor'}],
-  ['Compliance Officer','Full on every log, the rulebook and standards (CSQ); sees batches, products and the audit trail.',{training:'admin',qms:'admin',complaints:'admin',intaudits:'admin',sops:'admin',suppliers:'admin',equipment:'admin',chemicals:'admin',lineclear:'admin',rework:'admin',envtests:'admin',cultivation:'admin',haccp:'admin',risks:'admin',changes:'admin',orgchart:'admin',objectives:'admin',mgmtreview:'admin',verification:'admin',receiving:'admin',holds:'admin',shipping:'read',recall:'admin',rulebook:'admin',standards:'admin',audit:'read',logs:'admin',batch:'read',testing:'admin',stickers:'admin',products:'read'}],
-  ['Security Manager','Full on the security and visitor logs.',{training:'editor',qms:'editor',complaints:'editor',sops:'read',rulebook:'read',logs_security:'admin',logs_visitor:'admin'}],
-  ['Security Officer','Fills the security and visitor logs.',{training:'read',qms:'read',complaints:'read',sops:'read',rulebook:'read',logs_security:'editor',logs_visitor:'editor'}],
+  ['General Manager','Leadership. Edit everywhere; Full on batches and every log; sees recipes, prices and the audit trail.',{training:'admin',qms:'admin',complaints:'admin',intaudits:'admin',sops:'admin',suppliers:'admin',equipment:'admin',chemicals:'admin',lineclear:'admin',rework:'admin',envtests:'admin',cultivation:'admin',haccp:'admin',risks:'admin',changes:'admin',orgchart:'admin',objectives:'admin',mgmtreview:'admin',verification:'admin',timeclock:'admin',receiving:'admin',holds:'admin',shipping:'admin',recall:'admin',rulebook:'editor',standards:'editor',audit:'read',batch:'admin',testing:'admin',stickers:'admin',products:'editor',formbank:'read',cogs:'read',logs:'admin'}],
+  ['Assistant of General Manager','Leadership support. Edit on batches, products and every log; sees recipes and the audit trail.',{training:'editor',qms:'editor',complaints:'editor',intaudits:'editor',sops:'editor',suppliers:'editor',equipment:'editor',chemicals:'editor',lineclear:'editor',rework:'editor',envtests:'editor',cultivation:'editor',haccp:'editor',risks:'editor',changes:'editor',orgchart:'editor',objectives:'editor',mgmtreview:'editor',verification:'editor',timeclock:'editor',receiving:'editor',holds:'editor',shipping:'editor',recall:'editor',rulebook:'editor',standards:'read',audit:'read',batch:'editor',testing:'editor',products:'editor',formbank:'read',logs:'editor'}],
+  ['Compliance Officer','Full on every log, the rulebook and standards (CSQ); sees batches, products and the audit trail.',{training:'admin',qms:'admin',complaints:'admin',intaudits:'admin',sops:'admin',suppliers:'admin',equipment:'admin',chemicals:'admin',lineclear:'admin',rework:'admin',envtests:'admin',cultivation:'admin',haccp:'admin',risks:'admin',changes:'admin',orgchart:'admin',objectives:'admin',mgmtreview:'admin',verification:'admin',timeclock:'admin',receiving:'admin',holds:'admin',shipping:'read',recall:'admin',rulebook:'admin',standards:'admin',audit:'read',logs:'admin',batch:'read',testing:'admin',stickers:'admin',products:'read'}],
+  ['Security Manager','Full on the security and visitor logs.',{training:'editor',qms:'editor',complaints:'editor',sops:'read',rulebook:'read',logs_security:'admin',logs_visitor:'admin',timeclock:'admin'}],
+  ['Security Officer','Fills the security and visitor logs.',{training:'read',qms:'read',complaints:'read',sops:'read',rulebook:'read',logs_security:'editor',logs_visitor:'editor',timeclock:'read'}],
   ['Sanitation','Fills the sanitation, waste and pest control logs.',{chemicals:'read',envtests:'editor',training:'read',qms:'read',complaints:'read',sops:'read',logs_sanitation:'editor',logs_waste:'editor',logs_pest:'editor'}],
   ['Team Member','Continues batches; fills the sanitation and temp / humidity logs.',{equipment:'read',chemicals:'read',lineclear:'editor',orgchart:'read',training:'read',qms:'read',complaints:'read',sops:'read',holds:'editor',receiving:'read',batch:'editor',products:'read',logs_temp:'editor',logs_sanitation:'editor'}],
   ['Inventory Manager','Sees products and batches; fills the waste log.',{training:'editor',qms:'editor',complaints:'editor',sops:'read',suppliers:'editor',receiving:'admin',holds:'editor',shipping:'admin',recall:'editor',products:'read',batch:'read',logs_waste:'editor'}],
   ['Extraction Manager','Full on batches; fills the scale, equipment and temp / humidity logs.',{equipment:'editor',chemicals:'read',lineclear:'editor',rework:'editor',haccp:'editor',risks:'read',changes:'editor',orgchart:'read',objectives:'read',mgmtreview:'read',verification:'editor',training:'editor',qms:'editor',complaints:'editor',sops:'editor',suppliers:'read',receiving:'editor',holds:'editor',batch:'admin',testing:'editor',products:'read',formbank:'read',logs_scale:'editor',logs_equipment:'editor',logs_temp:'editor'}],
-  ['Production Manager','Full on batches; edits products; fills the production logs.',pm({equipment:'editor',chemicals:'editor',lineclear:'editor',rework:'editor',envtests:'editor',cultivation:'editor',haccp:'editor',risks:'editor',changes:'editor',orgchart:'read',objectives:'editor',mgmtreview:'read',verification:'editor',batch:'admin',testing:'editor',stickers:'editor',products:'editor',formbank:'read',rulebook:'read',standards:'editor',sops:'editor',qms:'editor',complaints:'editor',intaudits:'read',training:'editor',suppliers:'editor',receiving:'editor',holds:'editor',shipping:'read',recall:'editor'},LOGS_PROD,'editor')],
+  ['Production Manager','Full on batches; edits products; fills the production logs.',pm({equipment:'editor',chemicals:'editor',lineclear:'editor',rework:'editor',envtests:'editor',cultivation:'editor',haccp:'editor',risks:'editor',changes:'editor',orgchart:'read',objectives:'editor',mgmtreview:'read',verification:'editor',timeclock:'read',batch:'admin',testing:'editor',stickers:'editor',products:'editor',formbank:'read',rulebook:'read',standards:'editor',sops:'editor',qms:'editor',complaints:'editor',intaudits:'read',training:'editor',suppliers:'editor',receiving:'editor',holds:'editor',shipping:'read',recall:'editor'},LOGS_PROD,'editor')],
   ['Sales Manager','Sees products; records shipments.',{training:'read',qms:'read',complaints:'read',sops:'read',products:'read',shipping:'editor',holds:'read',recall:'read'}],
   ['Production Lead','Creates and continues batches; fills the production logs.',pm({equipment:'read',chemicals:'read',lineclear:'editor',rework:'editor',haccp:'editor',changes:'read',orgchart:'read',objectives:'read',batch:'editor',testing:'read',stickers:'read',products:'read',sops:'read',qms:'editor',complaints:'read',training:'read',receiving:'read',holds:'editor'},['logs_sanitation','logs_scale','logs_equipment','logs_temp'],'editor')]];
 function accessSummary(perms){
@@ -6700,6 +6702,266 @@ function MvDashCard(props){
     el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go(d.mr&&(mrLate||!d.vs||!d.od)?'mgmtreview':'verification');}},'Open'));
 }
 
+/* ---------- Time Clock and Badges (from the Michigan app): badges, kiosk, sign-in sheet, on site now ---------- */
+const TC_SEQ=['entry','break1_out','break1_in','break2_out','break2_in','break3_out','break3_in','clockout'];
+const TC_LABEL={entry:'Clock in',break1_out:'1st break \u2014 out',break1_in:'1st break \u2014 back',break2_out:'2nd break \u2014 out',break2_in:'2nd break \u2014 back',break3_out:'3rd break \u2014 out',break3_in:'3rd break \u2014 back',clockout:'Clock out'};
+const TC_COLS=[['entry','Clock in'],['break1_out','1st out'],['break1_in','1st back'],['break2_out','2nd out'],['break2_in','2nd back'],['break3_out','3rd out'],['break3_in','3rd back'],['clockout','Clock out']];
+const TC_LIMIT={break1_out:15,break2_out:30,break3_out:15};
+function tcErr(e){const m=String((e&&e.message)||e);return /hx_time_clock|hx_badge|hx_kiosk_clock|hx_clock_fix|Kiosk setup is missing/.test(m)&&/missing|does not exist|schema cache|Could not find/i.test(m)?'The time clock is not set up yet - run hendrix_step32.sql in the Hendrix Supabase project.':m;}
+function tcTime(ts){return ts?new Date(ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'';}
+function tcMin(a,b){return (new Date(b)-new Date(a))/60000;}
+// minutes worked = clock in to clock out, less the breaks taken
+function tcWorked(ev){if(!ev.entry||!ev.clockout)return null;let m=tcMin(ev.entry.ts,ev.clockout.ts);
+  ['1','2','3'].forEach(function(n){const o=ev['break'+n+'_out'],i=ev['break'+n+'_in'];if(o&&i)m-=tcMin(o.ts,i.ts);});return Math.max(0,Math.round(m));}
+function tcHrs(m){return m==null?'-':Math.floor(m/60)+'h '+pad2(m%60)+'m';}
+function tcBadgeFromScan(text){text=String(text||'').trim();if(!text)return '';try{const u=new URL(text);const b=u.searchParams.get('badge');if(b)return b;}catch(e){}return /^[A-Za-z0-9]{6,20}$/.test(text)?text:'';}
+function tcBadgeUrl(code){return window.location.origin+window.location.pathname+'?badge='+encodeURIComponent(code);}
+
+/* Code 128 (set B) drawn as SVG - read by any USB / Bluetooth barcode scanner */
+const C128=['212222','222122','222221','121223','121322','131222','122213','122312','132212','221213','221312','231212','112232','122132','122231','113222','123122','123221','223211','221132','221231','213212','223112','312131','311222','321122','321221','312212','322112','322211','212123','212321','232121','111323','131123','131321','112313','132113','132311','211313','231113','231311','112133','112331','132131','113123','113321','133121','313121','211331','231131','213113','213311','213131','311123','311321','331121','312113','312311','332111','314111','221411','431111','111224','111422','121124','121421','141122','141221','112214','112412','122114','122411','142112','142211','241211','221114','413111','241112','134111','111242','121142','121241','114212','124112','124211','411212','421112','421211','212141','214121','412121','111143','111341','131141','114113','114311','411113','411311','113141','114131','311141','411131','211412','211214','211232'];
+function code128Svg(text,w,h,color){
+  const vals=[104];String(text).split('').forEach(function(ch){const c=ch.charCodeAt(0)-32;if(c>=0&&c<95)vals.push(c);});
+  let sum=104;for(let i=1;i<vals.length;i++)sum+=vals[i]*i;vals.push(sum%103);
+  const pat=vals.map(function(v){return C128[v];}).join('')+'2331112';let units=0;for(let i=0;i<pat.length;i++)units+=+pat[i];
+  const q=10,total=units+q*2,sc=w/total;let x=q*sc,s='';
+  for(let i=0;i<pat.length;i++){const ww=+pat[i]*sc;if(i%2===0)s+='<rect x="'+x.toFixed(2)+'" y="0" width="'+ww.toFixed(2)+'" height="'+h+'"/>';x+=ww;}
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'" shape-rendering="crispEdges"><g fill="'+(color||'#000')+'">'+s+'</g></svg>';
+}
+const HX_LOGO_SVG='<svg width="26" height="26" viewBox="0 0 40 40"><defs><linearGradient id="bg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f1d57a"/><stop offset=".5" stop-color="#d4af37"/><stop offset="1" stop-color="#a8841c"/></linearGradient></defs><polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="none" stroke="url(#bg1)" stroke-width="2.4"/><path d="M13 12v16M27 12v16M13 20h14" stroke="url(#bg1)" stroke-width="3" stroke-linecap="round" fill="none"/></svg>';
+// the CR80 card (2.125 x 3.375 in, drawn at 96 px / in); the same HTML is used on screen and in print
+function badgeHtml(p,lic,qr){
+  const e=esc3,G='#d4af37',z=p.zoom||1,ox=p.pos_x||0,oy=p.pos_y||0,code=p.code||'';
+  const corner=function(t){return t;};
+  const orn='<svg style="position:absolute;inset:0;width:100%;height:100%" viewBox="0 0 204 324" preserveAspectRatio="none">'+
+    [[0,0,72,0,0,72,0,0,68,68],[204,0,132,0,204,72,204,0,136,68],[0,324,72,324,0,252,0,324,68,256],[204,324,132,324,204,252,204,324,136,256]].map(function(c){
+      return '<polygon points="'+c[0]+','+c[1]+' '+c[2]+','+c[3]+' '+c[4]+','+c[5]+'" fill="'+G+'" opacity=".2"/><line x1="'+c[6]+'" y1="'+c[7]+'" x2="'+c[8]+'" y2="'+c[9]+'" stroke="'+G+'" stroke-width="2" opacity=".75"/>';}).join('')+'</svg>';
+  const photo=p.photo?'<img src="'+e(p.photo)+'" style="width:100%;height:100%;object-fit:cover;transform:translate('+ox+'px,'+oy+'px) scale('+z+');transform-origin:center" draggable="false">':
+    '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:'+G+';font-size:8px;letter-spacing:1px;opacity:.6">PHOTO</div>';
+  return '<div class="hxbadge" style="width:204px;height:324px;background:#0a0a0a;border-radius:12px;position:relative;overflow:hidden;font-family:Inter,Arial,sans-serif;color:'+G+';-webkit-print-color-adjust:exact;print-color-adjust:exact">'+orn+
+    '<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;padding:12px 12px 8px;box-sizing:border-box">'+
+      '<div style="display:flex;align-items:center;gap:6px">'+HX_LOGO_SVG+'<div style="text-align:left"><div style="font-size:9px;font-weight:800;letter-spacing:2px">'+e(String(lic.name||'').toUpperCase().slice(0,22))+'</div><div style="font-size:5.5px;letter-spacing:1.5px;opacity:.7">'+e(lic.license_number||'')+'</div></div></div>'+
+      '<div style="width:90px;height:1px;background:linear-gradient(90deg,transparent,'+G+',transparent);margin:6px 0 5px"></div>'+
+      '<div style="width:84px;height:84px;border-radius:50%;background:linear-gradient(135deg,#8a6420,#f5d78e,#c9a84c,#8a6420);padding:3px;box-shadow:0 0 14px rgba(212,175,55,.5);box-sizing:border-box"><div class="hxbphoto" style="width:100%;height:100%;border-radius:50%;overflow:hidden;background:#1c1c1c">'+photo+'</div></div>'+
+      '<div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:2px;text-align:center;margin-top:7px;line-height:1.2">'+e(String(p.name||'').slice(0,26))+'</div>'+
+      '<div style="display:flex;align-items:center;gap:5px;margin:3px 0;width:100%"><div style="flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(212,175,55,.5))"></div><div style="font-size:7px">\u25c6</div><div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(212,175,55,.5),transparent)"></div></div>'+
+      '<div style="font-size:7px;letter-spacing:2.5px;opacity:.85;text-transform:uppercase;text-align:center">'+e(String(p.title||'').slice(0,34))+'</div>'+
+      '<div style="flex:1"></div>'+
+      '<div style="width:100%"><div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px"><div><div style="font-size:5.5px;letter-spacing:1px;opacity:.7;margin-bottom:2px">ID NO.</div>'+
+        '<div style="border:1px solid rgba(212,175,55,.5);border-radius:3px;padding:3px 10px;font-size:9px;font-weight:700;letter-spacing:3px">'+e(p.badge_no||'----')+'</div></div>'+
+        '<div style="width:1px;height:30px;background:rgba(212,175,55,.35)"></div><div style="font-size:5px;opacity:.6;letter-spacing:.8px;line-height:1.8;padding-top:2px">AUTHORIZED PERSONNEL<br>VALID ONLY WITH THIS PHOTO<br>RETURN IF FOUND</div></div>'+
+        '<div style="display:flex;align-items:center;gap:5px"><div style="border:1px solid rgba(212,175,55,.4);border-radius:3px;padding:2px;background:#fff;line-height:0">'+(qr?'<img src="'+qr+'" style="width:40px;height:40px">':'<div style="width:40px;height:40px"></div>')+'</div>'+
+          '<div style="border:1px solid rgba(212,175,55,.4);border-radius:3px;padding:3px 4px;flex:1;background:#fff;line-height:0;text-align:center">'+(code?code128Svg(code,120,30,'#000'):'<div style="height:30px"></div>')+'<div style="font-size:5px;color:#000;letter-spacing:1px;line-height:1.4">'+e(code)+'</div></div></div>'+
+        '<div style="font-size:5px;opacity:.5;letter-spacing:1.5px;text-align:center;text-transform:uppercase;margin-top:4px">HENDRIX QUALITY MANAGEMENT</div></div></div></div>';
+}
+function printBadges(list,lic){
+  const w=window.open('','_blank');if(!w)return;
+  const cards=list.map(function(p){return '<div class="pg">'+badgeHtml(p,lic,p.code?qrDataUrl(tcBadgeUrl(p.code),240):'')+'</div>';}).join('');
+  w.document.write('<html><head><title>Badges</title><style>@page{size:2.125in 3.375in;margin:0}html,body{margin:0;background:#fff}.pg{width:2.125in;height:3.375in;overflow:hidden;page-break-after:always;break-after:page}.pg:last-child{page-break-after:auto}.hxbadge{transform:scale(1);transform-origin:0 0;border-radius:0 !important}</style></head><body>'+cards+'</body></html>');
+  w.document.close();setTimeout(function(){w.print();},700);
+}
+function BadgeEditor(props){
+  const lic=props.license,p=props.person;
+  const[f,setF]=useState({title:p.title||props.defTitle||'',photo:p.photo||null,zoom:p.zoom||1,pos_x:p.pos_x||0,pos_y:p.pos_y||0});
+  const[busy,setBusy]=useState(false);const[err,setErr]=useState('');const[msg,setMsg]=useState('');const[code,setCode]=useState(p.code||'');const[no,setNo]=useState(p.badge_no||'');
+  const drag=useRef({on:false,x:0,y:0,ox:0,oy:0});
+  useEffect(function(){setF({title:p.title||props.defTitle||'',photo:p.photo||null,zoom:p.zoom||1,pos_x:p.pos_x||0,pos_y:p.pos_y||0});setCode(p.code||'');setNo(p.badge_no||'');setMsg('');setErr('');},[p.id]);
+  function set(k,v){setF(function(q){return {...q,[k]:v};});}
+  function onFile(ev){const file=ev.target.files&&ev.target.files[0];ev.target.value='';if(!file)return;const rd=new FileReader();
+    rd.onload=function(x){const img=new Image();img.onload=function(){const S=500,c=document.createElement('canvas');c.width=S;c.height=S;const g=c.getContext('2d');g.fillStyle='#000';g.fillRect(0,0,S,S);
+      const sc=Math.min(S/img.width,S/img.height),sw=Math.round(img.width*sc),sh=Math.round(img.height*sc);g.drawImage(img,Math.round((S-sw)/2),Math.round((S-sh)/2),sw,sh);
+      setF(function(q){return {...q,photo:c.toDataURL('image/jpeg',0.82),zoom:1,pos_x:0,pos_y:0};});};img.src=x.target.result;};rd.readAsDataURL(file);}
+  function dStart(e){if(!f.photo)return;const t=e.touches?e.touches[0]:e;drag.current={on:true,x:t.clientX,y:t.clientY,ox:f.pos_x,oy:f.pos_y};}
+  function dMove(e){if(!drag.current.on)return;const t=e.touches?e.touches[0]:e;const d=drag.current;setF(function(q){return {...q,pos_x:Math.round(d.ox+t.clientX-d.x),pos_y:Math.round(d.oy+t.clientY-d.y)};});}
+  function dEnd(){drag.current.on=false;}
+  async function save(){setErr('');setMsg('');setBusy(true);
+    try{const r=await sb('rpc/hx_badge_save',{method:'POST',body:{p_lic:lic.id,p_profile:p.id,p_title:f.title.trim(),p_photo:f.photo,p_zoom:+f.zoom,p_x:f.pos_x,p_y:f.pos_y}});
+      if(r&&r.code){setCode(r.code);setNo(r.badge_no);}setMsg(p.has_badge?'Badge saved.':'Badge issued - ID '+((r&&r.badge_no)||'')+'.');if(props.onSaved)props.onSaved();}catch(e){setErr(tcErr(e));}setBusy(false);}
+  const card={...p,...f,code:code,badge_no:no},qr=code?qrDataUrl(tcBadgeUrl(code),240):'';
+  return el('div',{className:'row',style:{gap:24,alignItems:'flex-start'}},
+    el('div',{style:{flex:'1 1 240px',minWidth:220,maxWidth:320}},
+      el('h3',{style:{margin:'0 0 8px'}},p.name),el('div',{className:'muted',style:{fontSize:12,marginBottom:10}},p.email||''),
+      el(Field,{label:'Title on the badge'},el('input',{value:f.title,placeholder:'e.g. Extraction Technician',onChange:function(e){set('title',e.target.value);}})),
+      el(Field,{label:'Photo',plain:true},el('label',{className:'btn ghost sm'},f.photo?'Replace photo':'Upload photo',el('input',{type:'file',accept:'image/*',style:{display:'none'},onChange:onFile}))),
+      f.photo&&el(Field,{label:'Zoom'},el('input',{type:'range',min:1,max:3,step:0.05,value:f.zoom,onChange:function(e){set('zoom',+e.target.value);}})),
+      f.photo&&el('div',{className:'muted',style:{fontSize:11,marginTop:-6,marginBottom:10}},'Drag the photo on the card to move it.'),
+      el('div',{className:'row',style:{gap:6}},can('timeclock',2)&&el('button',{className:'btn',disabled:busy,onClick:save},busy?'Saving...':p.has_badge?'Save badge':'Issue badge'),
+        code&&el('button',{className:'btn ghost',onClick:function(){printBadges([card],lic);}},'Print'),
+        p.has_badge&&can('timeclock',3)&&el('button',{className:'btn danger',onClick:props.onReissue},'Re-issue (lost)')),
+      msg&&el('div',{className:'msg',style:{marginTop:10}},msg),err&&el('div',{className:'msg err',style:{marginTop:10}},err),
+      no&&el('div',{className:'muted',style:{fontSize:11,marginTop:10}},'ID '+no+(p.issued_at?' \u00b7 issued '+String(p.issued_at).slice(0,10)+(p.issued_by?' by '+p.issued_by:''):'')+'. The QR and barcode are secret to this person: a lost badge is re-issued so the old one stops working.')),
+    el('div',{style:{flex:'0 0 auto',position:'relative'}},
+      el('div',{style:{boxShadow:'0 8px 32px rgba(0,0,0,.7)',borderRadius:12},dangerouslySetInnerHTML:{__html:badgeHtml(card,lic,qr)}}),
+      f.photo&&el('div',{title:'Drag to move the photo',onMouseDown:dStart,onMouseMove:dMove,onMouseUp:dEnd,onMouseLeave:dEnd,onTouchStart:dStart,onTouchMove:dMove,onTouchEnd:dEnd,
+        style:{position:'absolute',left:60,top:57,width:84,height:84,borderRadius:'50%',cursor:'grab'}}),
+      el('div',{className:'muted',style:{fontSize:10,textAlign:'center',marginTop:8}},'Prints at 2.125 \u00d7 3.375 in (CR80 card)')));
+}
+function TcFixForm(props){
+  const lic=props.license;const[f,setF]=useState({profile:props.person||'',event:props.event||'entry',time:(props.date||todayStr())+'T'+(props.time||'08:00'),reason:''});const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  function set(k,v){setF(function(q){return {...q,[k]:v};});}
+  async function go(){setErr('');if(!f.profile||!f.reason.trim()){setErr('Choose the person and give the reason.');return;}setBusy(true);
+    try{await sb('rpc/hx_clock_fix',{method:'POST',body:{p_lic:lic.id,p_profile:f.profile,p_date:props.date,p_event:f.event,p_ts:new Date(f.time).toISOString(),p_reason:f.reason.trim()}});props.onDone('Missed punch added.');}catch(e){setErr(tcErr(e));}setBusy(false);}
+  return el(Modal,{title:'Missed punch \u00b7 '+props.date,onClose:props.onClose},
+    el(Field,{label:'Person'},el('select',{value:f.profile,onChange:function(e){set('profile',e.target.value);}},el('option',{value:''},'Choose...'),(props.people||[]).map(function(p){return el('option',{key:p.id,value:p.id},p.name);}))),
+    el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}},el(Field,{label:'Punch'},el('select',{value:f.event,onChange:function(e){set('event',e.target.value);}},TC_SEQ.map(function(k){return el('option',{key:k,value:k},TC_LABEL[k]);}))),
+      el(Field,{label:'Time'},el('input',{type:'datetime-local',value:f.time,onChange:function(e){set('time',e.target.value);}}))),
+    el(Field,{label:'Reason *'},el('input',{value:f.reason,placeholder:'e.g. Forgot badge, confirmed by supervisor',onChange:function(e){set('reason',e.target.value);}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:go},busy?'Saving...':'Add punch')));
+}
+function tcSheetHtml(rows,lic,date){const e=esc3;
+  return '<div class="hxrec"><h2>Sign-in sheet \u2014 '+e(date)+'</h2><div class="m">'+e(lic.name)+' \u00b7 printed '+e(new Date().toLocaleString())+' \u00b7 break limits 15 / 30 / 15 min, late returns marked LATE</div>'+
+    '<table><tr><th>Employee</th>'+TC_COLS.map(function(c){return '<th>'+e(c[1])+'</th>';}).join('')+'<th>Worked</th></tr>'+rows.map(function(r){return '<tr><td><b>'+e(r.name)+'</b></td>'+TC_COLS.map(function(c){const x=r.ev[c[0]];
+      return '<td class="'+(x&&x.late?'bad':'')+'">'+(x?e(tcTime(x.ts))+(x.late?' LATE +'+x.late_minutes:'')+(x.source==='manual'?' (M)':''):'-')+'</td>';}).join('')+'<td>'+e(tcHrs(tcWorked(r.ev)))+'</td></tr>';}).join('')+'</table><p>(M) = missed punch added by a manager with a reason (see the audit trail).</p></div>';}
+function TimeClockPage(props){
+  const st=props.state,lic=props.license,lid=lic?lic.id:'';
+  const[tab,setTab]=useState(lsGet('hx_tctab')||'sheet');const[date,setDate]=useState(todayStr());const[ev,setEv]=useState(null);const[today,setToday]=useState([]);const[people,setPeople]=useState(null);
+  const[sel,setSel]=useState(null);const[q,setQ]=useState('');const[msg,setMsg]=useState('');const[modal,setModal]=useState(null);const[org,setOrg]=useState([]);const[,tick]=useState(0);
+  const loadDay=useCallback(function(){if(!lid)return;const L='license_id=eq.'+encodeURIComponent(lid);
+    db.get('hx_time_clock',L+'&event_date=eq.'+date+'&select=*&order=ts.asc').then(function(r){setEv((r||[]).filter(function(x){return x.license_id===lid&&x.event_date===date;}));}).catch(function(e){setMsg(tcErr(e));setEv([]);});
+    db.get('hx_time_clock',L+'&event_date=eq.'+todayStr()+'&voided=eq.false&select=*&order=ts.asc').then(function(r){setToday((r||[]).filter(function(x){return x.license_id===lid&&!x.voided&&x.event_date===todayStr();}));}).catch(function(){setToday([]);});},[lid,date]);
+  const loadPeople=useCallback(function(){if(!lid)return;sb('rpc/hx_badge_roster',{method:'POST',body:{p_lic:lid}}).then(function(r){setPeople(r||[]);}).catch(function(e){setMsg(tcErr(e));setPeople([]);});
+    if(can('orgchart',1))db.get('hx_org_positions','license_id=eq.'+encodeURIComponent(lid)+'&select=title,person_name,license_id').then(function(r){setOrg(r||[]);}).catch(function(){setOrg([]);});},[lid]);
+  useEffect(loadDay,[loadDay]);useEffect(loadPeople,[loadPeople]);
+  useEffect(function(){const t=setInterval(function(){tick(function(n){return n+1;});if(tab==='onsite')loadDay();},60000);return function(){clearInterval(t);};},[tab,loadDay]);
+  if(!st||!lic)return el('div',null,el('h1',null,el('span',{className:'g'},'Time Clock and Badges')),el('div',{className:'empty'},'Pick a state and a license at the top first.'));
+  function go(t){setTab(t);lsSet('hx_tctab',t);}
+  function done(m){setModal(null);setMsg(m);loadDay();loadPeople();}
+  const byPerson=function(list){const m={};list.filter(function(x){return !x.voided;}).forEach(function(x){const r=m[x.profile_id]||(m[x.profile_id]={id:x.profile_id,name:x.person_name,ev:{},last:null});r.ev[x.event_type]=x;if(!r.last||x.ts>r.last.ts)r.last=x;});
+    return Object.keys(m).map(function(k){return m[k];}).sort(function(a,b){return a.name.localeCompare(b.name);});};
+  const rows=byPerson(ev||[]),now=new Date().toISOString(),onsite=byPerson(today).filter(function(r){return r.last&&r.last.event_type!=='clockout';});
+  const lateToday=today.filter(function(x){return x.late;}).length,voided=(ev||[]).filter(function(x){return x.voided||x.source==='manual';});
+  const P=people||[],shown=P.filter(function(p){return !q||p.name.toLowerCase().indexOf(q.toLowerCase())>=0;}),selP=sel&&P.find(function(p){return p.id===sel;});
+  const defTitle=function(p){const o=org.find(function(x){return x.person_name&&x.person_name.toLowerCase()===String(p.name).toLowerCase();});return o?o.title:'';};
+  const link=window.location.origin+window.location.pathname+'?kiosk=clock&state='+encodeURIComponent(st.id)+'&lic='+encodeURIComponent(lid);
+  const canF=can('timeclock',3),canE=can('timeclock',2);
+  const stat=function(l,v,tone,sub){return el('div',{key:l,className:'card gold',style:{marginBottom:0}},el('div',{className:'k'},l),el('div',{className:'v',style:{fontSize:26,color:tone}},v),sub&&el('div',{className:'muted',style:{fontSize:11,marginTop:2}},sub));};
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,el('span',{className:'g'},'Time Clock and Badges')),el('div',{className:'sub'},lic.name+' \u00b7 badge scans at the door: clock in, three breaks (15 / 30 / 15 min), clock out \u00b7 who is on site right now')),
+      el('div',{className:'row',style:{gap:6}},tab==='sheet'&&canF&&el('button',{className:'btn ghost',onClick:function(){setModal({t:'fix'});}},'+ Missed punch'),
+        tab==='sheet'&&el('button',{className:'btn ghost',disabled:!rows.length,onClick:function(){printRecords('Sign-in sheet '+date,[tcSheetHtml(rows,lic,date)]);}},'Print sheet'),
+        tab==='onsite'&&el('button',{className:'btn ghost',disabled:!onsite.length,onClick:function(){printRecords('On site now',['<div class="hxrec"><h2>On site now \u2014 roll call</h2><div class="m">'+esc3(lic.name)+' \u00b7 '+esc3(new Date().toLocaleString())+'</div><table><tr><th>Name</th><th>Status</th><th>Since</th><th>Accounted for</th></tr>'+
+          onsite.map(function(r){return '<tr><td>'+esc3(r.name)+'</td><td>'+esc3(/_out$/.test(r.last.event_type)?'On break':'In')+'</td><td>'+esc3(tcTime(r.last.ts))+'</td><td style="width:90px">&#9744;</td></tr>';}).join('')+'</table></div>']);}},'Print roll call'),
+        tab==='badges'&&el('button',{className:'btn ghost',disabled:!P.some(function(p){return p.code;}),onClick:function(){printBadges(P.filter(function(p){return p.code;}),lic);}},'Print all badges'))),
+    msg&&el('div',{className:/^(Missed|Voided|Re-issued|Saved)/.test(msg)?'msg':'msg err'},msg),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',marginBottom:14}},
+      stat('On site now',onsite.length,'var(--text)',onsite.filter(function(r){return /_out$/.test(r.last.event_type);}).length+' on break'),
+      stat('Late returns today',lateToday,lateToday?'var(--red)':'var(--green)','over the break limit'),
+      stat('Badges issued',P.filter(function(p){return p.has_badge;}).length+' / '+P.length,P.length&&P.every(function(p){return p.has_badge;})?'var(--green)':'var(--gold-hi)','people at this license')),
+    el('div',{className:'tabs'},[['sheet','Sign-in sheet'],['onsite','On site now'],['badges','Badges'],['kiosk','Kiosk']].map(function(t){return el('button',{key:t[0],className:tab===t[0]?'on':'',onClick:function(){go(t[0]);}},t[1]);})),
+    tab==='sheet'?el('div',null,
+      el('div',{className:'row',style:{gap:10,marginBottom:12}},el('input',{type:'date',value:date,max:todayStr(),onChange:function(e){setDate(e.target.value||todayStr());}}),el('span',{className:'muted',style:{fontSize:12}},'1st and 3rd break: 15 min \u00b7 2nd break: 30 min \u00b7 late returns in red')),
+      ev===null?el('div',{className:'muted'},'Loading...'):!rows.length?el('div',{className:'empty'},'No scans recorded for this date.'):
+      el('div',{className:'card',style:{overflowX:'auto',padding:0}},el('table',null,el('thead',null,el('tr',null,['Employee'].concat(TC_COLS.map(function(c){return c[1];})).concat(['Worked']).map(function(h){return el('th',{key:h},h);}))),
+        el('tbody',null,rows.map(function(r){return el('tr',{key:r.id},el('td',null,el('b',null,r.name)),TC_COLS.map(function(c){const x=r.ev[c[0]];
+            return el('td',{key:c[0],style:{whiteSpace:'nowrap'}},x?el('span',{style:{color:x.late?'var(--red)':null,fontWeight:x.late?700:null,cursor:canF?'pointer':null},title:(x.source==='manual'?'Missed punch: '+x.reason+' ('+x.recorded_by+')':'Badge scan')+(canF?' \u00b7 click to void':''),
+              onClick:function(){if(canF)setModal({t:'void',x:x});}},tcTime(x.ts),x.late&&' \u26a0 +'+x.late_minutes,x.source==='manual'&&el('span',{className:'badge off',style:{marginLeft:4,fontSize:9}},'M')):el('span',{className:'muted'},'\u2014'));}),
+          el('td',null,tcHrs(tcWorked(r.ev))));})))),
+      voided.length>0&&el('div',{className:'muted',style:{fontSize:12,marginTop:10}},voided.map(function(x){return x.voided?'Voided '+TC_LABEL[x.event_type]+' '+tcTime(x.ts)+' ('+x.person_name+'): '+x.void_reason:'Missed punch '+TC_LABEL[x.event_type]+' '+tcTime(x.ts)+' ('+x.person_name+'): '+x.reason+' - '+x.recorded_by;}).join(' \u00b7 '))):
+    tab==='onsite'?el('div',null,!onsite.length?el('div',{className:'empty'},'Nobody is clocked in right now.'):
+      el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}},onsite.map(function(r){const out=/_out$/.test(r.last.event_type),mins=Math.round(tcMin(r.last.ts,now)),lim=TC_LIMIT[r.last.event_type],over=out&&lim&&mins>lim,pp=P.find(function(p){return p.id===r.id;});
+        return el('div',{key:r.id,className:'card',style:{marginBottom:0,display:'flex',gap:10,alignItems:'center',borderColor:over?'#5a2a26':null}},
+          el('div',{style:{width:44,height:44,borderRadius:'50%',overflow:'hidden',background:'#1c1c1c',flexShrink:0,border:'2px solid var(--gold)'}},pp&&pp.photo&&el('img',{src:pp.photo,style:{width:'100%',height:'100%',objectFit:'cover'}})),
+          el('div',null,el('b',null,r.name),el('div',{style:{fontSize:12,color:over?'var(--red)':out?'var(--gold-hi)':'var(--green)'}},out?'On break since '+tcTime(r.last.ts)+' ('+mins+' min'+(over?', over '+lim:'')+')':'In since '+tcTime((r.ev.entry||r.last).ts))));}))):
+    tab==='badges'?(people===null?el('div',{className:'muted'},'Loading...'):el('div',{className:'row',style:{gap:20,alignItems:'flex-start'}},
+      el('div',{style:{flex:'0 0 260px'}},el('input',{placeholder:'Search people...',value:q,onChange:function(e){setQ(e.target.value);},style:{width:'100%',marginBottom:8}}),
+        el('div',{className:'card',style:{padding:0,maxHeight:520,overflowY:'auto'}},!shown.length&&el('div',{className:'muted',style:{padding:14}},'No people at this license yet (Team and Access).'),
+          shown.map(function(p){return el('div',{key:p.id,onClick:function(){setSel(p.id);},style:{padding:'9px 12px',cursor:'pointer',borderBottom:'1px solid #1d1d1d',background:sel===p.id?'rgba(212,175,55,.12)':'transparent',display:'flex',justifyContent:'space-between',alignItems:'center'}},
+            el('div',null,el('div',{style:{fontSize:13,fontWeight:600}},p.name),el('div',{className:'muted',style:{fontSize:11}},p.title||defTitle(p)||'')),p.has_badge?el('span',{className:'badge ok',style:{fontSize:9}},'ID '+p.badge_no):el('span',{className:'badge off',style:{fontSize:9}},'No badge'));}))),
+      el('div',{style:{flex:1,minWidth:300}},selP?el(BadgeEditor,{key:selP.id,person:selP,license:lic,defTitle:defTitle(selP),onSaved:loadPeople,onReissue:function(){setModal({t:'reissue',p:selP});}}):el('div',{className:'empty'},'Choose a person to make or print their badge.')))):
+    el('div',{className:'row',style:{gap:20,alignItems:'flex-start'}},el('div',{className:'card',style:{textAlign:'center'}},el(QrBox,{text:link,size:180}),el('div',{className:'muted',style:{fontSize:11,marginTop:6}},'Time clock kiosk \u00b7 '+lic.name)),
+      el('div',{style:{flex:1,minWidth:280}},el('h3',{style:{marginTop:0}},'Front-door time clock'),
+        el('div',{style:{fontSize:13,lineHeight:1.7}},'Open this link on the tablet at the entrance (no login). It works for this license only; badges of people without access here are refused.',el('br'),
+          el('b',null,'Scanner: '),'plug in a USB or Bluetooth barcode / QR scanner - it reads the QR or the barcode on the badge.',el('br'),el('b',null,'Camera: '),'tap "Use camera" on the kiosk - face in the oval, then hold the badge to the camera (same as Michigan).',el('br'),
+          'Each scan records the next punch of the day. A second scan within a minute is ignored.'),
+        el('div',{className:'row',style:{gap:6,marginTop:10}},el('input',{readOnly:true,value:link,style:{flex:1,fontSize:12},onFocus:function(e){e.target.select();}}),el('a',{className:'btn ghost',href:link,target:'_blank',rel:'noopener'},'Open kiosk')))),
+    modal&&modal.t==='fix'&&el(TcFixForm,{license:lic,people:P,date:date,onClose:function(){setModal(null);},onDone:done}),
+    modal&&modal.t==='void'&&el(VoidModal,{what:TC_LABEL[modal.x.event_type]+' '+tcTime(modal.x.ts)+' for '+modal.x.person_name,onClose:function(){setModal(null);},onVoid:function(why){return db.update('hx_time_clock',modal.x.id,{voided:true,void_reason:why}).then(function(){done('Voided the punch.');});}}),
+    modal&&modal.t==='reissue'&&el(SimpleReason,{title:'Re-issue badge \u00b7 '+modal.p.name,label:'Why (the old badge will stop working)',btn:'Re-issue',onClose:function(){setModal(null);},
+      onGo:function(t){return sb('rpc/hx_badge_reissue',{method:'POST',body:{p_lic:lid,p_profile:modal.p.id,p_reason:t}}).then(function(){done('Re-issued the badge for '+modal.p.name+'. Print the new card.');}).catch(function(e){throw new Error(tcErr(e));});}}));
+}
+function TimeClockDashCard(props){
+  const lid=props.license?props.license.id:'';const[d,setD]=useState(null);
+  useEffect(function(){if(!lid||!can('timeclock',1)){setD(null);return;}let dead=false;
+    db.get('hx_time_clock','license_id=eq.'+encodeURIComponent(lid)+'&event_date=eq.'+todayStr()+'&voided=eq.false&select=profile_id,event_type,ts,late,license_id,voided,event_date&order=ts.asc').then(function(r){if(dead)return;
+      const L=(r||[]).filter(function(x){return x.license_id===lid&&!x.voided&&x.event_date===todayStr();}),last={};L.forEach(function(x){last[x.profile_id]=x;});
+      setD({on:Object.keys(last).filter(function(k){return last[k].event_type!=='clockout';}).length,late:L.filter(function(x){return x.late;}).length,ppl:Object.keys(last).length});}).catch(function(){if(!dead)setD(null);});
+    return function(){dead=true;};},[lid]);
+  if(!d)return null;
+  return el('div',{className:'card gold'},el('div',{className:'k'},'Time clock'),el('div',{className:'v'},d.on+' on site now'),
+    el('div',{className:'muted',style:{margin:'4px 0 8px'}},d.ppl+' clocked in today \u00b7 ',el('span',{style:{color:d.late?'var(--red)':null}},d.late+' late return'+(d.late===1?'':'s'))),
+    el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go('timeclock');}},'Open'));
+}
+
+/* ---------- the time clock kiosk (no login): ?kiosk=clock&state=..&lic=.. ---------- */
+let jsqrP=null;
+function loadJsQR(){if(window.jsQR)return Promise.resolve();if(!jsqrP)jsqrP=new Promise(function(ok,no){const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.js';s.onload=function(){ok();};s.onerror=function(){jsqrP=null;no(new Error('Could not load the QR reader.'));};document.head.appendChild(s);});return jsqrP;}
+function KioskClock(){
+  const q=new URLSearchParams(window.location.search),licId=q.get('lic')||'',stId=q.get('state')||'';
+  const[lic,setLic]=useState(null);const[bad,setBad]=useState('');const[res,setRes]=useState(null);const[busy,setBusy]=useState(false);const[mode,setMode]=useState('scanner');const[step,setStep]=useState('face');
+  const[faceP,setFaceP]=useState(0);const[camErr,setCamErr]=useState('');const[clock,setClock]=useState(new Date());
+  const buf=useRef('');const lastKey=useRef(0);const ready=useRef(true);const timer=useRef(null);const vid=useRef(null);const cnv=useRef(null);const stream=useRef(null);const raf=useRef(0);const faceN=useRef(0);const stepRef=useRef('face');const fd=useRef(null);const lastFace=useRef(0);
+  useEffect(function(){if(!cfg().ok){setBad('This kiosk is not connected to a database.');return;}if(!licId||!stId){setBad('This link is missing its state or license. Ask a manager for the kiosk link.');return;}
+    rpc('hx_kiosk_check',{p_state:stId,p_lic:licId}).then(function(r){if(r&&r.id)setLic(r);else setBad('This link is not linked to an active license in this state.');}).catch(function(e){setBad(String(e.message||e));});},[]);
+  useEffect(function(){const t=setInterval(function(){setClock(new Date());},1000);return function(){clearInterval(t);};},[]);
+  async function punch(text){const code=tcBadgeFromScan(text);if(!code||!ready.current)return;ready.current=false;setBusy(true);
+    try{const r=await rpc('hx_kiosk_clock',{p_state:stId,p_lic:licId,p_code:code,p_date:todayStr()});setRes(r||{error:'No answer.'});}catch(e){setRes({error:tcErr(e)});}
+    setBusy(false);if(timer.current)clearTimeout(timer.current);timer.current=setTimeout(function(){setRes(null);ready.current=true;if(stepRef.current==='badge'){stepRef.current='face';setStep('face');faceN.current=0;setFaceP(0);}},4500);}
+  useEffect(function(){function onKey(e){if(e.target&&e.target.tagName==='INPUT')return;const n=Date.now();if(n-lastKey.current>300)buf.current='';lastKey.current=n;
+      if(e.key==='Enter'||e.key==='Tab'){const t=buf.current;buf.current='';if(t)punch(t);e.preventDefault();}else if(e.key.length===1)buf.current+=e.key;}
+    window.addEventListener('keydown',onKey);return function(){window.removeEventListener('keydown',onKey);};},[]);
+  function stopCam(){if(raf.current)cancelAnimationFrame(raf.current);raf.current=0;if(stream.current){stream.current.getTracks().forEach(function(t){t.stop();});stream.current=null;}}
+  useEffect(function(){return stopCam;},[]);
+  async function startCam(){setCamErr('');try{await loadJsQR();if(window.FaceDetector){try{fd.current=new window.FaceDetector({fastMode:true,maxDetectedFaces:1});}catch(e){fd.current=null;}}
+      const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:720}},audio:false});stream.current=s;setMode('camera');stepRef.current='face';setStep('face');faceN.current=0;setFaceP(0);
+      setTimeout(function(){if(vid.current){vid.current.srcObject=s;vid.current.muted=true;vid.current.play().catch(function(){});}loop();},50);}catch(e){setCamErr('Camera unavailable: '+String(e.message||e));}}
+  async function faceSeen(v,c){const now=Date.now();if(now-lastFace.current<300)return null;lastFace.current=now;
+    if(fd.current){try{const f=await fd.current.detect(v);return !!(f&&f.length);}catch(e){}}
+    const g=c.getContext('2d',{willReadFrequently:true}),cx=Math.floor(c.width/2),cy=Math.floor(c.height/3),R=g.getImageData(Math.max(0,cx-60),Math.max(0,cy-60),120,120).data;let n=0;
+    for(let i=0;i<R.length;i+=4){const r=R[i],gg=R[i+1],b=R[i+2];if(r>60&&gg>40&&b>20&&r>gg&&r>b&&(r-gg)>15&&(r-b)>10)n++;}return n>120*120*0.15;}
+  function loop(){const v=vid.current,c=cnv.current;
+    if(v&&c&&v.videoWidth){c.width=v.videoWidth;c.height=v.videoHeight;const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(v,0,0);
+      if(stepRef.current==='face'&&ready.current){faceSeen(v,c).then(function(ok){if(ok===null||stepRef.current!=='face')return;faceN.current=ok?Math.min(5,faceN.current+1):Math.max(0,faceN.current-1);setFaceP(faceN.current*20);if(faceN.current>=5){stepRef.current='badge';setStep('badge');}});}
+      else if(stepRef.current==='badge'&&ready.current&&window.jsQR){const img=g.getImageData(0,0,c.width,c.height);let code=window.jsQR(img.data,img.width,img.height,{inversionAttempts:'attemptBoth'});
+        if(!code){const m=document.createElement('canvas');m.width=c.width;m.height=c.height;const mg=m.getContext('2d');mg.translate(c.width,0);mg.scale(-1,1);mg.drawImage(v,0,0);const i2=mg.getImageData(0,0,m.width,m.height);code=window.jsQR(i2.data,i2.width,i2.height,{inversionAttempts:'attemptBoth'});}
+        if(code&&code.data)punch(code.data);}}
+    raf.current=requestAnimationFrame(loop);}
+  const tone=res?(res.error?'var(--red)':res.late?'#f59e0b':'var(--green)'):null;
+  if(bad)return el('div',{className:'kiosk'},el('div',{className:'card',style:{maxWidth:520,margin:'60px auto',textAlign:'center'}},el(Logo,{size:48}),el('h2',null,'Time clock'),el('div',{className:'msg err'},bad)));
+  if(!lic)return el('div',{className:'kiosk'},el('div',{className:'muted',style:{textAlign:'center',marginTop:80}},'Loading...'));
+  return el('div',{style:{minHeight:'100vh',background:'#0a0a0a',color:'#fff',display:'flex',flexDirection:'column',alignItems:'center',padding:'24px 16px'}},
+    el('div',{className:'row',style:{gap:12,alignItems:'center'}},el(Logo,{size:44}),el('div',null,el('div',{style:{color:'var(--gold-hi)',fontWeight:800,letterSpacing:2}},String(lic.name).toUpperCase()),el('div',{className:'muted',style:{fontSize:12,letterSpacing:1}},'EMPLOYEE TIME CLOCK \u00b7 '+lic.state))),
+    el('div',{style:{fontSize:44,fontWeight:200,margin:'18px 0 4px',fontVariantNumeric:'tabular-nums'}},clock.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'})),
+    el('div',{className:'muted',style:{marginBottom:20}},clock.toLocaleDateString([],{weekday:'long',month:'long',day:'numeric'})),
+    res?el('div',{className:'kres',style:{width:'100%',maxWidth:440,border:'2px solid '+tone,borderRadius:16,padding:24,textAlign:'center',background:'#111'}},
+      res.photo&&el('div',{style:{width:110,height:110,borderRadius:'50%',overflow:'hidden',border:'4px solid '+tone,margin:'0 auto 12px'}},el('img',{src:res.photo,style:{width:'100%',height:'100%',objectFit:'cover'}})),
+      res.name&&el('div',{style:{fontSize:26,fontWeight:900,textTransform:'uppercase',letterSpacing:1}},res.name),res.title&&el('div',{style:{fontSize:12,color:'var(--gold-hi)',letterSpacing:2,textTransform:'uppercase'}},res.title),
+      el('div',{style:{fontSize:20,fontWeight:700,color:tone,marginTop:12}},res.error?res.error:res.done?'Already clocked out for today':(res.repeat?'Already recorded: ':'')+TC_LABEL[res.event]),
+      res.ts&&!res.error&&el('div',{style:{fontSize:16,color:'#ccc',marginTop:4}},tcTime(res.ts)),
+      res.late&&el('div',{style:{color:'#f59e0b',fontWeight:700,marginTop:10}},'\u26a0 '+res.late_minutes+' min over the break limit \u2014 flagged for review')):
+    mode==='camera'?el('div',{style:{position:'relative',width:'min(92vw,560px)',aspectRatio:'4/3',borderRadius:16,overflow:'hidden',background:'#000'}},
+      el('video',{ref:vid,playsInline:true,muted:true,style:{width:'100%',height:'100%',objectFit:'cover',transform:'scaleX(-1)'}}),el('canvas',{ref:cnv,style:{display:'none'}}),
+      el('div',{style:{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',pointerEvents:'none'}},
+        step==='face'?el('div',{style:{width:'46%',height:'78%',border:'4px solid '+(faceP>60?'#22c55e':'#d4af37'),borderRadius:'50%',boxShadow:'0 0 0 2000px rgba(0,0,0,.45)'}}):
+          el('div',{style:{width:'50%',aspectRatio:'1',border:'4px solid #d4af37',borderRadius:12,boxShadow:'0 0 0 2000px rgba(0,0,0,.35)'}})),
+      el('div',{style:{position:'absolute',left:0,right:0,bottom:12,textAlign:'center'}},el('span',{style:{background:'rgba(0,0,0,.75)',padding:'8px 16px',borderRadius:10,fontSize:14}},step==='face'?'Step 1 \u2014 face in the oval ('+faceP+'%)':'Step 2 \u2014 hold your badge to the camera'))):
+    el('div',{style:{textAlign:'center'}},el('div',{style:{fontSize:64,color:'var(--gold)'}},'\u2b1a'),el('div',{style:{fontSize:18,color:'#ccc'}},busy?'Checking...':'Scan your badge'),el('div',{className:'muted',style:{fontSize:13,marginTop:6}},'Hold the QR code or barcode on your badge to the scanner')),
+    el('div',{style:{flex:1}}),
+    camErr&&el('div',{className:'msg err',style:{marginTop:12}},camErr),
+    el('div',{className:'row',style:{gap:8,marginTop:20}},mode==='scanner'?el('button',{className:'btn ghost',onClick:startCam},'Use camera'):el('button',{className:'btn ghost',onClick:function(){stopCam();setMode('scanner');}},'Use scanner')),
+    el('div',{className:'muted',style:{fontSize:11,marginTop:10}},'1st and 3rd break 15 min \u00b7 2nd break 30 min'));
+}
+/* someone scans a badge with their own phone: who it belongs to, nothing else */
+function BadgeCheck(){
+  const code=new URLSearchParams(window.location.search).get('badge')||'';const[r,setR]=useState(null);const[err,setErr]=useState('');
+  useEffect(function(){if(!cfg().ok){setErr('Not connected.');return;}rpc('hx_badge_lookup',{p_code:code}).then(function(x){if(x)setR(x);else setErr('Badge not recognized.');}).catch(function(e){setErr(tcErr(e));});},[]);
+  return el('div',{style:{minHeight:'100vh',background:'#0a0a0a',color:'#fff',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:20,textAlign:'center'}},el(Logo,{size:56}),
+    err&&el('div',{style:{color:'var(--red)',marginTop:20,fontSize:16}},err),
+    r&&el('div',{style:{marginTop:20}},r.photo&&el('div',{style:{width:120,height:120,borderRadius:'50%',overflow:'hidden',border:'4px solid var(--gold)',margin:'0 auto 14px'}},el('img',{src:r.photo,style:{width:'100%',height:'100%',objectFit:'cover'}})),
+      el('div',{style:{fontSize:24,fontWeight:900,textTransform:'uppercase'}},r.name),el('div',{style:{fontSize:13,color:'var(--gold-hi)',letterSpacing:2,textTransform:'uppercase',marginTop:4}},r.title||''),
+      el('div',{style:{marginTop:16,fontWeight:700,color:r.valid?'var(--green)':'var(--red)'}},r.valid?'\u2713 Valid Hendrix badge \u00b7 ID '+r.badge_no:'\u2717 This badge is not valid')));
+}
+
 /* ---------- Training (Black Fox / Michigan SOP training matrix + CSQ 2A.13.2 training program) ---------- */
 const TRAIN_TOPICS=['Required by law','cGMP','cGACP','Extraction','Cannabis safety','Personnel hygiene & safety','Product defense','Job-specific','Safety','CSQ program','HACCP','Other'];
 const TRAIN_METHODS=['Classroom','On the job','Online course','Read and sign','External certification'];
@@ -8204,7 +8466,7 @@ const CSQ_MFG_CLAUSES=[
  ['1.6','1','Corrective and preventive actions (CAPA)','Document every deviation and nonconformance clearly with root cause (when an authorized person decides one is needed), owner, immediate correction, timescale, effectiveness check, and review the trend at least once a year.',['qms'],'QMS: numbered deviations with correction, authorized root-cause decision, owner and due date; CAPAs closed only when verified effective; monthly trends and a printable annual review.',[]],
  ['1.7','1','Complaint management','Name who investigates and resolves complaints, track and analyze complaint data, and record the corrective actions taken to stop them happening again.',['complaints'],'Complaints: numbered, named investigator and due date, investigation, root cause, resolution, corrective action and linked deviation / CAPA, response to the complainant, adverse events reported to the regulator, trends by month, category, lot and customer.',[]],
  ['1.8','1','Product recalls and withdrawals','Recall and withdrawal procedures that meet regulation: a recall team with roles, an up-to-date contact list (team, emergency services, customers, suppliers, regulators, certification body), a communication plan, recovery or disposal of product, and a yearly mock recall completed in under 2 hours.',['batches','testing','shipping','holds','recall'],'Batch numbers and final package tags. Shipments show which customers received each batch; recalled product goes on hold. Traceability and Recall: recall team with roles and backups, contact list (emergency, regulators, certification body, customers, suppliers, lab) verified yearly, timed mock recalls (server clock, pass only if every step is done within 2 hours), real recalls and withdrawals that put affected product on hold and record who was notified and when.',[]],
- ['1.9','1','Product defense','Protect against theft, bioterrorism and intentional adulteration: threat assessment, access to sensitive areas limited to authorized people, cannabis materials, waste and product secured, secure transport, training for security and transport staff, and a yearly review and test.',['sops','visitors','logs','roles','training','risks'],'Visitor Log and kiosk; security malfunction and security inspection logs; role-based access in Hendrix. Product defense training tracked per person. Risk register: threat assessment (product defense) with owner, controls and yearly review.',[]],
+ ['1.9','1','Product defense','Protect against theft, bioterrorism and intentional adulteration: threat assessment, access to sensitive areas limited to authorized people, cannabis materials, waste and product secured, secure transport, training for security and transport staff, and a yearly review and test.',['sops','visitors','logs','roles','training','risks','timeclock'],'Visitor Log and kiosk; security malfunction and security inspection logs; role-based access in Hendrix. Product defense training tracked per person. Risk register: threat assessment (product defense) with owner, controls and yearly review. Photo badges with a secret QR / barcode (re-issued when lost) and a badge time clock per license: only people with access to the license can clock in; who is on site is known at any time (roll call).',[]],
  ['1.10','1','Fraud prevention','Assess vulnerability to mislabeling, substitution, dilution and counterfeiting, control what is found, verify label claims (strain, cannabinoid content and similar), and review and test yearly.',['sops','stickers','testing','risks'],'Sticker potency is taken from the COA; COA tag mismatches are flagged. Risk register: fraud vulnerability assessment (substitution, dilution, mislabeling, counterfeiting) reviewed yearly.',[]],
  ['1.11','1','Crisis management','Crisis procedures with the people responsible and their contacts, emergency contacts, response to foreseeable disasters, how affected product is found, isolated and released, how authorities and customers are told, and a yearly review and test.',['sops','recall'],'Crisis plan kept as an SOP. Recall team and emergency contacts; affected product found with the trace and isolated with holds.',[]],
  ['2A.1.1','2A','Facility construction and design','Buildings, grounds and utilities suit their purpose and prevent cross-contamination: cleanable surfaces in good repair, enough and protected lighting, shatterproof or protected glass, ventilation, sealed and screened openings, handwash stations at production entries (potable warm water, hands-free soap, paper towels), plumbing and wastewater that work, restrooms, changing and break areas sized for the shift, required signage, and clear aisles.',['sops'],'QR signs for posted signage.',[]],
@@ -8330,9 +8592,9 @@ const STD_STATUSES=['Not assessed','Conforming','Partial','Not conforming','Not 
 const STD_TONE={'Not assessed':'off','Conforming':'ok','Partial':'warn','Not conforming':'bad','Not applicable':'off'};
 const STD_COLOR={'Conforming':'#5fbf8a','Partial':'#d4af37','Not conforming':'#e5645a','Not applicable':'#4a473f','Not assessed':'#2a2a2a'};
 const ADOPT_STATUSES=['Following','Audit scheduled','Certified','Suspended','Withdrawn'];
-const HX_PAGE_LABEL={mgmtreview:'Management Review',verification:'Verification Schedule',orgchart:'Org Chart',objectives:'Quality Objectives',risks:'Risk Register',changes:'Change Control',haccp:'HACCP',cultivation:'Cultivation',envtests:'Facility Tests',lineclear:'Line Clearance',rework:'Rework',equipment:'Equipment',chemicals:'Chemicals and SDS',complaints:'Complaints',intaudits:'Internal Audits',recall:'Traceability and Recall',receiving:'Receiving',inventory:'Inventory',holds:'Hold and Release',shipping:'Shipping',suppliers:'Suppliers',training:'Training',qms:'QMS (Deviations, CAPA)',sops:'SOPs',rulebook:'Rulebook',locations:'States and Licenses',audit:'Audit Trail',batches:'Batch Tracker',testing:'Testing',stickers:'Compliance Stickers',
+const HX_PAGE_LABEL={timeclock:'Time Clock and Badges',mgmtreview:'Management Review',verification:'Verification Schedule',orgchart:'Org Chart',objectives:'Quality Objectives',risks:'Risk Register',changes:'Change Control',haccp:'HACCP',cultivation:'Cultivation',envtests:'Facility Tests',lineclear:'Line Clearance',rework:'Rework',equipment:'Equipment',chemicals:'Chemicals and SDS',complaints:'Complaints',intaudits:'Internal Audits',recall:'Traceability and Recall',receiving:'Receiving',inventory:'Inventory',holds:'Hold and Release',shipping:'Shipping',suppliers:'Suppliers',training:'Training',qms:'QMS (Deviations, CAPA)',sops:'SOPs',rulebook:'Rulebook',locations:'States and Licenses',audit:'Audit Trail',batches:'Batch Tracker',testing:'Testing',stickers:'Compliance Stickers',
   products:'Products',logs:'Facility Logs',visitors:'Visitor Log',roles:'Roles',team:'Team and Access'};
-const HX_PAGE_MOD={mgmtreview:'mgmtreview',verification:'verification',orgchart:'orgchart',objectives:'objectives',risks:'risks',changes:'changes',haccp:'haccp',cultivation:'cultivation',envtests:'envtests',lineclear:'lineclear',rework:'rework',equipment:'equipment',chemicals:'chemicals',complaints:'complaints',intaudits:'intaudits',recall:'recall',receiving:'receiving',inventory:'receiving',holds:'holds',shipping:'shipping',suppliers:'suppliers',training:'training',qms:'qms',sops:'sops',rulebook:'rulebook',audit:'audit',batches:'batch',testing:'testing',stickers:'stickers',visitors:'logs_visitor'};
+const HX_PAGE_MOD={timeclock:'timeclock',mgmtreview:'mgmtreview',verification:'verification',orgchart:'orgchart',objectives:'objectives',risks:'risks',changes:'changes',haccp:'haccp',cultivation:'cultivation',envtests:'envtests',lineclear:'lineclear',rework:'rework',equipment:'equipment',chemicals:'chemicals',complaints:'complaints',intaudits:'intaudits',recall:'recall',receiving:'receiving',inventory:'receiving',holds:'holds',shipping:'shipping',suppliers:'suppliers',training:'training',qms:'qms',sops:'sops',rulebook:'rulebook',audit:'audit',batches:'batch',testing:'testing',stickers:'stickers',visitors:'logs_visitor'};
 function stdLevelOf(m){return m==='4A'?2:m==='5'?3:1;}
 function stdErr(e){
   const m=String((e&&e.message)||e);
@@ -8693,6 +8955,12 @@ async function loadStdEvidence(st,lic){
     return {n:P.length,auto:P.filter(function(p){return p.source!=='manual';}).length,od:P.filter(function(p){return !l[p.id]||eqAddDays(l[p.id],p.frequency_days)<T;}).map(function(p){return p.activity;}),
       rec:R.filter(function(r){return r.done_on>=since.slice(0,10);}).length,iss:R.filter(function(r){return r.done_on>=since.slice(0,10)&&r.result==='issues';}).length,
       last:P.map(function(p){return l[p.id]||'';}).sort().pop()||''};}));
+  if(can('timeclock',1))jobs.push(tryGet('timeclock',async function(){
+    const P=(await sb('rpc/hx_badge_roster',{method:'POST',body:{p_lic:lid}}))||[],d30=eqAddDays(todayStr(),-30);
+    const T=((await db.get('hx_time_clock','license_id=eq.'+enc(lid)+'&event_date=gte.'+d30+'&voided=eq.false&select=profile_id,event_date,late,source,license_id'))||[]).filter(function(x){return x.license_id===lid;});
+    const days={};T.forEach(function(x){days[x.event_date]=1;});
+    return {ppl:P.length,badges:P.filter(function(p){return p.has_badge;}).length,photos:P.filter(function(p){return p.has_badge&&p.photo;}).length,scans:T.filter(function(x){return x.source==='kiosk';}).length,manual:T.filter(function(x){return x.source==='manual';}).length,
+      days:Object.keys(days).length,last:Object.keys(days).sort().pop()||''};}));
   jobs.push(tryGet('roles',async function(){const rs=ACC.roles||[];return {n:rs.length,noReq:rs.filter(function(r){return !String(r.requirements||'').trim()||!String(r.description||'').trim();}).length};}));
   await Promise.all(jobs);
   return E;
@@ -8833,6 +9101,9 @@ function clauseEvidence(x,E){
     else if(p==='verification'&&E.verification){const Z=E.verification;
       out.push({label:'Verification schedule',value:Z.n+' verification activit'+(Z.n===1?'y':'ies')+' with who, how and how often ('+Z.auto+' dated from Hendrix records) \u00b7 '+Z.rec+' recorded by hand in 12 months ('+Z.iss+' with issues)',
         last:Z.last,page:'verification',warn:!Z.n?'No verification schedule':(Z.od.length?Z.od.length+' overdue: '+Z.od.slice(0,3).join(', '):'')});}
+    else if(p==='timeclock'&&E.timeclock){const Z=E.timeclock;
+      out.push({label:'Badges and time clock',value:Z.badges+' of '+Z.ppl+' people badged ('+Z.photos+' with photo) \u00b7 '+Z.scans+' badge scans on '+Z.days+' days in the last 30 days \u00b7 '+Z.manual+' missed punches added with a reason \u00b7 who is on site is known at any time',
+        last:Z.last,page:'timeclock',warn:Z.badges<Z.ppl?(Z.ppl-Z.badges)+' without a badge':(!Z.scans?'Time clock not used in 30 days':'')});}
     else if(p==='roles'&&E.roles)out.push({label:'Roles',value:E.roles.n+' defined role'+(E.roles.n===1?'':'s')+(x.clause==='2A.13.1'?' \u00b7 '+(E.roles.n-E.roles.noReq)+' with duties and requirements':''),page:'roles',
       warn:!E.roles.n?'No roles defined':(x.clause==='2A.13.1'&&E.roles.noReq?E.roles.noReq+' role'+(E.roles.noReq===1?'':'s')+' missing duties or requirements':'')});
   });
@@ -9834,7 +10105,7 @@ function App(){
   if(isAdmin)nav.push({id:'team',label:'Team and Access'},{id:'roles',label:'Roles'});
   if(can('audit',1))nav.push({id:'audit',label:'Audit Trail'});
   const anyLog=LOG_TYPES.some(function(t){return can(LOG_MOD[t.id],1);});
-  const mods=[can('qms',1)&&['qms','QMS'],can('complaints',1)&&['complaints','Complaints'],can('intaudits',1)&&['intaudits','Internal Audits'],can('haccp',1)&&['haccp','HACCP'],can('risks',1)&&['risks','Risk Register'],can('changes',1)&&['changes','Change Control'],can('orgchart',1)&&['orgchart','Org Chart'],can('objectives',1)&&['objectives','Quality Objectives'],can('mgmtreview',1)&&['mgmtreview','Management Review'],can('verification',1)&&['verification','Verification Schedule'],can('training',1)&&['training','Training'],can('sops',1)&&['sops','SOPs'],can('suppliers',1)&&['suppliers','Suppliers'],can('receiving',1)&&['receiving','Receiving'],can('holds',1)&&['holds','Hold and Release'],can('shipping',1)&&['shipping','Shipping'],can('recall',1)&&['recall','Traceability and Recall'],can('equipment',1)&&['equipment','Equipment'],can('chemicals',1)&&['chemicals','Chemicals and SDS'],(can('lineclear',1)||can('rework',1))&&['lineclear','Line Clearance and Rework'],can('envtests',1)&&['envtests','Facility Tests'],can('cultivation',1)&&licOp(lic)==='cultivation'&&['cultivation','Cultivation'],can('logs_visitor',1)&&['visitors','Visitor Log'],anyLog&&['logs','Facility Logs'],(can('products',1)||can('formbank',1)||can('cogs',1))&&['products','Products'],can('batch',1)&&['batches','Batch Tracker'],can('testing',1)&&['testing','Testing'],can('stickers',1)&&['stickers','Compliance Stickers']].filter(Boolean);
+  const mods=[can('qms',1)&&['qms','QMS'],can('complaints',1)&&['complaints','Complaints'],can('intaudits',1)&&['intaudits','Internal Audits'],can('haccp',1)&&['haccp','HACCP'],can('risks',1)&&['risks','Risk Register'],can('changes',1)&&['changes','Change Control'],can('orgchart',1)&&['orgchart','Org Chart'],can('objectives',1)&&['objectives','Quality Objectives'],can('mgmtreview',1)&&['mgmtreview','Management Review'],can('verification',1)&&['verification','Verification Schedule'],can('timeclock',1)&&['timeclock','Time Clock and Badges'],can('training',1)&&['training','Training'],can('sops',1)&&['sops','SOPs'],can('suppliers',1)&&['suppliers','Suppliers'],can('receiving',1)&&['receiving','Receiving'],can('holds',1)&&['holds','Hold and Release'],can('shipping',1)&&['shipping','Shipping'],can('recall',1)&&['recall','Traceability and Recall'],can('equipment',1)&&['equipment','Equipment'],can('chemicals',1)&&['chemicals','Chemicals and SDS'],(can('lineclear',1)||can('rework',1))&&['lineclear','Line Clearance and Rework'],can('envtests',1)&&['envtests','Facility Tests'],can('cultivation',1)&&licOp(lic)==='cultivation'&&['cultivation','Cultivation'],can('logs_visitor',1)&&['visitors','Visitor Log'],anyLog&&['logs','Facility Logs'],(can('products',1)||can('formbank',1)||can('cogs',1))&&['products','Products'],can('batch',1)&&['batches','Batch Tracker'],can('testing',1)&&['testing','Testing'],can('stickers',1)&&['stickers','Compliance Stickers']].filter(Boolean);
   let body;
   if(page==='locations')body=el(Locations,{profile:profile,states:states,licenses:licenses,reload:loadData,openRulebook:function(id){pickState(id);setPage('rulebook');}});
   else if(page==='visitors'&&can('logs_visitor',1))body=el(VisitorLog,{key:licId,state:st,license:lic});
@@ -9848,6 +10119,7 @@ function App(){
   else if(page==='roles'&&isAdmin)body=el(Roles);
   else if(page==='audit'&&can('audit',1))body=el(AuditTrail,{state:st});
   else if((page==='receiving'&&can('receiving',1))||(page==='inventory'&&can('receiving',1))||(page==='holds'&&can('holds',1))||(page==='shipping'&&can('shipping',1)))body=el(MatPage,{key:licId,state:st,license:lic,tab:page,go:setPage});
+  else if(page==='timeclock'&&can('timeclock',1))body=el(TimeClockPage,{key:licId,state:st,license:lic,profile:profile,go:setPage});
   else if(['orgchart','objectives','mgmtreview','verification'].indexOf(page)>=0&&(can('orgchart',1)||can('objectives',1)||can('mgmtreview',1)||can('verification',1)))body=el(QualitySysPage,{key:licId,state:st,license:lic,profile:profile,go:setPage,tab:{orgchart:'org',objectives:'kpi',mgmtreview:'mr',verification:'ver'}[page]});
   else if((page==='risks'||page==='changes')&&(can('risks',1)||can('changes',1)))body=el(RiskChangePage,{key:licId,state:st,license:lic,profile:profile,go:setPage,tab:page==='changes'?'cc':'rk'});
   else if(page==='haccp'&&can('haccp',1))body=el(HaccpPage,{key:licId,state:st,license:lic,profile:profile,go:setPage});
@@ -9891,8 +10163,8 @@ function App(){
 }
 
 {
-  const kq=new URLSearchParams(window.location.search).get('kiosk');
-  ReactDOM.createRoot(document.getElementById('root')).render(el(kq==='visitor'?KioskVisitor:kq==='log'?KioskLog:App));
+  const qp=new URLSearchParams(window.location.search),kq=qp.get('kiosk');
+  ReactDOM.createRoot(document.getElementById('root')).render(el(kq==='visitor'?KioskVisitor:kq==='log'?KioskLog:kq==='clock'?KioskClock:qp.get('badge')?BadgeCheck:App));
 }
 })();
 </script>
