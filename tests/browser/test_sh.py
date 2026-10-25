@@ -4,13 +4,14 @@ errors = []
 PGDB = os.environ.get('HX_PGDB', 'hxtest')
 AI = {'mode': 'ok', 'calls': []}
 def jr(route, j, st=200): return route.fulfill(status=st, content_type='application/json', body=json.dumps(j))
-def health_from_db():
-    # the real step-37 function on PostgreSQL (the check under test), run as the admin
-    out = subprocess.run(['psql', '-X', '-q', '-At', '-d', PGDB, '-c', "set test.uid='11111111-1111-1111-1111-111111111111'; select hx_system_health()::text"], capture_output=True, text=True)
+def health_from_db(fn='hx_system_health'):
+    # the real step-37/38 functions on PostgreSQL (the check under test), run as the admin
+    out = subprocess.run(['psql', '-X', '-q', '-At', '-d', PGDB, '-c', "set test.uid='11111111-1111-1111-1111-111111111111'; select " + fn + "()::text"], capture_output=True, text=True)
     return json.loads(out.stdout.strip().split('\n')[-1])
 _h = handle
 def handle(route, request):
     u = request.url; path = urllib.parse.urlparse(u).path
+    if path.endswith('/rpc/hx_health_extra'): return jr(route, health_from_db('hx_health_extra'))
     if path.endswith('/rpc/hx_system_health'):
         if AI.get('missing'): return jr(route, {'code': 'PGRST202', 'message': 'Could not find the function public.hx_system_health without parameters in the schema cache'}, 404)
         return jr(route, health_from_db())
@@ -34,8 +35,9 @@ with sync_playwright() as pw:
     pg = ctx.new_page(); pg.on('pageerror', lambda e: errors.append('JS: ' + str(e))); pg.on('dialog', lambda d: d.accept())
     pg.goto(BASE); pg.wait_for_selector('.nav')
     pg.get_by_role('button', name='System Health', exact=True).click(); pg.wait_for_selector('text=Database steps installed')
-    check(pg.locator('text=All 33 steps (4 to 37) are installed.').count() == 1, 'all database steps detected from the real database')
+    check(pg.locator('text=All 34 steps (4 to 38) are installed.').count() == 1, 'all database steps detected from the real database')
     check(row(pg, 'Audit trail locked').locator('text=✓').count() == 1 and row(pg, 'Every change goes to the audit trail').locator('text=✓').count() == 1, 'audit trail: covered and locked')
+    check(row(pg, 'Password at every signature').locator('text=✓').count() == 1 and row(pg, 'Two-step sign-in for admins').locator('text=!').count() == 1, 'step 38: signatures on everywhere; admin without two-step sign-in flagged')
     check(row(pg, 'Private file storage').locator('text=✓').count() == 1, 'private file bucket')
     check(pg.locator('text=Off on: hx_licenses, hx_profiles, hx_states').count() == 1, 'row level security gaps are named (test database stubs for steps 1-3)')
     check(row(pg, 'Accounts waiting for approval').locator('text=!').count() == 1, 'waiting approvals flagged')

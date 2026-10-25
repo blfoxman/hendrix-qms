@@ -160,6 +160,9 @@ async function freshToken(){
 }
 async function sb(path,opt){
   opt=opt||{};
+  if(!opt._esigDone&&(opt.method==='PATCH'||opt.method==='POST')){const es=hxEsignNeeded(path,opt);
+    if(es){if(!es.label&&es.id){try{const rr=await sb(es.table+'?id=eq.'+encodeURIComponent(es.id)+'&select=*');const x=rr&&rr[0];if(x)es.label=x.number||x.doc_number||x.title||x.name||x.item||x.tag||'';}catch(e){}}
+      if(!(await hxEsignPrompt(es)))throw new Error('Signature cancelled - nothing was saved.');opt={...opt,_esigDone:true,_esig:es};}}
   const c=cfg();
   const tok=await freshToken();
   const h={'apikey':c.key,'Authorization':'Bearer '+(tok||c.key),'Content-Type':'application/json'};
@@ -170,12 +173,13 @@ async function sb(path,opt){
   if(!r.ok){
     const m=(j&&(j.message||j.hint||j.details))||txt||('Error '+r.status);
     if(/schema cache|Could not find the table|relation .* does not exist/i.test(m)&&!/Could not find the '[A-Za-z0-9_]+' column/.test(m)){
-      const step=/hx_system_health/.test(m)?'hendrix_step37.sql':/hx_line_map|linemap_idle/.test(m)?'hendrix_step36.sql':/hx_license_settings/.test(m)?'hendrix_step34.sql':/hx_production_plans|hx_planner_recipes/.test(m)?'hendrix_step33.sql':/hx_time_clock|hx_badge|hx_kiosk_clock|hx_clock_fix/.test(m)?'hendrix_step32.sql':/hx_mgmt_reviews|hx_verification_/.test(m)?'hendrix_step31.sql':/hx_org_positions|hx_objective|hx_qms_settings/.test(m)?'hendrix_step30.sql':/hx_risk|hx_changes/.test(m)?'hendrix_step29.sql':/hx_haccp/.test(m)?'hendrix_step28.sql':/hx_grow_|hx_plant_batches/.test(m)?'hendrix_step27.sql':/hx_env_/.test(m)?'hendrix_step26.sql':/hx_line_clearances|hx_rework/.test(m)?'hendrix_step25.sql':/hx_equipment|hx_chemicals/.test(m)?'hendrix_step24.sql':/share_key|hx_training_shared/.test(m)?'hendrix_step23.sql':/hx_rule_sources/.test(m)?'hendrix_step22.sql':/hx_training_keys|hx_training_attempts|hx_course_submit|content_status/.test(m)?'hendrix_step20.sql':/hx_complaints|hx_audits|hx_audit_findings/.test(m)?'hendrix_step19.sql':/hx_recall|hx_trace_data/.test(m)?'hendrix_step18.sql':/hx_lots|hx_lot_uses|hx_holds|hx_shipments/.test(m)?'hendrix_step17.sql':/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
+      const step=/hx_esignatures|mfa_required|esig_password|idle_signout/.test(m)?'hendrix_step38.sql':/hx_system_health/.test(m)?'hendrix_step37.sql':/hx_line_map|linemap_idle/.test(m)?'hendrix_step36.sql':/hx_license_settings/.test(m)?'hendrix_step34.sql':/hx_production_plans|hx_planner_recipes/.test(m)?'hendrix_step33.sql':/hx_time_clock|hx_badge|hx_kiosk_clock|hx_clock_fix/.test(m)?'hendrix_step32.sql':/hx_mgmt_reviews|hx_verification_/.test(m)?'hendrix_step31.sql':/hx_org_positions|hx_objective|hx_qms_settings/.test(m)?'hendrix_step30.sql':/hx_risk|hx_changes/.test(m)?'hendrix_step29.sql':/hx_haccp/.test(m)?'hendrix_step28.sql':/hx_grow_|hx_plant_batches/.test(m)?'hendrix_step27.sql':/hx_env_/.test(m)?'hendrix_step26.sql':/hx_line_clearances|hx_rework/.test(m)?'hendrix_step25.sql':/hx_equipment|hx_chemicals/.test(m)?'hendrix_step24.sql':/share_key|hx_training_shared/.test(m)?'hendrix_step23.sql':/hx_rule_sources/.test(m)?'hendrix_step22.sql':/hx_training_keys|hx_training_attempts|hx_course_submit|content_status/.test(m)?'hendrix_step20.sql':/hx_complaints|hx_audits|hx_audit_findings/.test(m)?'hendrix_step19.sql':/hx_recall|hx_trace_data/.test(m)?'hendrix_step18.sql':/hx_lots|hx_lot_uses|hx_holds|hx_shipments/.test(m)?'hendrix_step17.sql':/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
       throw new Error('Database tables are missing - run '+step+' in the Hendrix Supabase project.');
     }
     if(/row-level security|permission denied/i.test(m))throw new Error('Not allowed - your access level does not allow this here. Ask a system admin.');
     throw new Error(m);
   }
+  if(opt._esig)await hxEsigLog(opt._esig,j);
   return j;
 }
 const db={
@@ -245,7 +249,7 @@ function LoginScreen(props){
   const[name,setName]=useState('');
   const[busy,setBusy]=useState(false);
   const[err,setErr]=useState('');
-  const[info,setInfo]=useState('');
+  const[info,setInfo]=useState(function(){const m=lsGet('hx_signout_msg')||'';if(m)lsSet('hx_signout_msg','');return m;});
   async function go(){
     setErr('');setInfo('');setBusy(true);
     try{
@@ -3143,7 +3147,7 @@ function AccessGrid(props){
 /* System admin: one person's approval, roles, licenses and custom access */
 function AccessEditor(props){
   const u=props.user,roles=props.roles;
-  const[f,setF]=useState({approved:props.approve?true:!!u.approved,admin:u.role==='admin',role_ids:(u.role_ids||[]).slice(),license_ids:(u.license_ids||[]).slice(),perms:{...(u.perms||{})}});
+  const[f,setF]=useState({approved:props.approve?true:!!u.approved,admin:u.role==='admin',role_ids:(u.role_ids||[]).slice(),license_ids:(u.license_ids||[]).slice(),perms:{...(u.perms||{})},mfa:!!u.mfa_required});
   const[err,setErr]=useState('');
   const[busy,setBusy]=useState(false);
   const allLic=!f.license_ids.length;
@@ -3152,7 +3156,8 @@ function AccessEditor(props){
   async function save(){
     setErr('');setBusy(true);
     try{
-      await db.update('hx_profiles',u.id,{approved:f.approved,role:f.admin?'admin':'member',role_ids:f.role_ids,license_ids:f.license_ids,perms:f.perms});
+      const up={approved:f.approved,role:f.admin?'admin':'member',role_ids:f.role_ids,license_ids:f.license_ids,perms:f.perms};if(u.mfa_required!==undefined||f.mfa)up.mfa_required=f.mfa;
+      await db.update('hx_profiles',u.id,up);
       props.onDone();
     }catch(e){setErr(accessErr(e));}
     setBusy(false);
@@ -3162,6 +3167,7 @@ function AccessEditor(props){
     el('div',{className:'card',style:{padding:12}},
       el('label',{className:'ck'},el('input',{type:'checkbox',checked:f.approved,disabled:props.isSelf,onChange:function(e){setF({...f,approved:e.target.checked});}}),el('span',null,el('b',null,'Approved'),' \u2014 can sign in to Hendrix')),
       el('label',{className:'ck'},el('input',{type:'checkbox',checked:f.admin,disabled:props.isSelf,onChange:function(e){setF({...f,admin:e.target.checked});}}),el('span',null,el('b',null,'System admin'),' \u2014 Full access to everything, plus States and Licenses, Team and Roles')),
+      el('label',{className:'ck'},el('input',{type:'checkbox',checked:f.mfa,onChange:function(e){setF({...f,mfa:e.target.checked});}}),el('span',null,el('b',null,'Require two-step sign-in'),' \u2014 password plus a code from an authenticator app; no access without it')),
       props.isSelf&&el('div',{className:'muted',style:{fontSize:12}},'You cannot remove your own approval or admin rights.')),
     el('div',{className:'secth'},'Roles'),
     !roles.length?el('div',{className:'muted',style:{marginBottom:12}},'No roles yet. Create them on the Roles page.'):
@@ -7147,7 +7153,7 @@ function tcLimTxt(){return TC_LIMIT.break1_out+' / '+TC_LIMIT.break2_out+' / '+T
 // apply a license's settings to the running app (defaults when the license has none)
 function hxApplySettings(s,lic){
   if(!HX_SET_DEF)HX_SET_DEF={logs:{...LOG_STALE_DAYS},rk:{...RK_REVIEW}};
-  s=s||{};TC_LIMIT.break1_out=s.break1_min||15;TC_LIMIT.break2_out=s.break2_min||30;TC_LIMIT.break3_out=s.break3_min||15;
+  s=s||{};HX_LIC_SET=s;TC_LIMIT.break1_out=s.break1_min||15;TC_LIMIT.break2_out=s.break2_min||30;TC_LIMIT.break3_out=s.break3_min||15;
   Object.keys(LOG_STALE_DAYS).forEach(function(k){delete LOG_STALE_DAYS[k];});Object.assign(LOG_STALE_DAYS,HX_SET_DEF.logs,s.log_due||{});
   Object.assign(RK_REVIEW,HX_SET_DEF.rk,s.review_days||{});
   HX_BRAND=lic&&(s.legal_name||s.dba||s.logo||s.address)?{name:s.dba||s.legal_name||lic.name,legal:s.legal_name||'',address:s.address||'',phone:s.phone||'',email:s.email||'',footer:s.print_footer||'',logo:s.logo||'',license_number:lic.license_number||''}:null;
@@ -7163,8 +7169,8 @@ function SettingsPage(props){
   const[tab,setTab]=useState('general');const[row,setRow]=useState(null);const[f,setF]=useState(null);const[msg,setMsg]=useState('');const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
   const load=useCallback(function(){if(!lid)return;db.get('hx_license_settings','license_id=eq.'+encodeURIComponent(lid)+'&select=*').then(function(r){const x=((r||[]).filter(function(y){return y.license_id===lid;}))[0]||null;setRow(x);
       const s=x||{};setF({legal_name:s.legal_name||'',dba:s.dba||'',address:s.address||'',phone:s.phone||'',email:s.email||'',print_footer:s.print_footer||'',logo:s.logo||null,
-        break1_min:String(s.break1_min||15),break2_min:String(s.break2_min||30),break3_min:String(s.break3_min||15),log_due:{...(s.log_due||{})},review_days:{...(s.review_days||{})},idle:String(s.linemap_idle_hours||4),idle0:String(s.linemap_idle_hours||4),hasIdle:!!x&&x.linemap_idle_hours!==undefined});})
-    .catch(function(e){const m=String(e.message||e);setErr(/hx_license_settings/.test(m)?'Settings are not set up yet - run hendrix_step34.sql in the Hendrix Supabase project.':m);setF({legal_name:'',dba:'',address:'',phone:'',email:'',print_footer:'',logo:null,break1_min:'15',break2_min:'30',break3_min:'15',log_due:{},review_days:{},idle:'4',idle0:'4',hasIdle:false});});},[lid]);
+        break1_min:String(s.break1_min||15),break2_min:String(s.break2_min||30),break3_min:String(s.break3_min||15),log_due:{...(s.log_due||{})},review_days:{...(s.review_days||{})},idle:String(s.linemap_idle_hours||4),idle0:String(s.linemap_idle_hours||4),hasIdle:!!x&&x.linemap_idle_hours!==undefined,esig:s.esig_password!==false,esig0:s.esig_password!==false,so:String(s.idle_signout_min===undefined||s.idle_signout_min===null?30:s.idle_signout_min),so0:String(s.idle_signout_min===undefined||s.idle_signout_min===null?30:s.idle_signout_min),hasSec:!!x&&x.esig_password!==undefined});})
+    .catch(function(e){const m=String(e.message||e);setErr(/hx_license_settings/.test(m)?'Settings are not set up yet - run hendrix_step34.sql in the Hendrix Supabase project.':m);setF({legal_name:'',dba:'',address:'',phone:'',email:'',print_footer:'',logo:null,break1_min:'15',break2_min:'30',break3_min:'15',log_due:{},review_days:{},idle:'4',idle0:'4',hasIdle:false,esig:true,esig0:true,so:'30',so0:'30',hasSec:false});});},[lid]);
   useEffect(load,[load]);
   if(!st||!lic)return el('div',null,el('h1',null,el('span',{className:'g'},'Settings')),el('div',{className:'empty'},'Pick a state and a license at the top first.'));
   function set(k,v){setF(function(p){return {...p,[k]:v};});}
@@ -7176,9 +7182,10 @@ function SettingsPage(props){
     const ld={},rv={};Object.keys(f.log_due).forEach(function(k){const v=n(f.log_due[k]);if(v)ld[k]=v;});Object.keys(f.review_days).forEach(function(k){const v=n(f.review_days[k]);if(v)rv[k]=v;});
     const rec={legal_name:f.legal_name.trim(),dba:f.dba.trim(),address:f.address.trim(),phone:f.phone.trim(),email:f.email.trim(),print_footer:f.print_footer.trim(),logo:f.logo||null,break1_min:b[0],break2_min:b[1],break3_min:b[2],log_due:ld,review_days:rv};
     const ih=n(f.idle);if(!ih||ih<1||ih>72){setErr('Line Map: hours without an update must be between 1 and 72.');return;}if(f.hasIdle||String(ih)!==f.idle0)rec.linemap_idle_hours=ih;
+    const so=parseInt(f.so,10);if(isNaN(so)||so<0||so>480){setErr('Automatic sign-out must be between 0 and 480 minutes (0 = never).');return;}if(f.hasSec||f.esig!==f.esig0||String(so)!==f.so0){rec.esig_password=!!f.esig;rec.idle_signout_min=so;}
     setBusy(true);try{if(row)await sb('hx_license_settings?license_id=eq.'+encodeURIComponent(lid),{method:'PATCH',body:rec,prefer:'return=representation'});else await db.insert('hx_license_settings',{...rec,license_id:lid,state_id:st.id});
       setMsg('Settings saved for '+lic.name+'.');load();if(props.onSaved)props.onSaved();}catch(e){setErr(String(e.message||e));}setBusy(false);}
-  const tabs=[['general','General'],['timeclock','Time clock'],['logs','Facility logs'],['reviews','Review cycles'],['linemap','Line Map'],['more','Everything else']];
+  const tabs=[['general','General'],['timeclock','Time clock'],['logs','Facility logs'],['reviews','Review cycles'],['linemap','Line Map'],['security','Security'],['more','Everything else']];
   const dis=!canF,inp=function(k,ph,type){return el('input',{type:type||'text',value:f[k],placeholder:ph||'',disabled:dis,onChange:function(e){set(k,e.target.value);}});};
   const link=function(page,title,what){return el('div',{key:page,className:'card',style:{marginBottom:0}},el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'center'}},el('b',null,title),
     el('button',{className:'btn ghost sm',onClick:function(){props.go(page);}},'Open')),el('div',{className:'muted',style:{fontSize:12,marginTop:4}},what));};
@@ -7206,6 +7213,10 @@ function SettingsPage(props){
       return el('div',{key:t.id,className:'row',style:{gap:10,alignItems:'center',padding:'4px 0',borderTop:'1px solid #1d1d1d',flexWrap:'nowrap'}},el('span',{style:{flex:1,fontSize:13}},t.name),
         el('input',{type:'number',min:1,max:400,value:f.log_due[t.id]!==undefined?f.log_due[t.id]:'',placeholder:String(def),disabled:dis,style:{width:90},onChange:function(e){const v={...f.log_due};if(e.target.value==='')delete v[t.id];else v[t.id]=e.target.value;set('log_due',v);}}),
         el('span',{className:'muted',style:{fontSize:12,width:110}},'days (default '+def+')'));}));
+  else if(tab==='security')body=el('div',{className:'card'},el('div',{className:'k',style:{marginBottom:10}},'Electronic signatures and sign-out'),
+    el('label',{className:'ck'},el('input',{type:'checkbox',checked:!!f.esig,disabled:dis,onChange:function(e){set('esig',e.target.checked);}}),el('span',null,el('b',null,'Ask for the password when signing'),' \u2014 approvals, releases, decisions, verifications and read-and-sign need the password (and the authenticator code with two-step sign-in). Every signature is kept permanently.')),
+    el('div',{className:'row',style:{gap:10,alignItems:'center',marginTop:12}},el('span',{style:{fontSize:13}},'Sign people out after'),el('input',{type:'number',min:0,max:480,value:f.so,disabled:dis,style:{width:90},'aria-label':'Minutes without activity',onChange:function(e){set('so',e.target.value);}}),el('span',{className:'muted',style:{fontSize:12}},'minutes without activity (0 = never; kiosks are not affected)')),
+    !f.esig&&el('div',{className:'msg err',style:{marginTop:10}},'Off: signatures are not confirmed with a password. Auditors expect them to be (21 CFR Part 11 benchmark).'));
   else if(tab==='linemap')body=el('div',{className:'card'},el('div',{className:'k',style:{marginBottom:6}},'Line Map: a batch is stopped after'),el('div',{className:'muted',style:{fontSize:12,marginBottom:10}},'When a batch in production has no update for this many hours, the Line Map shows it as stopped ("No update"). Default 4 hours.'),
     el('div',{className:'row',style:{gap:10,alignItems:'center'}},el('input',{type:'number',min:1,max:72,value:f.idle,disabled:dis,style:{width:90},onChange:function(e){set('idle',e.target.value);},'aria-label':'Hours without an update'}),el('span',{className:'muted',style:{fontSize:12}},'hours (1 to 72)')));
   else if(tab==='reviews')body=el('div',{className:'card'},el('div',{className:'k',style:{marginBottom:6}},'Risk register: review every'),el('div',{className:'muted',style:{fontSize:12,marginBottom:10}},'The default review cycle for a new risk, by its rating. Each risk can still be changed on its own.'),
@@ -7623,12 +7634,13 @@ function LineMapDashCard(props){
 }
 
 /* ---------- System Health (step 37): checks the installation like an IQ, admins only ---------- */
-const HX_RELEASE='Release 37 · October 2026';
-const SH_STEPS_EXPECTED=[4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,36,37];
+const HX_RELEASE='Release 38 · October 2026';
+const SH_STEPS_EXPECTED=[4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,36,37,38];
 function shErr(e){const m=String((e&&e.message)||e);return /hx_system_health/.test(m)&&/missing|does not exist|schema cache|Could not find/i.test(m)?'NOT_INSTALLED':m;}
 function SystemHealthPage(props){
-  const[h,setH]=useState(null);const[err,setErr]=useState('');const[ai,setAi]=useState(null);const[busy,setBusy]=useState(false);const[at,setAt]=useState(0);
+  const[h,setH]=useState(null);const[x38,setX38]=useState(null);const[err,setErr]=useState('');const[ai,setAi]=useState(null);const[busy,setBusy]=useState(false);const[at,setAt]=useState(0);
   const run=useCallback(function(){setBusy(true);setErr('');const t0=Date.now();
+    sb('rpc/hx_health_extra',{method:'POST',body:{}}).then(setX38).catch(function(){setX38(null);});
     sb('rpc/hx_system_health',{method:'POST',body:{}}).then(function(r){setH(r||{});setAt(t0);}).catch(function(e){setErr(shErr(e));setH(null);}).then(function(){setBusy(false);});},[]);
   useEffect(run,[run]);
   async function testAi(){setAi({busy:true});
@@ -7642,12 +7654,15 @@ function SystemHealthPage(props){
   function add(group,label,state,detail,fix){checks.push({group:group,label:label,state:state,detail:detail||'',fix:fix||''});}
   if(h){
     const steps=h.steps||[],missing=steps.filter(function(s){return !s.ok;});
-    add('Database','Database steps installed',missing.length?'bad':'ok',missing.length?'Missing: '+missing.map(function(s){return s.step+' '+s.name;}).join(', '):'All '+steps.length+' steps (4 to 37) are installed.',missing.length?'Run hendrix_install_13_to_37.sql (or the missing step files) in the Supabase SQL editor.':'');
+    add('Database','Database steps installed',missing.length?'bad':'ok',missing.length?'Missing: '+missing.map(function(s){return s.step+' '+s.name;}).join(', '):'All '+steps.length+' steps (4 to '+(steps.length?steps[steps.length-1].step:'')+') are installed.',missing.length?'Run hendrix_install_13_to_38.sql (or the missing step files) in the Supabase SQL editor.':'');
     const drift=at?Math.abs(new Date(h.checked_at).getTime()-at)/1000:0;
     add('Database','Clock',drift>120?'warn':'ok','Database time zone '+h.db_time_zone+'; this device is '+Math.round(drift)+' s '+(drift>120?'off':'in step')+'.',drift>120?'Set this device to the correct time (automatic time).':'');
     add('Security','Row level security on every table',(h.rls_off||[]).length?'bad':'ok',(h.rls_off||[]).length?'Off on: '+h.rls_off.join(', '):'On for all '+h.tables+' Hendrix tables.',(h.rls_off||[]).length?'Run the step file that creates those tables again, or turn on RLS for them in Supabase > Table editor.':'');
     add('Security','Every change goes to the audit trail',(h.not_audited||[]).length?'bad':'ok',(h.not_audited||[]).length?'Not audited: '+h.not_audited.join(', '):'All record tables are audited. By design not audited: '+(h.audit_by_design||[]).join('; ')+'.',(h.not_audited||[]).length?'Run the step file of those tables again.':'');
     add('Security','Audit trail locked',h.audit_locked?'ok':'bad',h.audit_locked?'Nobody can change or delete the audit trail ('+h.audit_rows+' entries).':'The lock is missing.',h.audit_locked?'':'Run hendrix_step6.sql again.');
+    if(x38){add('Security','Password at every signature',(x38.esig_off_licenses||[]).length?'bad':'ok',(x38.esig_off_licenses||[]).length?'Off at: '+x38.esig_off_licenses.join(', '):'On at every license \u00b7 '+x38.signatures+' signatures kept.',(x38.esig_off_licenses||[]).length?'Settings > Security > Ask for the password when signing.':'');
+      add('Security','Two-step sign-in for admins',x38.admins_without_2fa?'warn':'ok',x38.admins_without_2fa?x38.admins_without_2fa+' admin(s) without two-step sign-in.':'Every admin uses two-step sign-in.',x38.admins_without_2fa?'Each admin: My account > Set up two-step sign-in (or require it in Team and Access).':'');}
+    else add('Security','Electronic signatures and two-step sign-in','warn','Not installed yet.','Run hendrix_step38.sql.');
     const p=h.people||{};
     add('People','Admins',p.admins<1?'bad':(p.admins>3?'warn':'ok'),p.admins+' admin account'+(p.admins===1?'':'s')+'.',p.admins>3?'Keep admin rights to 1-3 people; give others roles in Team and Access.':(p.admins<1?'Make the system owner an admin.':''));
     add('People','Accounts waiting for approval',p.waiting?'warn':'ok',p.waiting?p.waiting+' account(s) waiting.':'None waiting.',p.waiting?'Approve or remove them in Team and Access.':'');
@@ -7671,16 +7686,153 @@ function SystemHealthPage(props){
       el('div',{className:'row',style:{gap:8}},el('button',{className:'btn ghost',disabled:busy,onClick:run},busy?'Checking...':'Run checks again'),
         el('button',{className:'btn ghost',disabled:ai&&ai.busy,onClick:testAi},ai&&ai.busy?'Testing...':'Test the AI connection'),
         h&&el('button',{className:'btn',onClick:print},'Print IQ evidence'))),
-    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'System Health is not set up yet - run hendrix_step37.sql (or hendrix_install_13_to_37.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
+    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'System Health is not set up yet - run hendrix_step37.sql (or hendrix_install_13_to_38.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
     h&&el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',gap:10,marginBottom:14}},
       el('div',{className:'card',style:{marginBottom:0,borderTop:'2px solid '+(nBad?'var(--red)':(nWarn?'var(--gold)':'#5fbf8a'))}},el('div',{className:'k'},'Overall'),el('div',{style:{fontSize:22,fontWeight:700,marginTop:4,color:nBad?'var(--red)':(nWarn?'var(--gold-hi)':'#5fbf8a')}},nBad?nBad+' to fix':(nWarn?nWarn+' to check':'Ready')),el('div',{className:'muted',style:{fontSize:12}},nOk+' of '+checks.length+' checks pass')),
-      el('div',{className:'card',style:{marginBottom:0}},el('div',{className:'k'},'Steps installed'),el('div',{style:{fontSize:22,fontWeight:700,marginTop:4}},(h.steps||[]).filter(function(s){return s.ok;}).length+' / '+(h.steps||[]).length),el('div',{className:'muted',style:{fontSize:12}},'database steps 4 to 37')),
+      el('div',{className:'card',style:{marginBottom:0}},el('div',{className:'k'},'Steps installed'),el('div',{style:{fontSize:22,fontWeight:700,marginTop:4}},(h.steps||[]).filter(function(s){return s.ok;}).length+' / '+(h.steps||[]).length),el('div',{className:'muted',style:{fontSize:12}},'database steps 4 to '+((h.steps||[]).slice(-1)[0]||{}).step)),
       el('div',{className:'card',style:{marginBottom:0}},el('div',{className:'k'},'Audit trail'),el('div',{style:{fontSize:22,fontWeight:700,marginTop:4}},h.audit_rows),el('div',{className:'muted',style:{fontSize:12}},h.audit_locked?'entries · locked':'entries · NOT locked')),
       el('div',{className:'card',style:{marginBottom:0}},el('div',{className:'k'},'AI'),el('div',{style:{fontSize:22,fontWeight:700,marginTop:4,color:ai&&!ai.busy?(ai.ok?'#5fbf8a':'var(--red)'):undefined}},ai&&!ai.busy?(ai.ok?'Working':'Not working'):'Not tested'),el('div',{className:'muted',style:{fontSize:12}},'click Test the AI connection'))),
     h&&groups.map(function(g){const list=checks.filter(function(c){return c.group===g;});if(!list.length)return null;
       return el('div',{key:g,className:'card'},el('h3',null,g),list.map(function(c,i){return el('div',{key:i,className:'row',style:{gap:12,alignItems:'flex-start',flexWrap:'nowrap',padding:'8px 0',borderTop:i?'1px solid #1d1d1d':'none'}},icon(c.state),
         el('div',{style:{flex:1}},el('div',{style:{fontWeight:600}},c.label),el('div',{className:'muted',style:{fontSize:13}},c.detail),c.fix&&el('div',{style:{fontSize:12.5,color:'var(--gold-hi)',marginTop:3}},'→ '+c.fix)));}));}),
     h&&!ai&&el('div',{className:'muted',style:{fontSize:12}},'The AI is not tested automatically (each test is one very small paid request). Click Test the AI connection.'));
+}
+
+/* ---------- Security (step 38): electronic signatures, auto sign-out, two-step sign-in ---------- */
+let HX_LIC_SET={};const HX_CUR={state:'',lic:''};
+function hxJwt(){try{let p=SESSION.access_token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');while(p.length%4)p+='=';return JSON.parse(decodeURIComponent(escape(atob(p))));}catch(e){return {};}}
+function hxAal(){return hxJwt().aal||'aal1';}
+async function authUser(method,path,body){
+  const c=cfg(),tok=await freshToken();
+  const r=await fetch(c.url+'/auth/v1/'+path,{method:method,headers:{'apikey':c.key,'Authorization':'Bearer '+(tok||c.key),'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
+  const t=await r.text();let j=null;try{j=t?JSON.parse(t):null;}catch(e){j=null;}
+  if(!r.ok)throw new Error((j&&(j.msg||j.message||j.error_description||j.error))||('Error '+r.status));
+  return j;
+}
+async function mfaFactors(all){const u=await authUser('GET','user');return ((u&&u.factors)||[]).filter(function(f){return f.factor_type==='totp'&&(all||f.status==='verified');});}
+async function mfaVerify(fid,code){const ch=await authUser('POST','factors/'+fid+'/challenge',{});const j=await authUser('POST','factors/'+fid+'/verify',{challenge_id:ch.id,code:String(code||'').replace(/\s/g,'')});saveSession(toSession(j));return j;}
+function mfaMsg(e){const m=String((e&&e.message)||e);return /invalid|code|totp|expired|challenge/i.test(m)?'That code is not correct or has expired. Enter the current 6-digit code from your authenticator app.':m;}
+
+/* which saves are signatures: table -> meaning (or null) */
+const ESIG_RULES={
+  hx_sops:function(b,m){return m==='PATCH'&&b.status==='published'?'Approved and published this SOP':null;},
+  hx_sop_acks:function(b,m){return m==='POST'?'Read and understood this SOP':null;},
+  hx_deviations:function(b,m){return m==='PATCH'&&b.status==='closed'?'Closed this deviation':null;},
+  hx_capas:function(b,m){return m==='PATCH'&&b.status==='closed'?'Verified this CAPA effective and closed it':null;},
+  hx_holds:function(b,m){return m==='PATCH'&&['released','destroyed','returned','reworked'].indexOf(b.status)>=0?'Decided this hold: '+b.status:null;},
+  hx_lots:function(b,m){return m==='PATCH'&&(b.status==='accepted'||b.status==='rejected')?(b.status==='accepted'?'Accepted this lot for use':'Rejected this lot'):null;},
+  hx_tests:function(b,m){return m==='PATCH'&&(b.status==='Passed'||b.status==='Failed')?'Recorded the final test result: '+b.status:null;},
+  hx_suppliers:function(b,m){return m==='PATCH'&&(b.status==='approved'||b.status==='conditional')?'Approved this supplier'+(b.status==='conditional'?' with conditions':''):null;},
+  hx_changes:function(b,m){return m==='PATCH'&&(b.status==='approved'||b.status==='closed')?(b.status==='approved'?'Approved this change':'Closed this change after the effectiveness check'):null;},
+  hx_mgmt_reviews:function(b,m){return m==='PATCH'&&b.status==='held'?'Signed this management review as held':null;},
+  hx_haccp_plans:function(b,m){return m==='PATCH'&&(b.status==='validated'||b.status==='active')?(b.status==='active'?'Approved and activated this HACCP plan':'Validated this HACCP plan'):null;},
+  hx_haccp_monitoring:function(b,m){return m==='PATCH'&&b.verified_by?'Verified this CCP record':null;},
+  hx_risks:function(b,m){return m==='PATCH'&&b.status==='closed'?'Closed this risk':null;},
+  hx_audits:function(b,m){return m==='PATCH'&&b.status==='closed'?'Closed this internal audit':null;},
+  hx_complaints:function(b,m){return m==='PATCH'&&b.status==='closed'?'Closed this complaint':null;}
+};
+const ESIG_WHAT={hx_sops:'SOP',hx_sop_acks:'SOP signature',hx_deviations:'Deviation',hx_capas:'CAPA',hx_holds:'Hold',hx_lots:'Lot',hx_tests:'Test',hx_suppliers:'Supplier',hx_changes:'Change',hx_mgmt_reviews:'Management review',hx_haccp_plans:'HACCP plan',hx_haccp_monitoring:'CCP record',hx_risks:'Risk',hx_audits:'Internal audit',hx_complaints:'Complaint'};
+function hxEsignNeeded(path,opt){
+  if(!SESSION||HX_LIC_SET.esig_password!==true)return null;
+  const t=String(path).split('?')[0],f=ESIG_RULES[t];if(!f)return null;
+  const b=opt.body&&!Array.isArray(opt.body)?opt.body:{};const meaning=f(b,opt.method||'GET');if(!meaning)return null;
+  const mm=/[?&]id=eq\.([^&]+)/.exec(path);
+  return {table:t,id:mm?decodeURIComponent(mm[1]):(b.id||''),meaning:meaning,label:b.number||b.doc_number||b.title||b.name||''};
+}
+function hxEsignPrompt(es){return new Promise(function(res){const host=document.createElement('div');document.body.appendChild(host);const root=ReactDOM.createRoot(host);
+  root.render(el(EsignModal,{es:es,onDone:function(v){setTimeout(function(){root.unmount();host.remove();},0);res(v);}}));});}
+function EsignModal(props){
+  const es=props.es,me=ACC.profile||{},email=(SESSION&&SESSION.user&&SESSION.user.email)||me.email||'',need2=!!me.mfa_required;
+  const[pw,setPw]=useState('');const[code,setCode]=useState('');const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  async function sign(){setErr('');setBusy(true);
+    try{const j=await authCall('token?grant_type=password',{email:email,password:pw});saveSession(toSession(j));}
+    catch(e){setErr(/invalid|credentials|grant/i.test(String(e.message||e))?'That password is not correct.':String(e.message||e));setBusy(false);return;}
+    if(need2){try{const f=(await mfaFactors())[0];if(!f)throw new Error('Two-step sign-in is required but not set up yet. Set it up in My account.');await mfaVerify(f.id,code);}
+      catch(e){setErr(mfaMsg(e));setBusy(false);return;}}
+    props.onDone(true);}
+  const row=function(k,v){return el('div',{className:'row',style:{gap:10,padding:'5px 0',borderTop:'1px solid #1d1d1d',fontSize:13,flexWrap:'nowrap'}},el('span',{className:'muted',style:{width:120,flex:'none'}},k),el('b',null,v));};
+  return el(Modal,{title:'Electronic signature',onClose:function(){props.onDone(false);}},
+    el('div',{className:'muted',style:{fontSize:13,marginBottom:10}},'Your password is your signature. The signature is permanent: your name, the meaning and the server time are kept with the record and in the audit trail.'),
+    row('Signing as',(me.name||'')+(email?' · '+email:'')),row('Meaning',es.meaning),row('Record',(ESIG_WHAT[es.table]||es.table)+(es.label?' · '+es.label:'')),row('Date and time',new Date().toLocaleString()+' (server time is recorded)'),
+    el('div',{style:{height:10}}),
+    el(Field,{label:'Password'},el('input',{type:'password',autoFocus:true,value:pw,'aria-label':'Password',onChange:function(e){setPw(e.target.value);},onKeyDown:function(e){if(e.key==='Enter'&&pw&&(!need2||code))sign();}})),
+    need2&&el(Field,{label:'Authenticator code'},el('input',{inputMode:'numeric',autoComplete:'one-time-code',maxLength:8,value:code,'aria-label':'Authenticator code',onChange:function(e){setCode(e.target.value);},onKeyDown:function(e){if(e.key==='Enter'&&pw&&code)sign();}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end',marginTop:8}},el('button',{className:'btn ghost',onClick:function(){props.onDone(false);}},'Cancel'),
+      el('button',{className:'btn',disabled:busy||!pw||(need2&&!code),onClick:sign},busy?'Checking...':'Sign')));
+}
+async function hxEsigLog(es,j){
+  const rec=Array.isArray(j)?j[0]:j;
+  try{await sb('hx_esignatures',{method:'POST',_esigDone:true,body:{id:newId('es'),state_id:HX_CUR.state,license_id:HX_CUR.lic,meaning:es.meaning,record_table:es.table,
+    record_id:es.id||(rec&&rec.id)||'',record_label:es.label||(rec&&(rec.number||rec.doc_number||rec.title||rec.name))||''}});}catch(e){/* step 38 not installed yet: the record itself is saved */}
+}
+
+/* two-step sign-in: shown after the password when the person needs it */
+function MfaSetup(props){
+  const[f,setF]=useState(null);const[code,setCode]=useState('');const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  useEffect(function(){let dead=false;(async function(){try{
+      const old=await mfaFactors(true);for(const x of old){if(x.status!=='verified'){try{await authUser('DELETE','factors/'+x.id);}catch(e){}}}
+      const n=await authUser('POST','factors',{factor_type:'totp',friendly_name:'Hendrix '+new Date().toISOString().slice(0,16),issuer:'Hendrix QMS'});if(!dead)setF(n);}
+    catch(e){if(!dead)setErr(String(e.message||e));}})();return function(){dead=true;};},[]);
+  async function verify(){setErr('');setBusy(true);try{await mfaVerify(f.id,code);if(props.onVerified)await props.onVerified();}catch(e){setErr(mfaMsg(e));}setBusy(false);}
+  const qr=f&&f.totp&&f.totp.qr_code;
+  return el('div',null,
+    el('ol',{style:{paddingLeft:18,fontSize:13,lineHeight:1.6,margin:'0 0 10px'}},el('li',null,'Install an authenticator app on your phone (Google Authenticator, Microsoft Authenticator, 1Password...).'),
+      el('li',null,'Scan this code with the app (or type the key below).'),el('li',null,'Enter the 6-digit code the app shows.')),
+    !f&&!err&&el('div',{className:'muted'},'Preparing...'),
+    qr&&el('div',{style:{background:'#fff',borderRadius:10,padding:10,width:200,height:200,margin:'0 auto 10px'}},el('img',{src:/^data:/.test(qr)?qr:'data:image/svg+xml;utf8,'+encodeURIComponent(qr),alt:'QR code for the authenticator app',style:{width:180,height:180}})),
+    f&&f.totp&&f.totp.secret&&el('div',{className:'muted',style:{fontSize:12,textAlign:'center',marginBottom:10,wordBreak:'break-all'}},'Key: ',el('code',null,f.totp.secret)),
+    f&&el(Field,{label:'6-digit code'},el('input',{inputMode:'numeric',autoComplete:'one-time-code',maxLength:8,value:code,'aria-label':'6-digit code',onChange:function(e){setCode(e.target.value);},onKeyDown:function(e){if(e.key==='Enter'&&code)verify();}})),
+    err&&el('div',{className:'msg err'},err),
+    f&&el('button',{className:'btn',style:{width:'100%'},disabled:busy||!code,onClick:verify},busy?'Checking...':'Turn on two-step sign-in'));
+}
+function MfaGate(props){
+  const[mode,setMode]=useState('load');const[code,setCode]=useState('');const[err,setErr]=useState('');const[busy,setBusy]=useState(false);const[fid,setFid]=useState('');
+  useEffect(function(){mfaFactors().then(function(fs){if(fs.length){setFid(fs[0].id);setMode('code');}else setMode('setup');}).catch(function(e){setErr(String(e.message||e));setMode('code');});},[]);
+  async function verify(){setErr('');setBusy(true);try{await mfaVerify(fid,code);props.onDone();}catch(e){setErr(mfaMsg(e));setBusy(false);}}
+  return el('div',{className:'auth'},el('div',{className:'box'},el(Brand),el('h2',{style:{marginTop:18}},'Two-step sign-in'),
+    mode==='load'&&el('div',{className:'muted'},'Checking...'),
+    mode==='code'&&el('div',null,el('p',{className:'muted'},'Enter the 6-digit code from your authenticator app.'),
+      el(Field,{label:'Code'},el('input',{inputMode:'numeric',autoComplete:'one-time-code',autoFocus:true,maxLength:8,value:code,'aria-label':'Code',onChange:function(e){setCode(e.target.value);},onKeyDown:function(e){if(e.key==='Enter'&&code)verify();}})),
+      err&&el('div',{className:'msg err'},err),
+      el('button',{className:'btn',style:{width:'100%'},disabled:busy||!code||!fid,onClick:verify},busy?'Checking...':'Continue')),
+    mode==='setup'&&el('div',null,el('p',{className:'muted'},'Your account needs two-step sign-in. Set it up now; you will need the app every time you sign in.'),el(MfaSetup,{onVerified:props.onDone})),
+    el('div',{style:{marginTop:14,textAlign:'center'}},el('a',{href:'#',style:{color:'var(--faint)',fontSize:12},onClick:function(e){e.preventDefault();props.onSignOut();}},'Sign out'))));
+}
+
+/* auto sign-out after the license's idle minutes (0 = never); kiosks are not affected */
+function IdleWatch(props){
+  const mins=props.minutes;const[left,setLeft]=useState(null);
+  useEffect(function(){if(!mins)return;let last=Date.now();const bump=function(){last=Date.now();};
+    const ev=['mousemove','mousedown','keydown','touchstart','scroll','wheel'];ev.forEach(function(e){window.addEventListener(e,bump,{passive:true});});
+    const t=setInterval(function(){const idle=Date.now()-last,lim=mins*60000;if(idle>=lim){clearInterval(t);props.onTimeout(mins);return;}setLeft(lim-idle<=60000?Math.ceil((lim-idle)/1000):null);},1000);
+    return function(){clearInterval(t);ev.forEach(function(e){window.removeEventListener(e,bump);});};},[mins]);
+  if(left===null)return null;
+  return el('div',{role:'alert',style:{position:'fixed',left:'50%',bottom:24,transform:'translateX(-50%)',zIndex:9999,background:'#2a2108',border:'1px solid #6b5414',color:'#f1d57a',borderRadius:10,padding:'12px 18px',fontSize:14,boxShadow:'0 6px 24px rgba(0,0,0,.5)'}},
+    'No activity: you will be signed out in '+left+' s. Move the mouse or press a key to stay signed in.');
+}
+
+/* My account: password and two-step sign-in */
+function MyAccountPage(props){
+  const me=props.profile||{};const email=(SESSION&&SESSION.user&&SESSION.user.email)||me.email||'';
+  const[pw1,setPw1]=useState('');const[pw2,setPw2]=useState('');const[msg,setMsg]=useState('');const[err,setErr]=useState('');const[setup,setSetup]=useState(false);const[fs,setFs]=useState(null);
+  const load=useCallback(function(){mfaFactors().then(setFs).catch(function(){setFs([]);});},[]);useEffect(load,[load]);
+  async function changePw(){setErr('');setMsg('');if(pw1.length<8){setErr('Use at least 8 characters.');return;}if(pw1!==pw2){setErr('The two passwords are not the same.');return;}
+    try{await authUser('PUT','user',{password:pw1});setPw1('');setPw2('');setMsg('Password changed.');}catch(e){setErr(String(e.message||e));}}
+  async function turnedOn(){try{if(!me.mfa_required)await db.update('hx_profiles',me.id,{mfa_required:true});}catch(e){}setSetup(false);setMsg('Two-step sign-in is on. You will need your authenticator app every time you sign in.');load();if(props.onChanged)props.onChanged();}
+  const on=fs&&fs.length>0;
+  return el('div',null,el('h1',null,el('span',{className:'g'},'My account')),el('div',{className:'sub'},(me.name||'')+' · '+email),
+    msg&&el('div',{className:'msg'},msg),err&&el('div',{className:'msg err'},err),
+    el('div',{className:'card'},el('h3',null,'Two-step sign-in'),
+      el('div',{className:'row',style:{gap:10,alignItems:'center',marginBottom:8}},el('span',{className:'badge '+(on?'ok':'off')},on?'On':'Off'),me.mfa_required&&el('span',{className:'badge warn'},'Required for your account'),
+        el('span',{className:'muted',style:{fontSize:13}},on?'You sign in with your password and a code from your authenticator app.':'Protects your account even if someone learns your password.')),
+      !on&&!setup&&el('button',{className:'btn',onClick:function(){setSetup(true);}},'Set up two-step sign-in'),
+      setup&&el('div',{style:{maxWidth:420}},el(MfaSetup,{onVerified:turnedOn})),
+      on&&el('div',{className:'muted',style:{fontSize:12}},'To turn it off or move it to a new phone, ask an admin (Team and Access).')),
+    el('div',{className:'card',style:{maxWidth:520}},el('h3',null,'Change password'),
+      el(Field,{label:'New password'},el('input',{type:'password',value:pw1,'aria-label':'New password',onChange:function(e){setPw1(e.target.value);}})),
+      el(Field,{label:'New password again'},el('input',{type:'password',value:pw2,'aria-label':'New password again',onChange:function(e){setPw2(e.target.value);}})),
+      el('button',{className:'btn',disabled:!pw1||!pw2,onClick:changePw},'Change password')));
 }
 
 /* ---------- Training (Black Fox / Michigan SOP training matrix + CSQ 2A.13.2 training program) ---------- */
@@ -9313,7 +9465,7 @@ const STD_STATUSES=['Not assessed','Conforming','Partial','Not conforming','Not 
 const STD_TONE={'Not assessed':'off','Conforming':'ok','Partial':'warn','Not conforming':'bad','Not applicable':'off'};
 const STD_COLOR={'Conforming':'#5fbf8a','Partial':'#d4af37','Not conforming':'#e5645a','Not applicable':'#4a473f','Not assessed':'#2a2a2a'};
 const ADOPT_STATUSES=['Following','Audit scheduled','Certified','Suspended','Withdrawn'];
-const HX_PAGE_LABEL={health:'System Health',linemap:'Line Map',planner:'Production Planner',timeclock:'Time Clock and Badges',mgmtreview:'Management Review',verification:'Verification Schedule',orgchart:'Org Chart',objectives:'Quality Objectives',risks:'Risk Register',changes:'Change Control',haccp:'HACCP',cultivation:'Cultivation',envtests:'Facility Tests',lineclear:'Line Clearance',rework:'Rework',equipment:'Equipment',chemicals:'Chemicals and SDS',complaints:'Complaints',intaudits:'Internal Audits',recall:'Traceability and Recall',receiving:'Receiving',inventory:'Inventory',holds:'Hold and Release',shipping:'Shipping',suppliers:'Suppliers',training:'Training',qms:'QMS (Deviations, CAPA)',sops:'SOPs',rulebook:'Rulebook',locations:'States and Licenses',audit:'Audit Trail',batches:'Batch Tracker',testing:'Testing',stickers:'Compliance Stickers',
+const HX_PAGE_LABEL={account:'My account',health:'System Health',linemap:'Line Map',planner:'Production Planner',timeclock:'Time Clock and Badges',mgmtreview:'Management Review',verification:'Verification Schedule',orgchart:'Org Chart',objectives:'Quality Objectives',risks:'Risk Register',changes:'Change Control',haccp:'HACCP',cultivation:'Cultivation',envtests:'Facility Tests',lineclear:'Line Clearance',rework:'Rework',equipment:'Equipment',chemicals:'Chemicals and SDS',complaints:'Complaints',intaudits:'Internal Audits',recall:'Traceability and Recall',receiving:'Receiving',inventory:'Inventory',holds:'Hold and Release',shipping:'Shipping',suppliers:'Suppliers',training:'Training',qms:'QMS (Deviations, CAPA)',sops:'SOPs',rulebook:'Rulebook',locations:'States and Licenses',audit:'Audit Trail',batches:'Batch Tracker',testing:'Testing',stickers:'Compliance Stickers',
   products:'Products',logs:'Facility Logs',visitors:'Visitor Log',roles:'Roles',team:'Team and Access'};
 const HX_PAGE_MOD={linemap:'linemap',planner:'planner',timeclock:'timeclock',mgmtreview:'mgmtreview',verification:'verification',orgchart:'orgchart',objectives:'objectives',risks:'risks',changes:'changes',haccp:'haccp',cultivation:'cultivation',envtests:'envtests',lineclear:'lineclear',rework:'rework',equipment:'equipment',chemicals:'chemicals',complaints:'complaints',intaudits:'intaudits',recall:'recall',receiving:'receiving',inventory:'receiving',holds:'holds',shipping:'shipping',suppliers:'suppliers',training:'training',qms:'qms',sops:'sops',rulebook:'rulebook',audit:'audit',batches:'batch',testing:'testing',stickers:'stickers',visitors:'logs_visitor'};
 function stdLevelOf(m){return m==='4A'?2:m==='5'?3:1;}
@@ -10780,8 +10932,10 @@ function App(){
     if(!SESSION||!(await freshToken())){setPhase('login');return;}
     try{
       const p=await db.get('hx_profiles','id=eq.'+SESSION.user.id+'&select=*');
-      if(!p||!p[0]){setLoadErr('Your profile was not found. Make sure hendrix_setup.sql was run in this Supabase project.');setPhase('login');saveSession(null);return;}
+      if(!p||!p[0]){try{const ms=await sb('rpc/hx_my_security',{method:'POST',body:{}});if(ms&&ms.mfa_required&&ms.aal!=='aal2'){ACC.profile={id:SESSION.user.id,name:ms.name,mfa_required:true};setPhase('mfa');return;}}catch(x){}
+        setLoadErr('Your profile was not found. Make sure hendrix_setup.sql was run in this Supabase project.');setPhase('login');saveSession(null);return;}
       setProfile(p[0]);ACC.profile=p[0];
+      if(p[0].mfa_required&&hxAal()!=='aal2'){setPhase('mfa');return;}
       if(!p[0].approved){setPhase('pending');return;}
       try{ACC.roles=(await db.get('hx_roles','select=*&order=sort,name'))||[];}catch(x){ACC.roles=[];}
       await loadData();setPhase('ready');
@@ -10809,6 +10963,7 @@ function App(){
   if(phase==='connect')return el(ConnectScreen,{onDone:boot});
   if(phase==='login')return el('div',null,loadErr&&el('div',{className:'msg err',style:{margin:12}},loadErr),
     el(LoginScreen,{onAuthed:boot,onReconnect:function(){setPhase('connect');rerender();}}));
+  if(phase==='mfa')return el(MfaGate,{onDone:boot,onSignOut:function(){saveSession(null);setProfile(null);ACC.profile=null;ACC.roles=[];setPhase('login');}});
   if(phase==='pending')return el('div',{className:'auth'},el('div',{className:'box'},el(Brand),
     el('h2',{style:{marginTop:18}},'Waiting for approval'),
     el('p',{className:'muted'},'Your account was created. An admin needs to approve it before you can enter.'),
@@ -10819,6 +10974,7 @@ function App(){
   const stLics=licenses.filter(function(l){return st&&l.state_id===st.id&&l.active&&licOk(l.id);});
   const lic=stLics.find(function(l){return l.id===licId;})||null;
   const isAdmin=profile.role==='admin';
+  HX_CUR.state=stateId;HX_CUR.lic=licId;
   function pickState(id){
     setStateId(id);lsSet('hx_state',id);
     const first=licenses.filter(function(l){return l.state_id===id&&l.active&&licOk(l.id);})[0];
@@ -10846,6 +11002,7 @@ function App(){
   else if(page==='logs')body=el(FacilityLogs,{key:licId,state:st,license:lic,profile:profile});
   else if(page==='rulebook'&&can('rulebook',1))body=el(Rulebook,{key:stateId,profile:profile,state:st,onCount:setRuleCount});
   else if(page==='import')body=el(ImportPage,{key:licId,state:st,license:lic,isAdmin:isAdmin});
+  else if(page==='account')body=el(MyAccountPage,{profile:profile,onChanged:boot});
   else if(page==='health'&&isAdmin)body=el(SystemHealthPage,{profile:profile});
   else if(page==='settings'&&(isAdmin||can('settings',1)))body=el(SettingsPage,{key:licId,state:st,license:lic,isAdmin:isAdmin,go:setPage,onSaved:function(){setSetRel(function(n){return n+1;});}});
   else if(page==='team'&&isAdmin)body=el(Team,{profile:profile,states:states,licenses:licenses,onSelfChange:boot});
@@ -10873,7 +11030,9 @@ function App(){
   else if(page==='standards'&&can('standards',1))body=el(StandardsPage,{key:licId,state:st,license:lic,go:setPage});
   else body=el(Dashboard,{profile:profile,states:states,licenses:licenses,state:st,license:lic,go:setPage,ruleCount:ruleCount});
 
+  const idleMin=HX_LIC_SET.idle_signout_min===undefined||HX_LIC_SET.idle_signout_min===null?30:+HX_LIC_SET.idle_signout_min;
   return el('div',{className:'shell'},
+    el(IdleWatch,{key:'idle'+idleMin,minutes:idleMin,onTimeout:function(m){lsSet('hx_signout_msg','You were signed out after '+m+' minute'+(m===1?'':'s')+' without activity.');saveSession(null);setProfile(null);ACC.profile=null;ACC.roles=[];setPhase('login');}}),
     el('div',{className:'top'},
       el(Brand),
       el('div',{className:'sp'}),
@@ -10887,7 +11046,7 @@ function App(){
           !stLics.length&&el('option',{value:''},'No licenses'),
           stLics.map(function(l){return el('option',{key:l.id,value:l.id},l.name+(l.license_number?' ('+l.license_number+')':''));}))),
       el('div',{className:'row'},
-        el('span',{className:'muted',style:{fontSize:12}},profile.name||profile.email),
+        el('button',{className:'btn ghost sm',title:'My account: password and two-step sign-in',style:{border:'none',color:'var(--muted)',fontWeight:500},onClick:function(){setPage('account');}},profile.name||profile.email),
         el('button',{className:'btn ghost sm',onClick:function(){saveSession(null);setProfile(null);ACC.profile=null;ACC.roles=[];setPhase('login');}},'Sign out'))),
     el('div',{className:'side'},el('div',{className:'nav'},
       el('div',{className:'grp'},'Hendrix'),
