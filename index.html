@@ -170,7 +170,7 @@ async function sb(path,opt){
   if(!r.ok){
     const m=(j&&(j.message||j.hint||j.details))||txt||('Error '+r.status);
     if(/schema cache|Could not find the table|relation .* does not exist/i.test(m)&&!/Could not find the '[A-Za-z0-9_]+' column/.test(m)){
-      const step=/hx_org_positions|hx_objective|hx_qms_settings/.test(m)?'hendrix_step30.sql':/hx_risk|hx_changes/.test(m)?'hendrix_step29.sql':/hx_haccp/.test(m)?'hendrix_step28.sql':/hx_grow_|hx_plant_batches/.test(m)?'hendrix_step27.sql':/hx_env_/.test(m)?'hendrix_step26.sql':/hx_line_clearances|hx_rework/.test(m)?'hendrix_step25.sql':/hx_equipment|hx_chemicals/.test(m)?'hendrix_step24.sql':/share_key|hx_training_shared/.test(m)?'hendrix_step23.sql':/hx_rule_sources/.test(m)?'hendrix_step22.sql':/hx_training_keys|hx_training_attempts|hx_course_submit|content_status/.test(m)?'hendrix_step20.sql':/hx_complaints|hx_audits|hx_audit_findings/.test(m)?'hendrix_step19.sql':/hx_recall|hx_trace_data/.test(m)?'hendrix_step18.sql':/hx_lots|hx_lot_uses|hx_holds|hx_shipments/.test(m)?'hendrix_step17.sql':/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
+      const step=/hx_mgmt_reviews|hx_verification_/.test(m)?'hendrix_step31.sql':/hx_org_positions|hx_objective|hx_qms_settings/.test(m)?'hendrix_step30.sql':/hx_risk|hx_changes/.test(m)?'hendrix_step29.sql':/hx_haccp/.test(m)?'hendrix_step28.sql':/hx_grow_|hx_plant_batches/.test(m)?'hendrix_step27.sql':/hx_env_/.test(m)?'hendrix_step26.sql':/hx_line_clearances|hx_rework/.test(m)?'hendrix_step25.sql':/hx_equipment|hx_chemicals/.test(m)?'hendrix_step24.sql':/share_key|hx_training_shared/.test(m)?'hendrix_step23.sql':/hx_rule_sources/.test(m)?'hendrix_step22.sql':/hx_training_keys|hx_training_attempts|hx_course_submit|content_status/.test(m)?'hendrix_step20.sql':/hx_complaints|hx_audits|hx_audit_findings/.test(m)?'hendrix_step19.sql':/hx_recall|hx_trace_data/.test(m)?'hendrix_step18.sql':/hx_lots|hx_lot_uses|hx_holds|hx_shipments/.test(m)?'hendrix_step17.sql':/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
       throw new Error('Database tables are missing - run '+step+' in the Hendrix Supabase project.');
     }
     if(/row-level security|permission denied/i.test(m))throw new Error('Not allowed - your access level does not allow this here. Ask a system admin.');
@@ -279,7 +279,7 @@ function LoginScreen(props){
 }
 
 /* ---------- Dashboard ---------- */
-const MODULES_SOON=['Level 3: management review, verification schedule','Time Clock and Badges','Production Planner'];
+const MODULES_SOON=['Time Clock and Badges','Production Planner'];
 function Dashboard(props){
   const st=props.state,lic=props.license;
   const isAdmin=props.profile.role==='admin';
@@ -316,6 +316,7 @@ function Dashboard(props){
       el(HaccpDashCard,{license:lic,go:props.go}),
       el(RiskDashCard,{license:lic,go:props.go}),
       el(ObjDashCard,{license:lic,go:props.go}),
+      el(MvDashCard,{license:lic,go:props.go}),
       el(ChemDashCard,{license:lic,go:props.go}),
       el(RecallDashCard,{license:lic,go:props.go}),
       el(StdDashCard,{license:lic,go:props.go})),
@@ -2345,7 +2346,7 @@ function Products(props){
 /* ---------- Audit trail: history, void, admin page ----------
    The database writes every change to hx_audit_log (append-only). Records are never deleted:
    they are voided with a reason. Every change to a record needs a reason for change. */
-const AUDIT_AREAS={hx_org_positions:'Org chart',hx_qms_settings:'Quality policy',hx_objectives:'Quality objective',hx_objective_results:'KPI result',hx_risks:'Risk',hx_risk_reviews:'Risk review',hx_changes:'Change',hx_haccp_team:'HACCP team',hx_haccp_plans:'HACCP plan',hx_haccp_monitoring:'CCP monitoring',hx_haccp_verifications:'HACCP verification',hx_grow_areas:'Grow area',hx_plant_batches:'Plant batch',hx_grow_events:'Grow record',hx_env_points:'Facility test point',hx_env_tests:'Facility test result',hx_line_clearances:'Line clearance',hx_rework:'Rework',hx_equipment:'Equipment',hx_equipment_events:'Equipment record',hx_chemicals:'Chemical',hx_complaints:'Complaint',hx_audits:'Internal audit',hx_audit_findings:'Audit finding',hx_recalls:'Recall / mock recall',hx_recall_contacts:'Recall contact',hx_lots:'Received lot',hx_lot_uses:'Lot use',hx_holds:'Hold',hx_shipments:'Shipment',hx_suppliers:'Supplier',hx_supplier_reviews:'Supplier review',hx_training_courses:'Training course',hx_training_records:'Training record',hx_deviations:'Deviation',hx_capas:'CAPA',hx_sops:'SOP',hx_sop_acks:'SOP signature',hx_label_prints:'Sticker print',hx_standards:'Standards',hx_standard_clauses:'Standard clauses',hx_license_standards:'Standard adoption',hx_conformance:'Standard conformance',hx_label_templates:'Label templates',hx_tests:'Testing record',hx_roles:'Roles',hx_batches:'Batch record',hx_facility_log:'Facility log entry',hx_visitor_log:'Visitor log',hx_log_lists:'Facility log lists',hx_rules:'Rulebook',hx_rule_sources:'Rulebook source PDF',
+const AUDIT_AREAS={hx_mgmt_reviews:'Management review',hx_verification_plan:'Verification activity',hx_verification_records:'Verification',hx_org_positions:'Org chart',hx_qms_settings:'Quality policy',hx_objectives:'Quality objective',hx_objective_results:'KPI result',hx_risks:'Risk',hx_risk_reviews:'Risk review',hx_changes:'Change',hx_haccp_team:'HACCP team',hx_haccp_plans:'HACCP plan',hx_haccp_monitoring:'CCP monitoring',hx_haccp_verifications:'HACCP verification',hx_grow_areas:'Grow area',hx_plant_batches:'Plant batch',hx_grow_events:'Grow record',hx_env_points:'Facility test point',hx_env_tests:'Facility test result',hx_line_clearances:'Line clearance',hx_rework:'Rework',hx_equipment:'Equipment',hx_equipment_events:'Equipment record',hx_chemicals:'Chemical',hx_complaints:'Complaint',hx_audits:'Internal audit',hx_audit_findings:'Audit finding',hx_recalls:'Recall / mock recall',hx_recall_contacts:'Recall contact',hx_lots:'Received lot',hx_lot_uses:'Lot use',hx_holds:'Hold',hx_shipments:'Shipment',hx_suppliers:'Supplier',hx_supplier_reviews:'Supplier review',hx_training_courses:'Training course',hx_training_records:'Training record',hx_deviations:'Deviation',hx_capas:'CAPA',hx_sops:'SOP',hx_sop_acks:'SOP signature',hx_label_prints:'Sticker print',hx_standards:'Standards',hx_standard_clauses:'Standard clauses',hx_license_standards:'Standard adoption',hx_conformance:'Standard conformance',hx_label_templates:'Label templates',hx_tests:'Testing record',hx_roles:'Roles',hx_batches:'Batch record',hx_facility_log:'Facility log entry',hx_visitor_log:'Visitor log',hx_log_lists:'Facility log lists',hx_rules:'Rulebook',hx_rule_sources:'Rulebook source PDF',
   hx_states:'States',hx_licenses:'Licenses',hx_profiles:'Team and access',hx_skus:'SKUs',hx_flavors:'Flavors',hx_formulations:'Formulations',hx_cost_library:'Ingredient prices'};
 const AUDIT_SKIP=['voided_by','voided_at','updated_at','edit_reason'];
 function auditVal(v){
@@ -3054,6 +3055,8 @@ const ACCESS_MODULES=[
   {id:'changes',label:'Change Control',grp:'General',help:'View changes / request changes and record the work / approve, reject, cancel and close changes'},
   {id:'orgchart',label:'Org Chart',grp:'General',help:'View the org chart / add and edit positions / remove positions'},
   {id:'objectives',label:'Quality Objectives',grp:'General',help:'View objectives and KPIs / set objectives and record results / link the quality policy, mark achieved or dropped'},
+  {id:'mgmtreview',label:'Management Review',grp:'General',help:'View reviews / prepare reviews and update actions / sign reviews, cancel drafts'},
+  {id:'verification',label:'Verification Schedule',grp:'General',help:'View the schedule / add activities and record verifications / turn activities off, void records'},
   {id:'batch',label:'Batch Tracker',grp:'Production',help:'View / create and continue (fill blanks) / change filled values with a reason and void'},
   {id:'products',label:'Products (SKUs and flavors)',grp:'Production',help:'View / add and edit / delete'},
   {id:'formbank',label:'Formulation Bank (recipes)',grp:'Production',help:'View / add and edit / delete'},
@@ -3215,16 +3218,16 @@ function Team(props){
 const LOGS_PROD=['logs_sanitation','logs_waste','logs_scale','logs_equipment','logs_temp','logs_env'];
 function pm(o,list,lv){const x={...o};(list||[]).forEach(function(k){x[k]=lv;});return x;}
 const STARTER_ROLES=[
-  ['General Manager','Leadership. Edit everywhere; Full on batches and every log; sees recipes, prices and the audit trail.',{training:'admin',qms:'admin',complaints:'admin',intaudits:'admin',sops:'admin',suppliers:'admin',equipment:'admin',chemicals:'admin',lineclear:'admin',rework:'admin',envtests:'admin',cultivation:'admin',haccp:'admin',risks:'admin',changes:'admin',orgchart:'admin',objectives:'admin',receiving:'admin',holds:'admin',shipping:'admin',recall:'admin',rulebook:'editor',standards:'editor',audit:'read',batch:'admin',testing:'admin',stickers:'admin',products:'editor',formbank:'read',cogs:'read',logs:'admin'}],
-  ['Assistant of General Manager','Leadership support. Edit on batches, products and every log; sees recipes and the audit trail.',{training:'editor',qms:'editor',complaints:'editor',intaudits:'editor',sops:'editor',suppliers:'editor',equipment:'editor',chemicals:'editor',lineclear:'editor',rework:'editor',envtests:'editor',cultivation:'editor',haccp:'editor',risks:'editor',changes:'editor',orgchart:'editor',objectives:'editor',receiving:'editor',holds:'editor',shipping:'editor',recall:'editor',rulebook:'editor',standards:'read',audit:'read',batch:'editor',testing:'editor',products:'editor',formbank:'read',logs:'editor'}],
-  ['Compliance Officer','Full on every log, the rulebook and standards (CSQ); sees batches, products and the audit trail.',{training:'admin',qms:'admin',complaints:'admin',intaudits:'admin',sops:'admin',suppliers:'admin',equipment:'admin',chemicals:'admin',lineclear:'admin',rework:'admin',envtests:'admin',cultivation:'admin',haccp:'admin',risks:'admin',changes:'admin',orgchart:'admin',objectives:'admin',receiving:'admin',holds:'admin',shipping:'read',recall:'admin',rulebook:'admin',standards:'admin',audit:'read',logs:'admin',batch:'read',testing:'admin',stickers:'admin',products:'read'}],
+  ['General Manager','Leadership. Edit everywhere; Full on batches and every log; sees recipes, prices and the audit trail.',{training:'admin',qms:'admin',complaints:'admin',intaudits:'admin',sops:'admin',suppliers:'admin',equipment:'admin',chemicals:'admin',lineclear:'admin',rework:'admin',envtests:'admin',cultivation:'admin',haccp:'admin',risks:'admin',changes:'admin',orgchart:'admin',objectives:'admin',mgmtreview:'admin',verification:'admin',receiving:'admin',holds:'admin',shipping:'admin',recall:'admin',rulebook:'editor',standards:'editor',audit:'read',batch:'admin',testing:'admin',stickers:'admin',products:'editor',formbank:'read',cogs:'read',logs:'admin'}],
+  ['Assistant of General Manager','Leadership support. Edit on batches, products and every log; sees recipes and the audit trail.',{training:'editor',qms:'editor',complaints:'editor',intaudits:'editor',sops:'editor',suppliers:'editor',equipment:'editor',chemicals:'editor',lineclear:'editor',rework:'editor',envtests:'editor',cultivation:'editor',haccp:'editor',risks:'editor',changes:'editor',orgchart:'editor',objectives:'editor',mgmtreview:'editor',verification:'editor',receiving:'editor',holds:'editor',shipping:'editor',recall:'editor',rulebook:'editor',standards:'read',audit:'read',batch:'editor',testing:'editor',products:'editor',formbank:'read',logs:'editor'}],
+  ['Compliance Officer','Full on every log, the rulebook and standards (CSQ); sees batches, products and the audit trail.',{training:'admin',qms:'admin',complaints:'admin',intaudits:'admin',sops:'admin',suppliers:'admin',equipment:'admin',chemicals:'admin',lineclear:'admin',rework:'admin',envtests:'admin',cultivation:'admin',haccp:'admin',risks:'admin',changes:'admin',orgchart:'admin',objectives:'admin',mgmtreview:'admin',verification:'admin',receiving:'admin',holds:'admin',shipping:'read',recall:'admin',rulebook:'admin',standards:'admin',audit:'read',logs:'admin',batch:'read',testing:'admin',stickers:'admin',products:'read'}],
   ['Security Manager','Full on the security and visitor logs.',{training:'editor',qms:'editor',complaints:'editor',sops:'read',rulebook:'read',logs_security:'admin',logs_visitor:'admin'}],
   ['Security Officer','Fills the security and visitor logs.',{training:'read',qms:'read',complaints:'read',sops:'read',rulebook:'read',logs_security:'editor',logs_visitor:'editor'}],
   ['Sanitation','Fills the sanitation, waste and pest control logs.',{chemicals:'read',envtests:'editor',training:'read',qms:'read',complaints:'read',sops:'read',logs_sanitation:'editor',logs_waste:'editor',logs_pest:'editor'}],
   ['Team Member','Continues batches; fills the sanitation and temp / humidity logs.',{equipment:'read',chemicals:'read',lineclear:'editor',orgchart:'read',training:'read',qms:'read',complaints:'read',sops:'read',holds:'editor',receiving:'read',batch:'editor',products:'read',logs_temp:'editor',logs_sanitation:'editor'}],
   ['Inventory Manager','Sees products and batches; fills the waste log.',{training:'editor',qms:'editor',complaints:'editor',sops:'read',suppliers:'editor',receiving:'admin',holds:'editor',shipping:'admin',recall:'editor',products:'read',batch:'read',logs_waste:'editor'}],
-  ['Extraction Manager','Full on batches; fills the scale, equipment and temp / humidity logs.',{equipment:'editor',chemicals:'read',lineclear:'editor',rework:'editor',haccp:'editor',risks:'read',changes:'editor',orgchart:'read',objectives:'read',training:'editor',qms:'editor',complaints:'editor',sops:'editor',suppliers:'read',receiving:'editor',holds:'editor',batch:'admin',testing:'editor',products:'read',formbank:'read',logs_scale:'editor',logs_equipment:'editor',logs_temp:'editor'}],
-  ['Production Manager','Full on batches; edits products; fills the production logs.',pm({equipment:'editor',chemicals:'editor',lineclear:'editor',rework:'editor',envtests:'editor',cultivation:'editor',haccp:'editor',risks:'editor',changes:'editor',orgchart:'read',objectives:'editor',batch:'admin',testing:'editor',stickers:'editor',products:'editor',formbank:'read',rulebook:'read',standards:'editor',sops:'editor',qms:'editor',complaints:'editor',intaudits:'read',training:'editor',suppliers:'editor',receiving:'editor',holds:'editor',shipping:'read',recall:'editor'},LOGS_PROD,'editor')],
+  ['Extraction Manager','Full on batches; fills the scale, equipment and temp / humidity logs.',{equipment:'editor',chemicals:'read',lineclear:'editor',rework:'editor',haccp:'editor',risks:'read',changes:'editor',orgchart:'read',objectives:'read',mgmtreview:'read',verification:'editor',training:'editor',qms:'editor',complaints:'editor',sops:'editor',suppliers:'read',receiving:'editor',holds:'editor',batch:'admin',testing:'editor',products:'read',formbank:'read',logs_scale:'editor',logs_equipment:'editor',logs_temp:'editor'}],
+  ['Production Manager','Full on batches; edits products; fills the production logs.',pm({equipment:'editor',chemicals:'editor',lineclear:'editor',rework:'editor',envtests:'editor',cultivation:'editor',haccp:'editor',risks:'editor',changes:'editor',orgchart:'read',objectives:'editor',mgmtreview:'read',verification:'editor',batch:'admin',testing:'editor',stickers:'editor',products:'editor',formbank:'read',rulebook:'read',standards:'editor',sops:'editor',qms:'editor',complaints:'editor',intaudits:'read',training:'editor',suppliers:'editor',receiving:'editor',holds:'editor',shipping:'read',recall:'editor'},LOGS_PROD,'editor')],
   ['Sales Manager','Sees products; records shipments.',{training:'read',qms:'read',complaints:'read',sops:'read',products:'read',shipping:'editor',holds:'read',recall:'read'}],
   ['Production Lead','Creates and continues batches; fills the production logs.',pm({equipment:'read',chemicals:'read',lineclear:'editor',rework:'editor',haccp:'editor',changes:'read',orgchart:'read',objectives:'read',batch:'editor',testing:'read',stickers:'read',products:'read',sops:'read',qms:'editor',complaints:'read',training:'read',receiving:'read',holds:'editor'},['logs_sanitation','logs_scale','logs_equipment','logs_temp'],'editor')]];
 function accessSummary(perms){
@@ -6273,9 +6276,9 @@ function objBoardHtml(objs,res,lic,policy){const e=esc3;
 function objDue(o,res){const p=objPeriods(o.frequency,2)[1];return o.status==='active'&&o.start_on<=objPeriodRange(p)[1]&&!res.some(function(r){return r.objective_id===o.id&&r.period===p;});}
 
 function QualitySysPage(props){
-  const st=props.state,lic=props.license,lid=lic?lic.id:'',canO=can('orgchart',1),canK=can('objectives',1);
-  const[tab,setTab]=useState(props.tab==='kpi'&&canK?'kpi':canO?'org':'kpi');
-  useEffect(function(){if(props.tab==='kpi'&&canK)setTab('kpi');else if(props.tab==='org'&&canO)setTab('org');},[props.tab]);
+  const st=props.state,lic=props.license,lid=lic?lic.id:'',canO=can('orgchart',1),canK=can('objectives',1),canM=can('mgmtreview',1),canV=can('verification',1),okT={org:canO,kpi:canK,mr:canM,ver:canV};
+  const[tab,setTab]=useState(okT[props.tab]?props.tab:['org','kpi','mr','ver'].find(function(t){return okT[t];})||'org');
+  useEffect(function(){if(okT[props.tab])setTab(props.tab);},[props.tab]);
   const[pos,setPos]=useState(null);const[objs,setObjs]=useState(null);const[res,setRes]=useState([]);const[set0,setSet0]=useState(null);const[sops,setSops]=useState([]);const[people,setPeople]=useState([]);
   const[msg,setMsg]=useState('');const[modal,setModal]=useState(null);const[showAll,setShowAll]=useState(false);
   const load=useCallback(function(){if(!lid)return;const enc=encodeURIComponent,L='license_id=eq.'+enc(lid);
@@ -6288,7 +6291,7 @@ function QualitySysPage(props){
   },[lid]);
   useEffect(load,[load]);
   if(!st||!lic)return el('div',null,el('h1',null,el('span',{className:'g'},'Org Chart and Objectives')),el('div',{className:'empty'},'Pick a state and a license at the top first.'));
-  function go(t){setTab(t);if(props.go)props.go(t==='kpi'?'objectives':'orgchart');}
+  function go(t){setTab(t);if(props.go)props.go({org:'orgchart',kpi:'objectives',mr:'mgmtreview',ver:'verification'}[t]);}
   function done(m){setModal(null);setMsg(m);load();}
   const stat=function(l,v,tone,sub){return el('div',{key:l,className:'card gold',style:{marginBottom:0}},el('div',{className:'k'},l),el('div',{className:'v',style:{fontSize:26,color:tone}},v),sub&&el('div',{className:'muted',style:{fontSize:11,marginTop:2}},sub));};
   const P=pos||[],holders=function(r){return P.filter(function(p){return (p.quality_roles||[]).indexOf(r)>=0;});};
@@ -6297,6 +6300,8 @@ function QualitySysPage(props){
   const pol=set0&&set0.policy_sop_id?sops.find(function(s){return s.id===set0.policy_sop_id;})||{id:set0.policy_sop_id,title:'(SOP not visible)'}:null;
   const polText=pol?((pol.sop_number?pol.sop_number+' ':'')+pol.title+(pol.version?' v'+pol.version:'')):'';
   const canOE=can('orgchart',2),canOF=can('orgchart',3),canKE=can('objectives',2),canKF=can('objectives',3);
+  if(tab==='mr'||tab==='ver')return el(tab==='mr'?MgmtReviewTab:VerificationTab,{key:tab,state:st,license:lic,profile:props.profile,
+    tabs:el('div',{className:'tabs'},[canO&&['org','Org chart'],canK&&['kpi','Quality objectives'],canM&&['mr','Management review'],canV&&['ver','Verification schedule']].filter(Boolean).map(function(t){return el('button',{key:t[0],className:tab===t[0]?'on':'',onClick:function(){go(t[0]);}},t[1]);}))});
   const isOk=/^(Saved|Removed|Added|Policy|Marked|[A-Z][a-z]{2} \d{4}|\d{4} Q\d)/.test(msg);
   return el('div',null,
     el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
@@ -6305,7 +6310,7 @@ function QualitySysPage(props){
         tab==='kpi'&&el('button',{className:'btn ghost',disabled:!act.length,onClick:function(){printRecords('Quality objectives',[objBoardHtml(act,res,lic,polText)]);}},'Print KPI board'),
         tab==='kpi'&&canKE&&!O.length&&el('button',{className:'btn ghost',onClick:function(){setModal({t:'objstart'});}},'Suggested objectives'),tab==='kpi'&&canKE&&el('button',{className:'btn',onClick:function(){setModal({t:'obj'});}},'+ Objective'))),
     msg&&el('div',{className:isOk?'msg':'msg err'},msg),
-    el('div',{className:'tabs'},[canO&&['org','Org chart'],canK&&['kpi','Quality objectives']].filter(Boolean).map(function(t){return el('button',{key:t[0],className:tab===t[0]?'on':'',onClick:function(){go(t[0]);}},t[1]);})),
+    el('div',{className:'tabs'},[canO&&['org','Org chart'],canK&&['kpi','Quality objectives'],canM&&['mr','Management review'],canV&&['ver','Verification schedule']].filter(Boolean).map(function(t){return el('button',{key:t[0],className:tab===t[0]?'on':'',onClick:function(){go(t[0]);}},t[1]);})),
     tab==='org'?(pos===null?el('div',{className:'muted'},'Loading...'):el('div',null,
       el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',marginBottom:14}},
         stat('Positions',P.length,'var(--text)',P.filter(function(p){return !p.person_name;}).length+' vacant'),
@@ -6397,6 +6402,302 @@ function ObjDashCard(props){
   return el('div',{className:'card gold'},el('div',{className:'k'},'Quality objectives'),el('div',{className:'v',style:{color:!d.n?'var(--gold-hi)':d.off?'var(--red)':'var(--green)'}},!d.n?'No objectives set':d.on+' of '+d.n+' on target'),
     el('div',{className:'muted',style:{margin:'4px 0 8px'}},d.n?(d.off+' off target \u00b7 '+d.due+' result'+(d.due===1?'':'s')+' due'):'Set measurable objectives (CSQ 5.1.2)'),
     el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go('objectives');}},'Open'));
+}
+
+/* ---------- Management review (CSQ 5.1.3) and Verification schedule (CSQ 5.1.8) ---------- */
+// [key, label, required by CSQ 5.1.3, module the facts come from]
+const MR_INPUTS=[['prev_actions','Actions from the last review',true,'mgmtreview'],['complaints','Complaints and customer feedback',true,'complaints'],['audits','Internal, external and regulatory audits',true,'intaudits'],
+  ['deviations','Deviations and corrective actions (CAPA)',true,'qms'],['risks','Risks and opportunities',true,'risks'],['haccp','HACCP and food safety performance',false,'haccp'],['kpis','Quality objectives and KPIs',false,'objectives'],
+  ['csq','CSQ conformance',true,'standards'],['changes','Changes that could affect the system',true,'changes'],['suppliers','Supplier performance',false,'suppliers'],['verification','Verification results',false,'verification'],
+  ['training','Training and competence',false,'training'],['resources','Resources (people, equipment, facility, budget)',true,null]];
+function mvErr(e){const m=String((e&&e.message)||e);return /hx_mgmt_reviews|hx_verification_plan|hx_verification_records/.test(m)&&/missing|does not exist|schema cache/i.test(m)?'Management review and the verification schedule are not set up yet - run hendrix_step31.sql in the Hendrix Supabase project.':m;}
+function mvIn(d,a,b){d=String(d||'').slice(0,10);return d>=a&&d<=b;}
+function mvTop(list,key,n){const c={};list.forEach(function(x){const k=x[key]||'Other';c[k]=(c[k]||0)+1;});return Object.keys(c).sort(function(a,b){return c[b]-c[a];}).slice(0,n||3).map(function(k){return k+' '+c[k];}).join(', ');}
+// facts for each input, counted from the records for the period reviewed
+async function mrFacts(lic,from,to,prev){
+  const lid=lic.id,enc=encodeURIComponent,L='license_id=eq.'+enc(lid),mine=function(x){return x.license_id===lid;},out={},T=todayStr();
+  const g=async function(k,fn){try{const v=await fn();if(v)out[k]=v;}catch(e){out[k]='(could not be counted: '+String(e.message||e).slice(0,80)+')';}};
+  const jobs=[];
+  jobs.push(g('prev_actions',async function(){if(!prev)return 'First management review on record.';const a=prev.actions||[],d=a.filter(function(x){return x.done;});
+    return prev.number+' ('+prev.meeting_date+'): '+d.length+' of '+a.length+' actions done.'+(a.length>d.length?' Open: '+a.filter(function(x){return !x.done;}).map(function(x){return x.what+(x.who?' ('+x.who+')':'')+(x.due?' due '+x.due:'');}).join('; ')+'.':'');}));
+  if(can('complaints',1))jobs.push(g('complaints',async function(){const c=((await db.get('hx_complaints',L+'&received_on=gte.'+from+'&select=id,received_on,category,type,status,license_id'))||[]).filter(function(x){return mine(x)&&mvIn(x.received_on,from,to)&&x.status!=='cancelled';});
+    const open=((await db.get('hx_complaints',L+'&status=in.(open,investigating)&select=id,status,license_id'))||[]).filter(function(x){return mine(x)&&(x.status==='open'||x.status==='investigating');}).length;
+    return c.length+' complaint'+(c.length===1?'':'s')+' received'+(c.length?' (by category: '+mvTop(c,'category')+')':'')+' \u00b7 '+c.filter(function(x){return x.status==='closed';}).length+' closed \u00b7 '+open+' open today.';}));
+  if(can('intaudits',1))jobs.push(g('audits',async function(){const a=((await db.get('hx_audits',L+'&audit_date=gte.'+from+'&select=id,audit_date,audit_type,status,license_id'))||[]).filter(function(x){return mine(x)&&mvIn(x.audit_date,from,to)&&x.status!=='cancelled';});
+    const f=((await db.get('hx_audit_findings',L+'&status=eq.open&select=id,severity,status,due_date,license_id'))||[]).filter(function(x){return mine(x)&&x.status==='open';});
+    return a.length+' audit'+(a.length===1?'':'s')+' in the period'+(a.length?' ('+mvTop(a,'audit_type',4)+')':'')+' \u00b7 '+f.length+' finding'+(f.length===1?'':'s')+' open ('+f.filter(function(x){return x.due_date&&x.due_date<T;}).length+' overdue). Add external and state inspections in the discussion.';}));
+  if(can('qms',1))jobs.push(g('deviations',async function(){const d=((await db.get('hx_deviations',L+'&created_at=gte.'+from+'&select=id,created_at,category,priority,status,license_id'))||[]).filter(function(x){return mine(x)&&mvIn(x.created_at,from,to)&&x.status!=='cancelled';});
+    const c=((await db.get('hx_capas',L+'&select=id,status,due_date,closed_at,effectiveness_rating,license_id'))||[]).filter(mine),co=c.filter(function(x){return x.status==='open'||x.status==='in_progress';}),cc=c.filter(function(x){return x.status==='closed'&&mvIn(x.closed_at,from,to);});
+    return d.length+' deviation'+(d.length===1?'':'s')+(d.length?' (by category: '+mvTop(d,'category')+'; '+d.filter(function(x){return x.priority==='critical';}).length+' critical)':'')+' \u00b7 CAPAs: '+cc.length+' closed in the period ('+cc.filter(function(x){return x.effectiveness_rating==='effective';}).length+' verified effective), '+co.length+' open, '+co.filter(function(x){return x.due_date&&x.due_date<T;}).length+' overdue.';}));
+  if(can('risks',1))jobs.push(g('risks',async function(){const r=((await db.get('hx_risks',L+'&select=*'))||[]).filter(function(x){return mine(x)&&x.status!=='closed';});
+    const hi=r.filter(function(x){return rkCur(x).n>=10;});return r.length+' risks on the register \u00b7 '+hi.length+' high / critical'+(hi.length?' ('+hi.map(function(x){return x.number+' '+x.title;}).slice(0,5).join('; ')+')':'')+' \u00b7 '+r.filter(function(x){return x.status==='controlled';}).length+' controlled \u00b7 '+r.filter(rkReviewDue).length+' reviews overdue \u00b7 '+r.filter(function(x){return mvIn(x.created_at,from,to);}).length+' new in the period.';}));
+  if(can('haccp',1))jobs.push(g('haccp',async function(){const p=((await db.get('hx_haccp_plans',L+'&status=eq.active&select=id,status,license_id'))||[]).filter(function(x){return mine(x)&&x.status==='active';});
+    const m=((await db.get('hx_haccp_monitoring',L+'&voided=eq.false&checked_at=gte.'+from+'&select=id,checked_at,within_limits,verified_at,license_id'))||[]).filter(function(x){return mine(x)&&mvIn(x.checked_at,from,to);});
+    return p.length+' active HACCP plan'+(p.length===1?'':'s')+' \u00b7 '+m.length+' CCP checks \u00b7 '+m.filter(function(x){return !x.within_limits;}).length+' out of limits \u00b7 '+m.filter(function(x){return x.verified_at;}).length+' verified by a second person.';}));
+  if(can('objectives',1))jobs.push(g('kpis',async function(){const o=((await db.get('hx_objectives',L+'&status=eq.active&select=id,number,name,status,license_id'))||[]).filter(function(x){return mine(x)&&x.status==='active';});
+    const r=((await db.get('hx_objective_results',L+'&select=objective_id,period,value,met,license_id'))||[]).filter(mine);
+    const last=function(x){return r.filter(function(y){return y.objective_id===x.id;}).sort(function(a,b){return a.period<b.period?1:-1;})[0];};const miss=o.filter(function(x){const l=last(x);return l&&!l.met;});
+    return o.length+' active objectives \u00b7 '+o.filter(function(x){const l=last(x);return l&&l.met;}).length+' on target \u00b7 '+miss.length+' off target'+(miss.length?' ('+miss.map(function(x){return x.name;}).join('; ')+')':'')+' \u00b7 '+o.filter(function(x){return !last(x);}).length+' not measured yet.';}));
+  if(can('standards',1))jobs.push(g('csq',async function(){const c=((await db.get('hx_conformance',L+'&select=id,status,license_id'))||[]).filter(mine);if(!c.length)return 'No CSQ self-assessment recorded yet.';
+    const n=function(s){return c.filter(function(x){return x.status===s;}).length;};return 'CSQ self-assessment: '+n('Conforming')+' conforming, '+n('Partial')+' partial, '+n('Not conforming')+' not conforming, '+n('Not applicable')+' not applicable, '+n('Not assessed')+' not assessed.';}));
+  if(can('changes',1))jobs.push(g('changes',async function(){const c=((await db.get('hx_changes',L+'&requested_on=gte.'+from+'&select=id,number,title,status,requested_on,license_id'))||[]).filter(function(x){return mine(x)&&mvIn(x.requested_on,from,to);});
+    return c.length+' change'+(c.length===1?'':'s')+' requested'+(c.length?' ('+c.filter(function(x){return x.status==='implemented'||x.status==='closed';}).length+' implemented, '+c.filter(function(x){return x.status==='requested'||x.status==='approved';}).length+' open, '+c.filter(function(x){return x.status==='rejected'||x.status==='cancelled';}).length+' stopped)':'')+'. Also consider changes outside Hendrix: rules, staff, facility, market.';}));
+  if(can('suppliers',1))jobs.push(g('suppliers',async function(){const s=((await db.get('hx_suppliers','select=id,status,next_review,license_id,license_ids'))||[]).filter(function(x){return x.license_id===lid||(x.license_ids||[]).indexOf(lid)>=0;});
+    const n=function(k){return s.filter(function(x){return x.status===k;}).length;};return s.length+' suppliers: '+n('approved')+' approved, '+n('conditional')+' conditional, '+n('suspended')+' suspended, '+n('disqualified')+' disqualified \u00b7 '+s.filter(function(x){return x.next_review&&x.next_review<T&&x.status!=='disqualified';}).length+' reviews overdue.';}));
+  if(can('verification',1))jobs.push(g('verification',async function(){const P=((await db.get('hx_verification_plan',L+'&active=eq.true&select=*'))||[]).filter(function(x){return mine(x)&&x.active;});if(!P.length)return 'No verification schedule yet.';
+    const last=await vsLastAll(lic,P),od=P.filter(function(p){const l=last[p.id];return !l||eqAddDays(l,p.frequency_days)<T;});
+    const R=((await db.get('hx_verification_records',L+'&voided=eq.false&done_on=gte.'+from+'&select=id,done_on,result,license_id'))||[]).filter(function(x){return mine(x)&&mvIn(x.done_on,from,to);});
+    return P.length+' scheduled verifications \u00b7 '+od.length+' overdue'+(od.length?' ('+od.map(function(p){return p.activity;}).slice(0,5).join('; ')+')':'')+' \u00b7 '+R.length+' recorded by hand, '+R.filter(function(x){return x.result==='issues';}).length+' with issues.';}));
+  await Promise.all(jobs);
+  return out;
+}
+function mrHtml(r,lic){const e=esc3,I=r.inputs||{};
+  return '<div class="hxrec"><h2>Management review '+e(r.number)+(r.status==='held'?'':' \u2014 '+e(r.status.toUpperCase()))+'</h2><div class="m">'+e(lic.name)+(lic.license_number?' ('+e(lic.license_number)+')':'')+' \u00b7 CSQ 5.1.3 \u00b7 printed '+e(new Date().toLocaleString())+'</div><table>'+
+    [['Meeting date',r.meeting_date],['Period reviewed',(r.period_from||'?')+' to '+(r.period_to||'?')],['Chair',r.chair],['Attendees',r.attendees],['Signed',r.signed_by?r.signed_by+' '+String(r.signed_at).slice(0,16).replace('T',' '):'Not signed'],['Next review',r.next_review||'-'],['Minutes shared with',r.shared_with?r.shared_with+(r.shared_on?' on '+r.shared_on:''):'Not yet']]
+      .map(function(x){return '<tr><th>'+e(x[0])+'</th><td>'+e(x[1])+'</td></tr>';}).join('')+'</table>'+
+    '<table><tr><th style="width:22%">Input</th><th>Facts</th><th>Discussion and conclusions</th></tr>'+MR_INPUTS.map(function(i){const x=I[i[0]]||{};if(!x.data&&!x.notes)return '';return '<tr><td><b>'+e(i[1])+'</b></td><td>'+e(x.data||'')+'</td><td>'+e(x.notes||'')+'</td></tr>';}).join('')+'</table>'+
+    '<p><b>Decisions and conclusions:</b><br>'+e(r.decisions).replace(/\n/g,'<br>')+'</p>'+(r.resources?'<p><b>Resources:</b><br>'+e(r.resources).replace(/\n/g,'<br>')+'</p>':'')+
+    ((r.actions||[]).length?'<table><tr><th>Action</th><th>Who</th><th>Due</th><th>Status</th></tr>'+r.actions.map(function(a){return '<tr><td>'+e(a.what)+'</td><td>'+e(a.who)+'</td><td>'+e(a.due)+'</td><td class="'+(a.done?'ok':'bad')+'">'+(a.done?'Done '+e(a.done_on||''):'Open')+'</td></tr>';}).join('')+'</table>':'')+'</div>';}
+function MrForm(props){
+  const lic=props.license,st=props.state,x=props.review||{},me=(props.profile&&props.profile.name)||'',prev=props.prev||null;
+  const[f,setF]=useState({meeting_date:x.meeting_date||todayStr(),period_from:x.period_from||(prev&&prev.period_to?eqAddDays(prev.period_to,1):eqAddDays(todayStr(),-365)),period_to:x.period_to||todayStr(),chair:x.chair||me,attendees:x.attendees||'',
+    inputs:JSON.parse(JSON.stringify(x.inputs||{})),decisions:x.decisions||'',resources:x.resources||'',actions:(x.actions||[]).slice(),next_review:x.next_review||eqAddDays(todayStr(),365),files:(x.files||[]).slice()});
+  const[err,setErr]=useState('');const[busy,setBusy]=useState(false);const[fill,setFill]=useState('');
+  function set(k,v){setF(function(p){return {...p,[k]:v};});}
+  function setIn(k,field,v){setF(function(p){const I={...p.inputs};I[k]={...(I[k]||{}),[field]:v};return {...p,inputs:I};});}
+  function doFill(){setFill('Counting...');mrFacts(lic,f.period_from,f.period_to,prev).then(function(o){setF(function(p){const I={...p.inputs};Object.keys(o).forEach(function(k){I[k]={...(I[k]||{}),data:o[k]};});return {...p,inputs:I};});setFill('Filled from Hendrix records for '+f.period_from+' to '+f.period_to+'.');}).catch(function(e){setFill('');setErr(String(e.message||e));});}
+  useEffect(function(){if(!x.id)doFill();},[]);
+  const missing=MR_INPUTS.filter(function(i){return i[2]&&!((f.inputs[i[0]]||{}).notes||'').trim();});
+  async function save(sign){setErr('');
+    if(sign){if(!f.chair.trim()||!f.attendees.trim()){setErr('Enter the chair and who attended.');return;}if(missing.length){setErr('Discuss every required input before signing: '+missing.map(function(i){return i[1];}).join(', ')+'.');return;}
+      if(!f.decisions.trim()){setErr('Record the decisions and conclusions.');return;}}
+    const rec={meeting_date:f.meeting_date,period_from:f.period_from||null,period_to:f.period_to||null,chair:f.chair.trim(),attendees:f.attendees.trim(),inputs:f.inputs,decisions:f.decisions.trim(),resources:f.resources.trim(),
+      actions:f.actions.filter(function(a){return (a.what||'').trim();}),next_review:f.next_review||null,files:f.files};
+    if(sign)rec.status='held';
+    setBusy(true);try{let r;if(x.id)r=await db.update('hx_mgmt_reviews',x.id,rec);else r=await db.insert('hx_mgmt_reviews',{...rec,id:newId('mr'),state_id:st.id,license_id:lic.id});
+      const n=(r&&r[0]&&r[0].number)||x.number||'';if(sign&&!x.id&&r&&r[0]&&r[0].status!=='held')await db.update('hx_mgmt_reviews',r[0].id,{status:'held'});
+      props.onDone(sign?'Signed management review '+n+'.':'Saved draft '+n+'.');}catch(e){setErr(mvErr(e));}setBusy(false);}
+  return el(Modal,{title:(x.id?'Management review '+x.number:'New management review')+' \u00b7 '+lic.name,wide:true,onClose:props.onClose},
+    el('div',{style:{display:'grid',gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:10}},el(Field,{label:'Meeting date'},el('input',{type:'date',value:f.meeting_date,max:todayStr(),onChange:function(e){set('meeting_date',e.target.value);}})),
+      el(Field,{label:'Period from'},el('input',{type:'date',value:f.period_from,onChange:function(e){set('period_from',e.target.value);}})),el(Field,{label:'Period to'},el('input',{type:'date',value:f.period_to,onChange:function(e){set('period_to',e.target.value);}}))),
+    el('div',{style:{display:'grid',gridTemplateColumns:'1fr 2fr',gap:10}},el(Field,{label:'Chair (senior management) *'},el('input',{value:f.chair,onChange:function(e){set('chair',e.target.value);}})),
+      el(Field,{label:'Attendees *'},el('input',{value:f.attendees,placeholder:'Names and roles',onChange:function(e){set('attendees',e.target.value);}}))),
+    el('div',{className:'row',style:{gap:8,margin:'2px 0 8px'}},el('button',{type:'button',className:'btn ghost sm',onClick:doFill},'Fill from Hendrix'),el('span',{className:'muted',style:{fontSize:12}},fill||'Counts each input from the records for the period.')),
+    MR_INPUTS.map(function(i){const v=f.inputs[i[0]]||{},miss=i[2]&&!(v.notes||'').trim();
+      return el('div',{key:i[0],className:'card',style:{padding:'8px 12px',marginBottom:8}},el('div',{className:'row',style:{justifyContent:'space-between'}},el('b',{style:{fontSize:13}},i[1]+(i[2]?' *':'')),miss&&el('span',{className:'muted',style:{fontSize:11}},'to discuss')),
+        el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginTop:4}},el('textarea',{rows:2,value:v.data||'',placeholder:'Facts',style:{fontSize:12},onChange:function(e){setIn(i[0],'data',e.target.value);}}),
+          el('textarea',{rows:2,value:v.notes||'',placeholder:'Discussion and conclusions',onChange:function(e){setIn(i[0],'notes',e.target.value);}})));}),
+    el(Field,{label:'Decisions and conclusions (is the system suitable, adequate and effective?) *'},el('textarea',{rows:3,value:f.decisions,onChange:function(e){set('decisions',e.target.value);}})),
+    el(Field,{label:'Resource needs'},el('textarea',{rows:2,value:f.resources,onChange:function(e){set('resources',e.target.value);}})),
+    el(Field,{label:'Actions',plain:true},el(ccActRows,{actions:f.actions,onChange:function(v){set('actions',v);}})),
+    el('div',{style:{display:'grid',gridTemplateColumns:'200px 1fr',gap:10}},el(Field,{label:'Next review (within 12 months)'},el('input',{type:'date',value:f.next_review,onChange:function(e){set('next_review',e.target.value);}})),
+      el(Field,{label:'Files (agenda, sign-in sheet, slides)',plain:true},el(FileList,{files:f.files,folder:'mgmtreview/'+lic.id,onChange:function(v){set('files',v);},onErr:setErr}))),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn ghost',disabled:busy,onClick:function(){save(false);}},'Save draft'),
+      can('mgmtreview',3)&&el('button',{className:'btn',disabled:busy,title:missing.length?'Discuss: '+missing.map(function(i){return i[1];}).join(', '):'',onClick:function(){save(true);}},busy?'Saving...':'Sign as held')));
+}
+function MrFollow(props){
+  const r=props.review;const[a,setA]=useState((r.actions||[]).slice());const[sw,setSw]=useState(r.shared_with||'');const[so,setSo]=useState(r.shared_on||'');const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  async function save(){setErr('');setBusy(true);try{await db.update('hx_mgmt_reviews',r.id,{actions:a,shared_with:sw.trim(),shared_on:so||null});props.onDone('Saved '+r.number+'.');}catch(e){setErr(mvErr(e));}setBusy(false);}
+  return el(Modal,{title:'Follow-up \u00b7 '+r.number,wide:true,onClose:props.onClose},
+    el('div',{className:'muted',style:{fontSize:13,marginBottom:8}},'Signed by '+r.signed_by+'. The minutes are locked; tick actions as they are done and record who the minutes were shared with.'),
+    el(Field,{label:'Actions',plain:true},a.length?el(ccActRows,{actions:a,tick:true,disabled:true,onChange:setA}):el('div',{className:'muted'},'No actions.')),
+    el('div',{style:{display:'grid',gridTemplateColumns:'2fr 1fr',gap:10}},el(Field,{label:'Minutes shared with'},el('input',{value:sw,placeholder:'e.g. All managers, posted in the break room',onChange:function(e){setSw(e.target.value);}})),
+      el(Field,{label:'Shared on'},el('input',{type:'date',value:so,max:todayStr(),onChange:function(e){setSo(e.target.value);}}))),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:save},busy?'Saving...':'Save')));
+}
+function MgmtReviewTab(props){
+  const st=props.state,lic=props.license,lid=lic.id;const[rows,setRows]=useState(null);const[msg,setMsg]=useState('');const[modal,setModal]=useState(null);
+  const load=useCallback(function(){db.get('hx_mgmt_reviews','license_id=eq.'+encodeURIComponent(lid)+'&select=*&order=meeting_date.desc').then(function(r){setRows((r||[]).filter(function(x){return x.license_id===lid;}));}).catch(function(e){setMsg(mvErr(e));setRows([]);});},[lid]);
+  useEffect(load,[load]);
+  function done(m){setModal(null);setMsg(m);load();}
+  const R=rows||[],held=R.filter(function(r){return r.status==='held';}).sort(function(a,b){return a.meeting_date<b.meeting_date?1:-1;}),last=held[0]||null,T=todayStr();
+  const due=last?last.next_review:null,openA=held.reduce(function(n,r){return n+(r.actions||[]).filter(function(a){return !a.done;}).length;},0);
+  const prevFor=function(x){return held.find(function(r){return r.id!==(x&&x.id)&&(!x||!x.meeting_date||r.meeting_date<=x.meeting_date);})||null;};
+  const stat=function(l,v,tone,sub){return el('div',{key:l,className:'card gold',style:{marginBottom:0}},el('div',{className:'k'},l),el('div',{className:'v',style:{fontSize:24,color:tone}},v),sub&&el('div',{className:'muted',style:{fontSize:11,marginTop:2}},sub));};
+  const canE=can('mgmtreview',2),canF=can('mgmtreview',3);
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},el('div',null,el('h1',null,el('span',{className:'g'},'Management Review')),el('div',{className:'sub'},lic.name+' \u00b7 senior management reviews the whole system at least once a year; minutes kept and shared (CSQ 5.1.3)')),
+      canE&&el('button',{className:'btn',onClick:function(){setModal({t:'new'});}},'+ Management review')),
+    msg&&el('div',{className:/^(Saved|Signed|Cancelled)/.test(msg)?'msg':'msg err'},msg),props.tabs,
+    rows===null?el('div',{className:'muted'},'Loading...'):el('div',null,
+      el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',marginBottom:14}},
+        stat('Last review',last?last.meeting_date:'Never',last&&last.meeting_date>=eqAddDays(T,-365)?'var(--green)':'var(--red)',last?last.number:'at least yearly'),
+        stat('Next review due',due||'-',due&&due<T?'var(--red)':'var(--text)',due&&due<T?'overdue':''),
+        stat('Open actions',openA,openA?'var(--gold-hi)':'var(--green)','from signed reviews'),
+        stat('Minutes shared',last?(last.shared_on?'Yes':'Not yet'):'-',last&&!last.shared_on?'var(--gold-hi)':'var(--text)',last&&last.shared_with||'')),
+      !R.length?el('div',{className:'empty'},'No management reviews yet.'+(canE?' Start one: Hendrix fills the facts for each input (complaints, audits, CAPAs, risks, KPIs, CSQ, changes...) from your records.':'')):
+      el('div',{className:'card',style:{overflowX:'auto',padding:0}},el('table',null,el('thead',null,el('tr',null,['No.','Meeting','Period','Chair','Status','Actions','Shared',''].map(function(h,i){return el('th',{key:i},h);}))),
+        el('tbody',null,R.map(function(r){const a=r.actions||[],d=a.filter(function(x){return x.done;}).length;
+          return el('tr',{key:r.id,className:r.status==='cancelled'?'voidrow':''},el('td',null,r.number),el('td',null,r.meeting_date),el('td',{style:{fontSize:12}},(r.period_from||'')+' \u2013 '+(r.period_to||'')),el('td',null,r.chair),
+            el('td',null,el('span',{className:'badge '+(r.status==='held'?'ok':r.status==='draft'?'warn':'off'),title:r.cancel_reason||''},r.status==='held'?'Held \u00b7 signed':r.status==='draft'?'Draft':'Cancelled')),
+            el('td',null,a.length?el('span',{className:'badge '+(d===a.length?'ok':'warn')},d+' / '+a.length):'-'),el('td',{style:{fontSize:12}},r.shared_on||(r.status==='held'?el('span',{className:'badge warn'},'Not yet'):'-')),
+            el('td',{style:{whiteSpace:'nowrap'}},el('button',{className:'btn ghost sm',onClick:function(){printRecords('Management review '+r.number,[mrHtml(r,lic)]);}},'Print'),
+              r.status==='draft'&&canE&&el('button',{className:'btn sm',style:{marginLeft:4},onClick:function(){setModal({t:'edit',r:r});}},'Continue'),
+              r.status==='held'&&canE&&el('button',{className:'btn ghost sm',style:{marginLeft:4},onClick:function(){setModal({t:'follow',r:r});}},'Follow-up'),
+              r.status==='draft'&&canF&&el('button',{className:'btn danger sm',style:{marginLeft:4},onClick:function(){setModal({t:'cancel',r:r});}},'Cancel')));}))))),
+    modal&&(modal.t==='new'||modal.t==='edit')&&el(MrForm,{review:modal.r,prev:prevFor(modal.r),state:st,license:lic,profile:props.profile,onClose:function(){setModal(null);},onDone:done}),
+    modal&&modal.t==='follow'&&el(MrFollow,{review:modal.r,onClose:function(){setModal(null);},onDone:done}),
+    modal&&modal.t==='cancel'&&el(SimpleReason,{title:'Cancel '+modal.r.number,label:'Reason',btn:'Cancel review',onClose:function(){setModal(null);},
+      onGo:function(t){return db.update('hx_mgmt_reviews',modal.r.id,{status:'cancelled',cancel_reason:t}).then(function(){done('Cancelled '+modal.r.number+'.');}).catch(function(e){throw new Error(mvErr(e));});}}));
+}
+
+/* verification schedule: where each activity's last date comes from */
+const VS_SOURCES=[['manual','Recorded here',null],['sanitation_verify','Sanitation log signed by a verifier','logs_sanitation'],['ccp_review','CCP records verified (HACCP)','haccp'],['haccp_verify','HACCP verification / reanalysis','haccp'],
+  ['calibration','Calibrations (Equipment)','equipment'],['internal_audit','Internal audits','intaudits'],['env_tests','Facility tests','envtests'],['line_clear','Line clearances verified by a supervisor','lineclear'],
+  ['risk_review','Risk reviews','risks'],['kpi_review','KPI results','objectives'],['mgmt_review','Management review','mgmtreview'],['supplier_review','Supplier reviews','suppliers']];
+function vsSrc(k){return VS_SOURCES.find(function(s){return s[0]===k;})||VS_SOURCES[0];}
+async function vsAuto(src,lic){
+  const lid=lic.id,enc=encodeURIComponent,L='license_id=eq.'+enc(lid),mine=function(x){return x.license_id===lid;},mx=function(a){return a.filter(Boolean).map(function(d){return String(d).slice(0,10);}).sort().pop()||null;};
+  const m=vsSrc(src)[2];if(!m||!can(m,1))return null;
+  if(src==='sanitation_verify')return mx(((await db.get('hx_facility_log',L+'&log_type=eq.sanitation&select=created_at,data,voided,license_id&order=created_at.desc&limit=400'))||[]).filter(function(x){return mine(x)&&!x.voided&&String((x.data||{}).verified_by||'').trim();}).map(function(x){return x.created_at;}));
+  if(src==='ccp_review')return mx(((await db.get('hx_haccp_monitoring',L+'&voided=eq.false&select=verified_at,license_id&order=checked_at.desc&limit=500'))||[]).filter(mine).map(function(x){return x.verified_at;}));
+  if(src==='haccp_verify')return mx(((await db.get('hx_haccp_verifications',L+'&voided=eq.false&select=done_on,license_id'))||[]).filter(mine).map(function(x){return x.done_on;}));
+  if(src==='calibration')return mx(((await db.get('hx_equipment_events',L+'&kind=eq.calibration&voided=eq.false&select=done_on,license_id'))||[]).filter(mine).map(function(x){return x.done_on;}));
+  if(src==='internal_audit')return mx(((await db.get('hx_audits',L+'&status=in.(completed,closed)&select=audit_date,status,license_id'))||[]).filter(function(x){return mine(x)&&(x.status==='completed'||x.status==='closed');}).map(function(x){return x.audit_date;}));
+  if(src==='env_tests')return mx(((await db.get('hx_env_tests',L+'&voided=eq.false&select=sampled_on,license_id'))||[]).filter(mine).map(function(x){return x.sampled_on;}));
+  if(src==='line_clear')return mx(((await db.get('hx_line_clearances',L+'&voided=eq.false&select=checked_at,verified_by,license_id&order=checked_at.desc&limit=400'))||[]).filter(function(x){return mine(x)&&String(x.verified_by||'').trim();}).map(function(x){return x.checked_at;}));
+  if(src==='risk_review')return mx(((await db.get('hx_risk_reviews',L+'&select=reviewed_on,license_id'))||[]).filter(mine).map(function(x){return x.reviewed_on;}));
+  if(src==='kpi_review')return mx(((await db.get('hx_objective_results',L+'&select=created_at,updated_at,license_id'))||[]).filter(mine).map(function(x){return x.updated_at||x.created_at;}));
+  if(src==='mgmt_review')return mx(((await db.get('hx_mgmt_reviews',L+'&status=eq.held&select=meeting_date,status,license_id'))||[]).filter(function(x){return mine(x)&&x.status==='held';}).map(function(x){return x.meeting_date;}));
+  if(src==='supplier_review')return mx(((await db.get('hx_suppliers','select=last_review,license_id,license_ids'))||[]).filter(function(x){return x.license_id===lid||(x.license_ids||[]).indexOf(lid)>=0;}).map(function(x){return x.last_review;}));
+  return null;
+}
+// last date per activity = latest of the linked records and the verifications recorded here
+async function vsLastAll(lic,plans,recs){
+  const srcs={};plans.forEach(function(p){if(p.source&&p.source!=='manual')srcs[p.source]=1;});const auto={};
+  await Promise.all(Object.keys(srcs).map(function(s){return vsAuto(s,lic).then(function(d){auto[s]=d;}).catch(function(){auto[s]=null;});}));
+  if(!recs)recs=((await db.get('hx_verification_records','license_id=eq.'+encodeURIComponent(lic.id)+'&voided=eq.false&select=plan_id,done_on,license_id').catch(function(){return [];}))||[]).filter(function(x){return x.license_id===lic.id;});
+  const out={};plans.forEach(function(p){const d=[auto[p.source]].concat(recs.filter(function(r){return r.plan_id===p.id&&!r.voided;}).map(function(r){return r.done_on;})).filter(Boolean).sort().pop()||null;out[p.id]=d;out[p.id+'_auto']=auto[p.source]||null;});
+  return out;
+}
+const VS_STARTER=[['Sanitation records reviewed and signed','Supervisor checks the sanitation log is complete and signs it',7,'sanitation_verify','Facility Logs - Sanitation','2A.3'],
+  ['CCP monitoring records reviewed','A second person reviews and verifies every CCP check',7,'ccp_review','HACCP - Monitoring','4A.8'],
+  ['HACCP plan verification','Records review and on-floor check that the plan is followed',90,'haccp_verify','HACCP - Verification','4A.11'],
+  ['Scale and equipment calibration','Calibration against certified weights / standards',30,'calibration','Equipment','2A.2.3'],
+  ['Line clearance verified','Supervisor verifies the pre-operational inspection',30,'line_clear','Line Clearance','2A.12.3'],
+  ['Facility air and water tests reviewed','ISO 17025 lab results checked against limits',365,'env_tests','Facility Tests','2A.6, 2A.7'],
+  ['Risk register review','Owners review each risk on its schedule',90,'risk_review','Risk Register','5.1.6'],
+  ['KPI review','Results recorded and discussed with the team',90,'kpi_review','Quality Objectives','5.1.4'],
+  ['Internal audit','Full CSQ scope audited by a trained, independent auditor',365,'internal_audit','Internal Audits','1.8'],
+  ['Management review','Senior management reviews the system',365,'mgmt_review','Management Review','5.1.3'],
+  ['Supplier performance review','Approved suppliers re-evaluated',365,'supplier_review','Suppliers','2A.12.4'],
+  ['Labels checked against the batch','Label claims checked against the COA and formulation',30,'manual','Compliance Stickers',''],
+  ['Pest control service reports reviewed','Pest service report and trap map reviewed, trends checked',30,'manual','Facility Logs - Pest','2A.5.1']];
+function VsForm(props){
+  const lic=props.license,st=props.state,x=props.plan||{},me=(props.profile&&props.profile.name)||'';
+  const[f,setF]=useState({activity:x.activity||'',method:x.method||'',responsible:x.responsible||me,frequency_days:x.frequency_days||30,source:x.source||'manual',record_where:x.record_where||'',clause:x.clause||''});
+  const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  function set(k,v){setF(function(p){return {...p,[k]:v};});}
+  async function save(){setErr('');if(!f.activity.trim()||!f.responsible.trim()){setErr('Enter the activity and who does it.');return;}
+    const rec={activity:f.activity.trim(),method:f.method.trim(),responsible:f.responsible.trim(),frequency_days:+f.frequency_days||30,source:f.source,record_where:f.record_where.trim(),clause:f.clause.trim()};
+    setBusy(true);try{if(x.id)await db.update('hx_verification_plan',x.id,rec);else await db.insert('hx_verification_plan',{...rec,id:newId('vp'),state_id:st.id,license_id:lic.id});props.onDone('Saved '+rec.activity+'.');}catch(e){setErr(mvErr(e));}setBusy(false);}
+  return el(Modal,{title:(x.id?x.number:'New verification activity')+' \u00b7 '+lic.name,wide:true,onClose:props.onClose},
+    el(Field,{label:'What is verified *'},el('input',{value:f.activity,placeholder:'e.g. CCP monitoring records reviewed',onChange:function(e){set('activity',e.target.value);}})),
+    el(Field,{label:'How'},el('input',{value:f.method,onChange:function(e){set('method',e.target.value);}})),
+    el('div',{style:{display:'grid',gridTemplateColumns:'2fr 1fr 2fr',gap:10}},el(Field,{label:'Who *'},el('input',{value:f.responsible,onChange:function(e){set('responsible',e.target.value);}})),
+      el(Field,{label:'Every (days)'},el('input',{type:'number',min:1,value:f.frequency_days,onChange:function(e){set('frequency_days',e.target.value);}})),
+      el(Field,{label:'Last date comes from'},el('select',{value:f.source,onChange:function(e){set('source',e.target.value);}},VS_SOURCES.filter(function(s){return !s[2]||can(s[2],1)||s[0]===f.source;}).map(function(s){return el('option',{key:s[0],value:s[0]},s[1]);})))),
+    el('div',{style:{display:'grid',gridTemplateColumns:'2fr 1fr',gap:10}},el(Field,{label:'Recorded where'},el('input',{value:f.record_where,onChange:function(e){set('record_where',e.target.value);}})),
+      el(Field,{label:'CSQ clause'},el('input',{value:f.clause,onChange:function(e){set('clause',e.target.value);}}))),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:save},busy?'Saving...':'Save')));
+}
+function VsRecordForm(props){
+  const p=props.plan,me=(props.profile&&props.profile.name)||'';
+  const[f,setF]=useState({done_on:todayStr(),done_by:me,result:'ok',findings:'',action:'',files:[]});const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  function set(k,v){setF(function(q){return {...q,[k]:v};});}
+  async function save(){setErr('');if(!f.done_by.trim()){setErr('Enter who did the verification.');return;}if(f.result==='issues'&&(!f.findings.trim()||!f.action.trim())){setErr('Describe the issues found and the action taken.');return;}
+    setBusy(true);try{await db.insert('hx_verification_records',{id:newId('vr'),state_id:p.state_id,license_id:p.license_id,plan_id:p.id,done_on:f.done_on,done_by:f.done_by.trim(),result:f.result,findings:f.findings.trim(),action:f.action.trim(),files:f.files});
+      props.onDone('Recorded: '+p.activity+'.');}catch(e){setErr(mvErr(e));}setBusy(false);}
+  return el(Modal,{title:'Verified \u00b7 '+p.number+' '+p.activity,onClose:props.onClose},
+    p.method&&el('div',{className:'muted',style:{fontSize:13,marginBottom:8}},p.method),
+    el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}},el(Field,{label:'Date'},el('input',{type:'date',value:f.done_on,max:todayStr(),onChange:function(e){set('done_on',e.target.value);}})),
+      el(Field,{label:'By *'},el('input',{value:f.done_by,onChange:function(e){set('done_by',e.target.value);}})),
+      el(Field,{label:'Result'},el('select',{value:f.result,onChange:function(e){set('result',e.target.value);}},el('option',{value:'ok'},'No issues'),el('option',{value:'issues'},'Issues found')))),
+    el(Field,{label:'Findings'+(f.result==='issues'?' *':'')},el('textarea',{rows:2,value:f.findings,onChange:function(e){set('findings',e.target.value);}})),
+    f.result==='issues'&&el(Field,{label:'Action taken *'},el('textarea',{rows:2,value:f.action,onChange:function(e){set('action',e.target.value);}})),
+    el(Field,{label:'Files',plain:true},el(FileList,{files:f.files,folder:'verification/'+p.license_id,onChange:function(v){set('files',v);},onErr:setErr})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:save},busy?'Saving...':'Record')));
+}
+function vsHtml(P,last,lic){const e=esc3,T=todayStr();
+  return '<div class="hxrec"><h2>Verification schedule</h2><div class="m">'+e(lic.name)+' \u00b7 CSQ 5.1.8 \u00b7 printed '+e(new Date().toLocaleString())+'</div><table><tr><th>No.</th><th>What is verified / how</th><th>Who</th><th>How often</th><th>Recorded where</th><th>Last done</th><th>Next due</th></tr>'+
+    P.map(function(p){const l=last[p.id],n=l?eqAddDays(l,p.frequency_days):null;return '<tr><td>'+e(p.number)+'</td><td><b>'+e(p.activity)+'</b><br>'+e(p.method)+(p.clause?'<br><i>CSQ '+e(p.clause)+'</i>':'')+'</td><td>'+e(p.responsible)+'</td><td>every '+p.frequency_days+' days</td><td>'+e(p.record_where||vsSrc(p.source)[1])+'</td><td>'+e(l||'Never')+'</td><td class="'+(!n||n<T?'bad':'ok')+'">'+e(n||'Now')+'</td></tr>';}).join('')+'</table></div>';}
+function VerificationTab(props){
+  const st=props.state,lic=props.license,lid=lic.id;const[plans,setPlans]=useState(null);const[recs,setRecs]=useState([]);const[last,setLast]=useState({});const[msg,setMsg]=useState('');const[modal,setModal]=useState(null);const[showOff,setShowOff]=useState(false);
+  const load=useCallback(function(){const L='license_id=eq.'+encodeURIComponent(lid);
+    Promise.all([db.get('hx_verification_plan',L+'&select=*&order=number'),db.get('hx_verification_records',L+'&select=*&order=done_on.desc&limit=3000')]).then(function(r){
+      const P=(r[0]||[]).filter(function(x){return x.license_id===lid;}),R=(r[1]||[]).filter(function(x){return x.license_id===lid;});setPlans(P);setRecs(R);
+      vsLastAll(lic,P,R.filter(function(x){return !x.voided;})).then(setLast);}).catch(function(e){setMsg(mvErr(e));setPlans([]);});},[lid]);
+  useEffect(load,[load]);
+  function done(m){setModal(null);setMsg(m);load();}
+  const T=todayStr(),P=(plans||[]),act=P.filter(function(p){return p.active;}),shown=showOff?P:act;
+  const nextOf=function(p){const l=last[p.id];return l?eqAddDays(l,p.frequency_days):null;},od=act.filter(function(p){const n=nextOf(p);return !n||n<T;}),soon=act.filter(function(p){const n=nextOf(p);return n&&n>=T&&n<=eqAddDays(T,7);});
+  const stat=function(l,v,tone,sub){return el('div',{key:l,className:'card gold',style:{marginBottom:0}},el('div',{className:'k'},l),el('div',{className:'v',style:{fontSize:26,color:tone}},v),sub&&el('div',{className:'muted',style:{fontSize:11,marginTop:2}},sub));};
+  const canE=can('verification',2),canF=can('verification',3),y1=eqAddDays(T,-365);
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},el('div',null,el('h1',null,el('span',{className:'g'},'Verification Schedule')),el('div',{className:'sub'},lic.name+' \u00b7 what is verified, how, by whom, how often and where it is recorded (CSQ 5.1.8)')),
+      el('div',{className:'row',style:{gap:6}},el('button',{className:'btn ghost',disabled:!act.length,onClick:function(){printRecords('Verification schedule',[vsHtml(act,last,lic)]);}},'Print schedule'),
+        canE&&!P.length&&el('button',{className:'btn ghost',onClick:function(){setModal({t:'starter'});}},'Suggested schedule'),canE&&el('button',{className:'btn',onClick:function(){setModal({t:'plan'});}},'+ Activity'))),
+    msg&&el('div',{className:/^(Saved|Added|Recorded|Voided|Turned)/.test(msg)?'msg':'msg err'},msg),props.tabs,
+    plans===null?el('div',{className:'muted'},'Loading...'):el('div',null,
+      el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',marginBottom:14}},
+        stat('Scheduled activities',act.length,'var(--text)',act.filter(function(p){return p.source!=='manual';}).length+' linked to Hendrix records'),
+        stat('Overdue or never done',od.length,od.length?'var(--red)':'var(--green)',''),stat('Due in 7 days',soon.length,soon.length?'var(--gold-hi)':'var(--text)',''),
+        stat('Recorded here (12 months)',recs.filter(function(r){return !r.voided&&r.done_on>=y1;}).length,'var(--text)',recs.filter(function(r){return !r.voided&&r.done_on>=y1&&r.result==='issues';}).length+' with issues')),
+      !P.length?el('div',{className:'empty'},'No verification schedule yet.'+(canE?' Start from the suggested schedule: most activities take their last date straight from Hendrix records.':'')):
+      el('div',null,el('div',{className:'card',style:{overflowX:'auto',padding:0}},el('table',null,el('thead',null,el('tr',null,['No.','What is verified','Who','Every','Last done','Next due',''].map(function(h,i){return el('th',{key:i},h);}))),
+        el('tbody',null,shown.map(function(p){const l=last[p.id],n=nextOf(p),late=p.active&&(!n||n<T),au=last[p.id+'_auto'];
+          return el('tr',{key:p.id,className:p.active?'':'voidrow'},el('td',null,p.number),el('td',null,el('b',null,p.activity),el('div',{className:'muted',style:{fontSize:11}},[p.method,p.record_where||vsSrc(p.source)[1],p.clause&&'CSQ '+p.clause].filter(Boolean).join(' \u00b7 '))),
+            el('td',{style:{fontSize:13}},p.responsible),el('td',{style:{fontSize:13}},p.frequency_days+' days'),
+            el('td',{style:{fontSize:13}},l||el('span',{className:'muted'},'Never'),l&&au&&au===l&&el('div',{className:'muted',style:{fontSize:10}},'from '+vsSrc(p.source)[1])),
+            el('td',null,!p.active?'-':el('span',{className:'badge '+(late?'bad':n<=eqAddDays(T,7)?'warn':'ok'),style:{whiteSpace:'nowrap'}},late?(n?'Overdue '+n:'Due now'):n)),
+            el('td',{style:{whiteSpace:'nowrap'}},p.active&&canE&&el('button',{className:late?'btn sm':'btn ghost sm',onClick:function(){setModal({t:'rec',p:p});}},'Record'),
+              el('button',{className:'btn ghost sm',style:{marginLeft:4},onClick:function(){setModal({t:'hist',p:p});}},'History'),
+              canE&&el('button',{className:'btn ghost sm',style:{marginLeft:4},onClick:function(){setModal({t:'plan',p:p});}},'Edit'),
+              canF&&el('button',{className:'btn ghost sm',style:{marginLeft:4},onClick:function(){db.update('hx_verification_plan',p.id,{active:!p.active}).then(function(){done('Turned '+(p.active?'off':'on')+' '+p.number+'.');}).catch(function(e){setMsg(mvErr(e));});}},p.active?'Turn off':'Turn on')));})))),
+        P.length>act.length&&el('div',{style:{marginTop:10}},el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();setShowOff(!showOff);}},showOff?'Hide turned off':'Show turned off ('+(P.length-act.length)+')')))),
+    modal&&modal.t==='plan'&&el(VsForm,{plan:modal.p,state:st,license:lic,profile:props.profile,onClose:function(){setModal(null);},onDone:done}),
+    modal&&modal.t==='rec'&&el(VsRecordForm,{plan:modal.p,profile:props.profile,onClose:function(){setModal(null);},onDone:done}),
+    modal&&modal.t==='starter'&&el(VsStarter,{state:st,license:lic,profile:props.profile,onClose:function(){setModal(null);},onDone:done}),
+    modal&&modal.t==='hist'&&el(Modal,{title:'History \u00b7 '+modal.p.number+' '+modal.p.activity,wide:true,onClose:function(){setModal(null);}},
+      last[modal.p.id+'_auto']&&el('div',{className:'muted',style:{fontSize:13,marginBottom:8}},'Latest in '+vsSrc(modal.p.source)[1]+': '+last[modal.p.id+'_auto']+'.'),
+      (function(){const H=recs.filter(function(r){return r.plan_id===modal.p.id;});return !H.length?el('div',{className:'muted'},'Nothing recorded here yet.'):
+        el('table',null,el('thead',null,el('tr',null,['Date','By','Result','Findings / action',''].map(function(h,i){return el('th',{key:i},h);}))),el('tbody',null,H.map(function(r){
+          return el('tr',{key:r.id,className:r.voided?'voidrow':''},el('td',null,r.done_on),el('td',null,r.done_by),el('td',null,r.voided?el('span',{className:'badge bad',title:r.void_reason},'Void'):el('span',{className:'badge '+(r.result==='ok'?'ok':'bad')},r.result==='ok'?'No issues':'Issues')),
+            el('td',{style:{fontSize:12}},r.findings,r.action&&el('div',null,'Action: '+r.action)),
+            el('td',{style:{whiteSpace:'nowrap'}},!r.voided&&r.result==='issues'&&el(RaiseDeviation,{state:st,license:lic,prefill:{title:'Verification issue: '+modal.p.activity,dept:'Quality',category:'',lot_number:'',source_type:'verification',source_id:r.id,source_label:modal.p.number+' '+r.done_on,occurred_on:r.done_on}}),
+              !r.voided&&canF&&el('button',{className:'btn danger sm',style:{marginLeft:4},onClick:function(){setModal({t:'void',r:r,p:modal.p});}},'Void')));})));})()),
+    modal&&modal.t==='void'&&el(VoidModal,{what:'this verification record',onClose:function(){setModal(null);},onVoid:function(why){return db.update('hx_verification_records',modal.r.id,{voided:true,void_reason:why}).then(function(){done('Voided.');});}}));
+}
+function VsStarter(props){
+  const lic=props.license,st=props.state,list=VS_STARTER.filter(function(x){const m=vsSrc(x[3])[2];return !m||can(m,1);});
+  const[sel,setSel]=useState(function(){const s={};list.forEach(function(x,i){s[i]=true;});return s;});const[who,setWho]=useState((props.profile&&props.profile.name)||'');const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  async function go(){setErr('');if(!who.trim()){setErr('Enter who does the verifications (change each one later).');return;}let n=0;setBusy(true);
+    try{for(let i=0;i<list.length;i++){if(!sel[i])continue;const x=list[i];await db.insert('hx_verification_plan',{id:newId('vp'),state_id:st.id,license_id:lic.id,activity:x[0],method:x[1],frequency_days:x[2],source:x[3],record_where:x[4],clause:x[5],responsible:who.trim()});n++;}
+      props.onDone('Added '+n+' verification activit'+(n===1?'y':'ies')+'.');}catch(e){setErr(mvErr(e));if(n)props.onDone('Added '+n+'.');}setBusy(false);}
+  return el(Modal,{title:'Suggested verification schedule',wide:true,onClose:props.onClose},
+    el('div',{className:'card',style:{padding:'4px 12px'}},list.map(function(x,i){return el('label',{key:i,className:'ck',style:{display:'flex',gap:8,padding:'6px 0',borderTop:i?'1px solid #1d1d1d':'none',alignItems:'flex-start'}},
+      el('input',{type:'checkbox',checked:!!sel[i],onChange:function(e){setSel(function(p){return {...p,[i]:e.target.checked};});}}),el('span',{style:{flex:1}},el('b',null,x[0]),el('span',{className:'muted',style:{fontSize:12}},' \u00b7 every '+x[2]+' days \u00b7 '+(x[3]==='manual'?'recorded here':'from '+vsSrc(x[3])[1]))));})),
+    el(Field,{label:'Who does them *'},el('input',{value:who,onChange:function(e){setWho(e.target.value);}})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:go},busy?'Adding...':'Add selected')));
+}
+function MvDashCard(props){
+  const lic=props.license,lid=lic?lic.id:'';const[d,setD]=useState(null);
+  useEffect(function(){if(!lid||!(can('mgmtreview',1)||can('verification',1))){setD(null);return;}let dead=false;const L='license_id=eq.'+encodeURIComponent(lid);
+    (async function(){const o={};
+      if(can('mgmtreview',1)){const r=((await db.get('hx_mgmt_reviews',L+'&status=eq.held&select=meeting_date,next_review,status,license_id').catch(function(){return null;}))||[]).filter(function(x){return x.license_id===lid&&x.status==='held';}).sort(function(a,b){return a.meeting_date<b.meeting_date?1:-1;});o.mr=true;o.last=r[0]||null;}
+      if(can('verification',1)){const P=((await db.get('hx_verification_plan',L+'&active=eq.true&select=*').catch(function(){return null;}))||[]).filter(function(x){return x.license_id===lid&&x.active;});o.vs=true;o.n=P.length;
+        if(P.length){const l=await vsLastAll(lic,P);o.od=P.filter(function(p){return !l[p.id]||eqAddDays(l[p.id],p.frequency_days)<todayStr();}).length;}else o.od=0;}
+      if(!dead)setD(o);})().catch(function(){if(!dead)setD(null);});return function(){dead=true;};},[lid]);
+  if(!d)return null;const T=todayStr(),mrLate=d.mr&&(!d.last||(d.last.next_review&&d.last.next_review<T));
+  return el('div',{className:'card gold'},el('div',{className:'k'},'Review and verification'),
+    el('div',{className:'v',style:{color:mrLate||d.od?'var(--red)':'var(--green)'}},d.mr&&!d.last?'No management review':mrLate?'Management review overdue':d.vs&&d.od?d.od+' verification'+(d.od===1?'':'s')+' overdue':'Up to date'),
+    el('div',{className:'muted',style:{margin:'4px 0 8px'}},[d.mr&&(d.last?'Last review '+d.last.meeting_date+' \u00b7 next '+(d.last.next_review||'-'):'Hold one at least yearly (CSQ 5.1.3)'),d.vs&&(d.n?d.n+' scheduled verifications':'No verification schedule')].filter(Boolean).join(' \u00b7 ')),
+    el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go(d.mr&&(mrLate||!d.vs||!d.od)?'mgmtreview':'verification');}},'Open'));
 }
 
 /* ---------- Training (Black Fox / Michigan SOP training matrix + CSQ 2A.13.2 training program) ---------- */
@@ -7009,7 +7310,7 @@ const QMS_STATUSES={open:'Open',in_progress:'In Progress',closed:'Closed',cancel
 const QMS_STATUS_TONE={open:'bad',in_progress:'warn',closed:'ok',cancelled:'off'};
 const QMS_PRI_TONE={critical:'bad',major:'warn',minor:''};
 const DEV_CATEGORIES=['Product quality','Process / procedure','Equipment','Environment / temperature','Sanitation','Pest','Security','Documentation','Labeling / packaging','Testing result','Supplier / material','Safety','Other'];
-const DEV_SOURCES={haccp:'HACCP CCP',facility_test:'Facility test',line_clearance:'Line clearance',rework:'Rework',equipment:'Equipment',manual:'Reported',facility_log:'Facility log',batch:'Batch',test:'Lab test',visitor:'Visitor',standard:'Standard clause',complaint:'Complaint',audit:'Audit'};
+const DEV_SOURCES={verification:'Verification',haccp:'HACCP CCP',facility_test:'Facility test',line_clearance:'Line clearance',rework:'Rework',equipment:'Equipment',manual:'Reported',facility_log:'Facility log',batch:'Batch',test:'Lab test',visitor:'Visitor',standard:'Standard clause',complaint:'Complaint',audit:'Audit'};
 const DEV_SOURCE_PAGE={facility_log:'logs',batch:'batches',test:'testing',visitor:'visitors',standard:'standards'};
 const CAPA_EFF={effective:'Effective',partially:'Partially effective',ineffective:'Ineffective'};
 function qmsErr(e){const m=String((e&&e.message)||e);return /hx_deviations|hx_capas/.test(m)&&/missing|does not exist|schema cache/i.test(m)?'QMS is not set up yet - run hendrix_step14.sql in the Hendrix Supabase project.':m;}
@@ -7896,7 +8197,7 @@ function csqPartNames(scopes){return ['3C','3B','3A'].filter(function(k){return 
 // [clause, module, title, summary, hendrix pages, what Hendrix already holds, planned Hendrix modules, applies to]
 const CSQ_MFG_CLAUSES=[
  ['1.1','1','Safety and quality management system','Keep a documented safety and quality system (paper or electronic) that covers the CSQ requirements, names the people and backups who maintain it, holds every SOP, program, form, log, diagram and training material plus local regulations, is available to staff, sets the rules for using the CSQ logo, and is kept up to date.',['sops','rulebook','logs','team'],'Hendrix is the electronic system; Rulebook holds each state\'s regulations; logs and records. SOP library: every SOP, numbered, versioned, approved and signed.',[]],
- ['1.2','1','Management commitment','Have a written safety, quality and compliance policy with measurable objectives, shared with staff, backed by resources, that keeps staff informed of new science and regulation and is reviewed regularly.',['sops','objectives'],'Write the safety, quality and compliance policy as an SOP; everyone signs it. Quality policy (signed SOP) linked on Quality Objectives, with measurable objectives, owners and targets.',[]],
+ ['1.2','1','Management commitment','Have a written safety, quality and compliance policy with measurable objectives, shared with staff, backed by resources, that keeps staff informed of new science and regulation and is reviewed regularly.',['sops','objectives','mgmtreview'],'Write the safety, quality and compliance policy as an SOP; everyone signs it. Quality policy (signed SOP) linked on Quality Objectives, with measurable objectives, owners and targets. Management review checks the policy and objectives at least yearly.',[]],
  ['1.3','1','Regulatory compliance','Procedures that keep all operations and products compliant where they are made and sold, with compliance staff trained and current on regulations.',['rulebook','locations','training'],'Rulebook per state; licenses per state. Regulatory training tracked per person.',[]],
  ['1.4','1','Documentation and recordkeeping','Control documents and records: a master list, document type and current version, approved changes and replacement of old versions, legible and available records, secure storage for at least 1 year past the date on the label (or longer if required), ink only and no white-out on paper.',['sops','audit'],'Audit trail: every change kept with who, when and why; records are voided, never deleted. SOP library: master list, document numbers, versions, approval by Full access, every earlier version kept unchanged, review dates; audit trail on every record.',[]],
  ['1.5','1','Internal audits','Audit every applicable CSQ requirement at least once a year with competent auditors who do not audit their own work; record findings and corrective actions, share results, and close findings through CAPA.',['intaudits'],'Internal Audits: annual program of every CSQ clause in scope with coverage shown per clause, auditor named with qualification and confirmed independent, checklist results with evidence, a finding for every nonconformity, findings closed through deviations / CAPA with verification, results shared with staff before closing.',[]],
@@ -8011,15 +8312,15 @@ const CSQ_MFG_CLAUSES=[
  ['4A.8','4A','Monitoring','Documented monitoring that keeps each CCP within its limits.',['batches','haccp'],'Batch records capture the process values. HACCP: CCP monitoring records with measured value, within limits or not, verified by a second person.',[]],
  ['4A.9','4A','Corrective actions','Specific corrective actions for each CCP that bring it back under control and keep affected product from consumers.',['qms','haccp'],'Out-of-control CCPs handled as deviations and CAPAs. HACCP: a CCP out of limits needs the corrective action and the product disposition; a deviation can be raised from it.',[]],
  ['4A.10','4A','HACCP validation','Validate control measures and critical limits before use and again after significant product or process changes.',['haccp','changes'],'HACCP: validation evidence required before a plan is activated; revising a plan clears the validation. Change control: a change that affects HACCP cannot be implemented until the plan is reviewed and revalidated.',[]],
- ['4A.11','4A','HACCP verification','Ongoing verification that HACCP is followed and works, with a full reanalysis yearly or after significant change.',['haccp','changes'],'HACCP: verification records (records review, calibration, yearly reanalysis) with findings; reanalysis due date per plan. Change control: changes affecting HACCP trigger the plan review.',[]],
+ ['4A.11','4A','HACCP verification','Ongoing verification that HACCP is followed and works, with a full reanalysis yearly or after significant change.',['haccp','changes','verification'],'HACCP: verification records (records review, calibration, yearly reanalysis) with findings; reanalysis due date per plan. Change control: changes affecting HACCP trigger the plan review. Verification schedule dates HACCP verification and CCP record review.',[]],
  ['5.1.1','5','Quality system personnel and org chart','An organizational chart showing reporting lines and everyone involved in safety, quality and CSQ conformance, with their functions and responsibilities.',['team','roles','orgchart'],'Team members with roles. Org chart: positions with reporting lines, the person and backup, functions and responsibilities, and who holds each safety / quality / CSQ role (senior management, quality lead and backup flagged when missing).',[]],
  ['5.1.2','5','Quality policies and objectives','Quality policies and measurable objectives suited to the business, with a process to change, review and keep improving them.',['objectives'],'Quality objectives: measurable targets with owners, counted from Hendrix records where possible; targets changed or dropped only with a recorded reason.',[]],
- ['5.1.3','5','Management review','Senior management reviews the system at least yearly: previous actions, complaints and feedback, internal, external and regulatory audits, risks and corrective actions, resources, CSQ conformance, and changes; minutes kept and shared.',[],'',['Management review']],
+ ['5.1.3','5','Management review','Senior management reviews the system at least yearly: previous actions, complaints and feedback, internal, external and regulatory audits, risks and corrective actions, resources, CSQ conformance, and changes; minutes kept and shared.',['mgmtreview'],'Management review: every input (previous actions, complaints, audits, CAPAs, risks, HACCP, KPIs, CSQ conformance, changes, suppliers, verification, resources) filled from Hendrix records and discussed; signed by Full access, next review within 12 months, actions tracked, minutes shared.',[]],
  ['5.1.4','5','Continuous improvement','Measurable improvement goals with KPIs and effectiveness checks, continuing education per role, shared with staff and reviewed at least quarterly.',['training','objectives'],'Continued education per role in the training matrix. KPIs measured every month or quarter; a missed target needs the action taken; KPI board printed to share with staff.',[]],
  ['5.1.5','5','Change management','A change management plan for people, processes and products: what each change affects, how it is documented and approved, training before use, and who is told (including regulators and the certification body).',['audit','changes'],'Audit trail records every change with a reason. Change control: impact assessment, approval by Full access, actions, training before use, notifications (regulator, certification body, customers) and an effectiveness check; approved changes cannot be rewritten.',[]],
  ['5.1.6','5','Risk management','Risk procedures: the hazard, its root cause, the owner, immediate action, timescale for a permanent fix, verification, and routine surveillance of product safety and quality.',['qms','risks'],'Risk register: each risk with the hazard, root cause, owner, rating (likelihood x severity), immediate action and target date for the permanent fix; controlled only with verification; routine review on a schedule with every review kept.',[]],
  ['5.1.7','5','Validation','Validate facilities and equipment with installation, operational and performance qualification (IQ, OQ, PQ), materials through supplier approval, and revalidate yearly and whenever critical limits, cGMPs or CSQ conformance change.',['suppliers','equipment'],'Materials validated through supplier approval. Equipment register: IQ, OQ and PQ recorded per piece of equipment with yearly revalidation.',[]],
- ['5.1.8','5','Verification','Verification procedures that list the activities to verify, who does them, how often, and how they are monitored and recorded.',[],'',['Verification schedule']],
+ ['5.1.8','5','Verification','Verification procedures that list the activities to verify, who does them, how often, and how they are monitored and recorded.',['verification'],'Verification schedule: each activity with how, who, how often and where it is recorded; last dates taken from Hendrix records (sanitation, CCP, HACCP, calibration, audits, tests, risks, KPIs, management review, suppliers) or recorded here; overdue flagged.',[]],
  ['5.2','5','Safety and quality culture','Everyone acknowledges the safety and quality commitments, training covers anyone who affects product, improvements are planned and measured, and the culture policy is reviewed yearly.',['sops','training'],'Quality policy as an SOP; every signature recorded per version. Training per person in the training matrix.',[]],
  ['5.3','5','Customer satisfaction','Know and meet customer requirements, have a channel for product information, feedback and complaints, and measure whether customers are satisfied.',['complaints'],'Customer feedback logged with a satisfaction rating; complaints and feedback tracked per customer.',[]],
  ['5.4.1','5','Product and process development','New products and changes are approved by a qualified person, trial runs prove the process when needed, and every product has a full process description and flow diagram kept current.',['products','changes'],'A SKU cannot be switched on without a formulation. Change control: new products and changes approved by a qualified person; a trial run must pass before use when required.',[]],
@@ -8029,9 +8330,9 @@ const STD_STATUSES=['Not assessed','Conforming','Partial','Not conforming','Not 
 const STD_TONE={'Not assessed':'off','Conforming':'ok','Partial':'warn','Not conforming':'bad','Not applicable':'off'};
 const STD_COLOR={'Conforming':'#5fbf8a','Partial':'#d4af37','Not conforming':'#e5645a','Not applicable':'#4a473f','Not assessed':'#2a2a2a'};
 const ADOPT_STATUSES=['Following','Audit scheduled','Certified','Suspended','Withdrawn'];
-const HX_PAGE_LABEL={orgchart:'Org Chart',objectives:'Quality Objectives',risks:'Risk Register',changes:'Change Control',haccp:'HACCP',cultivation:'Cultivation',envtests:'Facility Tests',lineclear:'Line Clearance',rework:'Rework',equipment:'Equipment',chemicals:'Chemicals and SDS',complaints:'Complaints',intaudits:'Internal Audits',recall:'Traceability and Recall',receiving:'Receiving',inventory:'Inventory',holds:'Hold and Release',shipping:'Shipping',suppliers:'Suppliers',training:'Training',qms:'QMS (Deviations, CAPA)',sops:'SOPs',rulebook:'Rulebook',locations:'States and Licenses',audit:'Audit Trail',batches:'Batch Tracker',testing:'Testing',stickers:'Compliance Stickers',
+const HX_PAGE_LABEL={mgmtreview:'Management Review',verification:'Verification Schedule',orgchart:'Org Chart',objectives:'Quality Objectives',risks:'Risk Register',changes:'Change Control',haccp:'HACCP',cultivation:'Cultivation',envtests:'Facility Tests',lineclear:'Line Clearance',rework:'Rework',equipment:'Equipment',chemicals:'Chemicals and SDS',complaints:'Complaints',intaudits:'Internal Audits',recall:'Traceability and Recall',receiving:'Receiving',inventory:'Inventory',holds:'Hold and Release',shipping:'Shipping',suppliers:'Suppliers',training:'Training',qms:'QMS (Deviations, CAPA)',sops:'SOPs',rulebook:'Rulebook',locations:'States and Licenses',audit:'Audit Trail',batches:'Batch Tracker',testing:'Testing',stickers:'Compliance Stickers',
   products:'Products',logs:'Facility Logs',visitors:'Visitor Log',roles:'Roles',team:'Team and Access'};
-const HX_PAGE_MOD={orgchart:'orgchart',objectives:'objectives',risks:'risks',changes:'changes',haccp:'haccp',cultivation:'cultivation',envtests:'envtests',lineclear:'lineclear',rework:'rework',equipment:'equipment',chemicals:'chemicals',complaints:'complaints',intaudits:'intaudits',recall:'recall',receiving:'receiving',inventory:'receiving',holds:'holds',shipping:'shipping',suppliers:'suppliers',training:'training',qms:'qms',sops:'sops',rulebook:'rulebook',audit:'audit',batches:'batch',testing:'testing',stickers:'stickers',visitors:'logs_visitor'};
+const HX_PAGE_MOD={mgmtreview:'mgmtreview',verification:'verification',orgchart:'orgchart',objectives:'objectives',risks:'risks',changes:'changes',haccp:'haccp',cultivation:'cultivation',envtests:'envtests',lineclear:'lineclear',rework:'rework',equipment:'equipment',chemicals:'chemicals',complaints:'complaints',intaudits:'intaudits',recall:'recall',receiving:'receiving',inventory:'receiving',holds:'holds',shipping:'shipping',suppliers:'suppliers',training:'training',qms:'qms',sops:'sops',rulebook:'rulebook',audit:'audit',batches:'batch',testing:'testing',stickers:'stickers',visitors:'logs_visitor'};
 function stdLevelOf(m){return m==='4A'?2:m==='5'?3:1;}
 function stdErr(e){
   const m=String((e&&e.message)||e);
@@ -8379,6 +8680,19 @@ async function loadStdEvidence(st,lic){
       on:A.filter(function(o){const l=lastOf(o);return l&&l.met;}).length,meas:A.filter(function(o){return lastOf(o);}).length,achieved:O.filter(function(o){return o.status==='achieved';}).length,
       pol:pol,polText:pol?((pol.sop_number?pol.sop_number+' ':'')+pol.title+(pol.version?' v'+pol.version:'')):'',share:S.policy_note||'',
       last:R.map(function(r){return String(r.updated_at||r.created_at).slice(0,10);}).sort().pop()||''};}));
+  if(can('mgmtreview',1))jobs.push(tryGet('mgmtreview',async function(){
+    const R=((await db.get('hx_mgmt_reviews','license_id=eq.'+enc(lid)+'&status=eq.held&select=*'))||[]).filter(function(x){return x.license_id===lid&&x.status==='held';}).sort(function(a,b){return a.meeting_date<b.meeting_date?1:-1;});
+    const L=R[0]||null,req=MR_INPUTS.filter(function(i){return i[2];});
+    return {n:R.length,n12:R.filter(function(r){return r.meeting_date>=since.slice(0,10);}).length,last:L?L.meeting_date:'',num:L?L.number:'',next:L?L.next_review:'',shared:L?!!L.shared_on:false,
+      inputs:L?MR_INPUTS.filter(function(i){return ((L.inputs||{})[i[0]]||{}).notes;}).length:0,req:L?req.filter(function(i){return ((L.inputs||{})[i[0]]||{}).notes;}).length:0,reqN:req.length,
+      open:R.reduce(function(n,r){return n+(r.actions||[]).filter(function(a){return !a.done;}).length;},0)};}));
+  if(can('verification',1))jobs.push(tryGet('verification',async function(){
+    const P=((await db.get('hx_verification_plan','license_id=eq.'+enc(lid)+'&active=eq.true&select=*'))||[]).filter(function(x){return x.license_id===lid&&x.active;});
+    const R=((await db.get('hx_verification_records','license_id=eq.'+enc(lid)+'&voided=eq.false&select=plan_id,done_on,result,voided,license_id'))||[]).filter(function(x){return x.license_id===lid&&!x.voided;});
+    const l=P.length?await vsLastAll(lic,P,R):{},T=todayStr();
+    return {n:P.length,auto:P.filter(function(p){return p.source!=='manual';}).length,od:P.filter(function(p){return !l[p.id]||eqAddDays(l[p.id],p.frequency_days)<T;}).map(function(p){return p.activity;}),
+      rec:R.filter(function(r){return r.done_on>=since.slice(0,10);}).length,iss:R.filter(function(r){return r.done_on>=since.slice(0,10)&&r.result==='issues';}).length,
+      last:P.map(function(p){return l[p.id]||'';}).sort().pop()||''};}));
   jobs.push(tryGet('roles',async function(){const rs=ACC.roles||[];return {n:rs.length,noReq:rs.filter(function(r){return !String(r.requirements||'').trim()||!String(r.description||'').trim();}).length};}));
   await Promise.all(jobs);
   return E;
@@ -8513,6 +8827,12 @@ function clauseEvidence(x,E){
       if(cl==='5.1.4')out.push({label:'KPIs reviewed',value:Z.rev+' of '+Z.n+' active objectives measured in the last quarter \u00b7 '+Z.on+' on target \u00b7 '+Z.achieved+' achieved',last:Z.last,page:'objectives',warn:!Z.n?'No measurable objectives':(Z.rev<Z.n?(Z.n-Z.rev)+' not reviewed this quarter':'')});
       else out.push({label:'Quality policy and objectives',value:(Z.pol?'Policy: '+Z.polText+(Z.pol.status?' ('+Z.pol.status+')':''):'No policy linked')+' \u00b7 '+Z.n+' measurable objective'+(Z.n===1?'':'s')+' with targets and owners ('+Z.auto+' counted from records)'+(Z.share?' \u00b7 shared: '+Z.share:''),
         last:Z.last,page:'objectives',warn:!Z.pol?'Link the quality policy SOP':!Z.n?'No measurable objectives':(Z.pol.status&&Z.pol.status!=='published'?'Policy SOP is not published':'')});}
+    else if(p==='mgmtreview'&&E.mgmtreview){const Z=E.mgmtreview,old=!Z.last||Z.last<eqAddDays(todayStr(),-365);
+      out.push({label:'Management review',value:Z.n?('Last held '+Z.last+' ('+Z.num+'), signed \u00b7 '+Z.req+' of '+Z.reqN+' required inputs discussed \u00b7 '+Z.open+' action'+(Z.open===1?'':'s')+' open \u00b7 minutes '+(Z.shared?'shared':'not shared yet')+' \u00b7 next '+(Z.next||'-')):'No management review held',
+        last:Z.last,page:'mgmtreview',warn:!Z.n?'Hold a management review (at least yearly)':old?'Last review more than 12 months ago':(!Z.shared?'Share the minutes':(Z.next&&Z.next<todayStr()?'Next review overdue':''))});}
+    else if(p==='verification'&&E.verification){const Z=E.verification;
+      out.push({label:'Verification schedule',value:Z.n+' verification activit'+(Z.n===1?'y':'ies')+' with who, how and how often ('+Z.auto+' dated from Hendrix records) \u00b7 '+Z.rec+' recorded by hand in 12 months ('+Z.iss+' with issues)',
+        last:Z.last,page:'verification',warn:!Z.n?'No verification schedule':(Z.od.length?Z.od.length+' overdue: '+Z.od.slice(0,3).join(', '):'')});}
     else if(p==='roles'&&E.roles)out.push({label:'Roles',value:E.roles.n+' defined role'+(E.roles.n===1?'':'s')+(x.clause==='2A.13.1'?' \u00b7 '+(E.roles.n-E.roles.noReq)+' with duties and requirements':''),page:'roles',
       warn:!E.roles.n?'No roles defined':(x.clause==='2A.13.1'&&E.roles.noReq?E.roles.noReq+' role'+(E.roles.noReq===1?'':'s')+' missing duties or requirements':'')});
   });
@@ -9514,7 +9834,7 @@ function App(){
   if(isAdmin)nav.push({id:'team',label:'Team and Access'},{id:'roles',label:'Roles'});
   if(can('audit',1))nav.push({id:'audit',label:'Audit Trail'});
   const anyLog=LOG_TYPES.some(function(t){return can(LOG_MOD[t.id],1);});
-  const mods=[can('qms',1)&&['qms','QMS'],can('complaints',1)&&['complaints','Complaints'],can('intaudits',1)&&['intaudits','Internal Audits'],can('haccp',1)&&['haccp','HACCP'],can('risks',1)&&['risks','Risk Register'],can('changes',1)&&['changes','Change Control'],can('orgchart',1)&&['orgchart','Org Chart'],can('objectives',1)&&['objectives','Quality Objectives'],can('training',1)&&['training','Training'],can('sops',1)&&['sops','SOPs'],can('suppliers',1)&&['suppliers','Suppliers'],can('receiving',1)&&['receiving','Receiving'],can('holds',1)&&['holds','Hold and Release'],can('shipping',1)&&['shipping','Shipping'],can('recall',1)&&['recall','Traceability and Recall'],can('equipment',1)&&['equipment','Equipment'],can('chemicals',1)&&['chemicals','Chemicals and SDS'],(can('lineclear',1)||can('rework',1))&&['lineclear','Line Clearance and Rework'],can('envtests',1)&&['envtests','Facility Tests'],can('cultivation',1)&&licOp(lic)==='cultivation'&&['cultivation','Cultivation'],can('logs_visitor',1)&&['visitors','Visitor Log'],anyLog&&['logs','Facility Logs'],(can('products',1)||can('formbank',1)||can('cogs',1))&&['products','Products'],can('batch',1)&&['batches','Batch Tracker'],can('testing',1)&&['testing','Testing'],can('stickers',1)&&['stickers','Compliance Stickers']].filter(Boolean);
+  const mods=[can('qms',1)&&['qms','QMS'],can('complaints',1)&&['complaints','Complaints'],can('intaudits',1)&&['intaudits','Internal Audits'],can('haccp',1)&&['haccp','HACCP'],can('risks',1)&&['risks','Risk Register'],can('changes',1)&&['changes','Change Control'],can('orgchart',1)&&['orgchart','Org Chart'],can('objectives',1)&&['objectives','Quality Objectives'],can('mgmtreview',1)&&['mgmtreview','Management Review'],can('verification',1)&&['verification','Verification Schedule'],can('training',1)&&['training','Training'],can('sops',1)&&['sops','SOPs'],can('suppliers',1)&&['suppliers','Suppliers'],can('receiving',1)&&['receiving','Receiving'],can('holds',1)&&['holds','Hold and Release'],can('shipping',1)&&['shipping','Shipping'],can('recall',1)&&['recall','Traceability and Recall'],can('equipment',1)&&['equipment','Equipment'],can('chemicals',1)&&['chemicals','Chemicals and SDS'],(can('lineclear',1)||can('rework',1))&&['lineclear','Line Clearance and Rework'],can('envtests',1)&&['envtests','Facility Tests'],can('cultivation',1)&&licOp(lic)==='cultivation'&&['cultivation','Cultivation'],can('logs_visitor',1)&&['visitors','Visitor Log'],anyLog&&['logs','Facility Logs'],(can('products',1)||can('formbank',1)||can('cogs',1))&&['products','Products'],can('batch',1)&&['batches','Batch Tracker'],can('testing',1)&&['testing','Testing'],can('stickers',1)&&['stickers','Compliance Stickers']].filter(Boolean);
   let body;
   if(page==='locations')body=el(Locations,{profile:profile,states:states,licenses:licenses,reload:loadData,openRulebook:function(id){pickState(id);setPage('rulebook');}});
   else if(page==='visitors'&&can('logs_visitor',1))body=el(VisitorLog,{key:licId,state:st,license:lic});
@@ -9528,7 +9848,7 @@ function App(){
   else if(page==='roles'&&isAdmin)body=el(Roles);
   else if(page==='audit'&&can('audit',1))body=el(AuditTrail,{state:st});
   else if((page==='receiving'&&can('receiving',1))||(page==='inventory'&&can('receiving',1))||(page==='holds'&&can('holds',1))||(page==='shipping'&&can('shipping',1)))body=el(MatPage,{key:licId,state:st,license:lic,tab:page,go:setPage});
-  else if((page==='orgchart'||page==='objectives')&&(can('orgchart',1)||can('objectives',1)))body=el(QualitySysPage,{key:licId,state:st,license:lic,profile:profile,go:setPage,tab:page==='objectives'?'kpi':'org'});
+  else if(['orgchart','objectives','mgmtreview','verification'].indexOf(page)>=0&&(can('orgchart',1)||can('objectives',1)||can('mgmtreview',1)||can('verification',1)))body=el(QualitySysPage,{key:licId,state:st,license:lic,profile:profile,go:setPage,tab:{orgchart:'org',objectives:'kpi',mgmtreview:'mr',verification:'ver'}[page]});
   else if((page==='risks'||page==='changes')&&(can('risks',1)||can('changes',1)))body=el(RiskChangePage,{key:licId,state:st,license:lic,profile:profile,go:setPage,tab:page==='changes'?'cc':'rk'});
   else if(page==='haccp'&&can('haccp',1))body=el(HaccpPage,{key:licId,state:st,license:lic,profile:profile,go:setPage});
   else if(page==='cultivation'&&can('cultivation',1))body=el(CultivationPage,{key:licId,state:st,license:lic,profile:profile,go:setPage});
