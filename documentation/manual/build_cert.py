@@ -44,19 +44,18 @@ def tests():
     for ln in open(os.path.join(SP, 'reg.log')):
         m = re.match(r'(\S+) pass=(\d+) fail=(\d+)', ln)
         if m: counts[m.group(1)] = (int(m.group(2)), int(m.group(3)))
-    counts['st'] = (10, 0); counts['tc'] = (20, 0)  # re-run after a timing failure in the full loop; both pass
     tot = sum(v[0] for v in counts.values())
     k = ('<div class="kpi"><div><b>%d</b><span>test suites</span></div><div><b>%d</b><span>automated checks</span></div>'
-         '<div><b>0</b><span>failures</span></div><div><b>35</b><span>database steps challenged</span></div></div>') % (len(SUITES), tot)
+         '<div><b>0</b><span>failures</span></div><div><b>37</b><span>database steps challenged</span></div></div>') % (len(SUITES), tot)
     rows = [(s, e(n), counts.get(s, ('-',))[0], '<span class="ok">Pass</span>') for s, n in SUITES]
-    note = ('<p class="note">Last full run: 24 October 2026, release 36. Suites are written in Python with Playwright and run against a mocked database that copies the real rules; '
+    note = ('<p class="note">Last full run: 25 October 2026, release 41. Suites are written in Python with Playwright and run against a mocked database that copies the real rules (the System Health, Line Map, My Tasks, kiosk and METRC suites call the real database functions); the two Edge Functions (email, METRC) have their own tests (22 checks); '
             'the database rules themselves are tested on a local PostgreSQL 16 copy. The test scripts and their logs are kept with the source code and can be shown to the auditor.</p>')
     return k + table(['Suite', 'Area', 'Checks', 'Result'], rows) + note
 
 def trace():
     out = ''
-    titles = {'found': 'Setting up and running Hendrix', 'qual': 'Quality system', 'mgmt': 'HACCP and management system', 'supply': 'Suppliers, materials and traceability', 'facility': 'Facility, equipment and people', 'prod': 'Products, production and cultivation', 'lm': 'Production Line Map'}
-    for g in ['found', 'qual', 'mgmt', 'supply', 'facility', 'prod', 'lm']:
+    titles = {'found': 'Setting up and running Hendrix', 'qual': 'Quality system', 'mgmt': 'HACCP and management system', 'supply': 'Suppliers, materials and traceability', 'facility': 'Facility, equipment and people', 'prod': 'Products, production and cultivation', 'lm': 'Production Line Map', 'secure': 'Tasks, security, kiosks and METRC'}
+    for g in ['found', 'qual', 'mgmt', 'supply', 'facility', 'prod', 'lm', 'secure']:
         p = os.path.join(D, 'controls_%s.md' % g)
         if not os.path.exists(p): continue
         md = open(p).read()
@@ -108,9 +107,9 @@ def build_cert():
     body = '<style>%s</style>' % EXTRA + body
     cov = cover('Validation and certification pack', 'Hendrix QMS<br><em>validation &amp; certification</em>',
                 'System description, requirements, risk assessment, data integrity, controls and test evidence, IQ / OQ / PQ protocols and the CSQ clause map, ready for the auditor.',
-                'Release 36 · October 2026', 'Prepared for ASI CSQ, Missouri DCR and Michigan CRA')
+                'Release 41 · October 2026', 'Prepared for ASI CSQ, Missouri DCR and Michigan CRA')
     out = os.path.join(SP, 'Hendrix_QMS_Validation_and_Certification_Pack.pdf')
-    pages = build(out, cov, body, toc, 'Validation and Certification Pack · Release 36', 'Hendrix QMS: Validation and Certification Pack')
+    pages = build(out, cov, body, toc, 'Validation and Certification Pack · Release 41', 'Hendrix QMS: Validation and Certification Pack')
     print('pages', pages)
 
 if __name__ == '__main__':

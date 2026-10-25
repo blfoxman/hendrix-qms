@@ -29,7 +29,7 @@ Hendrix is validated with the risk-based approach of **ISPE GAMP® 5 (Second Edi
 | Item | Detail |
 |---|---|
 | System name | Hendrix QMS (Hendrix Quality Management) |
-| Release covered | Release 36, October 2026 (source repository `blfoxman/hendrix-qms`, branch `main`, commit `11d5518`) |
+| Release covered | Release 41, October 2026 (source repository `blfoxman/hendrix-qms`, branch `main`, commit `9cdb4e9`) |
 | System owner | Director of Production (Sam Salari) |
 | Business process owner | Quality Assurance lead of each license |
 | Operations covered | Licensed cannabis manufacturing, extraction and cultivation in Missouri and Michigan; each license kept separately |
@@ -41,11 +41,11 @@ Hendrix is validated with the risk-based approach of **ISPE GAMP® 5 (Second Edi
 <div class="arch">
 <div class="lane"><div class="box dark"><b>People</b><span>Browser on PC, tablet or phone; kiosk tablets at the door</span></div></div>
 <div class="arrow">HTTPS (TLS)</div>
-<div class="lane"><div class="box"><b>Hendrix app</b><span>One web page (index.html), served by GitHub Pages; no data stored on the device except the sign-in session</span></div></div>
+<div class="lane"><div class="box"><b>Hendrix app</b><span>One web page (index.html), served by GitHub Pages; no data stored on the device except the sign-in session and, on kiosks, entries waiting for the internet</span></div></div>
 <div class="arrow">HTTPS + signed access token</div>
-<div class="lane three"><div class="box"><b>Sign-in</b><span>Supabase Auth: email + password, signed tokens</span></div><div class="box"><b>Database</b><span>Supabase PostgreSQL: every record, rule, signature and the audit trail</span></div><div class="box"><b>Files</b><span>Supabase Storage: COAs, SDS, certificates, photos</span></div></div>
+<div class="lane three"><div class="box"><b>Sign-in</b><span>Supabase Auth: email + password, optional authenticator code (TOTP), signed tokens</span></div><div class="box"><b>Database</b><span>Supabase PostgreSQL: every record, rule, signature and the audit trail</span></div><div class="box"><b>Files</b><span>Supabase Storage: COAs, SDS, certificates, photos</span></div></div>
 <div class="arrow">server-side only</div>
-<div class="lane"><div class="box"><b>AI helper (hendrix-ai)</b><span>Supabase Edge Function; calls Anthropic Claude to read COAs, draft SOPs and courses, plan amounts and match import columns. The API key never reaches the browser.</span></div></div>
+<div class="lane three"><div class="box"><b>AI helper (hendrix-ai)</b><span>Supabase Edge Function; calls Anthropic Claude to read COAs, draft SOPs and courses, plan amounts and match import columns. The API key never reaches the browser.</span></div><div class="box"><b>Email (hendrix-notify)</b><span>Edge Function; daily task lists and urgent alerts through Resend; every email logged</span></div><div class="box"><b>METRC (hendrix-metrc)</b><span>Edge Function; reads the license's packages from METRC (read only) for METRC Check</span></div></div>
 </div>
 
 ### Components
@@ -57,6 +57,9 @@ Hendrix is validated with the risk-based approach of **ISPE GAMP® 5 (Second Edi
 | Supabase (PostgreSQL, Auth, Storage, Edge Functions) | Stores and protects the data; enforces the rules | 1 (infrastructure) | Supabase Inc. |
 | Hendrix application and database rules | All screens, forms, calculations, approvals, locks and the audit trail | **5 (custom application)** | Built in-house |
 | hendrix-ai function + Anthropic Claude | Suggestions that a person always reviews before saving | 5 (custom) on a 1 service | In-house / Anthropic |
+| hendrix-notify function + Resend | Sends the daily task lists and urgent alerts | 5 (custom) on a 1 service | In-house / Resend |
+| hendrix-metrc function + METRC API | Reads METRC packages for reconciliation (never writes) | 5 (custom) on a 1 service | In-house / Metrc LLC |
+| Kiosk service worker (sw.js) | Keeps the kiosk page on the tablet so kiosks reopen without internet | 5 (custom) | Built in-house |
 
 ### Where the rules live
 
@@ -74,7 +77,7 @@ The rules are installed by numbered SQL step files (steps 4 to 41; step 35 needs
 
 ### Not in scope
 
-- **METRC (state track and trace).** Hendrix stores METRC tag numbers on batches and lots, but it does not connect to METRC. METRC stays the state's system of record for plant and package inventory.
+- **Writing to METRC (state track and trace).** Hendrix stores METRC tags and compares its records with METRC (METRC Check, read only), but it never changes METRC. METRC stays the state's system of record for plant and package inventory.
 - **Payroll.** The time clock records attendance only. It does not calculate pay.
 - **Accounting.** Ingredient prices are used only for batch costing.
 
@@ -145,20 +148,20 @@ The risk assessment follows GAMP 5. Each function is rated for **severity** (har
 
 | Expectation | How Hendrix meets it | Gap or note |
 |---|---|---|
-| Validated system (11.10a) | This pack, plus 35 automated test suites and the database tests | Execute IQ/OQ/PQ on the live system |
+| Validated system (11.10a) | This pack, plus 40 automated test suites, the database tests and the Edge Function tests, run on every change (GitHub Actions) | Execute IQ/OQ/PQ on the live system |
 | Accurate, complete copies (11.10b) | Print or PDF of every record; inspector view; Audit Trail export to CSV for any period | None |
 | Record protection and retention (11.10c) | No deletes; voids with a reason; managed database and backups | Confirm the backup retention of the hosting plan (IQ-10) |
-| Limited access (11.10d) | Personal accounts, admin approval, View / Edit / Full per module | None |
+| Limited access (11.10d) | Personal accounts, admin approval, View / Edit / Full per module; two-step sign-in can be required per person (enforced by the database); idle sessions signed out (default 30 min) | None |
 | Secure, time-stamped audit trail (11.10e) | Written by the database for every insert, change and void, with old and new values, user, time and reason. The log cannot be changed or deleted, even by admins. | Read access is given per person (View on Audit Trail), e.g. QA or an inspector account |
 | Operational checks (11.10f) | Status flows enforced in order, e.g. requested → approved → implemented → closed | None |
 | Authority checks (11.10g) | Approvals need Full access; the database checks this on every write | None |
 | Device checks (11.10h) | Kiosks work only for an active license and a valid badge | None |
 | Trained users (11.10i) | Training module; system training recorded like any other training | Add "Hendrix user training" to the training matrix |
-| Signature manifestation (11.50) | Signed records show the signer's name, the date and time, and the meaning: approved, reviewed, verified, held, released | None |
-| Signature linking (11.70) | Signatures are fields of the record itself, fixed by the database after signing | None |
+| Signature manifestation (11.50) | Signed records show the signer's name, the date and time, and the meaning; the signature box shows the meaning before signing, and every signature is kept in the signature log with the meaning ("Approved and published this SOP", "Decided this hold: released") | None |
+| Signature linking (11.70) | Signatures are fields of the record itself, fixed by the database after signing; the signature log names the record table and id and cannot be changed or deleted | None |
 | Unique signatures (11.100) | One account per person; shared accounts not allowed | Enforce through the access SOP (section 12) |
-| Signature components (11.200) | Signing happens inside a signed-in session (email + password) | Hendrix does not ask for the password again at each signature. Mitigation: personal devices lock; staff must sign out of shared devices (access SOP) |
-| Password controls (11.300) | Passwords of at least 8 characters, hashed by the provider; accounts can be disabled by the admin | No multi-factor sign-in yet. Recommended for admin accounts (section 14) |
+| Signature components (11.200) | Each signature needs the password again (and the authenticator code with two-step sign-in), checked by the sign-in service at the moment of signing; the signer is taken from that sign-in | None. The password step is on by default and System Health fails if a license switches it off |
+| Password controls (11.300) | Passwords of at least 8 characters, hashed by the provider; accounts can be disabled by the admin; two-step sign-in with an authenticator app | Require two-step sign-in for admins and approvers (IQ-16) |
 
 @@SEC 7|Developer testing@@
 
@@ -166,7 +169,7 @@ Every release of Hendrix is tested in three ways before it goes live:
 
 1. **Automated browser test suites.** These are scripted runs of the real app in a headless Chrome browser against a test database. They fill in forms, click buttons and check the result. The full set runs after every change.
 2. **Database tests.** Every SQL step is installed on a local PostgreSQL copy. Each rule is then challenged: the test tries to break it, for example by closing without a reason, using a held lot or editing a signed record, and confirms that the database refuses.
-3. **Clean install test.** The one-file install (steps 13 to 36) is run on an empty database that has steps 1 to 12, and run a second time on a full database. Both runs finish with no errors.
+3. **Clean install test.** The one-file install (steps 13 to 41) is run on an empty database that has steps 1 to 12, and run a second time on a full database. Both runs finish with no errors.
 
 {{TESTS}}
 
@@ -231,11 +234,11 @@ The clause summaries here are Hendrix's own short wording. They are not the CSQ 
 
 | # | Limitation | Risk | Recommendation |
 |---|---|---|---|
-| 1 | No multi-factor sign-in | Medium (stolen password) | Turn on multi-factor sign-in in the hosting provider for admin accounts; require strong passwords |
-| 2 | No password re-entry at each signature | Low to medium | Lock personal devices, sign out of shared ones; add signature re-authentication in a future release if an auditor asks |
-| 3 | No automatic sign-out after inactivity | Low | Set the device screen lock to 5 minutes on shared tablets; kiosks hold no signed-in user |
+| 1 | Two-step sign-in is per person, not forced for everyone | Low | Require it for admins and approvers (IQ-16); System Health flags admins without it |
+| 2 | Email depends on an outside service (Resend) | Low | Settings > Email and System Health show when email stops; My Tasks always shows the same list in the app |
+| 3 | Kiosk entries waiting on a tablet are lost if the tablet's browser data is cleared before the internet returns | Low | Do not clear kiosk browser data; the kiosk shows how many entries are waiting; the paper backup form covers long outages |
 | 4 | Backups depend on the hosting plan | Medium | Confirm backup frequency and retention (IQ-10); run the yearly restore test |
-| 5 | METRC not connected | Low | Keep METRC as the state system of record; record tags in Hendrix and reconcile monthly |
+| 5 | METRC Check reads METRC but does not write to it | Low | Fix differences in METRC by hand; run METRC Check weekly and before inspections |
 | 6 | AI suggestions can be wrong | Medium | Human review is required (section 12); AI never approves |
 | 7 | CSQ clause 3C.2.7 (topical products) has no dedicated page | Low (only if you make topicals) | If topicals are added, cover them with an SOP and product records, or ask for a topicals page |
 
@@ -245,7 +248,7 @@ Complete this after the IQ, OQ and PQ.
 
 | Item | Result |
 |---|---|
-| Release validated | Release 36 (commit `11d5518`) — or the release installed: ____________ |
+| Release validated | Release 41 (commit `9cdb4e9`) — or the release installed: ____________ |
 | IQ result | ☐ Pass ☐ Pass with deviations ☐ Fail — deviations: ____________ |
 | OQ result | ☐ Pass ☐ Pass with deviations ☐ Fail — deviations: ____________ |
 | PQ result | ☐ Pass ☐ Pass with deviations ☐ Fail — deviations: ____________ |
