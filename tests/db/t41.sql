@@ -39,3 +39,10 @@ select hx_metrc_save('lic-mo','csv','x.csv','[{"tag":"A"}]'::jsonb);
 select hx_metrc_reconcile((select id from hx_metrc_snapshots where license_id='lic-mo' limit 1));
 set test.uid='11111111-1111-1111-1111-111111111111';
 select 'M7 audited', count(*) from hx_audit_log where table_name='hx_metrc_snapshots';
+-- leave the shared test database as it was (the other checks count holds, lots and shipments); test_mc.py keeps them (-v keep=1)
+\if :{?keep}
+\else
+set session_replication_role=replica;
+delete from hx_holds where id like 't41%'; delete from hx_lots where id like 't41%'; delete from hx_shipments where id like 't41%'; delete from hx_tests where id like 't41%'; delete from hx_suppliers where id like 't41%';
+set session_replication_role=origin;
+\endif

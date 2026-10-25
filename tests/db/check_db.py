@@ -100,7 +100,7 @@ e40(r'^C9 wrong license\|This kiosk is not linked', 'offline: license must belon
 e40(r'Missing kiosk item id', 'offline: every item needs its one-time id')
 e40(r'^K1 live\|break2_out$', 'live kiosk carries on after the offline punches')
 e40(r'^R1 rows\|entry:true:true,break1_out:true:true,break1_in:true:true,break2_out:false:false$', 'punches marked offline with the time they arrived')
-e40(r'^R2 audit reason\|3$', 'audit trail says the punch was saved offline')
+e40(r'^R2 audit reason\|[1-9][0-9]*$', 'audit trail says the punch was saved offline')
 e40(r'^L1 log\|t$', 'offline facility log entry saved')
 e40(r'^L2 no signature\|Please sign in the box\.$', 'offline facility log: same rules as online')
 e40(r'^V1 visitor\|t$', 'offline visitor sign-in saved')

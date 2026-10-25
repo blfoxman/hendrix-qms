@@ -4,7 +4,7 @@ exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mock_c.py'))
 errors = []
 PGDB = os.environ.get('HX_PGDB', 'hxtest')
 HERE_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'db')
-subprocess.run(['psql', '-X', '-q', '-d', PGDB, '-f', os.path.join(HERE_DB, 't41.sql')], capture_output=True, text=True)   # Hendrix records with METRC tags
+subprocess.run(['psql', '-X', '-q', '-v', 'keep=1', '-d', PGDB, '-f', os.path.join(HERE_DB, 't41.sql')], capture_output=True, text=True)   # Hendrix records with METRC tags
 ST = {'api': 'nokeys', 'saves': []}
 def db_json(sql_fn, args):
     vs = []; names = []
@@ -60,7 +60,8 @@ with sync_playwright() as pw:
                  ('Open hold HOLD-T41-1 in Hendrix, not on hold in METRC', 'hold in Hendrix only'), ('still active in METRC', 'shipped but still active in METRC'),
                  ('Lot LOT-T41-2 has 50 g left in Hendrix, not active in METRC', 'lot missing from METRC'), ('Quantity: Hendrix 800 g, METRC 700 Grams', 'quantity difference')]:
         check(t in txt, 'shown: ' + m)
-    check(pg.locator('.mcrow').first.locator('.badge', has_text='Fix now').count() == 1, 'most serious first')
+    first = pg.wait_for_function("(()=>{const b=document.querySelector('.mcrow .badge');return b&&b.textContent})()").json_value()
+    check(first.lower() == 'fix now', 'most serious first (%s)' % first)
     check(pg.locator('.card', has=pg.locator('.k', has_text='Packages in METRC')).inner_text().split('\n')[-1] == '7', 'package count')
     pg.locator('.card .k', has_text=re.compile('^Not in Hendrix$')).click()
     check(pg.locator('.mcrow').count() >= 1 and pg.locator('.mcrow', has_text='1A40-NEW').count() == 1, 'information list: packages Hendrix does not know')
