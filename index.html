@@ -3001,7 +3001,7 @@ function BatchTracker(props){
               return c&&c[0]!=='none'&&c[0]!=='info'?el('span',{key:f.k,className:'badge '+(tone[c[0]]||''),style:{marginRight:6,marginTop:6}},btLabel(def.id,{l:BT_SHORT[f.k]||f.l},ts,sk)+': '+c[1]):null;}),
             (tests[b.id]||[]).map(function(t){return el(TestBadge,{key:t.id,s:t.status,prefix:'Test: ',style:{marginRight:6,marginTop:6}});}),
             can('lineclear',1)&&!b.voided&&(function(){const c=(lcs[b.id]||[]).find(function(x){return x.result==='cleared';});
-              return el('span',{className:'badge '+(c?'ok':'bad'),style:{marginRight:6,marginTop:6},title:c?'Line cleared '+String(c.checked_at).slice(0,16).replace('T',' '):'No line clearance recorded for this batch'},c?'Line cleared \u00b7 '+c.number:'No line clearance');})(),
+              return el('span',{className:'badge '+(c?'ok':'bad'),style:{marginRight:6,marginTop:6},title:c?'Line cleared '+fmtTs(c.checked_at):'No line clearance recorded for this batch'},c?'Line cleared \u00b7 '+c.number:'No line clearance');})(),
             !b.voided&&(function(){const hp=hpFor(b);if(!hp)return null;const cs=hp.ccps||[],ms=(hpm[b.id]||[]).filter(function(m){return m.plan_id===hp.id;});
               const ok=cs.filter(function(c){return ms.some(function(m){return m.ccp_id===c.id&&m.within_limits;});}).length,bad=ms.some(function(m){return !m.within_limits;});
               return el('span',{className:'badge '+(bad?'bad':ok===cs.length?'ok':'warn'),style:{marginRight:6,marginTop:6},title:'HACCP '+hp.number+' '+hp.name+': '+cs.map(function(c){return c.name;}).join(', ')},'CCP '+ok+'/'+cs.length+(bad?' \u00b7 deviation':''));})()),
@@ -3702,7 +3702,7 @@ function SimpleReason(props){
 function shipHtml(s,lic){const e=esc3;
   return '<div class="hxrec"><h2>Shipment '+e(s.number)+'</h2><div class="m">'+e(lic.name)+(lic.license_number?' ('+e(lic.license_number)+')':'')+' \u00b7 printed '+e(new Date().toLocaleString())+'</div><table>'+
     [['Ship date',s.ship_date],['Customer',s.customer+(s.customer_license?' ('+s.customer_license+')':'')],['Destination',s.destination],['State manifest',s.manifest_number],['Transporter / driver / vehicle',[s.transporter,s.driver,s.vehicle].filter(Boolean).join(' / ')],
-     ['Status',s.status+(s.delivered_on?' '+s.delivered_on:'')+(s.cancel_reason?' - '+s.cancel_reason:'')],['Shipped by',s.shipped_by+' \u00b7 '+String(s.created_at).slice(0,16).replace('T',' ')]].map(function(r){return '<tr><th>'+e(r[0])+'</th><td>'+e(r[1]||'-')+'</td></tr>';}).join('')+
+     ['Status',s.status+(s.delivered_on?' '+s.delivered_on:'')+(s.cancel_reason?' - '+s.cancel_reason:'')],['Shipped by',s.shipped_by+' \u00b7 '+fmtTs(s.created_at)]].map(function(r){return '<tr><th>'+e(r[0])+'</th><td>'+e(r[1]||'-')+'</td></tr>';}).join('')+
     '</table><table><tr><th>Batch</th><th>Product</th><th>Package tag</th><th>Qty</th></tr>'+(s.items||[]).map(function(i){return '<tr><td>'+e(i.batch_number)+'</td><td>'+e(i.product)+'</td><td>'+e(i.tag)+'</td><td>'+e(i.qty+' '+(i.unit||''))+'</td></tr>';}).join('')+'</table>'+
     '<table><tr class="sec"><td colspan="2">Pre-load inspection</td></tr>'+SHIP_CHECKS.map(function(c){const ok=(s.checks||{})[c[0]];return '<tr><th>'+e(c[1])+'</th><td class="'+(ok?'ok':'bad')+'">'+(ok?'Pass':'FAIL')+'</td></tr>';}).join('')+'</table>'+(s.notes?'<div>'+e(s.notes)+'</div>':'')+'</div>';}
 function MatPage(props){
@@ -4887,7 +4887,7 @@ function LineClearanceForm(props){
       el('button',{className:'btn',disabled:busy||!canClear,onClick:function(){save('cleared');}},busy?'Saving...':'Line cleared')));
 }
 function lcHtml(c,lic,eqs){const e=esc3;const E=(eqs||[]).filter(function(x){return (c.equipment_ids||[]).indexOf(x.id)>=0;});
-  return '<div class="hxrec"><h2>Line clearance '+e(c.number)+' \u2014 '+(c.result==='cleared'?'CLEARED':'NOT CLEARED')+'</h2><div class="m">'+e(lic.name)+' \u00b7 '+e(String(c.checked_at).slice(0,16).replace('T',' '))+(c.voided?' \u00b7 VOID: '+e(c.void_reason):'')+'</div><table>'+
+  return '<div class="hxrec"><h2>Line clearance '+e(c.number)+' \u2014 '+(c.result==='cleared'?'CLEARED':'NOT CLEARED')+'</h2><div class="m">'+e(lic.name)+' \u00b7 '+e(fmtTs(c.checked_at))+(c.voided?' \u00b7 VOID: '+e(c.void_reason):'')+'</div><table>'+
     [['Batch',c.batch_label||'-'],['Room / line',c.area||'-'],['Equipment',E.map(function(x){return x.number+' '+x.name;}).join(', ')||'-'],['Inspected by',c.checked_by],['Verified by',c.verified_by||'-'],['Recorded by',c.recorded_by]].map(function(r){return '<tr><th>'+e(r[0])+'</th><td>'+e(r[1])+'</td></tr>';}).join('')+'</table>'+
     '<table><tr><th>Check</th><th>Result</th></tr>'+Object.keys(c.checks||{}).map(function(k){const x=c.checks[k];return '<tr><td>'+e(x.l||k)+'</td><td class="'+(x.r==='fail'?'bad':'ok')+'">'+(x.r==='pass'?'Pass':x.r==='na'?'N/A':'FAIL'+(x.fixed?' - corrected':''))+'</td></tr>';}).join('')+'</table>'+
     (c.issues?'<p><b>Problems:</b> '+e(c.issues)+'<br><b>Corrections:</b> '+e(c.corrections)+'</p>':'')+'</div>';}
@@ -4984,7 +4984,7 @@ function LineReworkPage(props){
         stat('Inspections (30 days)',LC.filter(function(c){return c.checked_at>=d30;}).length,'var(--text)'),stat('Not cleared (30 days)',LC.filter(function(c){return c.checked_at>=d30&&c.result!=='cleared';}).length,'var(--gold-hi)','line stopped and fixed')),
       !(lcs||[]).length?el('div',{className:'empty'},'No line clearances yet.'+(canE?' Record one before each batch (also from the Batch Tracker).':'')):
       el('div',{className:'card',style:{overflowX:'auto',padding:0}},el('table',null,el('thead',null,el('tr',null,['No.','When','Batch / line','Result','Inspected by','',''].map(function(h,i){return el('th',{key:i},h);}))),
-        el('tbody',null,(lcs||[]).map(function(c){return el('tr',{key:c.id,className:c.voided?'voidrow':''},el('td',null,c.number),el('td',null,String(c.checked_at).slice(0,16).replace('T',' ')),el('td',null,c.batch_label||c.area,c.batch_label&&c.area&&el('div',{className:'muted',style:{fontSize:11}},c.area)),
+        el('tbody',null,(lcs||[]).map(function(c){return el('tr',{key:c.id,className:c.voided?'voidrow':''},el('td',null,c.number),el('td',null,fmtTs(c.checked_at)),el('td',null,c.batch_label||c.area,c.batch_label&&c.area&&el('div',{className:'muted',style:{fontSize:11}},c.area)),
           el('td',null,c.voided?el('span',{className:'badge bad',title:c.void_reason},'Void'):el('span',{className:'badge '+(c.result==='cleared'?'ok':'bad')},c.result==='cleared'?'Cleared':'Not cleared'),Object.keys(c.checks||{}).some(function(k){return c.checks[k].r==='fail';})&&el('span',{className:'muted',style:{fontSize:11,marginLeft:4}},'problems corrected')),
           el('td',null,c.checked_by+(c.verified_by?' \u00b7 verified '+c.verified_by:'')),
           el('td',{style:{whiteSpace:'nowrap'}},el('button',{className:'btn ghost sm',onClick:function(){printRecords('Line clearance '+c.number,[lcHtml(c,lic,eqs)]);}},'Print'),
@@ -5644,7 +5644,7 @@ function HaccpPage(props){
             canF&&p.status!=='retired'&&p.status!=='draft'&&el('button',{className:'btn danger sm',style:{marginLeft:4},onClick:function(){setModal({t:'retire',p:p});}},'Retire')));}))))):
     tab==='mon'?el('div',null,el('div',{className:'row',style:{marginBottom:10}},el('select',{value:monF,onChange:function(e){setMonF(e.target.value);}},el('option',{value:'all'},'All checks'),el('option',{value:'out'},'Out of limits'),el('option',{value:'unver'},'Not verified yet'))),
       !shownM.length?el('div',{className:'empty'},'No CCP checks yet.'):el('div',{className:'card',style:{overflowX:'auto',padding:0}},el('table',null,el('thead',null,el('tr',null,['When','CCP','Batch','Value','Result','Checked by','Verified',''].map(function(h,i){return el('th',{key:i},h);}))),
-        el('tbody',null,shownM.map(function(m){return el('tr',{key:m.id,className:m.voided?'voidrow':''},el('td',{style:{whiteSpace:'nowrap'}},String(m.checked_at).slice(0,16).replace('T',' ')),el('td',null,m.ccp_name,el('div',{className:'muted',style:{fontSize:11}},pName(m.plan_id)+' v'+m.plan_version)),
+        el('tbody',null,shownM.map(function(m){return el('tr',{key:m.id,className:m.voided?'voidrow':''},el('td',{style:{whiteSpace:'nowrap'}},fmtTs(m.checked_at)),el('td',null,m.ccp_name,el('div',{className:'muted',style:{fontSize:11}},pName(m.plan_id)+' v'+m.plan_version)),
           el('td',{style:{fontSize:13}},m.batch_id?bName(m.batch_id):'-'),el('td',null,m.value),
           el('td',null,m.voided?el('span',{className:'badge bad',title:m.void_reason},'Void'):el('span',{className:'badge '+(m.within_limits?'ok':'bad')},m.within_limits?'Within limits':'OUT'),!m.within_limits&&el('div',{style:{fontSize:11,color:'var(--gold-hi)'}},m.corrective+' \u00b7 product '+(HP_DISP[m.disposition]||''))),
           el('td',null,m.checked_by),el('td',{style:{fontSize:12}},m.verified_at?m.verified_by+' '+String(m.verified_at).slice(0,10):(!m.voided&&canE?el('button',{className:'btn ghost sm',onClick:function(){db.update('hx_haccp_monitoring',m.id,{verified_at:new Date().toISOString()}).then(function(){setMsg('Verified.');load();}).catch(function(e){setMsg(hpErr(e));});}},'Verify'):'-')),
@@ -5900,8 +5900,8 @@ function ccActRows(props){
   const a=props.actions||[],dis=props.disabled;
   function up(i,k,v){const n=a.map(function(x,j){return j===i?{...x,[k]:v}:x;});props.onChange(n);}
   return el('div',null,a.map(function(x,i){return el('div',{key:x.id||i,className:'row',style:{gap:6,flexWrap:'nowrap',marginBottom:6,alignItems:'center'}},
-      props.tick&&el('input',{type:'checkbox',checked:!!x.done,disabled:props.tickDisabled,title:'Done',onChange:function(e){const n=a.map(function(y,j){return j===i?{...y,done:e.target.checked,done_on:e.target.checked?todayStr():null}:y;});props.onChange(n);}}),
-      el('input',{value:x.what||'',placeholder:'Action',disabled:dis,style:{flex:3},onChange:function(e){up(i,'what',e.target.value);}}),el('input',{value:x.who||'',placeholder:'Who',disabled:dis,style:{flex:1},onChange:function(e){up(i,'who',e.target.value);}}),
+      props.tick&&el('input',{type:'checkbox',checked:!!x.done,disabled:props.tickDisabled,title:'Done',style:{width:18,height:18,flex:'0 0 auto',accentColor:'#d4af37'},onChange:function(e){const n=a.map(function(y,j){return j===i?{...y,done:e.target.checked,done_on:e.target.checked?todayStr():null}:y;});props.onChange(n);}}),
+      el('input',{value:x.what||'',placeholder:'Action',disabled:dis,style:{flex:3,minWidth:0},onChange:function(e){up(i,'what',e.target.value);}}),el('input',{value:x.who||'',placeholder:'Who',disabled:dis,style:{flex:1,minWidth:0},onChange:function(e){up(i,'who',e.target.value);}}),
       el('input',{type:'date',value:x.due||'',disabled:dis,style:{width:150},onChange:function(e){up(i,'due',e.target.value);}}),
       x.done&&x.done_on&&el('span',{className:'muted',style:{fontSize:11,whiteSpace:'nowrap'}},'done '+x.done_on),
       !dis&&el('button',{type:'button',className:'btn ghost sm',onClick:function(){props.onChange(a.filter(function(y,j){return j!==i;}));}},'\u00d7'));}),
@@ -5988,7 +5988,7 @@ function ccHtml(c,lic,refs){const e=esc3,R=refs||{},nm=function(list,ids){return
     [['Change',c.title],['Type',ccType(c.change_type)],['Product(s)',c.product],['What changes',c.description],['Why',c.reason],['Requested',c.requested_by+' '+c.requested_on],['Impacts',ccImpacts(c).map(function(i){return i[1];}).join(', ')||'Nothing else affected'],
      ['Impact notes',c.impact_notes],['Risk of the change',c.risk_level],['SOPs',nm(R.sops,c.sop_ids)],['HACCP plans',nm(R.plans,c.plan_ids)+(c.haccp_reviewed?' - reviewed':'')],['Training',c.training_required?(c.training_note||'required')+(c.training_done?' - done':' - not done'):'Not needed'],
      ['Trial run',c.trial_required?(c.trial_result||'not run')+(c.trial_note?' - '+c.trial_note:''):'Not needed'],['Told',CC_NOTIFY.filter(function(n){return (c.notify||{})[n[0]];}).map(function(n){return n[1];}).join(', ')+(c.notified_on?' on '+c.notified_on+(c.notified_note?' - '+c.notified_note:''):'')],
-     ['Approved',c.approved_by?c.approved_by+' '+String(c.approved_at).slice(0,16).replace('T',' ')+(c.approval_note?' - '+c.approval_note:''):'-'],['Implemented',c.implemented_on||'-'],['Effectiveness',c.effectiveness],['Closed / stopped',c.stop_reason?c.status+': '+c.stop_reason+' - '+c.closed_by:c.closed_by?c.closed_by+' '+String(c.closed_at).slice(0,10):'']]
+     ['Approved',c.approved_by?c.approved_by+' '+fmtTs(c.approved_at)+(c.approval_note?' - '+c.approval_note:''):'-'],['Implemented',c.implemented_on||'-'],['Effectiveness',c.effectiveness],['Closed / stopped',c.stop_reason?c.status+': '+c.stop_reason+' - '+c.closed_by:c.closed_by?c.closed_by+' '+String(c.closed_at).slice(0,10):'']]
      .filter(function(r){return r[1];}).map(function(r){return '<tr><th>'+e(r[0])+'</th><td>'+e(r[1])+'</td></tr>';}).join('')+'</table>'+
     ((c.actions||[]).length?'<table><tr><th>Action</th><th>Who</th><th>Due</th><th>Done</th></tr>'+c.actions.map(function(a){return '<tr><td>'+e(a.what)+'</td><td>'+e(a.who)+'</td><td>'+e(a.due)+'</td><td class="'+(a.done?'ok':'bad')+'">'+(a.done?'Done '+e(a.done_on||''):'Open')+'</td></tr>';}).join('')+'</table>':'')+'</div>';}
 
@@ -6461,7 +6461,7 @@ async function mrFacts(lic,from,to,prev){
 }
 function mrHtml(r,lic){const e=esc3,I=r.inputs||{};
   return '<div class="hxrec"><h2>Management review '+e(r.number)+(r.status==='held'?'':' \u2014 '+e(r.status.toUpperCase()))+'</h2><div class="m">'+e(lic.name)+(lic.license_number?' ('+e(lic.license_number)+')':'')+' \u00b7 CSQ 5.1.3 \u00b7 printed '+e(new Date().toLocaleString())+'</div><table>'+
-    [['Meeting date',r.meeting_date],['Period reviewed',(r.period_from||'?')+' to '+(r.period_to||'?')],['Chair',r.chair],['Attendees',r.attendees],['Signed',r.signed_by?r.signed_by+' '+String(r.signed_at).slice(0,16).replace('T',' '):'Not signed'],['Next review',r.next_review||'-'],['Minutes shared with',r.shared_with?r.shared_with+(r.shared_on?' on '+r.shared_on:''):'Not yet']]
+    [['Meeting date',r.meeting_date],['Period reviewed',(r.period_from||'?')+' to '+(r.period_to||'?')],['Chair',r.chair],['Attendees',r.attendees],['Signed',r.signed_by?r.signed_by+' '+fmtTs(r.signed_at):'Not signed'],['Next review',r.next_review||'-'],['Minutes shared with',r.shared_with?r.shared_with+(r.shared_on?' on '+r.shared_on:''):'Not yet']]
       .map(function(x){return '<tr><th>'+e(x[0])+'</th><td>'+e(x[1])+'</td></tr>';}).join('')+'</table>'+
     '<table><tr><th style="width:22%">Input</th><th>Facts</th><th>Discussion and conclusions</th></tr>'+MR_INPUTS.map(function(i){const x=I[i[0]]||{};if(!x.data&&!x.notes)return '';return '<tr><td><b>'+e(i[1])+'</b></td><td>'+e(x.data||'')+'</td><td>'+e(x.notes||'')+'</td></tr>';}).join('')+'</table>'+
     '<p><b>Decisions and conclusions:</b><br>'+e(r.decisions).replace(/\n/g,'<br>')+'</p>'+(r.resources?'<p><b>Resources:</b><br>'+e(r.resources).replace(/\n/g,'<br>')+'</p>':'')+
@@ -8170,7 +8170,7 @@ function TrainingPage(props){
         return el('tr',{key:u.id},el('td',null,u.name),cells,el('td',{style:{fontWeight:700,color:rate===100?'var(--green)':rate>=80?'var(--gold-hi)':'var(--red)'}},rate+'%'));}))))):
     tab==='records'?el('div',null,atts.length>0&&el('div',{className:'card'},el('h3',null,'Online quiz attempts ('+atts.length+')'),el('div',{style:{overflowX:'auto'}},el('table',null,
         el('thead',null,el('tr',null,['Date','Person','Course','Score','Result','Time','Version'].map(function(h){return el('th',{key:h},h);}))),
-        el('tbody',null,atts.slice(0,200).map(function(a){const c=C.find(function(x){return x.id===a.course_id;});return el('tr',{key:a.id},el('td',null,String(a.finished_at).slice(0,16).replace('T',' ')),el('td',null,a.person_name),el('td',null,c?c.name:'-'),
+        el('tbody',null,atts.slice(0,200).map(function(a){const c=C.find(function(x){return x.id===a.course_id;});return el('tr',{key:a.id},el('td',null,fmtTs(a.finished_at)),el('td',null,a.person_name),el('td',null,c?c.name:'-'),
           el('td',null,a.correct+'/'+a.total+' ('+a.score+'%)'),el('td',null,el('span',{className:'badge '+(a.passed?'ok':'bad')},a.passed?'Passed':'Not passed')),el('td',null,a.minutes!=null?a.minutes+' min':'-'),el('td',null,'v'+a.content_version));}))))),
       shRecs.length>0&&el('div',{className:'card'},el('h3',null,'Counted from your other licenses ('+shRecs.length+')'),
         el('div',{className:'muted',style:{fontSize:12,marginBottom:6}},'Training done once for a shared course at another license. It counts here too; the record itself stays at the license where it was done.'),
@@ -9625,6 +9625,7 @@ async function loadStdEvidence(st,lic){
   return E;
 }
 function daysAgo(iso){if(!iso)return null;return Math.floor((Date.now()-new Date(iso).getTime())/86400000);}
+function fmtTs(v){if(!v)return '';const d=new Date(v);if(isNaN(d.getTime()))return String(v).slice(0,16).replace('T',' ');return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())+' '+pad2(d.getHours())+':'+pad2(d.getMinutes());}
 function fmtDay(iso){return iso?new Date(/^\d{4}-\d{2}-\d{2}$/.test(iso)?iso+'T12:00:00':iso).toLocaleDateString():'';}
 // rows of live evidence for one clause: {label, value, last, warn, page}
 function clauseEvidence(x,E){
