@@ -1,0 +1,34 @@
+\set ON_ERROR_STOP 0
+set test.uid='11111111-1111-1111-1111-111111111111';
+set session_replication_role=replica; delete from hx_esignatures where id like 't38%'; set session_replication_role=origin;
+update hx_profiles set perms='{"qms":"read"}', mfa_required=false, license_ids='{}' where id='22222222-2222-2222-2222-222222222222';
+
+set test.uid='22222222-2222-2222-2222-222222222222';
+select 'S1 perm before', hx_perm('qms'), hx_lic_ok('lic-mo');
+update hx_profiles set mfa_required=true where id='22222222-2222-2222-2222-222222222222';
+select 'S2 perm aal1', hx_perm('qms'), hx_lic_ok('lic-mo'), hx_fl_is_approved();
+set request.jwt.claims='{"aal":"aal2"}';
+select 'S3 perm aal2', hx_perm('qms'), hx_lic_ok('lic-mo');
+update hx_profiles set mfa_required=false where id='22222222-2222-2222-2222-222222222222';
+select 'S4 still required', mfa_required from hx_profiles where id='22222222-2222-2222-2222-222222222222';
+set request.jwt.claims='';
+insert into hx_esignatures(id,state_id,license_id,meaning,record_table,record_id,record_label) values ('t38x','st-mo','lic-mo','Approved','hx_sops','t38-sop','SOP-001 v1');
+set request.jwt.claims='{"aal":"aal2"}';
+insert into hx_esignatures(id,state_id,license_id,meaning,record_table,record_id,record_label,signer_name,user_id) values ('t38a','st-mo','lic-mo','Approved','hx_sops','t38-sop','SOP-001 v1','Somebody Else','11111111-1111-1111-1111-111111111111');
+select 'S5 sig', signer_name, user_id from hx_esignatures where id='t38a';
+insert into hx_esignatures(id,state_id,license_id,meaning,record_table,record_id,record_label) values ('t38b','st-mo','lic-mo','Released','hx_holds','t38-hold','HOLD-1');
+select 'S6 sig method', method from hx_esignatures where id='t38b';
+update hx_esignatures set meaning='x' where id='t38a';
+delete from hx_esignatures where id='t38b';
+insert into hx_esignatures(id,state_id,license_id,meaning) values ('t38c','st-mi','lic-mo','Approved');
+set request.jwt.claims='';
+set test.uid='11111111-1111-1111-1111-111111111111';
+update hx_profiles set mfa_required=false where id='22222222-2222-2222-2222-222222222222';
+select 'S7 admin turned off', mfa_required from hx_profiles where id='22222222-2222-2222-2222-222222222222';
+update hx_license_settings set idle_signout_min=999 where license_id='lic-mo';
+select 'S8 defaults', esig_password, idle_signout_min from hx_license_settings where license_id='lic-mo';
+select 'S9 extra', (hx_health_extra()->>'signatures')::int >= 2;
+set test.uid='22222222-2222-2222-2222-222222222222';
+select 'S10 extra member', hx_health_extra() is not null;
+set test.uid='11111111-1111-1111-1111-111111111111';
+update hx_profiles set perms='{}' where id='22222222-2222-2222-2222-222222222222';
