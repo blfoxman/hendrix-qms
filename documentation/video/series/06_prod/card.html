@@ -1,0 +1,82 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Hendrix QMS</title>
+<style>
+:root{--gold:#d4af37;--gold2:#f0d78a;--ink:#0a0a0a;--fg:#f3efe4;--mut:#9a9488}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;background:var(--ink);color:var(--fg);font-family:Inter,'Inter Display',sans-serif;overflow:hidden}
+body{background:radial-gradient(ellipse 70% 60% at 50% 38%,rgba(212,175,55,.13),rgba(212,175,55,0) 70%),linear-gradient(180deg,#0d0d0c,#070707)}
+.wrap{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.logo{display:flex;align-items:center;gap:26px;opacity:0;transform:translateY(10px);transition:opacity 1s ease,transform 1s ease}
+.logo.on{opacity:1;transform:none}
+.logo svg{width:112px;height:112px}
+.logo svg polygon,.logo svg path{stroke-dasharray:140;stroke-dashoffset:140;transition:stroke-dashoffset 1.8s ease .2s}
+.logo.on svg polygon,.logo.on svg path{stroke-dashoffset:0}
+.word b{display:block;font-weight:700;font-size:62px;letter-spacing:.32em;color:var(--gold);line-height:1}
+.word span{display:block;margin-top:12px;font-size:19px;letter-spacing:.62em;color:#cfc8b6}
+.rule{width:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);margin:30px 0 24px;transition:width 1.4s ease .6s}
+.rule.on{width:620px}
+h1{font-size:44px;font-weight:600;letter-spacing:-.01em;opacity:0;transition:opacity 1s ease 1s;text-align:center}
+h1.on{opacity:1}
+p.sub{margin-top:16px;font-size:22px;color:var(--mut);opacity:0;transition:opacity 1s ease 1.4s;text-align:center}
+p.sub.on{opacity:1}
+.list{margin-top:24px;display:grid;grid-template-columns:repeat(1,minmax(0,640px));gap:6px 38px}
+.it{display:flex;align-items:center;gap:14px;font-size:21px;color:#e8e2d2;opacity:0;transform:translateX(-10px);transition:opacity .6s ease,transform .6s ease}
+.it.on{opacity:1;transform:none}
+.it i{font-style:normal;flex:none;width:34px;height:34px;border:1.5px solid var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--gold);font-weight:600}
+.foot{position:absolute;top:44px;font-size:15px;letter-spacing:.3em;color:#6f6a60;opacity:0;transition:opacity 1s ease 1.8s}
+.foot.on{opacity:1}
+.book{margin-top:38px;display:flex;gap:22px;align-items:center;border:1px solid rgba(212,175,55,.45);border-radius:14px;padding:22px 30px;background:rgba(20,18,12,.7);opacity:0;transition:opacity 1s ease}
+.book.on{opacity:1}
+.book svg{width:46px;height:46px;flex:none}
+.book b{display:block;font-size:24px;color:var(--gold2);font-weight:600}
+.book span{display:block;font-size:17px;color:var(--mut);margin-top:6px}
+.thanks{margin-top:42px;font-size:40px;font-weight:600;color:var(--gold);opacity:0;transition:opacity 1.2s ease}
+.thanks.on{opacity:1}
+.kick{font-size:16px;letter-spacing:.34em;color:var(--gold);text-transform:uppercase;margin-bottom:18px;opacity:0;transition:opacity 1s ease .8s}
+.kick.on{opacity:1}
+.it small{color:var(--mut);font-size:17px;margin-left:8px}
+.next{margin-top:30px;font-size:24px;color:#e8e2d2;opacity:0;transition:opacity 1s ease}
+.next.on{opacity:1}
+.next b{color:var(--gold2);font-weight:600}
+</style></head>
+<body>
+<div class="wrap">
+  <div class="logo" id="logo">
+    <svg viewBox="0 0 40 40" fill="none" stroke="#d4af37" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round">
+      <polygon points="20,2 36,11 36,29 20,38 4,29 4,11"/><path d="M13 12v16M27 12v16M13 20h14"/>
+    </svg>
+    <div class="word"><b>HENDRIX</b><span>QUALITY MANAGEMENT</span></div>
+  </div>
+  <div class="rule" id="rule"></div>
+  <div class="kick" id="kick">Hendrix QMS training &middot; Video 06 &middot; Products, production and cultivation</div>
+  <h1 id="h1"></h1>
+  <p class="sub" id="sub"></p>
+  <div class="list" id="list"></div>
+  <div class="book" id="book" style="display:none">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#d4af37" stroke-width="1.6" stroke-linejoin="round"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H19v15H5.5A1.5 1.5 0 0 0 4 19.5z"/><path d="M4 19.5A1.5 1.5 0 0 0 5.5 21H19v-3"/><path d="M8 7h7M8 10h5"/></svg>
+    <div><b>Full details in the User Manual, Chapter 7</b><span>Products, production and cultivation: every page, field and Hendrix check for the seven modules in this video</span></div>
+  </div>
+  <div class="next" id="next" style="display:none"><b>That&rsquo;s the full series</b> &middot; thank you for watching</div>
+  <div class="foot" id="foot">ONE QUALITY SYSTEM &middot; EVERY LICENSE &middot; BUILT ON CSQ</div>
+</div>
+<script>
+const mode = location.pathname.includes('end') ? 'end' : 'title';
+const $ = id => document.getElementById(id);
+const ITEMS = [['Line Map','the live map of every batch'],['Products','SKUs, flavors and formulations'],['Production Planner',''],['Batch Tracker',''],['Testing','incl. the COA reading'],['Compliance Stickers',''],['Cultivation','for cultivation licenses']];
+if (mode === 'title') {
+  $('h1').textContent = 'Products, production and cultivation';
+  $('sub').textContent = 'From the recipe and the batch record, through the lab, to the printed label and the grow room';
+  ITEMS.forEach((t, i) => { const d = document.createElement('div'); d.className = 'it'; d.innerHTML = '<i>' + (i + 1) + '</i><span>' + t[0] + (t[1] ? '<small>' + t[1] + '</small>' : '') + '</span>'; $('list').appendChild(d); });
+} else {
+  $('h1').textContent = 'Wrap-up';
+  $('sub').style.display = 'none'; $('list').style.display = 'none';
+  $('book').style.display = 'flex'; $('next').style.display = 'block';
+}
+window.step = function (n) {
+  if (n === 0) { ['logo', 'rule', 'kick', 'h1', 'sub', 'foot'].forEach(k => $(k).classList.add('on')); }
+  if (n === 1 && mode === 'title') { [...document.querySelectorAll('.it')].forEach((e, i) => setTimeout(() => e.classList.add('on'), 300 + i * 700)); }
+  if (n === 1 && mode === 'end') { $('book').classList.add('on'); setTimeout(() => $('next').classList.add('on'), 1800); }
+  if (n === 2) { $('next').classList.add('on'); }
+};
+</script>
+</body></html>

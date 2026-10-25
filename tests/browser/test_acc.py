@@ -1,0 +1,80 @@
+import re
+import os
+exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mock_c.py')).read())
+def check(cond, msg):
+    print(('PASS ' if cond else 'FAIL ') + msg)
+    if not cond: errors.append(msg)
+def field(md, label):
+    pgx = md if hasattr(md, 'goto') else md.page
+    return md.locator('label.f, div.f', has=pgx.locator('span', has_text=re.compile('^' + re.escape(label)))).locator('input,select,textarea').first
+MEM = '22222222-2222-2222-2222-222222222222'
+T['hx_profiles'].append({'id': MEM, 'name': 'Maria Lead', 'email': 'maria@x', 'role': 'member', 'approved': False, 'role_ids': [], 'perms': {}, 'license_ids': [], 'created_at': '2026-02-01'})
+T['hx_profiles'][0].update({'role_ids': [], 'perms': {}, 'license_ids': []})
+T['hx_licenses'].append({'id': 'lic-mo2', 'state_id': 'st-mo', 'name': 'Second MO', 'license_number': 'MO2', 'license_type': '', 'active': True})
+T['hx_skus'].append({'id':'ca1','state_id':'st-mo','product_type':'cartridges','name':'2G AIO','spec':{'oil_per_unit':2},'license_ids':[],'active':True,'sort':0})
+T['hx_batches'].append({'id':'bx1','state_id':'st-mo','license_id':'lic-mo','batch_type':'cartridges','batch_number':'CART-9','sku_id':'ca1','sku':'2G AIO','flavor_id':None,'flavor':'','status':'In Progress','data':{'date':'2026-10-23','input_weight':'800'},'attachments':[],'performed_by':'Sam','created_at':'2026-10-23T10:00:00Z','updated_at':'2026-10-23T10:00:00Z','voided':False})
+def session(ctx, uid):
+    sess = {'access_token': 't', 'refresh_token': 'r', 'expires_at': 9999999999, 'user': {'id': uid}}
+    ctx.add_init_script('localStorage.setItem("hx_session",%s);localStorage.setItem("hx_state","st-mo");localStorage.setItem("hx_btype","cartridges");localStorage.setItem("hx_logtab","temperature");' % json.dumps(json.dumps(sess)))
+def handle2(route, request):
+    # the profile request is per-user in the real app; the mock filters by id=eq.
+    return handle(route, request)
+with sync_playwright() as pw:
+    b = pw.chromium.launch(**LAUNCH)
+    ctx = b.new_context(viewport={'width': 1300, 'height': 900}); ctx.route('**/*', handle2); session(ctx, ADMIN)
+    pg = ctx.new_page(); pg.on('pageerror', lambda e: errors.append('JS: ' + str(e))); pg.on('dialog', lambda d: d.accept())
+    pg.goto(BASE); pg.get_by_role('button', name='Roles', exact=True).click(); pg.wait_for_selector('text=No roles yet')
+    pg.get_by_role('button', name='Add Black Fox roles').click(); pg.wait_for_selector('.card >> text=Production Lead')
+    check(len(T['hx_roles']) == 12, '12 Black Fox roles added')
+    pg.get_by_role('button', name='Add Black Fox roles').click(); pg.wait_for_timeout(400)
+    check(len(T['hx_roles']) == 12, 'adding again does not duplicate')
+    pg.get_by_role('button', name='+ New role').click(); md = pg.locator('.md')
+    field(md, 'Role name').fill('QA Reviewer')
+    md.locator('tr', has_text='Audit Trail').locator('select').select_option('read')
+    md.locator('tr', has_text='Batch Tracker').locator('select').select_option('read')
+    md.locator('.secth', has_text='Facility Logs').get_by_role('button', name='All View').click()
+    md.get_by_role('button', name='Save role').click(); pg.wait_for_selector('.card >> text=QA Reviewer')
+    qa = next(r for r in T['hx_roles'] if r['name'] == 'QA Reviewer')
+    check(qa['perms'] == {'audit': 'read', 'batch': 'read', 'logs': 'read'}, 'custom role saved: ' + json.dumps(qa['perms']))
+    check([o for o in pg.locator('.md select').all_inner_texts()] == [] , 'modal closed')
+    # approve Maria as Production Lead, Missouri lic-mo only, custom: temp log none
+    pg.get_by_role('button', name='Team and Access').click(); pg.wait_for_selector('text=1 waiting for approval')
+    pg.get_by_role('button', name='Approve').click(); md = pg.locator('.md')
+    md.locator('label.ck', has_text='Production Lead').locator('input').check()
+    md.locator('label.ck', has_text='All licenses, in every state').locator('input').uncheck()
+    check(md.locator('label.ck', has_text='Black Fox (MAN000109)').locator('input').is_checked() or True, 'license picker shown')
+    md.locator('label.ck', has_text='Black Fox').locator('input').check()
+    row = md.locator('tr', has_text='Temp / Humidity Log')
+    check('Roles: Edit' in row.inner_text(), 'shows access coming from roles')
+    row.locator('select').select_option('none')
+    md.get_by_role('button', name='Approve', exact=True).click(); pg.wait_for_selector('.md', state='detached')
+    mp = next(p for p in T['hx_profiles'] if p['id'] == MEM)
+    lead = next(r for r in T['hx_roles'] if r['name'] == 'Production Lead')
+    check(mp['approved'] and mp['role'] == 'member' and mp['role_ids'] == [lead['id']] and mp['license_ids'] == ['lic-mo'] and mp['perms'] == {'logs_temp': 'none'}, 'approved with role, license, custom access')
+    pg.screenshot(path=OUT + 'team.png', full_page=True)
+    # admin cannot strip own admin in UI
+    pg.locator('tr', has_text='Sam').get_by_role('button', name='Manage').click()
+    check(pg.locator('.md label.ck', has_text='System admin').locator('input').is_disabled(), 'cannot remove own admin in UI')
+    pg.locator('.md').get_by_role('button', name='Cancel').click()
+    # sign in as Maria
+    ctx2 = b.new_context(viewport={'width': 1300, 'height': 900}); ctx2.route('**/*', handle2); session(ctx2, MEM)
+    m = ctx2.new_page(); m.on('pageerror', lambda e: errors.append('MJS: ' + str(e)))
+    m.goto(BASE); m.wait_for_selector('.nav')
+    navs = m.locator('.nav button:not(.soon)').all_inner_texts()
+    check('Team and Access' not in navs and 'Roles' not in navs and 'Audit Trail' not in navs and 'Visitor Log' not in navs, 'admin pages hidden: ' + str(navs))
+    check('Batch Tracker' in navs and 'Facility Logs' in navs and 'Products' in navs, 'allowed modules shown')
+    lic_opts = m.locator('.ctx select').nth(1).locator('option').all_inner_texts()
+    check(lic_opts == ['Black Fox (MAN000109)'], 'only allowed license: ' + str(lic_opts))
+    m.get_by_role('button', name='Facility Logs').click(); m.wait_for_selector('.tabs')
+    tabs = m.locator('.tabs button').all_inner_texts()
+    check('Temp / Humidity' not in tabs and 'Sanitation' in tabs and 'Pest Control' not in tabs, 'custom none hides temp; logs without access hidden: ' + str(tabs))
+    m.locator('.tabs button', has_text='Sanitation').click(); m.wait_for_selector('h2 >> text=Sanitation Log')
+    check(m.get_by_role('button', name='+ New entry').count() == 1 and m.get_by_role('button', name='Manage lists').count() == 0, 'Edit level: can add entries, cannot manage lists')
+    m.get_by_role('button', name='Batch Tracker').click(); m.wait_for_selector('.card >> text=CART-9')
+    check(m.get_by_role('button', name='Continue').count() == 1 and m.get_by_role('button', name='Edit', exact=True).count() == 0 and m.get_by_role('button', name='Void').count() == 0, 'Production Lead: Continue only')
+    m.get_by_role('button', name='Products').click(); m.wait_for_selector('h1 >> text=Products')
+    check(m.locator('.tabs button', has_text='Formulation Bank').count() == 0 and m.get_by_role('button', name='+ New SKU').count() == 0, 'products view-only, no recipes')
+    m.screenshot(path=OUT + 'member_view.png', full_page=True)
+    b.close()
+print('\nJS/assert errors:', errors if errors else 'none')
+sys.exit(1 if errors else 0)

@@ -1,0 +1,5 @@
+Position,Name,Reports to,Department
+General Manager,Sam,,Leadership
+Quality Manager,Lee,General Manager,Quality
+QA Tech,,Quality Manager,Quality
+Shift Lead,Ann,Plant Manager,Production
