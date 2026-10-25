@@ -28,7 +28,7 @@ select 'M1 save' , left(hx_metrc_save('lic-mo','csv','packages.csv', '[
   {"tag":"1A40-NEW","item":"Duplicate row"},
   {"tag":"","item":"no tag"}]'::jsonb), 3);
 select 'M2 packages', packages, source, file_name from hx_metrc_snapshots where license_id='lic-mo';
-select 'M3 findings', string_agg(f->>'kind' || ':' || (f->>'tag'), ',' order by f->>'kind', f->>'tag')
+select 'M3 findings', string_agg(f->>'kind' || ':' || (f->>'tag'), ',' order by f->>'kind' collate "C", f->>'tag' collate "C")
   from hx_metrc_snapshots s, jsonb_array_elements(hx_metrc_reconcile(s.id)->'findings') f where s.license_id='lic-mo';
 select 'M4 first is high', (hx_metrc_reconcile(s.id)->'findings'->0->>'severity') from hx_metrc_snapshots s where s.license_id='lic-mo';
 select 'M5 titles', f->>'title' from hx_metrc_snapshots s, jsonb_array_elements(hx_metrc_reconcile(s.id)->'findings') f where s.license_id='lic-mo' and f->>'kind' in ('quantity','lot','lab') order by 2;
