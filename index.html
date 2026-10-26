@@ -173,7 +173,7 @@ async function sb(path,opt){
   if(!r.ok){
     const m=(j&&(j.message||j.hint||j.details))||txt||('Error '+r.status);
     if(/schema cache|Could not find the table|relation .* does not exist/i.test(m)&&!/Could not find the '[A-Za-z0-9_]+' column/.test(m)){
-      const step=/hx_metrc/.test(m)?'hendrix_step41.sql':/hx_my_tasks|hx_notify|task_email/.test(m)?'hendrix_step39.sql':/hx_esignatures|mfa_required|esig_password|idle_signout/.test(m)?'hendrix_step38.sql':/hx_system_health/.test(m)?'hendrix_step37.sql':/hx_line_map|linemap_idle/.test(m)?'hendrix_step36.sql':/hx_license_settings/.test(m)?'hendrix_step34.sql':/hx_production_plans|hx_planner_recipes/.test(m)?'hendrix_step33.sql':/hx_time_clock|hx_badge|hx_kiosk_clock|hx_clock_fix/.test(m)?'hendrix_step32.sql':/hx_mgmt_reviews|hx_verification_/.test(m)?'hendrix_step31.sql':/hx_org_positions|hx_objective|hx_qms_settings/.test(m)?'hendrix_step30.sql':/hx_risk|hx_changes/.test(m)?'hendrix_step29.sql':/hx_haccp/.test(m)?'hendrix_step28.sql':/hx_grow_|hx_plant_batches/.test(m)?'hendrix_step27.sql':/hx_env_/.test(m)?'hendrix_step26.sql':/hx_line_clearances|hx_rework/.test(m)?'hendrix_step25.sql':/hx_equipment|hx_chemicals/.test(m)?'hendrix_step24.sql':/share_key|hx_training_shared/.test(m)?'hendrix_step23.sql':/hx_rule_sources/.test(m)?'hendrix_step22.sql':/hx_training_keys|hx_training_attempts|hx_course_submit|content_status/.test(m)?'hendrix_step20.sql':/hx_complaints|hx_audits|hx_audit_findings/.test(m)?'hendrix_step19.sql':/hx_recall|hx_trace_data/.test(m)?'hendrix_step18.sql':/hx_lots|hx_lot_uses|hx_holds|hx_shipments/.test(m)?'hendrix_step17.sql':/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
+      const step=/hx_admin_set_password|hx_password_changed|must_change_password/.test(m)?'hendrix_step42.sql':/hx_metrc/.test(m)?'hendrix_step41.sql':/hx_my_tasks|hx_notify|task_email/.test(m)?'hendrix_step39.sql':/hx_esignatures|mfa_required|esig_password|idle_signout/.test(m)?'hendrix_step38.sql':/hx_system_health/.test(m)?'hendrix_step37.sql':/hx_line_map|linemap_idle/.test(m)?'hendrix_step36.sql':/hx_license_settings/.test(m)?'hendrix_step34.sql':/hx_production_plans|hx_planner_recipes/.test(m)?'hendrix_step33.sql':/hx_time_clock|hx_badge|hx_kiosk_clock|hx_clock_fix/.test(m)?'hendrix_step32.sql':/hx_mgmt_reviews|hx_verification_/.test(m)?'hendrix_step31.sql':/hx_org_positions|hx_objective|hx_qms_settings/.test(m)?'hendrix_step30.sql':/hx_risk|hx_changes/.test(m)?'hendrix_step29.sql':/hx_haccp/.test(m)?'hendrix_step28.sql':/hx_grow_|hx_plant_batches/.test(m)?'hendrix_step27.sql':/hx_env_/.test(m)?'hendrix_step26.sql':/hx_line_clearances|hx_rework/.test(m)?'hendrix_step25.sql':/hx_equipment|hx_chemicals/.test(m)?'hendrix_step24.sql':/share_key|hx_training_shared/.test(m)?'hendrix_step23.sql':/hx_rule_sources/.test(m)?'hendrix_step22.sql':/hx_training_keys|hx_training_attempts|hx_course_submit|content_status/.test(m)?'hendrix_step20.sql':/hx_complaints|hx_audits|hx_audit_findings/.test(m)?'hendrix_step19.sql':/hx_recall|hx_trace_data/.test(m)?'hendrix_step18.sql':/hx_lots|hx_lot_uses|hx_holds|hx_shipments/.test(m)?'hendrix_step17.sql':/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
       throw new Error('Database tables are missing - run '+step+' in the Hendrix Supabase project.');
     }
     if(/row-level security|permission denied/i.test(m))throw new Error('Not allowed - your access level does not allow this here. Ask a system admin.');
@@ -278,6 +278,7 @@ function LoginScreen(props){
     el('div',{className:'muted',style:{marginTop:14,textAlign:'center',fontSize:13}},
       mode==='in'?'New here? ':'Already have an account? ',
       el('a',{href:'#',style:{color:'var(--gold-hi)'},onClick:function(e){e.preventDefault();setMode(mode==='in'?'up':'in');setErr('');}},mode==='in'?'Create an account':'Sign in')),
+    mode==='in'&&el('div',{className:'muted',style:{marginTop:8,textAlign:'center',fontSize:13}},el('a',{href:'#',style:{color:'var(--gold-hi)'},onClick:function(e){e.preventDefault();setErr('');setInfo('Forgot your password? Ask a Hendrix admin to set a temporary password for you (Team and Access > Manage > Set a temporary password). You choose your own at the next sign-in.');}},'Forgot your password?')),
     el('div',{className:'muted',style:{marginTop:14,textAlign:'center',fontSize:11}},
       el('a',{href:'#',style:{color:'var(--faint)'},onClick:function(e){e.preventDefault();lsDel('hx_url');lsDel('hx_key');props.onReconnect();}},'Change database connection'))));
 }
@@ -3177,6 +3178,7 @@ function AccessEditor(props){
       el('label',{className:'ck'},el('input',{type:'checkbox',checked:f.admin,disabled:props.isSelf,onChange:function(e){setF({...f,admin:e.target.checked});}}),el('span',null,el('b',null,'System admin'),' \u2014 Full access to everything, plus States and Licenses, Team and Roles')),
       el('label',{className:'ck'},el('input',{type:'checkbox',checked:f.mfa,onChange:function(e){setF({...f,mfa:e.target.checked});}}),el('span',null,el('b',null,'Require two-step sign-in'),' \u2014 password plus a code from an authenticator app; no access without it')),
       props.isSelf&&el('div',{className:'muted',style:{fontSize:12}},'You cannot remove your own approval or admin rights.')),
+    !props.approve&&el(TempPasswordBox,{user:u}),
     el('div',{className:'secth'},'Roles'),
     !roles.length?el('div',{className:'muted',style:{marginBottom:12}},'No roles yet. Create them on the Roles page.'):
     el('div',{className:'cklist',style:{marginBottom:12}},roles.map(function(r){
@@ -7647,8 +7649,8 @@ function LineMapDashCard(props){
 }
 
 /* ---------- System Health (step 37): checks the installation like an IQ, admins only ---------- */
-const HX_RELEASE='Release 41 · October 2026';
-const SH_STEPS_EXPECTED=[4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,36,37,38,39,40,41];
+const HX_RELEASE='Release 42 · October 2026';
+const SH_STEPS_EXPECTED=[4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,36,37,38,39,40,41,42];
 function shErr(e){const m=String((e&&e.message)||e);return /hx_system_health/.test(m)&&/missing|does not exist|schema cache|Could not find/i.test(m)?'NOT_INSTALLED':m;}
 function SystemHealthPage(props){
   const[h,setH]=useState(null);const[x38,setX38]=useState(null);const[err,setErr]=useState('');const[ai,setAi]=useState(null);const[busy,setBusy]=useState(false);const[at,setAt]=useState(0);
@@ -7667,7 +7669,7 @@ function SystemHealthPage(props){
   function add(group,label,state,detail,fix){checks.push({group:group,label:label,state:state,detail:detail||'',fix:fix||''});}
   if(h){
     const steps=h.steps||[],missing=steps.filter(function(s){return !s.ok;});
-    add('Database','Database steps installed',missing.length?'bad':'ok',missing.length?'Missing: '+missing.map(function(s){return s.step+' '+s.name;}).join(', '):'All '+steps.length+' steps (4 to '+(steps.length?steps[steps.length-1].step:'')+') are installed.',missing.length?'Run hendrix_install_13_to_41.sql (or the missing step files) in the Supabase SQL editor.':'');
+    add('Database','Database steps installed',missing.length?'bad':'ok',missing.length?'Missing: '+missing.map(function(s){return s.step+' '+s.name;}).join(', '):'All '+steps.length+' steps (4 to '+(steps.length?steps[steps.length-1].step:'')+') are installed.',missing.length?'Run hendrix_install_13_to_42.sql (or the missing step files) in the Supabase SQL editor.':'');
     const drift=at?Math.abs(new Date(h.checked_at).getTime()-at)/1000:0;
     add('Database','Clock',drift>120?'warn':'ok','Database time zone '+h.db_time_zone+'; this device is '+Math.round(drift)+' s '+(drift>120?'off':'in step')+'.',drift>120?'Set this device to the correct time (automatic time).':'');
     add('Security','Row level security on every table',(h.rls_off||[]).length?'bad':'ok',(h.rls_off||[]).length?'Off on: '+h.rls_off.join(', '):'On for all '+h.tables+' Hendrix tables.',(h.rls_off||[]).length?'Run the step file that creates those tables again, or turn on RLS for them in Supabase > Table editor.':'');
@@ -7702,7 +7704,7 @@ function SystemHealthPage(props){
       el('div',{className:'row',style:{gap:8}},el('button',{className:'btn ghost',disabled:busy,onClick:run},busy?'Checking...':'Run checks again'),
         el('button',{className:'btn ghost',disabled:ai&&ai.busy,onClick:testAi},ai&&ai.busy?'Testing...':'Test the AI connection'),
         h&&el('button',{className:'btn',onClick:print},'Print IQ evidence'))),
-    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'System Health is not set up yet - run hendrix_step37.sql (or hendrix_install_13_to_41.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
+    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'System Health is not set up yet - run hendrix_step37.sql (or hendrix_install_13_to_42.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
     h&&el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',gap:10,marginBottom:14}},
       el('div',{className:'card',style:{marginBottom:0,borderTop:'2px solid '+(nBad?'var(--red)':(nWarn?'var(--gold)':'#5fbf8a'))}},el('div',{className:'k'},'Overall'),el('div',{style:{fontSize:22,fontWeight:700,marginTop:4,color:nBad?'var(--red)':(nWarn?'var(--gold-hi)':'#5fbf8a')}},nBad?nBad+' to fix':(nWarn?nWarn+' to check':'Ready')),el('div',{className:'muted',style:{fontSize:12}},nOk+' of '+checks.length+' checks pass')),
       el('div',{className:'card',style:{marginBottom:0}},el('div',{className:'k'},'Steps installed'),el('div',{style:{fontSize:22,fontWeight:700,marginTop:4}},(h.steps||[]).filter(function(s){return s.ok;}).length+' / '+(h.steps||[]).length),el('div',{className:'muted',style:{fontSize:12}},'database steps 4 to '+((h.steps||[]).slice(-1)[0]||{}).step)),
@@ -7834,7 +7836,7 @@ function MyAccountPage(props){
   const[pw1,setPw1]=useState('');const[pw2,setPw2]=useState('');const[msg,setMsg]=useState('');const[err,setErr]=useState('');const[setup,setSetup]=useState(false);const[fs,setFs]=useState(null);
   const load=useCallback(function(){mfaFactors().then(setFs).catch(function(){setFs([]);});},[]);useEffect(load,[load]);
   async function changePw(){setErr('');setMsg('');if(pw1.length<8){setErr('Use at least 8 characters.');return;}if(pw1!==pw2){setErr('The two passwords are not the same.');return;}
-    try{await authUser('PUT','user',{password:pw1});setPw1('');setPw2('');setMsg('Password changed.');}catch(e){setErr(String(e.message||e));}}
+    try{await authUser('PUT','user',{password:pw1});try{await sb('rpc/hx_password_changed',{method:'POST',body:{}});}catch(x){}setPw1('');setPw2('');setMsg('Password changed.');}catch(e){setErr(String(e.message||e));}}
   async function turnedOn(){try{if(!me.mfa_required)await db.update('hx_profiles',me.id,{mfa_required:true});}catch(e){}setSetup(false);setMsg('Two-step sign-in is on. You will need your authenticator app every time you sign in.');load();if(props.onChanged)props.onChanged();}
   const on=fs&&fs.length>0;
   return el('div',null,el('h1',null,el('span',{className:'g'},'My account')),el('div',{className:'sub'},(me.name||'')+' · '+email),
@@ -7882,7 +7884,7 @@ function MyTasksPage(props){
       el('div',null,el('h1',null,el('span',{className:'g'},'My Tasks')),el('div',{className:'sub'},(lic?lic.name+' · ':'')+'everything waiting for you, kept up to date by Hendrix from the records')),
       el('div',{className:'row',style:{gap:8}},el('button',{className:'btn ghost',onClick:load},'Refresh'),lic&&el('button',{className:'btn ghost',disabled:busy,onClick:emailMe},busy?'Sending...':'Email me this list'))),
     msg&&el('div',{className:'msg'},msg),
-    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'My Tasks is not set up yet - run hendrix_step39.sql (or hendrix_install_13_to_41.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
+    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'My Tasks is not set up yet - run hendrix_step39.sql (or hendrix_install_13_to_42.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
     list===null?el('div',{className:'muted'},'Loading...'):el('div',null,
       el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',gap:10,marginBottom:14}},
         stat('All',L.length,'open tasks',undefined,'all'),stat('Waiting for you',mine.length,'assigned to you',undefined,'mine'),
@@ -8032,7 +8034,7 @@ function MetrcPage(props){
     el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-end',gap:12,flexWrap:'wrap',marginBottom:16}},
       el('div',null,el('h1',null,el('span',{className:'g'},'METRC Check')),el('div',{className:'sub'},lic.name+(lic.license_number?' · '+lic.license_number:'')+' · what METRC says compared with Hendrix; read only, nothing is changed in METRC')),
       el('div',{className:'row',style:{gap:8}},res&&el('button',{className:'btn ghost',onClick:print},'Print report'))),
-    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'METRC Check is not set up yet - run hendrix_step41.sql (or hendrix_install_13_to_41.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
+    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'METRC Check is not set up yet - run hendrix_step41.sql (or hendrix_install_13_to_42.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
     busy&&el('div',{className:'msg'},busy),
     canE&&el('div',{className:'card'},el('div',{className:'k',style:{marginBottom:8}},'Get what METRC says'),
       el('div',{className:'row',style:{gap:10,alignItems:'center',flexWrap:'wrap'}},
@@ -8053,6 +8055,37 @@ function MetrcPage(props){
           el('span',{className:'muted',style:{flex:'0 0 auto',width:110,fontSize:12}},MC_KIND[x.kind]||x.kind),
           el('div',{style:{flex:1,minWidth:0}},el('div',{style:{fontWeight:600}},x.title),el('div',{className:'muted',style:{fontSize:12.5,marginTop:2}},el('code',null,x.tag),x.detail?' · '+x.detail:'')),
           x.page&&el('button',{className:'btn sm',style:{flex:'0 0 auto'},onClick:function(){props.go(x.page);}},'Open'));}))));
+}
+
+/* ---------- Temporary passwords (step 42): admin resets, person picks a new one ---------- */
+function hxTempPassword(){const A='ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';const r=new Uint32Array(12);crypto.getRandomValues(r);let o='';for(let i=0;i<12;i++){o+=A[r[i]%A.length];if(i===3||i===7)o+='-';}return o;}
+function pwErr(e){const m=String((e&&e.message)||e);return /hx_admin_set_password|hx_password_changed/.test(m)&&/missing|does not exist|schema cache|Could not find/i.test(m)?'Temporary passwords are not set up yet - run hendrix_step42.sql in the Hendrix Supabase project.':m;}
+function TempPasswordBox(props){
+  const u=props.user;const[open,setOpen]=useState(false);const[pw,setPw]=useState('');const[busy,setBusy]=useState(false);const[err,setErr]=useState('');const[done,setDone]=useState('');
+  async function go(){setErr('');setBusy(true);try{await sb('rpc/hx_admin_set_password',{method:'POST',body:{p_user:u.id,p_password:pw}});setDone(pw);setOpen(false);}catch(e){setErr(pwErr(e));}setBusy(false);}
+  return el('div',{className:'card',style:{padding:12}},
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'center',gap:10}},el('div',null,el('b',null,'Password'),el('div',{className:'muted',style:{fontSize:12}},'Forgot their password? Set a temporary one and give it to them in person. They must choose their own at the next sign-in.')),
+      !open&&el('button',{type:'button',className:'btn ghost sm',onClick:function(){setOpen(true);setDone('');setErr('');setPw(hxTempPassword());}},'Set a temporary password')),
+    open&&el('div',{className:'row',style:{gap:8,marginTop:10,alignItems:'center',flexWrap:'wrap'}},
+      el('input',{value:pw,'aria-label':'Temporary password',style:{width:220,fontFamily:'monospace'},onChange:function(e){setPw(e.target.value);}}),
+      el('button',{type:'button',className:'btn ghost sm',onClick:function(){setPw(hxTempPassword());}},'Generate'),
+      el('button',{type:'button',className:'btn sm',disabled:busy||pw.length<8,onClick:go},busy?'Setting...':'Set password'),
+      el('button',{type:'button',className:'btn ghost sm',onClick:function(){setOpen(false);}},'Cancel')),
+    done&&el('div',{className:'msg ok',style:{marginTop:10}},'Temporary password for '+(u.name||u.email)+': ',el('code',{style:{fontSize:15,userSelect:'all'}},done),'. Give it to them in person (not by text or email). Their other sessions were signed out; at the next sign-in they choose a new password.'),
+    err&&el('div',{className:'msg err',style:{marginTop:10}},err));
+}
+function NewPasswordScreen(props){
+  const me=props.profile||{};const[pw1,setPw1]=useState('');const[pw2,setPw2]=useState('');const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  async function go(){setErr('');if(pw1.length<8){setErr('Use at least 8 characters.');return;}if(pw1!==pw2){setErr('The two passwords are not the same.');return;}
+    setBusy(true);try{await authUser('PUT','user',{password:pw1});await sb('rpc/hx_password_changed',{method:'POST',body:{}});props.onDone();}
+    catch(e){const m=String(e.message||e);setErr(/same|different|should be different/i.test(m)?'Choose a password different from the temporary one.':pwErr(e));setBusy(false);}}
+  return el('div',{className:'auth'},el('div',{className:'box'},el(Brand),el('h2',{style:{marginTop:18}},'Choose a new password'),
+    el('p',{className:'muted'},'An admin set a temporary password for '+(me.name||'your account')+'. Choose your own password now; only you will know it.'),
+    el(Field,{label:'New password'},el('input',{type:'password',autoFocus:true,value:pw1,'aria-label':'New password',onChange:function(e){setPw1(e.target.value);}})),
+    el(Field,{label:'New password again'},el('input',{type:'password',value:pw2,'aria-label':'New password again',onChange:function(e){setPw2(e.target.value);},onKeyDown:function(e){if(e.key==='Enter'&&pw1&&pw2)go();}})),
+    err&&el('div',{className:'msg err'},err),
+    el('button',{className:'btn',style:{width:'100%'},disabled:busy||!pw1||!pw2,onClick:go},busy?'Saving...':'Save my new password'),
+    el('div',{style:{marginTop:14,textAlign:'center'}},el('a',{href:'#',style:{color:'var(--faint)',fontSize:12},onClick:function(e){e.preventDefault();props.onSignOut();}},'Sign out'))));
 }
 
 /* ---------- Training (Black Fox / Michigan SOP training matrix + CSQ 2A.13.2 training program) ---------- */
@@ -11156,6 +11189,7 @@ function App(){
         setLoadErr('Your profile was not found. Make sure hendrix_setup.sql was run in this Supabase project.');setPhase('login');saveSession(null);return;}
       setProfile(p[0]);ACC.profile=p[0];
       if(p[0].mfa_required&&hxAal()!=='aal2'){setPhase('mfa');return;}
+      if(p[0].must_change_password&&p[0].approved){setPhase('newpw');return;}
       if(!p[0].approved){setPhase('pending');return;}
       try{ACC.roles=(await db.get('hx_roles','select=*&order=sort,name'))||[];}catch(x){ACC.roles=[];}
       await loadData();setPhase('ready');
@@ -11185,6 +11219,7 @@ function App(){
   if(phase==='connect')return el(ConnectScreen,{onDone:boot});
   if(phase==='login')return el('div',null,loadErr&&el('div',{className:'msg err',style:{margin:12}},loadErr),
     el(LoginScreen,{onAuthed:boot,onReconnect:function(){setPhase('connect');rerender();}}));
+  if(phase==='newpw')return el(NewPasswordScreen,{profile:profile,onDone:boot,onSignOut:function(){saveSession(null);setProfile(null);ACC.profile=null;ACC.roles=[];setPhase('login');}});
   if(phase==='mfa')return el(MfaGate,{onDone:boot,onSignOut:function(){saveSession(null);setProfile(null);ACC.profile=null;ACC.roles=[];setPhase('login');}});
   if(phase==='pending')return el('div',{className:'auth'},el('div',{className:'box'},el(Brand),
     el('h2',{style:{marginTop:18}},'Waiting for approval'),

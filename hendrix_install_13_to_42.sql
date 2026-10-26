@@ -1,5 +1,5 @@
 -- =====================================================================
--- Hendrix QMS - ONE-FILE INSTALL of steps 13 to 41 (SOPs ... Line Map, System Health, Security, My Tasks)
+-- Hendrix QMS - ONE-FILE INSTALL of steps 13 to 42 (SOPs ... Line Map, System Health, Security, My Tasks)
 -- For a Hendrix database that already has steps 1-12.
 -- Paste the whole file into Supabase > SQL Editor > Run (one time).
 -- Safe to run again: every step can run more than once.
@@ -5360,7 +5360,7 @@ select 'Hendrix step 36 (Production Line Map) installed' as result;
 -- Hendrix QMS  -  Step 37: System Health
 -- One admin-only function, hx_system_health(), that checks the installation the
 -- way an auditor's Installation Qualification (IQ) does:
---   * which database steps are installed (4 to 41)
+--   * which database steps are installed (4 to 42)
 --   * row level security switched on for every Hendrix table
 --   * every Hendrix table written to the audit trail, and the audit trail locked
 --   * the private file bucket exists and is not public
@@ -5397,7 +5397,7 @@ begin
       (24,'Equipment and chemicals','t','hx_equipment'),(25,'Line clearance and rework','t','hx_line_clearances'),(26,'Facility tests','t','hx_env_points'),(27,'Cultivation','t','hx_grow_areas'),
       (28,'HACCP','t','hx_haccp_team'),(29,'Risk register and change control','t','hx_risks'),(30,'Org chart and objectives','t','hx_org_positions'),(31,'Management review and verification','t','hx_mgmt_reviews'),
       (32,'Time clock and badges','t','hx_badges'),(33,'Production planner','t','hx_production_plans'),(34,'Settings','t','hx_license_settings'),(36,'Line Map','f','hx_line_map'),
-      (37,'System health','f','hx_system_health'),(38,'Security: e-signatures, two-step sign-in','t','hx_esignatures'),(39,'My Tasks and email alerts','t','hx_notify_queue'),(40,'Kiosks keep working offline','t','hx_kiosk_receipts'),(41,'METRC check','t','hx_metrc_snapshots')) as s(step, name, kind, obj)
+      (37,'System health','f','hx_system_health'),(38,'Security: e-signatures, two-step sign-in','t','hx_esignatures'),(39,'My Tasks and email alerts','t','hx_notify_queue'),(40,'Kiosks keep working offline','t','hx_kiosk_receipts'),(41,'METRC check','t','hx_metrc_snapshots'),(42,'Temporary passwords','f','hx_admin_set_password')) as s(step, name, kind, obj)
   loop
     v_ok := case r.kind
       when 't' then to_regclass('public.' || r.obj) is not null
@@ -6390,5 +6390,65 @@ notify pgrst, 'reload schema';
 select 'Hendrix step 41 (METRC check) installed' as result;
 
 
+-- ###################################################################
+-- ### hendrix_step42.sql
+-- ###################################################################
+-- =====================================================================
+-- Hendrix QMS  -  Step 42: admin sets a temporary password
+--
+--   Until email is set up, a person who forgot their password asks an admin.
+--   Team and Access > Manage > "Set a temporary password": the admin types (or
+--   generates) a temporary password and gives it to the person in person.
+--   * the person's other open sessions are signed out;
+--   * at the next sign-in Hendrix makes the person choose their own new
+--     password before anything else opens (must_change_password);
+--   * the reset is in the Audit Trail ("Password reset by an admin"); the
+--     password itself is never stored by Hendrix, only its hash in Supabase Auth.
+--
+-- Run in the Hendrix Supabase project (bqrncllndvzbhmxanitq) AFTER steps 1-41.
+-- Safe to run more than once.
+-- =====================================================================
+
+create schema if not exists extensions;
+create extension if not exists pgcrypto with schema extensions;
+alter table hx_profiles add column if not exists must_change_password boolean not null default false;
+
+create or replace function hx_admin_set_password(p_user uuid, p_password text) returns boolean
+language plpgsql volatile security definer set search_path = public, extensions as $$
+begin
+  if not hx_fl_is_admin() then raise exception 'Only a system admin can set a temporary password.'; end if;
+  if length(coalesce(p_password, '')) < 8 then raise exception 'The temporary password needs at least 8 characters.'; end if;
+  if length(p_password) > 72 then raise exception 'The temporary password can have at most 72 characters.'; end if;
+  if not exists (select 1 from hx_profiles where id = p_user) then raise exception 'Unknown person.'; end if;
+  update auth.users set encrypted_password = extensions.crypt(p_password, extensions.gen_salt('bf', 10)), updated_at = now() where id = p_user;
+  if not found then raise exception 'This person has no sign-in account.'; end if;
+  -- sign the person out everywhere else
+  begin execute 'delete from auth.sessions where user_id = $1' using p_user; exception when undefined_table then null; end;
+  begin execute 'delete from auth.refresh_tokens where user_id = $1::text' using p_user; exception when undefined_table or undefined_column then null; end;
+  perform set_config('hx.reason', 'Password reset by an admin', true);
+  update hx_profiles set must_change_password = (p_user::text <> auth.uid()::text) where id = p_user;
+  return true;
+end $$;
+revoke all on function hx_admin_set_password(uuid, text) from public, anon;
+grant execute on function hx_admin_set_password(uuid, text) to authenticated;
+
+-- the person chose their own password: clear the flag (the app calls this after changing the password)
+create or replace function hx_password_changed() returns boolean
+language plpgsql volatile security definer set search_path = public as $$
+begin
+  if auth.uid() is null then raise exception 'Sign in first.'; end if;
+  if exists (select 1 from hx_profiles where id::text = auth.uid()::text and must_change_password) then
+    perform set_config('hx.reason', 'New password chosen after a reset', true);
+    update hx_profiles set must_change_password = false where id::text = auth.uid()::text;
+  end if;
+  return true;
+end $$;
+revoke all on function hx_password_changed() from public, anon;
+grant execute on function hx_password_changed() to authenticated;
+
 notify pgrst, 'reload schema';
-select 'Hendrix steps 13-41 installed' as result;
+select 'Hendrix step 42 (admin sets a temporary password) installed' as result;
+
+
+notify pgrst, 'reload schema';
+select 'Hendrix steps 13-42 installed' as result;
