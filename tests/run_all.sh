@@ -3,7 +3,7 @@
 # Usage: tests/run_all.sh            (all)      tests/run_all.sh mat qms   (only those browser suites)
 # Env: HX_CHROME=<chromium binary> (optional), HX_SKIP_DB=1 to skip PostgreSQL parts.
 cd "$(dirname "$0")"
-SUITES=${*:-"mc off tk sec lm sh im st pp tc mv qs rc haccp cul env lc eq share training online tr_upgrade scope rulebook std ops cmp recall mat suppliers qms sop s t acc b fl3 p2 a w"}
+SUITES=${*:-"pw mc off tk sec lm sh im st pp tc mv qs rc haccp cul env lc eq share training online tr_upgrade scope rulebook std ops cmp recall mat suppliers qms sop s t acc b fl3 p2 a w"}
 # on GitHub Actions, failures are also written as annotations (readable without the log)
 note(){ [ -n "$GITHUB_ACTIONS" ] && echo "::error title=$1::$(echo "$2" | tr '\n' '|' | cut -c1-900)"; return 0; }
 FAILED=0; TOTAL=0; LOG=browser/work/summary.log; mkdir -p browser/work; : > $LOG

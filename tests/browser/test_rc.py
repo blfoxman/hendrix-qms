@@ -103,6 +103,9 @@ with sync_playwright() as pw:
     check('Risk register' in html and 'CSQ 5.1.6' in html and 'Glass breakage' in html, 'printable risk register'); w.close()
     rrow(pg, 'Power or HVAC failure').get_by_role('button', name='Close').click(); md = pg.locator('.md')
     md.locator('textarea').fill('Moved to a facility with backup power'); md.get_by_role('button', name='Close risk').click(); pg.wait_for_selector('.msg >> text=Closed RK-010')
+    for _ in range(30):
+        if rrow(pg, 'Power or HVAC failure').count() == 0: break
+        pg.wait_for_timeout(100)
     check(rrow(pg, 'Power or HVAC failure').count() == 0, 'closed risk leaves the live list')
     pg.screenshot(path=OUT + 'risks.png', full_page=True)
     # change control
@@ -117,6 +120,9 @@ with sync_playwright() as pw:
     md.get_by_role('button', name='Request change').click(); pg.wait_for_selector('.msg >> text=Requested CC-2026-001')
     pg.get_by_role('button', name='Approve', exact=True).click(); md = pg.locator('.md'); check(md.locator('text=tell State regulator').count() == 1, 'approval screen lists what is needed before use')
     md.get_by_role('button', name='Approve').click(); pg.wait_for_selector('.msg >> text=Approved CC-2026-001')
+    for _ in range(30):
+        if pg.locator('td', has_text='1 action open, training before use, HACCP plan review, notifications').count() == 1: break
+        pg.wait_for_timeout(100)
     check(pg.locator('td', has_text='1 action open, training before use, HACCP plan review, notifications').count() == 1, 'next step lists the blockers')
     pg.get_by_role('button', name='Work', exact=True).click(); md = pg.locator('.md')
     check(md.get_by_role('button', name='Mark implemented').is_disabled(), 'cannot implement with open items')

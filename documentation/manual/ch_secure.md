@@ -66,6 +66,14 @@ From now on, Hendrix asks for the code after your password every time you sign i
 
 ![Two-step sign-in at sign-in](shots/sec_gate.png)
 
+### Forgot password (temporary password from an admin)
+Until password-reset email is set up, a person who forgot their password asks a system admin:
+1. Admin: **Team and Access** → **Manage** on the person → **Set a temporary password**. Hendrix suggests a readable one (for example `WPYt-vF8F-Uktn`); **Generate** makes another, or type your own (at least 8 characters). Click **Set password**.
+2. Give the temporary password to the person **in person** (not by text or email). Their other open sessions are signed out.
+3. The person signs in with it. Hendrix shows **Choose a new password** before anything else opens; they type their own password twice and click **Save my new password**.
+
+The reset is in the Audit Trail ("Password reset by an admin"). Hendrix never stores passwords, only the secure hash kept by the sign-in service. On the sign-in page, **Forgot your password?** tells people to ask an admin.
+
 ### Change password
 | Field | What to enter | Required |
 |---|---|---|
