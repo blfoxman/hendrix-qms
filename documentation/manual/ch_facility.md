@@ -80,7 +80,8 @@ How the result is set:
 | Track-and-Trace Tag(s) | Package tags, comma separated | Yes |
 | Unit of Measure | Grams or EA (Each) | Yes |
 | Quantity of Waste / Expired Product | e.g. 14.2 | Yes |
-| Camera #1 to #4 Name | The camera covering each angle of the destruction | No |
+| Rendering Camera Angle 1 and 2 | The two cameras covering the rendering (making the waste unusable) | No |
+| Disposal Camera 1 and 2 | The two cameras covering the disposal | No |
 | Location of Rendering, Method Used | From the lists; write each full method as your state requires | Method yes |
 | Quantity of Rendered Waste | Weight after rendering | No |
 | Date / Time of Disposal, Waste Management Company, Waste Manifest Number, Disposal Receipt Number, Location of Disposal | Disposal details | No |
