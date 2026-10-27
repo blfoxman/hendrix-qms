@@ -102,6 +102,8 @@ with sync_playwright() as pw:
     p.goto(BASE); p.wait_for_selector('.nav'); p.locator('.nav').get_by_role('button', name='Facility Logs').click()
     p.locator('button', has_text='Maintenance Request').first.click(); p.wait_for_selector('h2 >> text=Maintenance Request')
     check(p.locator('text=after signing in with their own Hendrix account').count() == 1, 'QR card says staff sign in')
+    try: p.locator('td', has_text='Cart room').first.wait_for(timeout=10000); p.locator('.badge', has_text='1 open').first.wait_for(timeout=5000)
+    except Exception: pass
     check(p.locator('.badge', has_text='1 open').count() == 1 and p.locator('td', has_text='Cart room').count() == 1, 'open request listed')
     p.get_by_role('button', name='Update status').click(); md = p.locator('.md')
     md.get_by_role('button', name='In progress', exact=True).click(); md.locator('textarea').fill('Technician coming Thursday'); md.get_by_role('button', name='Save status').click()
