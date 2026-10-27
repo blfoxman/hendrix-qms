@@ -28,8 +28,8 @@ select 'R1 rows', string_agg(event_type || ':' || offline::text || ':' || (synce
 select 'R2 audit reason', count(*) from hx_audit_log where table_name='hx_time_clock' and reason like 'Badge scan (saved on the kiosk while offline)%';
 set role anon;
 -- facility log and visitor saved offline
-select 'L1 log', (hx_kiosk_sync('st-mo','lic-mo','log','t40-l1-0001', now()-interval '5 hours', jsonb_build_object('type','sanitation','item','Bench','result','pass','performed_by','T40 Tester','signature','data:image/png;base64,xx','data',jsonb_build_object('note','ok'))) ? 'id');
-select 'L2 no signature', hx_kiosk_sync('st-mo','lic-mo','log','t40-l2-0002', now()-interval '5 hours', jsonb_build_object('type','sanitation','performed_by','T40 Tester'))->>'error';
+select 'L1 log', (hx_kiosk_sync('st-mo','lic-mo','log','t40-l1-0001', now()-interval '5 hours', jsonb_build_object('type','pest','item','Bench','result','pass','performed_by','T40 Tester','signature','data:image/png;base64,xx','data',jsonb_build_object('note','ok'))) ? 'id');
+select 'L2 no signature', hx_kiosk_sync('st-mo','lic-mo','log','t40-l2-0002', now()-interval '5 hours', jsonb_build_object('type','pest','performed_by','T40 Tester'))->>'error';
 select 'V1 visitor', (hx_kiosk_sync('st-mo','lic-mo','visitor','t40-v1-0001', now()-interval '4 hours', jsonb_build_object('visitor_name','T40 Visitor','purpose','Audit','signature',repeat('x',60),'gmp_ack',true,'ill',false)) ? 'id');
 select 'X1 receipts closed', count(*) from hx_kiosk_receipts;
 reset role;

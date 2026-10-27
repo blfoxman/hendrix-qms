@@ -35,7 +35,7 @@ with sync_playwright() as pw:
     pg = ctx.new_page(); pg.on('pageerror', lambda e: errors.append('JS: ' + str(e))); pg.on('dialog', lambda d: d.accept())
     pg.goto(BASE); pg.wait_for_selector('.nav')
     pg.get_by_role('button', name='System Health', exact=True).click(); pg.wait_for_selector('text=Database steps installed')
-    check(pg.locator('text=All 38 steps (4 to 42) are installed.').count() == 1, 'all database steps detected from the real database')
+    check(pg.locator('text=All 39 steps (4 to 43) are installed.').count() == 1, 'all database steps detected from the real database')
     check(row(pg, 'Audit trail locked').locator('text=✓').count() == 1 and row(pg, 'Every change goes to the audit trail').locator('text=✓').count() == 1, 'audit trail: covered and locked')
     check(row(pg, 'Password at every signature').locator('text=✓').count() == 1 and row(pg, 'Two-step sign-in for admins').locator('text=!').count() == 1, 'step 38: signatures on everywhere; admin without two-step sign-in flagged')
     check(row(pg, 'Kiosk entries saved without internet (7 days)').count() == 1, 'step 40: offline kiosk check shown')

@@ -277,7 +277,7 @@ with sync_playwright() as pw:
     pg.get_by_role('button', name='Facility Logs').click()
     pg.wait_for_selector('h2 >> text=Sanitation Log')
     names = pg.locator('.tabs button').all_inner_texts()
-    check(names == ['Sanitation', 'Waste Destruction', 'Scale Calibration', 'Security Malfunction', 'Security Equipment Inspection', 'Pest Control', 'Equipment Maintenance', 'Temp / Humidity', 'Environmental Monitoring'], '9 Black Fox logs in Black Fox order: ' + str(names))
+    check(names == ['Sanitation', 'Waste Destruction', 'Scale Calibration', 'Security Malfunction', 'Security Equipment Inspection', 'Pest Control', 'Equipment Maintenance', 'Temp / Humidity', 'Environmental Monitoring', 'Maintenance Request', 'Purchase Request'], '9 Black Fox logs in Black Fox order, then the two request forms: ' + str(names))
 
     # --- Sanitation
     pg.get_by_role('button', name='Manage lists').click()
@@ -384,16 +384,18 @@ with sync_playwright() as pw:
     # --- Kiosk on a phone
     kp = b.new_context(viewport={'width': 390, 'height': 844}, has_touch=True); kp.route('**/*', handle)
     k = kp.new_page(); k.on('pageerror', lambda e: errors.append('KJS: ' + str(e)))
-    k.goto(BASE + '?kiosk=log&type=environmental&state=st-mo&lic=lic-mo'); k.wait_for_selector('text=Environmental Monitoring Log')
-    check(k.locator('select option', has_text='ATP swab (surface)').count() == 1, 'kiosk sample types use BF defaults')
-    field(k.locator('.box'), 'Performed By').fill('Kiosk Kim'); field(k.locator('.box'), 'Sampling Location').fill('Drain 1')
+    # Pest Control Log stays open without sign-in (outside pest company)
+    k.goto(BASE + '?kiosk=log&type=pest&state=st-mo&lic=lic-mo'); k.wait_for_selector('text=Pest Control Log')
+    check(k.locator('select option', has_text='Routine inspection').count() == 1, 'open kiosk: pest log with BF default types')
+    field(k.locator('.box'), 'Performed By').fill('Kiosk Kim'); field(k.locator('.box'), 'Areas Inspected').fill('Dock and warehouse')
     k.get_by_role('button', name='Submit entry').click()
     check(k.locator('.msg.err', has_text='sign').count() == 1, 'kiosk requires signature')
     sign(k); k.screenshot(path=OUT + 'kiosk2.png', full_page=True)
     k.get_by_role('button', name='Submit entry').click(); k.wait_for_selector('text=Saved. Thank you, Kiosk Kim.')
-    r = last('environmental'); check(r['source'] == 'kiosk' and r['result'] == 'Pass' and r['state_id'] == 'st-mo', 'kiosk environmental saved')
-    k.goto(BASE + '?kiosk=log&type=sanitation&state=st-mo&lic=lic-mo'); k.wait_for_selector('label.ck >> text=Production Floor')
-    check(True, 'sanitation kiosk shows this license areas')
+    r = last('pest'); check(r['source'] == 'kiosk' and r['state_id'] == 'st-mo', 'kiosk pest entry saved without sign-in')
+    # every other log asks for the person's own sign-in after the QR scan
+    k.goto(BASE + '?kiosk=log&type=sanitation&state=st-mo&lic=lic-mo'); k.wait_for_selector('text=Sign in with your own Hendrix account to fill this form')
+    check(k.locator('input[type=password]').count() == 1, 'sanitation kiosk asks for sign-in')
     for bad, txt in [(BASE + '?kiosk=log&type=scale_calibration&state=st-mi&lic=lic-mo', 'not linked to an active license in this state'),
                      (BASE + '?kiosk=log&type=pest&lic=lic-mo', 'missing its state or license'),
                      (BASE + '?kiosk=log&type=scale&state=st-mo&lic=lic-mo', 'not a valid log code'),
