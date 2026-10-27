@@ -84,12 +84,12 @@ with sync_playwright() as pw:
     check(len(outbox(k)) == 0, 'online: scans go straight to Hendrix (a scan within 60 s of the synced one is the same scan)')
     k.screenshot(path=OUT + 'off_clock.png')
     # ---- facility log ----
-    k.goto(BASE + '?kiosk=log&type=environmental&state=st-mo&lic=lic-mo'); k.wait_for_selector('text=Environmental Monitoring Log')
-    NET['down'] = True; k.reload(); k.wait_for_selector('text=Environmental Monitoring Log')
+    k.goto(BASE + '?kiosk=log&type=pest&state=st-mo&lic=lic-mo'); k.wait_for_selector('text=Pest Control Log')
+    NET['down'] = True; k.reload(); k.wait_for_selector('text=Pest Control Log')
     check(True, 'log kiosk opens without internet (set-up kept on the tablet)')
-    field(k.locator('.box'), 'Performed By').fill('Offline Olga'); field(k.locator('.box'), 'Sampling Location').fill('Drain 2'); sign(k)
+    field(k.locator('.box'), 'Performed By').fill('Offline Olga'); field(k.locator('.box'), 'Areas Inspected').fill('Dock'); sign(k)
     k.get_by_role('button', name='Submit entry').click(); k.wait_for_selector('text=Saved on this tablet (no internet)')
-    check(len(outbox(k)) == 1 and outbox(k)[0]['kind'] == 'log' and outbox(k)[0]['p']['type'] == 'environmental', 'log entry saved on the tablet')
+    check(len(outbox(k)) == 1 and outbox(k)[0]['kind'] == 'log' and outbox(k)[0]['p']['type'] == 'pest', 'log entry saved on the tablet')
     NET['down'] = False; k.get_by_role('button', name='Send now').click(); k.wait_for_function('!JSON.parse(localStorage.getItem("hx_outbox")||"[]").length')
     check(pg("select offline::text||','||(performed_at < created_at)::text||','||source from hx_facility_log where performed_by='Offline Olga'") == 'true,true,kiosk', 'log entry arrived, marked offline with the time it was done')
     # ---- visitors ----
