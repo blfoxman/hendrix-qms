@@ -121,6 +121,38 @@ select,input,textarea{max-width:100%}
 <script>
 (function(){
 const {useState,useEffect,useCallback,useRef,useMemo}=React;
+/* ---------- New version check: an open Hendrix page notices when a newer Hendrix is published.
+   It compares this page's own program with the published page (when the window gets focus, and every
+   5 minutes). People see a bar with Reload; a kiosk reloads by itself once nobody has touched it for 2 minutes. */
+(function hxUpdateCheck(){
+  const me=document.currentScript,src=me&&me.textContent?me.textContent.replace(/\r\n?/g,'\n'):'';
+  if(src.length<10000||!window.fetch)return;
+  const kiosk=/[?&]kiosk=/.test(window.location.search);
+  let found=false,last=Date.now(),touched=Date.now();   // the page was just loaded: first check after a minute
+  ['pointerdown','keydown','touchstart'].forEach(function(e){window.addEventListener(e,function(){touched=Date.now();},true);});
+  async function check(){
+    if(found||Date.now()-last<60000)return;last=Date.now();
+    try{const r=await fetch(window.location.pathname+'?hxv='+Date.now(),{cache:'no-store'});if(!r.ok)return;
+      const t=(await r.text()).replace(/\r\n?/g,'\n');
+      if(t.length<10000||t.indexOf('hxUpdateCheck')<0||t.indexOf(src)>=0)return;   // not the app page, or the same version
+      found=true;show();}catch(e){}
+  }
+  function idleReload(){if(Date.now()-touched>120000&&!document.querySelector('.md'))window.location.reload();else setTimeout(idleReload,30000);}
+  function show(){
+    if(kiosk){idleReload();return;}
+    if(document.getElementById('hx-update'))return;
+    const d=document.createElement('div');d.id='hx-update';d.setAttribute('role','status');
+    d.style.cssText='position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:9999;max-width:calc(100% - 32px);background:#2a2108;border:1px solid #c9a227;color:#f1d57a;border-radius:10px;padding:10px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font:14px system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.5)';
+    const t=document.createElement('span');t.textContent='A newer version of Hendrix is published. Save what you are working on, then reload.';
+    const b=document.createElement('button');b.textContent='Reload';b.className='btn sm';b.onclick=function(){window.location.reload();};
+    const x=document.createElement('button');x.textContent='Later';x.className='btn ghost sm';x.onclick=function(){d.remove();found=false;last=Date.now()+29*60000;};
+    d.appendChild(t);d.appendChild(b);d.appendChild(x);document.body.appendChild(d);
+  }
+  window.addEventListener('focus',check);
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)check();});
+  setInterval(check,5*60000);
+  window.hxUpdateCheckNow=function(){last=0;return check();};
+})();
 const el=React.createElement;
 
 /* ---------- Supabase connection (a NEW, separate project) ---------- */
