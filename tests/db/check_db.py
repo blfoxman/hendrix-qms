@@ -36,7 +36,7 @@ h = _j.loads(q('select hx_system_health()::text').split('\n')[-1])
 def chk(cond, msg):
     print(('PASS ' if cond else 'FAIL ') + msg)
     if not cond: fails.append(msg)
-chk(len(h['steps']) == 39 and all(x['ok'] for x in h['steps']), 'health: all 39 database steps (4-43) detected')
+chk(len(h['steps']) == 40 and all(x['ok'] for x in h['steps']), 'health: all 40 database steps (4-44) detected')
 chk(set(h['rls_off']) <= {'hx_licenses', 'hx_profiles', 'hx_states'}, 'health: row level security on every table created by steps 4-37')
 chk(h['not_audited'] == [] and h['audit_locked'], 'health: every record table audited and the audit trail locked')
 chk(h['bucket'] == {'exists': True, 'public': False}, 'health: private file bucket')
@@ -156,5 +156,14 @@ e43(r'^T1 tasks\|maintenance_request,purchase_request$', 'open requests in the m
 e43(r'^N1 urgent alert\|1$', 'urgent maintenance request queued for email')
 e43(r'^S1 audit\|t$', 'status change in the audit trail')
 e43(r'^M1 mod\|logs_maintenance\|logs_purchase$', 'access modules for the new forms')
+# ---- step 44: CSQ Program Overview online; HACCP certificate-only
+r44 = subprocess.run(['psql', '-X', '-q', '-At', '-d', DB, '-f', os.path.join(HERE, 't44.sql')], capture_output=True, text=True)
+o44 = r44.stdout + r44.stderr
+def e44(pattern, msg):
+    chk(re.search(pattern, o44, re.M) is not None, msg)
+e44(r'^C1 cert only\|t\|f\|f$', 'only HACCP is certificate-only')
+e44(r'^C2 csq online\|t\|draft$', 'CSQ Program Overview can have an online course')
+e44(r'outside certification \(HACCP certificate', 'HACCP certification refuses an online quiz')
+e44(r'^C3 haccp online\|f$', 'HACCP course stays certificate-only')
 print('\nDB checks:', 'all passed' if not fails else '%d failed' % len(fails))
 sys.exit(1 if fails else 0)
