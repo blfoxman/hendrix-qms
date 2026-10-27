@@ -103,6 +103,8 @@ with sync_playwright() as pw:
     field(md, 'Reason for revision').fill('Added weight check'); md.locator('textarea').nth(1).fill('Inspect carts and record the lot.')
     md.get_by_role('button', name='Approve and publish v1.1').click(); pg.wait_for_selector('.msg >> text=Revised')
     check(sop['version'] == '1.1' and len(T['hx_sop_versions']) == 1 and T['hx_sop_versions'][0]['version'] == '1.0' and T['hx_sop_versions'][0]['snapshot']['steps'][0]['text'] == 'Inspect carts.', 'v1.0 kept unchanged in version history')
+    try: pg.locator('.card', has_text='Cart Filling').locator('.badge', has_text='Needs my signature').first.wait_for(timeout=5000)
+    except Exception: pass
     check(pg.locator('.card', has_text='Cart Filling').locator('.badge', has_text='Needs my signature').count() == 1, 'new version needs signing again')
     open_sop(pg, 'Cart Filling'); pg.get_by_role('button', name='Version history').click()
     pg.wait_for_selector('.md >> text=Replaced because: Added weight check'); check(True, 'version history shows v1.0 and the reason'); pg.mouse.click(5, 5)

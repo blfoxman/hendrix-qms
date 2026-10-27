@@ -45,8 +45,8 @@ with sync_playwright() as pw:
     check(md.locator('input[aria-label="Temporary password"]').input_value() != tmp, 'Generate makes a new one')
     md.locator('input[aria-label="Temporary password"]').fill('short'); check(md.get_by_role('button', name='Set password').is_disabled(), 'fewer than 8 characters: cannot set')
     md.locator('input[aria-label="Temporary password"]').fill('Temp-Pass-2026'); md.get_by_role('button', name='Set password').click()
-    md.locator('text=Give it to them in person').wait_for()
-    check(ST['set'] == [{'p_user': MEM, 'p_password': 'Temp-Pass-2026'}] and md.locator('code', has_text='Temp-Pass-2026').count() == 1, 'temporary password set for Maria and shown once to the admin')
+    md.locator('text=Give it to them in person').wait_for(); md.locator('code', has_text='Temp-Pass-2026').wait_for(timeout=5000)
+    check(ST['set'] == [{'p_user': MEM, 'p_password': 'Temp-Pass-2026'}] and md.locator('code', has_text='Temp-Pass-2026').count() == 1, 'temporary password set for Maria and shown once to the admin (%s)' % ST['set'])
     pg.screenshot(path=OUT + 'pw_admin.png')
     ST['missing'] = True; md.get_by_role('button', name='Set a temporary password').click(); md.get_by_role('button', name='Set password').click()
     md.locator('text=run hendrix_step42.sql').wait_for(); check(True, 'clear message when step 42 is not installed'); ST['missing'] = False
