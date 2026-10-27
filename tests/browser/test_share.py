@@ -51,7 +51,7 @@ def handle(route, request):
         b = json.loads(request.post_data); cid = urllib.parse.unquote(u.split('id=eq.')[1].split('&')[0]); c = next(x for x in T['hx_training_courses'] if x['id'] == cid)
         old = dict(c); c.update(b)
         if c.get('content_status') == 'published' and any(old.get(k) != c.get(k) for k in ('lessons', 'quiz', 'content_status', 'pass_mark', 'content_source', 'minutes')):
-            if c['topic'] in ('HACCP', 'CSQ program'): c.update(old); return jr(route, {'message': 'outside certification'}, 400)
+            if c['topic'] == 'HACCP': c.update(old); return jr(route, {'message': 'outside certification'}, 400)
             c['content_version'] = old.get('content_version', 0) + 1; c['content_by'] = 'Sam'; c['assessment_required'] = True
             if c.get('share_key'):
                 for s in T['hx_training_courses']:
