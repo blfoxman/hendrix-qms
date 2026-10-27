@@ -7171,7 +7171,11 @@ function tcLimTxt(){return TC_LIMIT.break1_out+' / '+TC_LIMIT.break2_out+' / '+T
 function hxApplySettings(s,lic){
   if(!HX_SET_DEF)HX_SET_DEF={logs:{...LOG_STALE_DAYS},rk:{...RK_REVIEW}};
   s=s||{};HX_LIC_SET=s;TC_LIMIT.break1_out=s.break1_min||15;TC_LIMIT.break2_out=s.break2_min||30;TC_LIMIT.break3_out=s.break3_min||15;
-  Object.keys(LOG_STALE_DAYS).forEach(function(k){delete LOG_STALE_DAYS[k];});Object.assign(LOG_STALE_DAYS,HX_SET_DEF.logs,s.log_due||{});
+  Object.keys(LOG_STALE_DAYS).forEach(function(k){delete LOG_STALE_DAYS[k];});Object.assign(LOG_STALE_DAYS,HX_SET_DEF.logs);
+  const ld0=s.log_due||{};Object.keys(ld0).forEach(function(k){if(!/_h$/.test(k))LOG_STALE_DAYS[k]=ld0[k];});
+  Object.keys(LOG_STALE_HOURS).forEach(function(k){delete LOG_STALE_HOURS[k];});
+  Object.keys(LOG_STALE_DAYS).forEach(function(k){LOG_STALE_HOURS[k]=LOG_HOUR_LOGS[k]&&ld0[k]===undefined?LOG_HOUR_LOGS[k]:LOG_STALE_DAYS[k]*24;});
+  Object.keys(ld0).forEach(function(k){if(/_h$/.test(k))LOG_STALE_HOURS[k.slice(0,-2)]=+ld0[k];});
   Object.assign(RK_REVIEW,HX_SET_DEF.rk,s.review_days||{});
   HX_BRAND=lic&&(s.legal_name||s.dba||s.logo||s.address)?{name:s.dba||s.legal_name||lic.name,legal:s.legal_name||'',address:s.address||'',phone:s.phone||'',email:s.email||'',footer:s.print_footer||'',logo:s.logo||'',license_number:lic.license_number||''}:null;
 }
@@ -7180,13 +7184,13 @@ function hxBrandHead(){const b=HX_BRAND;if(!b)return '';const e=esc3;
     '<div style="font-size:11px;line-height:1.4"><div style="font-size:14px;font-weight:700">'+e(b.name)+'</div>'+(b.legal&&b.legal!==b.name?'<div>'+e(b.legal)+'</div>':'')+
     '<div style="color:#555">'+e([b.address.replace(/\n/g,', '),b.phone,b.email,b.license_number&&'License '+b.license_number].filter(Boolean).join(' \u00b7 '))+'</div></div></div>';}
 function hxBrandFoot(){const b=HX_BRAND;return b&&b.footer?'<div style="font-family:Arial,sans-serif;font-size:10px;color:#666;text-align:center;border-top:1px solid #ddd;margin:8px 18px 0;padding-top:6px">'+esc3(b.footer)+'</div>':'';}
-const ST_LOGS_HELP='After how many days without an entry the log is flagged as not kept up (dashboard and Standards).';
+const ST_LOGS_HELP='After how long without an entry the log is flagged as not kept up (dashboard and Standards). The sanitation log is counted in hours; the others in days.';
 function SettingsPage(props){
   const st=props.state,lic=props.license,lid=lic?lic.id:'',canF=can('settings',3);
   const[tab,setTab]=useState('general');const[row,setRow]=useState(null);const[f,setF]=useState(null);const[msg,setMsg]=useState('');const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
   const load=useCallback(function(){if(!lid)return;db.get('hx_license_settings','license_id=eq.'+encodeURIComponent(lid)+'&select=*').then(function(r){const x=((r||[]).filter(function(y){return y.license_id===lid;}))[0]||null;setRow(x);
       const s=x||{};setF({legal_name:s.legal_name||'',dba:s.dba||'',address:s.address||'',phone:s.phone||'',email:s.email||'',print_footer:s.print_footer||'',logo:s.logo||null,
-        break1_min:String(s.break1_min||15),break2_min:String(s.break2_min||30),break3_min:String(s.break3_min||15),log_due:{...(s.log_due||{})},review_days:{...(s.review_days||{})},idle:String(s.linemap_idle_hours||4),idle0:String(s.linemap_idle_hours||4),hasIdle:!!x&&x.linemap_idle_hours!==undefined,esig:s.esig_password!==false,esig0:s.esig_password!==false,so:String(s.idle_signout_min===undefined||s.idle_signout_min===null?30:s.idle_signout_min),so0:String(s.idle_signout_min===undefined||s.idle_signout_min===null?30:s.idle_signout_min),hasSec:!!x&&x.esig_password!==undefined});})
+        break1_min:String(s.break1_min||15),break2_min:String(s.break2_min||30),break3_min:String(s.break3_min||15),log_due:(function(){const o={...(s.log_due||{})};Object.keys(LOG_HOUR_LOGS).forEach(function(k){if(o[k]!==undefined&&o[k+'_h']===undefined)o[k+'_h']=o[k]*24;delete o[k];});return o;})(),review_days:{...(s.review_days||{})},idle:String(s.linemap_idle_hours||4),idle0:String(s.linemap_idle_hours||4),hasIdle:!!x&&x.linemap_idle_hours!==undefined,esig:s.esig_password!==false,esig0:s.esig_password!==false,so:String(s.idle_signout_min===undefined||s.idle_signout_min===null?30:s.idle_signout_min),so0:String(s.idle_signout_min===undefined||s.idle_signout_min===null?30:s.idle_signout_min),hasSec:!!x&&x.esig_password!==undefined});})
     .catch(function(e){const m=String(e.message||e);setErr(/hx_license_settings/.test(m)?'Settings are not set up yet - run hendrix_step34.sql in the Hendrix Supabase project.':m);setF({legal_name:'',dba:'',address:'',phone:'',email:'',print_footer:'',logo:null,break1_min:'15',break2_min:'30',break3_min:'15',log_due:{},review_days:{},idle:'4',idle0:'4',hasIdle:false,esig:true,esig0:true,so:'30',so0:'30',hasSec:false});});},[lid]);
   useEffect(load,[load]);
   if(!st||!lic)return el('div',null,el('h1',null,el('span',{className:'g'},'Settings')),el('div',{className:'empty'},'Pick a state and a license at the top first.'));
@@ -7196,7 +7200,7 @@ function SettingsPage(props){
       c.getContext('2d').drawImage(img,0,0,c.width,c.height);const d=c.toDataURL('image/png');if(d.length>290000){setErr('That logo is too large even after resizing. Use a simpler PNG or JPG.');return;}set('logo',d);};img.src=x.target.result;};rd.readAsDataURL(file);}
   async function save(){setErr('');setMsg('');const n=function(v){return parseInt(v,10);};
     const b=[n(f.break1_min),n(f.break2_min),n(f.break3_min)];if(b.some(function(x){return !x||x<1||x>240;})){setErr('Break limits must be between 1 and 240 minutes.');return;}
-    const ld={},rv={};Object.keys(f.log_due).forEach(function(k){const v=n(f.log_due[k]);if(v)ld[k]=v;});Object.keys(f.review_days).forEach(function(k){const v=n(f.review_days[k]);if(v)rv[k]=v;});
+    const ld={},rv={};Object.keys(f.log_due).forEach(function(k){const v=n(f.log_due[k]);if(v)ld[k]=v;});if(Object.keys(ld).some(function(k){return ld[k]<1||ld[k]>400;})){setErr('Log limits must be between 1 and 400 (days, or hours for the sanitation log).');return;}Object.keys(f.review_days).forEach(function(k){const v=n(f.review_days[k]);if(v)rv[k]=v;});
     const rec={legal_name:f.legal_name.trim(),dba:f.dba.trim(),address:f.address.trim(),phone:f.phone.trim(),email:f.email.trim(),print_footer:f.print_footer.trim(),logo:f.logo||null,break1_min:b[0],break2_min:b[1],break3_min:b[2],log_due:ld,review_days:rv};
     const ih=n(f.idle);if(!ih||ih<1||ih>72){setErr('Line Map: hours without an update must be between 1 and 72.');return;}if(f.hasIdle||String(ih)!==f.idle0)rec.linemap_idle_hours=ih;
     const so=parseInt(f.so,10);if(isNaN(so)||so<0||so>480){setErr('Automatic sign-out must be between 0 and 480 minutes (0 = never).');return;}if(f.hasSec||f.esig!==f.esig0||String(so)!==f.so0){rec.esig_password=!!f.esig;rec.idle_signout_min=so;}
@@ -7226,10 +7230,10 @@ function SettingsPage(props){
   else if(tab==='timeclock')body=el('div',{className:'card'},el('div',{className:'k',style:{marginBottom:6}},'Break limits'),el('div',{className:'muted',style:{fontSize:12,marginBottom:10}},'A return later than the limit is flagged late (with the minutes over) on the kiosk and the sign-in sheet. Michigan uses 15 / 30 / 15.'),
     el('div',{style:{display:'grid',gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:10,maxWidth:520}},el(Field,{label:'1st break (min)'},inp('break1_min','','number')),el(Field,{label:'2nd break (min)'},inp('break2_min','','number')),el(Field,{label:'3rd break (min)'},inp('break3_min','','number'))));
   else if(tab==='logs')body=el('div',{className:'card'},el('div',{className:'k',style:{marginBottom:6}},'Flag a log as not kept up after'),el('div',{className:'muted',style:{fontSize:12,marginBottom:10}},ST_LOGS_HELP),
-    LOG_TYPES.filter(function(t){return (HX_SET_DEF||{logs:LOG_STALE_DAYS}).logs[t.id]!==undefined||LOG_STALE_DAYS[t.id]!==undefined;}).map(function(t){const def=(HX_SET_DEF?HX_SET_DEF.logs:LOG_STALE_DAYS)[t.id];
+    LOG_TYPES.filter(function(t){return (HX_SET_DEF||{logs:LOG_STALE_DAYS}).logs[t.id]!==undefined||LOG_STALE_DAYS[t.id]!==undefined;}).map(function(t){const def=(HX_SET_DEF?HX_SET_DEF.logs:LOG_STALE_DAYS)[t.id],hr=!!LOG_HOUR_LOGS[t.id];
       return el('div',{key:t.id,className:'row',style:{gap:10,alignItems:'center',padding:'4px 0',borderTop:'1px solid #1d1d1d',flexWrap:'nowrap'}},el('span',{style:{flex:1,fontSize:13}},t.name),
-        el('input',{type:'number',min:1,max:400,value:f.log_due[t.id]!==undefined?f.log_due[t.id]:'',placeholder:String(def),disabled:dis,style:{width:90},onChange:function(e){const v={...f.log_due};if(e.target.value==='')delete v[t.id];else v[t.id]=e.target.value;set('log_due',v);}}),
-        el('span',{className:'muted',style:{fontSize:12,width:110}},'days (default '+def+')'));}));
+        el('input',{type:'number',min:1,max:400,value:f.log_due[t.id+(hr?'_h':'')]!==undefined?f.log_due[t.id+(hr?'_h':'')]:'',placeholder:String(hr?LOG_HOUR_LOGS[t.id]:def),disabled:dis,style:{width:90},'aria-label':t.name+(hr?' hours':' days'),onChange:function(e){const v={...f.log_due},k=t.id+(hr?'_h':'');if(e.target.value==='')delete v[k];else v[k]=e.target.value;set('log_due',v);}}),
+        el('span',{className:'muted',style:{fontSize:12,width:120}},hr?'hours (default '+LOG_HOUR_LOGS[t.id]+')':'days (default '+def+')'));}));
   else if(tab==='email')body=el(EmailStatusTab);
   else if(tab==='security')body=el('div',{className:'card'},el('div',{className:'k',style:{marginBottom:10}},'Electronic signatures and sign-out'),
     el('label',{className:'ck'},el('input',{type:'checkbox',checked:!!f.esig,disabled:dis,onChange:function(e){set('esig',e.target.checked);}}),el('span',null,el('b',null,'Ask for the password when signing'),' \u2014 approvals, releases, decisions, verifications and read-and-sign need the password (and the authenticator code with two-step sign-in). Every signature is kept permanently.')),
@@ -9871,7 +9875,12 @@ function stdRegisterHtml(std,lic,st,adopt,clauses,conf,inScope,E){
 const CSQ_LOG_MAP={'1.9':['security','security_inspection'],'2A.1.2':['sanitation','equipment'],'2A.2.2':['equipment'],'2A.2.3':['scale_calibration'],'2A.3':['sanitation'],
   '2A.4':['waste'],'2A.4.1':['waste'],'2A.5.1':['pest'],'2A.6':['temperature'],'2A.8':['environmental'],'2A.9.3':['temperature'],'3C.1.6':['sanitation'],'3C.1.9':['temperature']};
 // a log with no entry for longer than this many days is flagged as not being kept up
+const LOG_HOUR_LOGS={sanitation:48};   // logs whose cycle is set in hours (default hours)
+const LOG_STALE_HOURS={};
+function logStale(t,iso){const lim=LOG_STALE_HOURS[t];if(!lim||!iso)return null;const h=(Date.now()-new Date(iso).getTime())/3600000;if(h<=lim)return null;
+  return LOG_HOUR_LOGS[t]?{ago:h<48?Math.floor(h)+' hours':Math.floor(h/24)+' days',every:lim+' hours'}:{ago:Math.floor(h/24)+' days',every:Math.round(lim/24)+' days'};}
 const LOG_STALE_DAYS={sanitation:2,temperature:2,waste:31,pest:35,environmental:35,scale_calibration:35,security_inspection:35,equipment:95,security:120};
+Object.keys(LOG_STALE_DAYS).forEach(function(k){LOG_STALE_HOURS[k]=LOG_HOUR_LOGS[k]||LOG_STALE_DAYS[k]*24;});
 async function loadStdEvidence(st,lic){
   const E={},enc=encodeURIComponent,since=new Date(Date.now()-365*86400000).toISOString(),lid=lic.id,sid=st.id;
   async function tryGet(k,fn){try{E[k]=await fn();}catch(e){E[k]=null;}}
@@ -10106,12 +10115,12 @@ function clauseEvidence(x,E){
       const types=CSQ_LOG_MAP[x.clause]||[];
       (types.length?types:Object.keys(E.logs)).forEach(function(t){
         const def=LOG_TYPES.find(function(d){return d.id===t;});if(!def)return;
-        const b=E.logs[t]||{n:0,last:''},d=daysAgo(b.last),lim=LOG_STALE_DAYS[t];
+        const b=E.logs[t]||{n:0,last:''},st=logStale(t,b.last);
         let v=b.n+' entr'+(b.n===1?'y':'ies');
         if(t==='pest')v+=' \u00b7 '+(b.sightings||0)+' pest sighting'+(b.sightings===1?'':'s');
         else if(b.fails)v+=' \u00b7 '+b.fails+' failed / flagged (each with corrective action)';
         out.push({label:def.name,value:v,last:b.last,page:'logs',
-          warn:!b.n?'No entries in 12 months':(lim&&d>lim?'No entry for '+d+' days':(t==='sanitation'&&b.unver30?b.unver30+' not verified (last 30 days)':''))});
+          warn:!b.n?'No entries in 12 months':(st?'No entry for '+st.ago:(t==='sanitation'&&b.unver30?b.unver30+' not verified (last 30 days)':''))});
       });
     }
     else if(p==='visitors'&&E.visitors){const V=E.visitors,noAck=V.tracked?V.n-V.ack:0;
@@ -10250,8 +10259,8 @@ function EvidenceList(props){
 }
 function StdAlerts(props){
   const E=props.ev,items=[];
-  if(E&&E.logs)LOG_TYPES.forEach(function(t){const lim=LOG_STALE_DAYS[t.id];if(!lim||!can(LOG_MOD[t.id],1))return;const b=E.logs[t.id],d=b?daysAgo(b.last):null;
-    if(!b||!b.n)items.push({tone:'bad',text:t.name+': no entries in the last 12 months',page:'logs'});else if(d>lim)items.push({tone:'bad',text:t.name+': last entry '+d+' days ago (expected every '+lim+' days or sooner)',page:'logs'});});
+  if(E&&E.logs)LOG_TYPES.forEach(function(t){if(!LOG_STALE_HOURS[t.id]||!can(LOG_MOD[t.id],1))return;const b=E.logs[t.id],st=b?logStale(t.id,b.last):null;
+    if(!b||!b.n)items.push({tone:'bad',text:t.name+': no entries in the last 12 months',page:'logs'});else if(st)items.push({tone:'bad',text:t.name+': last entry '+st.ago+' ago (expected every '+st.every+' or sooner)',page:'logs'});});
   const late=props.inScope.filter(function(x){const r=props.conf[x.id];return r&&r.due_date&&r.due_date<props.today&&r.status!=='Conforming'&&r.status!=='Not applicable';}).length;
   const nc=props.inScope.filter(function(x){const r=props.conf[x.id];return r&&r.status==='Not conforming';}).length;
   const na=props.inScope.filter(function(x){return !props.conf[x.id];}).length;

@@ -46,11 +46,11 @@ with sync_playwright() as pw:
     pg.locator('input[type=file]').set_input_files(OUT + 'logo.png'); pg.wait_for_selector('img[alt=logo]')
     check(pg.locator('text=Black Fox Manufacturing LLC').count() >= 1 and pg.locator('text=Controlled copy - do not distribute').count() >= 1, 'printout header preview')
     pg.get_by_role('button', name='Time clock', exact=True).click(); field(pg, '1st break (min)').fill('10')
-    pg.get_by_role('button', name='Facility logs', exact=True).click(); pg.locator('.row', has_text='Sanitation Log').last.locator('input').fill('3')
+    pg.get_by_role('button', name='Facility logs', exact=True).click(); check(pg.locator('.row', has_text='Sanitation Log').last.locator('text=hours (default 48)').count() == 1, 'sanitation cycle is set in hours'); pg.locator('.row', has_text='Sanitation Log').last.locator('input').fill('12')
     pg.get_by_role('button', name='Review cycles').click(); pg.locator('.row', has_text='High (10-14)').last.locator('input').fill('120')
     pg.get_by_role('button', name='Save settings').click(); pg.wait_for_selector('.msg >> text=Settings saved for Black Fox.')
     s0 = T['hx_license_settings'][0]
-    check(s0['break1_min'] == 10 and s0['log_due'] == {'sanitation': 3} and s0['review_days'] == {'high': 120} and s0['logo'].startswith('data:image/png') and s0['address'].startswith('100 Main'), 'settings saved for the license')
+    check(s0['break1_min'] == 10 and s0['log_due'] == {'sanitation_h': 12} and s0['review_days'] == {'high': 120} and s0['logo'].startswith('data:image/png') and s0['address'].startswith('100 Main'), 'settings saved for the license')
     pg.get_by_role('button', name='Everything else').click(); check(pg.locator('.card b', has_text='Products').count() == 1 and pg.locator('.card b', has_text='Roles (access templates)').count() == 1, 'directory of where everything else is set')
     pg.get_by_role('button', name='Time Clock and Badges').click(); pg.wait_for_selector('text=three breaks (10 / 30 / 15 min)')
     check(True, 'time clock uses the saved break limits')
