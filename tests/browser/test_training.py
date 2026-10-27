@@ -43,10 +43,10 @@ with sync_playwright() as pw:
     pg = ctx.new_page(); pg.on('pageerror', lambda e: errors.append('JS: ' + str(e))); pg.on('dialog', lambda d: d.accept())
     pg.goto(BASE); pg.wait_for_selector('text=Open training')
     check(pg.locator('.card', has_text='Open training').locator('text=No courses yet').count() == 1, 'dashboard: training not set up')
-    pg.get_by_role('button', name='Training', exact=True).click(); pg.wait_for_selector('.msg >> text=Created the 9 CSQ training courses')
-    TC = {c['name'][:4]: c for c in T['hx_training_courses']}
+    pg.get_by_role('button', name='Training', exact=True).click(); pg.wait_for_selector('.msg >> text=Created the 10 CSQ training courses')
+    TC = {c['name'][:4]: c for c in T['hx_training_courses'] if c['topic'] != 'HACCP basics'}
     check(any(c['name'] == 'Missouri regulatory compliance (state rules)' and 'Only for Missouri licenses' in c['description'] for c in T['hx_training_courses']), 'law course is Missouri-specific')
-    check(len(T['hx_training_courses']) == 9 and any(c['topic'] == 'Extraction' for c in T['hx_training_courses']) and not any(c['topic'] == 'cGACP' for c in T['hx_training_courses']) and sum(1 for c in T['hx_training_courses'] if c['required_mode'] == 'everyone') == 5, 'opening Training creates the 9 CSQ courses for a manufacturing license (incl. Extraction, no cGACP); 5 for everyone')
+    check(len(T['hx_training_courses']) == 10 and any(c['topic'] == 'HACCP basics' and c['required_mode'] == 'roles' for c in T['hx_training_courses']) and any(c['topic'] == 'Extraction' for c in T['hx_training_courses']) and not any(c['topic'] == 'cGACP' for c in T['hx_training_courses']) and sum(1 for c in T['hx_training_courses'] if c['required_mode'] == 'everyone') == 5, 'opening Training creates the 10 CSQ courses for a manufacturing license (incl. Extraction and HACCP basics, no cGACP); 5 for everyone')
     check(TC['CSQ ']['required_mode'] == 'roles' and TC['CSQ ']['role_ids'] == ['r2'] and TC['HACC']['role_ids'] == ['r2'] and TC['HACC']['min_people'] == 2 and sorted(TC['Chem']['role_ids']) == ['r1', 'r2'], 'CSQ overview + HACCP = manager training; chemical safety = managers + sanitation')
     pg.locator('.tabs button', has_text='Courses').click(); pg.wait_for_selector('text=at least 2 certified')
     check(pg.locator('.card', has_text='HACCP certification').locator('text=Chosen roles: Production Manager').count() == 1, 'courses list shows manager roles and certified count')
