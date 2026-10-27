@@ -3,6 +3,7 @@ import os
 exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mock_c.py')).read())
 ROSTER = [{'id': ADMIN, 'name': 'Sam', 'role_ids': [], 'license_ids': [], 'is_admin': True}, {'id': 'u-lee', 'name': 'Lee Worker', 'role_ids': ['r1'], 'license_ids': ['lic-mo'], 'is_admin': False}]
 AIQ = []
+AIMODE = []
 META = {'sop_number': 'SOP-[DEPT]-[3digit]', 'title': 'Pre-Roll Infusion', 'revision': '1.0', 'department': 'Production', 'purpose': 'Infuse pre-rolls safely.', 'scope': 'Pre-roll room.',
         'regulatory_references': ['19 CSR 100-1.x'], 'responsibilities': [{'role': 'Lead', 'responsibility': 'Oversees'}], 'required_materials': ['Gloves'], 'deviation_procedure': 'Stop and tell QA.', 'training_requirements': 'Annual.'}
 STEPS = {'steps': [{'step_number': 1, 'title': 'Prep', 'instruction': 'Sanitize the bench.', 'critical': False}, {'step_number': 2, 'title': 'Infuse', 'instruction': 'Apply 0.5 g oil.', 'regulatory_note': 'Record in METRC', 'critical': True}],
@@ -15,6 +16,10 @@ def handle(route, request):
         b = json.loads(request.post_data); AIQ.append(b)
         prompt = b['messages'][0]['content']; prompt = prompt if isinstance(prompt, str) else prompt[-1]['text']
         out = META if 'Respond with ONLY this JSON (no markdown, be concise)' in prompt else STEPS
+        mode = AIMODE.pop(0) if AIMODE else ''
+        if mode == 'prose': return route.fulfill(status=200, content_type='application/json', body=json.dumps({'content': [{'type': 'text', 'text': 'Here is a draft SOP for your pre-roll infusion process.'}], 'stop_reason': 'end_turn'}))
+        if mode == 'thinking': return route.fulfill(status=200, content_type='application/json', body=json.dumps({'content': [{'type': 'thinking', 'thinking': 'planning'}, {'type': 'text', 'text': json.dumps(out)}]}))
+        if mode == 'cut': t = json.dumps(out); return route.fulfill(status=200, content_type='application/json', body=json.dumps({'content': [{'type': 'text', 'text': t[:t.index('"quality_checks"') + 30]}], 'stop_reason': 'max_tokens'}))
         return route.fulfill(status=200, content_type='application/json', body=json.dumps({'content': [{'type': 'text', 'text': json.dumps(out)}]}))
     if '/rest/v1/rpc/hx_sop_roster' in u:
         return route.fulfill(status=200, content_type='application/json', body=json.dumps(ROSTER))
@@ -129,6 +134,19 @@ with sync_playwright() as pw:
     md.get_by_role('button', name='Save as draft').click(); pg.wait_for_selector('.msg >> text=Created: Pre-Roll Infusion')
     ai = next(x for x in T['hx_sops'] if x['title'] == 'Pre-Roll Infusion')
     check(ai['status'] == 'draft' and ai['folder'] == 'Production' and ai['generated_content']['scope'] == 'Pre-roll room.' and ai['sop_number'] == '', 'AI SOP saved as draft (placeholder number dropped)')
+    # AI answers that are not plain JSON: a thinking block first, prose (retried once), an answer cut off at max_tokens
+    AIMODE[:] = ['thinking', 'prose', 'cut']; n0 = len(AIQ)
+    if pg.locator('.md').count(): (pg.locator('.md').get_by_role('button', name='Close').first.click() if pg.locator('.md').get_by_role('button', name='Close').count() else pg.mouse.click(5, 5)); pg.wait_for_timeout(200)
+    pg.get_by_role('button', name='🤖 AI Generate SOP').click(); md = pg.locator('.md')
+    field(md, 'SOP title').fill('Pre-Roll Infusion B'); md.get_by_role('button', name='Generate SOP with AI').click(); pg.wait_for_selector('.md >> text=Save as draft')
+    check(len(AIQ) - n0 == 3 and md.locator('.badge', has_text='Critical').count() == 1 and 'Reply with the JSON object only' in json.dumps(AIQ[-1]), 'AI answer with a thinking block, a prose answer (retried) and a cut-off answer still give a readable SOP')
+    md.get_by_role('button', name='Cancel').click() if md.get_by_role('button', name='Cancel').count() else pg.mouse.click(5, 5)
+    AIMODE[:] = ['prose', 'prose']; pg.wait_for_timeout(200)
+    if pg.locator('.md').count(): pg.mouse.click(5, 5); pg.wait_for_timeout(200)
+    pg.get_by_role('button', name='🤖 AI Generate SOP').click(); md = pg.locator('.md')
+    field(md, 'SOP title').fill('Pre-Roll Infusion C'); md.get_by_role('button', name='Generate SOP with AI').click(); pg.wait_for_selector('.md >> text=it answered')
+    check(md.locator('.msg.err', has_text='Here is a draft SOP').count() == 1, 'still no JSON after the retry: the error shows what the AI answered')
+    pg.mouse.click(5, 5)
     # archive + restore
     open_sop(pg, 'Cart Filling'); pg.get_by_role('button', name='Archive', exact=True).click(); pg.wait_for_selector('.msg >> text=Archived')
     check(sop['status'] == 'archived' and sop['folder'] == 'Archived', 'archived')

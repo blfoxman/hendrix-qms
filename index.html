@@ -9281,14 +9281,28 @@ function SopForm(props){
       el('button',{className:'btn',disabled:!!busy,onClick:save},busy==='Saving...'?'Saving...':mode==='new'?'Create SOP':'Save')));
 }
 
+// read the JSON object in an AI answer; an answer cut off at max_tokens is closed at its last complete value
 function sopAiJson(t){
   let c=String(t||'').replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
-  const a=c.indexOf('{');if(a>0)c=c.slice(a);
-  try{return JSON.parse(c);}catch(e){
-    const lb=c.lastIndexOf('}');if(lb<0)throw new Error('The AI did not return a readable SOP. Try again.');
-    let r=c.slice(0,lb+1),d=0;for(const ch of r){if(ch==='{')d++;else if(ch==='}')d--;}while(d>0){r+='}';d--;}
-    return JSON.parse(r);
-  }
+  const a=c.indexOf('{');
+  if(a<0)throw new Error('The AI did not return a readable SOP'+(c?' (it answered: "'+c.slice(0,160).replace(/\s+/g,' ')+(c.length>160?'...':'')+'")':' (the answer was empty)')+'. Try again.');
+  c=c.slice(a);
+  try{return JSON.parse(c);}catch(e){}
+  let tries=0;
+  for(let i=c.length;i>1&&tries<600;i--){const ch=c[i-1];if('}]"'.indexOf(ch)<0&&!/[0-9el]/.test(ch))continue;tries++;
+    const r=jsonCloseCut(c.slice(0,i));if(r===null)continue;try{return JSON.parse(r);}catch(e){}}
+  throw new Error('The AI answer was cut off or was not valid JSON. Try again.');
+}
+function jsonCloseCut(s){const st=[];let inS=false,esc=false;
+  for(const ch of s){if(inS){if(esc)esc=false;else if(ch==='\\')esc=true;else if(ch==='"')inS=false;continue;}
+    if(ch==='"')inS=true;else if(ch==='{'||ch==='[')st.push(ch==='{'?'}':']');else if(ch==='}'||ch===']'){if(st.pop()!==ch)return null;}}
+  if(inS)return null;return s.replace(/,\s*$/,'')+st.reverse().join('');}
+// AI call that must return JSON: one automatic retry with a stricter instruction and more room
+async function sopAiJ(prompt,maxTok,doc){
+  try{return sopAiJson(await sopAi(prompt,maxTok,doc));}
+  catch(e){const m=String(e&&e.message||e);
+    if(!/readable SOP|cut off or was not valid JSON|Unexpected|JSON/.test(m))throw e;
+    return sopAiJson(await sopAi(prompt+'\n\nReply with the JSON object only: start with { and end with }. No other text before or after it.',Math.min(8000,Math.round(maxTok*1.6)),doc));}
 }
 async function sopAi(prompt,maxTok,doc){
   const content=doc?[{type:'document',source:{type:'base64',media_type:'application/pdf',data:doc}},{type:'text',text:prompt}]:prompt;
@@ -9330,12 +9344,12 @@ function SopGenerator(props){
         ref=(await sopAi('Summarize the key procedural and regulatory content of this document relevant to "'+title+'" in under 600 words, plain text, no markdown. Focus on facts useful for writing an SOP.',1000,ref.slice(8))).slice(0,3000);}
       const ci=custom.trim()?'\nIMPORTANT - follow these instructions from the facility, they take priority over your own judgment:\n'+custom.trim()+'\n':'';
       setBusy('Writing purpose, scope and responsibilities...');
-      const meta=sopAiJson(await sopAi('You are a cannabis compliance officer writing an SOP for '+st.name+' (license: '+lic.name+(lic.license_type?', '+lic.license_type:'')+').\nRegulatory agency: '+reg.agency+(reg.code?' - '+reg.code:'')+'\n'+
+      const meta=(await sopAiJ('You are a cannabis compliance officer writing an SOP for '+st.name+' (license: '+lic.name+(lic.license_type?', '+lic.license_type:'')+').\nRegulatory agency: '+reg.agency+(reg.code?' - '+reg.code:'')+'\n'+
         (reg.rules.length?'Key regulations from the facility rulebook: '+reg.rules.join('; ')+'\n':'')+'\nSOP Title: '+title+'\nCategory: '+category+'\n'+(ref?'Reference material: '+ref+'\n':'')+ci+
-        '\nThe facility follows the CSQ Standard for Manufacturing (cGMP). Respond with ONLY this JSON (no markdown, be concise):\n{"sop_number":"SOP-[DEPT]-[3digit]","title":"'+title.replace(/"/g,"'")+'","revision":"1.0","effective_date":"'+today+'","review_frequency":"Annual","department":"...","purpose":"2-3 sentences","scope":"1-2 sentences","regulatory_references":["3-5 specific citations"],"responsibilities":[{"role":"...","responsibility":"..."}],"definitions":[{"term":"...","definition":"..."}],"required_materials":["..."],"deviation_procedure":"1-2 sentences","training_requirements":"1-2 sentences"}',1500));
+        '\nThe facility follows the CSQ Standard for Manufacturing (cGMP). Respond with ONLY this JSON (no markdown, be concise):\n{"sop_number":"SOP-[DEPT]-[3digit]","title":"'+title.replace(/"/g,"'")+'","revision":"1.0","effective_date":"'+today+'","review_frequency":"Annual","department":"...","purpose":"2-3 sentences","scope":"1-2 sentences","regulatory_references":["3-5 specific citations"],"responsibilities":[{"role":"...","responsibility":"..."}],"definitions":[{"term":"...","definition":"..."}],"required_materials":["..."],"deviation_procedure":"1-2 sentences","training_requirements":"1-2 sentences"}',2500));
       setBusy('Writing the procedure steps...');
-      const steps=sopAiJson(await sopAi('You are writing the procedure steps for this cannabis SOP:\nTitle: '+title+'\nPurpose: '+(meta.purpose||'')+'\nDepartment: '+(meta.department||'')+'\n'+(ref?'Reference material: '+ref+'\n':'')+ci+
-        '\nWrite 6-10 clear procedure steps. Keep each instruction to 1-2 sentences. Flag CRITICAL steps where a regulatory violation or product risk exists.\n\nRespond with ONLY this JSON (no markdown, keep instructions short so it is not truncated):\n{"steps":[{"step_number":1,"title":"short title","instruction":"1-2 sentences","regulatory_note":"optional, brief","critical":false}],"quality_checks":["5-8 short checkpoints"],"documentation_required":["3-6 short items"]}',3000));
+      const steps=(await sopAiJ('You are writing the procedure steps for this cannabis SOP:\nTitle: '+title+'\nPurpose: '+(meta.purpose||'')+'\nDepartment: '+(meta.department||'')+'\n'+(ref?'Reference material: '+ref+'\n':'')+ci+
+        '\nWrite 6-10 clear procedure steps. Keep each instruction to 1-2 sentences. Flag CRITICAL steps where a regulatory violation or product risk exists.\n\nRespond with ONLY this JSON (no markdown, keep instructions short so it is not truncated):\n{"steps":[{"step_number":1,"title":"short title","instruction":"1-2 sentences","regulatory_note":"optional, brief","critical":false}],"quality_checks":["5-8 short checkpoints"],"documentation_required":["3-6 short items"]}',4000));
       setGen({...meta,license_name:lic.name,state:st.name,steps:steps.steps||[],quality_checks:steps.quality_checks||[],documentation_required:steps.documentation_required||[],definitions:meta.definitions||[],
         revision_history:[{revision:'1.0',date:today,description:'Initial release',approved_by:''}]});
       setStep(3);
@@ -9402,7 +9416,7 @@ function SopRevise(props){
     setErr('');setBusy('AI is revising the SOP...');
     try{
       const reg=await sopRegContext(st),orig=gen0||{title:s.title,purpose:s.description,steps:sopStepsOf(s).map(function(x){return {step_number:x.n,title:x.title,instruction:x.text};})};
-      const r=sopAiJson(await sopAi('You are revising an existing cannabis SOP. Current SOP (JSON): '+JSON.stringify(orig)+'\n\nLICENSE: '+lic.name+' ('+st.name+')\nREGULATORY CONTEXT: '+reg.agency+(reg.code?' - '+reg.code:'')+'\n\nREQUESTED CHANGES: '+ask+
+      const r=(await sopAiJ('You are revising an existing cannabis SOP. Current SOP (JSON): '+JSON.stringify(orig)+'\n\nLICENSE: '+lic.name+' ('+st.name+')\nREGULATORY CONTEXT: '+reg.agency+(reg.code?' - '+reg.code:'')+'\n\nREQUESTED CHANGES: '+ask+
         '\n\nReturn a REVISED version as JSON only (no markdown). Set revision to "'+version+'". Add an entry to revision_history dated '+todayStr()+'. Keep all unchanged fields identical. Fields: sop_number, title, revision, effective_date, review_frequency, department, license_name, state, regulatory_references, purpose, scope, responsibilities, definitions, required_materials, steps, quality_checks, documentation_required, deviation_procedure, training_requirements, revision_history',6000));
       setAiGen(r);setDesc(r.purpose||desc);setSteps((r.steps||[]).map(function(x,i){return {id:'r'+i,n:x.step_number||i+1,title:x.title||'',text:x.instruction||'',note:x.regulatory_note||'',critical:!!x.critical};}));
       if(!note.trim())setNote(ask.trim());
@@ -10678,6 +10692,9 @@ async function aiCall(body){
   if(r.status===502||r.status===503||r.status===504||r.status===546)throw new Error('The AI took too long and Supabase stopped the request ('+r.status+'). Try again; if it keeps happening, the request is too large.');
   const j=await r.json().catch(function(){return {};});
   if(!r.ok||j.error)throw new Error((j.error&&j.error.message)||('AI request failed ('+r.status+')'));
+  if(Array.isArray(j.content)){const txt=j.content.filter(function(b){return b&&b.type==='text'&&typeof b.text==='string';}).map(function(b){return b.text;}).join('');
+    if(!txt.trim()&&j.stop_reason==='refusal')throw new Error('The AI declined to answer this request. Rephrase the title or instructions and try again.');
+    j.content=[{type:'text',text:txt}].concat(j.content.filter(function(b){return !(b&&b.type==='text');}));}
   return j;
 }
 // "Failed to fetch": the browser never got an answer. A quick request that does not call the AI tells which problem it is.
