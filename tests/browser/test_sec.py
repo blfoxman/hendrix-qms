@@ -33,7 +33,7 @@ def handle(route, request):
         if path.endswith('/user') and request.method == 'GET':
             return jr(route, {'id': ADMIN, 'email': 's@x', 'factors': AUTH['factors']})
         if path.endswith('/user') and request.method == 'PUT':
-            AUTH['pw_changed'] = body.get('password'); return jr(route, {'id': ADMIN})
+            AUTH['pw_changed'] = body.get('password'); AUTH['pw_current'] = body.get('current_password'); return jr(route, {'id': ADMIN})
         if path.endswith('/factors') and request.method == 'POST':
             f = {'id': 'f-%d' % (len(AUTH['factors']) + 1), 'factor_type': 'totp', 'status': 'unverified', 'friendly_name': body.get('friendly_name'),
                  'totp': {'qr_code': '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10"/></svg>', 'secret': 'JBSWY3DPEHPK3PXP', 'uri': 'otpauth://totp/x'}}
@@ -130,13 +130,15 @@ with sync_playwright() as pw:
     check(aal_of(pg) == 'aal2', 'session upgraded to the second step (aal2)')
     pg.wait_for_selector('.badge >> text=Required for your account')
     pg.screenshot(path=OUT + 'sec_account.png', full_page=True)
-    # password change
+    # password change (asks for the current password: Supabase may require it)
+    check(pg.get_by_role('button', name='Change password').is_disabled(), 'password change needs the current password')
+    pg.locator('input[aria-label="Current password"]').fill('Old-Pass-123')
     pg.locator('input[aria-label="New password"]').fill('short'); pg.locator('input[aria-label="New password again"]').fill('short'); pg.get_by_role('button', name='Change password').click()
     pg.wait_for_selector('text=Use at least 8 characters.')
     pg.locator('input[aria-label="New password"]').fill('New-Pass-123'); pg.locator('input[aria-label="New password again"]').fill('New-Pass-124'); pg.get_by_role('button', name='Change password').click()
     pg.wait_for_selector('text=The two passwords are not the same.')
     pg.locator('input[aria-label="New password again"]').fill('New-Pass-123'); pg.get_by_role('button', name='Change password').click(); pg.wait_for_selector('text=Password changed.')
-    check(AUTH['pw_changed'] == 'New-Pass-123', 'password changed')
+    check(AUTH['pw_changed'] == 'New-Pass-123' and AUTH.get('pw_current') == 'Old-Pass-123', 'password changed, current password sent to Supabase')
     # ---- signature with two-step on: password + code ----
     T['hx_sops'][1]['status'] = 'draft'
     open_sop(pg, 'Line Cleaning'); pg.get_by_role('button', name='✓ Approve & publish').click(); md = esig_modal(pg); md.wait_for()
