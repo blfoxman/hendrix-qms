@@ -5,7 +5,7 @@ errors = []
 MEM = '22222222-2222-2222-2222-222222222222'
 T['hx_profiles'][0].update({'email': 's@x'})
 T['hx_profiles'].append({'id': MEM, 'name': 'Maria Lopez', 'email': 'maria@x', 'role': 'member', 'approved': True, 'role_ids': [], 'license_ids': [], 'perms': {'qms': 'read'}, 'must_change_password': False, 'created_at': '2026-02-01'})
-ST = {'set': [], 'changed': [], 'put': [], 'missing': False}
+ST = {'set': [], 'changed': [], 'put': [], 'missing': False, 'own': [], 'own_missing': False, 'need_cur': False, 'cur': []}
 def jr(route, j, st=200): return route.fulfill(status=st, content_type='application/json', body=json.dumps(j))
 _h = handle
 def handle(route, request):
@@ -16,8 +16,12 @@ def handle(route, request):
         ST['set'].append(b); p = next(x for x in T['hx_profiles'] if x['id'] == b['p_user']); p['must_change_password'] = b['p_user'] != ADMIN; return jr(route, True)
     if path.endswith('/rpc/hx_password_changed'):
         ST['changed'].append(1); [p.update({'must_change_password': False}) for p in T['hx_profiles']]; return jr(route, True)
+    if path.endswith('/rpc/hx_set_own_password'):
+        if ST['own_missing']: return jr(route, {'code': 'PGRST202', 'message': 'Could not find the function public.hx_set_own_password(p_password) in the schema cache'}, 404)
+        ST['own'].append(b.get('p_password')); [p.update({'must_change_password': False}) for p in T['hx_profiles']]; return jr(route, True)
     if path.endswith('/auth/v1/user') and request.method == 'PUT':
-        ST['put'].append(b.get('password')); return jr(route, {'id': MEM})
+        if ST['need_cur'] and not b.get('current_password'): return jr(route, {'code': 422, 'error_code': 'current_password_required', 'msg': 'Current password required when setting new password.'}, 422)
+        ST['put'].append(b.get('password')); ST['cur'].append(b.get('current_password')); return jr(route, {'id': MEM})
     return _h(route, request)
 def check(cond, msg):
     print(('PASS ' if cond else 'FAIL ') + msg)
@@ -60,7 +64,15 @@ with sync_playwright() as pw:
     pg.wait_for_selector('text=The two passwords are not the same.')
     pg.screenshot(path=OUT + 'pw_new.png')
     pg.locator('input[aria-label="New password again"]').fill('Maria-Own-2026'); pg.get_by_role('button', name='Save my new password').click(); pg.wait_for_selector('.nav')
-    check(ST['put'] == ['Maria-Own-2026'] and len(ST['changed']) == 1, 'new password saved and the reset flag cleared; Hendrix opens')
+    check(ST['own'] == ['Maria-Own-2026'] and ST['put'] == [] and pg.locator('input[aria-label="Temporary password"]').count() == 0, 'new password saved on the server without the current password (step 45); Hendrix opens')
+    ctx.close()
+    # step 45 not installed and Supabase asks for the current password: Hendrix asks for the temporary password once
+    next(x for x in T['hx_profiles'] if x['id'] == MEM)['must_change_password'] = True; ST['own_missing'] = True; ST['need_cur'] = True
+    ctx, pg = ctx_for(b, MEM); pg.goto(BASE); pg.wait_for_selector('h2 >> text=Choose a new password')
+    pg.locator('input[aria-label="New password"]').fill('Maria-Own-2026'); pg.locator('input[aria-label="New password again"]').fill('Maria-Own-2026'); pg.get_by_role('button', name='Save my new password').click()
+    pg.wait_for_selector('input[aria-label="Temporary password"]'); check(pg.locator('text=Enter the temporary password the admin gave you').count() == 1, 'without step 45: asks for the temporary password instead of the Supabase message')
+    pg.locator('input[aria-label="Temporary password"]').fill('Temp-Pass-2026'); pg.get_by_role('button', name='Save my new password').click(); pg.wait_for_selector('.nav')
+    check(ST['put'] == ['Maria-Own-2026'] and ST['cur'] == ['Temp-Pass-2026'] and len(ST['changed']) == 1, 'password saved with the temporary password as the current one; reset flag cleared')
     ctx.close()
     b.close()
 print('\nJS/assert errors:', errors if errors else 'none')

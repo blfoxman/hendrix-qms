@@ -2,7 +2,7 @@
 -- Hendrix QMS  -  Step 37: System Health
 -- One admin-only function, hx_system_health(), that checks the installation the
 -- way an auditor's Installation Qualification (IQ) does:
---   * which database steps are installed (4 to 44)
+--   * which database steps are installed (4 to 45)
 --   * row level security switched on for every Hendrix table
 --   * every Hendrix table written to the audit trail, and the audit trail locked
 --   * the private file bucket exists and is not public
@@ -39,7 +39,7 @@ begin
       (24,'Equipment and chemicals','t','hx_equipment'),(25,'Line clearance and rework','t','hx_line_clearances'),(26,'Facility tests','t','hx_env_points'),(27,'Cultivation','t','hx_grow_areas'),
       (28,'HACCP','t','hx_haccp_team'),(29,'Risk register and change control','t','hx_risks'),(30,'Org chart and objectives','t','hx_org_positions'),(31,'Management review and verification','t','hx_mgmt_reviews'),
       (32,'Time clock and badges','t','hx_badges'),(33,'Production planner','t','hx_production_plans'),(34,'Settings','t','hx_license_settings'),(36,'Line Map','f','hx_line_map'),
-      (37,'System health','f','hx_system_health'),(38,'Security: e-signatures, two-step sign-in','t','hx_esignatures'),(39,'My Tasks and email alerts','t','hx_notify_queue'),(40,'Kiosks keep working offline','t','hx_kiosk_receipts'),(41,'METRC check','t','hx_metrc_snapshots'),(42,'Temporary passwords','f','hx_admin_set_password'),(43,'Maintenance and purchase requests, QR sign-in','f','hx_kiosk_log_add_user'),(44,'CSQ Program Overview online course','f','hx_course_cert_only')) as s(step, name, kind, obj)
+      (37,'System health','f','hx_system_health'),(38,'Security: e-signatures, two-step sign-in','t','hx_esignatures'),(39,'My Tasks and email alerts','t','hx_notify_queue'),(40,'Kiosks keep working offline','t','hx_kiosk_receipts'),(41,'METRC check','t','hx_metrc_snapshots'),(42,'Temporary passwords','f','hx_admin_set_password'),(43,'Maintenance and purchase requests, QR sign-in','f','hx_kiosk_log_add_user'),(44,'CSQ Program Overview online course','f','hx_course_cert_only'),(45,'New password after a reset','f','hx_set_own_password')) as s(step, name, kind, obj)
   loop
     v_ok := case r.kind
       when 't' then to_regclass('public.' || r.obj) is not null
