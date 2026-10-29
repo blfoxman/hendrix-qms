@@ -98,7 +98,7 @@ with sync_playwright() as pw:
     ctx.add_init_script('localStorage.setItem("hx_session",%s);localStorage.setItem("hx_state","st-mo");localStorage.setItem("hx_lic","lic-mo");localStorage.setItem("hx_trtab","matrix");' % json.dumps(json.dumps(sess)))
     pg = ctx.new_page(); pg.on('pageerror', lambda e: errors.append('JS: ' + str(e))); pg.on('dialog', lambda d: d.accept())
     pg.goto(BASE); pg.wait_for_selector('text=Quality standard')
-    pg.get_by_role('button', name='Training', exact=True).click(); pg.wait_for_selector('.msg >> text=Created the 10 CSQ training courses')
+    pg.get_by_role('button', name='Training', exact=True).click(); pg.wait_for_selector('.msg >> text=Created the 11 CSQ training courses')
     mo = lic_courses('lic-mo')
     check(by('lic-mo', 'Current Good Manufacturing')['share_key'] == 'csq:cgmp' and by('lic-mo', 'Missouri regulatory')['share_key'] == 'law:st-mo' and by('lic-mo', 'HACCP')['share_key'] == 'csq:haccp', 'new courses get share keys (CSQ: all licenses, law: per state)')
     pg.get_by_role('button', name='Publish all').click(); pg.wait_for_selector('.msg >> text=/Published \\d+ online course/')
@@ -110,7 +110,7 @@ with sync_playwright() as pw:
     # second Missouri license
     pg.locator('select').nth(1).select_option('lic-mo2'); pg.wait_for_timeout(600)
     if pg.locator('text=Training matrix \u00b7 Second MO').count() == 0: pg.get_by_role('button', name='Training', exact=True).click()
-    pg.wait_for_selector('.msg >> text=Created the 10 CSQ training courses')
+    pg.wait_for_selector('.msg >> text=Created the 11 CSQ training courses')
     c2 = by('lic-mo2', 'Current Good Manufacturing')
     check(c2['content_status'] == 'published' and c2['content_version'] == cg['content_version'] and c2['lessons'] == cg['lessons'] and any(k['course_id'] == c2['id'] for k in T['hx_training_keys']), 'new license copy starts from the published shared content (same version, answer key)')
     pg.locator('.tabs button', has_text='Training matrix').click()

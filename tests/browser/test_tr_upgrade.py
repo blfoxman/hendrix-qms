@@ -33,9 +33,9 @@ with sync_playwright() as pw:
     # Michigan license gets its own courses with Michigan law
     pg.locator('header select, .top select').first.select_option(label='Michigan') if pg.locator('header select, .top select').count() else pg.locator('select').first.select_option(label='Michigan')
     pg.wait_for_timeout(600); pg.get_by_role('button', name='Training', exact=True).click()
-    pg.wait_for_selector('.msg >> text=Created the 10 CSQ training courses')
+    pg.wait_for_selector('.msg >> text=Created the 11 CSQ training courses')
     mi=[c for c in T['hx_training_courses'] if c['license_id']=='lic-mi']; mo=[c for c in T['hx_training_courses'] if c['license_id']=='lic-mo']
-    check(len(mo)==6 and any(c['topic']=='HACCP basics' for c in mo) and len(mi)==10 and any(c['name']=='Michigan regulatory compliance (state rules)' and 'CRA' in c['description'] for c in mi) and not any('Missouri' in c['name'] for c in mi), 'Michigan gets Michigan regulatory training; Missouri keeps its courses and gains the new HACCP basics course')
+    check(len(mo)==7 and any(c['topic']=='HACCP basics' for c in mo) and len(mi)==11 and any(c['name']=='Michigan regulatory compliance (state rules)' and 'CRA' in c['description'] for c in mi) and not any('Missouri' in c['name'] for c in mi), 'Michigan gets Michigan regulatory training; Missouri keeps its courses and gains the new HACCP basics course')
     pg.locator('.tabs button', has_text='Courses').click(); pg.wait_for_selector('text=Michigan regulatory compliance')
     check(pg.locator('text=Missouri regulatory compliance').count()==0, 'Michigan screen shows no Missouri course')
     b.close()

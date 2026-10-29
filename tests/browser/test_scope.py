@@ -79,7 +79,7 @@ with sync_playwright() as pw:
     pg.locator('.tabs button', has_text='Annual program').click(); pg.wait_for_selector('text=Annual audit program')
     check(pg.locator('h3', has_text='CSQ Standard for Cultivation').count() == 1 and pg.locator('text=Module 3A · Cultivation').count() >= 1, 'coverage uses the Cultivation scope')
     # training for CUL
-    pg.get_by_role('button', name='Training', exact=True).click(); pg.wait_for_selector('.msg >> text=Created the 10 CSQ training courses')
+    pg.get_by_role('button', name='Training', exact=True).click(); pg.wait_for_selector('.msg >> text=Created the 11 CSQ training courses')
     cul = [c for c in T['hx_training_courses'] if c['license_id'] == 'lic-cul']
     check(any(c['topic'] == 'cGACP' and c['required_mode'] == 'everyone' for c in cul) and not any(c['topic'] == 'Extraction' for c in cul), 'CUL license: cGACP course for everyone, no Extraction course')
     # locations
