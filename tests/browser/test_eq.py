@@ -1,3 +1,4 @@
+import calendar
 import re, datetime as dt
 import os
 exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mock_c.py')).read())
@@ -10,7 +11,7 @@ T['hx_facility_log'].append({'id': 'fl-m1', 'state_id': 'st-mo', 'license_id': '
 SEQ = {'EQ': 0, 'CHEM': 0}
 def today(): return dt.date.today().isoformat()
 def addm(d, m):
-    d = dt.date.fromisoformat(d); mm = d.month - 1 + m; return dt.date(d.year + mm // 12, mm % 12 + 1, min(d.day, 28)).isoformat()
+    d = dt.date.fromisoformat(d); mm = d.month - 1 + m; return dt.date(d.year + mm // 12, mm % 12 + 1, min(d.day, calendar.monthrange(d.year + mm // 12, mm % 12 + 1)[1])).isoformat()
 def jr(route, j, st=200): return route.fulfill(status=st, content_type='application/json', body=json.dumps(j))
 def eq_apply(eid):
     e = next(x for x in T['hx_equipment'] if x['id'] == eid); ev = [v for v in T['hx_equipment_events'] if v['equipment_id'] == eid and not v.get('voided')]

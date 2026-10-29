@@ -8321,7 +8321,8 @@ async function trAutoSetup(st,lic,C){
 }
 function trErr(e){const m=String((e&&e.message)||e);return /hx_training/.test(m)&&/missing|does not exist|schema cache/i.test(m)?'Training is not set up yet - run hendrix_step15.sql in the Hendrix Supabase project.':m;}
 function trRequired(c,u){if(!c.active)return false;if(c.required_mode==='everyone')return true;if(c.required_mode==='roles')return (u.role_ids||[]).some(function(r){return (c.role_ids||[]).indexOf(r)>=0;});return false;}
-function trAddMonths(d,m){const x=new Date(d+'T12:00:00');x.setMonth(x.getMonth()+m);return x.toISOString().slice(0,10);}
+// adds months; a day past the end of the new month becomes its last day (Aug 31 + 6 months = Feb 28/29, not Mar 3)
+function trAddMonths(d,m){const x=new Date(d+'T12:00:00'),day=x.getDate();x.setDate(1);x.setMonth(x.getMonth()+m);const last=new Date(x.getFullYear(),x.getMonth()+1,0,12).getDate();x.setDate(Math.min(day,last));return x.toISOString().slice(0,10);}
 // best evidence for one person and one course: a training record, or (for read-and-sign courses) a signature on the SOP's current version
 function trCell(c,u,recs,acks,sops){
   let best=null;
