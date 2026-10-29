@@ -1,10 +1,11 @@
+import calendar
 import re, datetime as dt
 import os
 exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mock_c.py')).read())
 errors = []
 TODAY = dt.date.today()
 def addm(d, m):
-    mm = d.month - 1 + m; return dt.date(d.year + mm // 12, mm % 12 + 1, min(d.day, 28)).isoformat()
+    mm = d.month - 1 + m; return dt.date(d.year + mm // 12, mm % 12 + 1, min(d.day, calendar.monthrange(d.year + mm // 12, mm % 12 + 1)[1])).isoformat()
 T['hx_tests'] += [{'id': 't1', 'state_id': 'st-mo', 'license_id': 'lic-mo', 'tag': 'A', 'lab_name': 'Green Lab', 'voided': False, 'status': 'Passed'},
                   {'id': 't2', 'state_id': 'st-mo', 'license_id': 'lic-mo', 'tag': 'B', 'lab_name': 'Cheap Labs LLC', 'voided': False, 'status': 'Passed'}]
 _h = handle
