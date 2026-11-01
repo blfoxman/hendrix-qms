@@ -4,6 +4,7 @@ exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mock_c.py'))
 errors = []
 D = OUT + 'rbpdf/'
 AIREQ = []
+RBMODE = {'m': 'ok', 'n': 0}
 _h = handle
 def handle(route, request):
     u = request.url
@@ -16,7 +17,12 @@ def handle(route, request):
             for ln in txt.split('\n'):
                 m = re.match(r'^(\d+)\|(Hand washing|Visitors|Product labels)$', ln)
                 if m: out.append({'line': int(m.group(1)), 'citation': '', 'title': m.group(2), 'category': 'Facility' if m.group(2) == 'Hand washing' else 'Security' if m.group(2) == 'Visitors' else 'Labeling'})
-            return route.fulfill(status=200, content_type='application/json', body=json.dumps({'content': [{'type': 'text', 'text': json.dumps({'rules': out})}]}))
+            js = json.dumps({'rules': out}); mode = RBMODE['m']; RBMODE['n'] += 1; stop = 'end_turn'
+            if mode == 'prose': js = 'Here are the rule starts I found:\n```json\n' + js + '\n```\nLet me know if you need more.'
+            if mode == 'once' and RBMODE['n'] == 1: js = 'I cannot tell where the rules begin in this text.'
+            if mode == 'never': js = 'I cannot tell where the rules begin in this text.'
+            if mode == 'cut': js = js[:js.rindex('{"line"') + 5]
+            return route.fulfill(status=200, content_type='application/json', body=json.dumps({'content': [{'type': 'text', 'text': js}], 'stop_reason': stop}))
         if 'Sort each cannabis regulation' in txt:
             c = [[int(ln.split('|')[0]), 'Training'] for ln in txt.split('\n') if re.match(r'^\d+\|', ln)]
             return route.fulfill(status=200, content_type='application/json', body=json.dumps({'content': [{'type': 'text', 'text': json.dumps({'c': c})}]}))
@@ -98,6 +104,17 @@ with sync_playwright() as pw:
     check(md.locator('text=Found by AI (no standard rule numbers)').count() == 1 and md.locator('div.rbrow input[value="Visitors"]').count() == 1 and md.locator('div.rbrow').nth(1).locator('select').input_value() == 'Security', 'no rule numbers: AI finds each rule, text kept')
     md.locator('div.rbrow').nth(1).get_by_role('button', name='Text').click()
     check('All visitors sign in at reception' in md.locator('div.rbrow').nth(1).inner_text(), 'AI split keeps the PDF text word for word')
+    md.get_by_role('button', name='Cancel').click()
+    # the AI wraps its JSON in prose, refuses once, or is cut off: still read
+    for mode, want, msg in (('prose', '3 rules found', 'AI answer wrapped in prose and a code fence'), ('once', '3 rules found', 'unreadable answer: asks again with a stricter instruction'), ('cut', '2 rules found', 'answer cut off: the complete rules are kept')):
+        RBMODE.update(m=mode, n=0); upload(pg, 'plain.pdf'); pg.wait_for_selector('text=' + want, timeout=30000); md = pg.locator('.md')
+        check(md.locator('text=Found by AI (no standard rule numbers)').count() == 1, msg); md.get_by_role('button', name='Cancel').click()
+    RBMODE.update(m='never', n=0); upload(pg, 'plain.pdf'); pg.wait_for_selector('.md .msg.err', timeout=30000)
+    check('I cannot tell where the rules begin' in pg.locator('.md .msg.err').inner_text() and RBMODE['n'] == 2, 'never readable: the error shows what the AI answered (after one retry)')
+    pg.locator('.md').get_by_role('button', name='Close').click(); RBMODE.update(m='ok', n=0)
+    # New York (Cornell style "\u00a7 125.1 - Definitions")
+    upload(pg, 'ny.pdf'); pg.wait_for_selector('text=4 rules found', timeout=30000); md = pg.locator('.md')
+    check('Numbered sections' in md.locator('.sub').first.inner_text() and md.locator('div.rbrow input[value="Definitions"]').count() == 1 and md.locator('div.rbrow input[value="Security"]').count() == 1, 'New York sections with a dash before the title are found without AI')
     md.get_by_role('button', name='Cancel').click()
     b.close()
 print('\nJS/assert errors:', errors if errors else 'none')
