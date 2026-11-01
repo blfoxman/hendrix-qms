@@ -6446,7 +6446,7 @@ function objBoardHtml(objs,res,lic,policy){const e=esc3;
   return '<div class="hxrec"><h2>Quality objectives and KPIs</h2><div class="m">'+e(lic.name)+' \u00b7 printed '+e(new Date().toLocaleString())+' \u00b7 CSQ 1.2, 5.1.2, 5.1.4</div>'+(policy?'<p><b>Quality policy:</b> '+e(policy)+'</p>':'')+
     '<table><tr><th>Objective</th><th>Target</th><th>Owner</th><th>Last result</th><th>Last 6 periods</th><th>Plan / action</th></tr>'+objs.map(function(o){const last=res.filter(function(r){return r.objective_id===o.id;}).sort(function(a,b){return a.period<b.period?1:-1;})[0];
       return '<tr><td><b>'+e(o.number+' '+o.name)+'</b><br>'+e(o.description)+'</td><td>'+(o.direction==='down'?'\u2264 ':'\u2265 ')+e(objFmt(o.target,o.unit))+' '+e(o.frequency)+'</td><td>'+e(o.owner)+'</td><td class="'+(last?(last.met?'ok':'bad'):'')+'">'+(last?e(objPeriodLabel(last.period)+': '+objFmt(last.value,o.unit)+(last.met?' met':' MISSED')):'Not measured yet')+'</td><td>'+objSpark(o,res,true)+'</td><td>'+e((last&&!last.met&&last.action)||o.action_plan)+'</td></tr>';}).join('')+'</table></div>';}
-function objDue(o,res){const p=objPeriods(o.frequency,2)[1];return o.status==='active'&&o.start_on<=objPeriodRange(p)[1]&&!res.some(function(r){return r.objective_id===o.id&&r.period===p;});}
+function objDue(o,res){const p=objPeriods(o.frequency,2)[1];return o.status==='active'&&o.start_on<objPeriodRange(p)[1]&&!res.some(function(r){return r.objective_id===o.id&&r.period===p;});}
 
 function QualitySysPage(props){
   const st=props.state,lic=props.license,lid=lic?lic.id:'',canO=can('orgchart',1),canK=can('objectives',1),canM=can('mgmtreview',1),canV=can('verification',1),okT={org:canO,kpi:canK,mr:canM,ver:canV};
