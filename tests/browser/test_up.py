@@ -58,5 +58,16 @@ with sync_playwright() as pw:
     with pg.expect_navigation(): pg.clock.fast_forward(100000)
     pg.wait_for_selector('text=Scan your badge')
     check(pg.evaluate('document.documentElement.innerHTML.indexOf("Release 99")>=0'), 'kiosk: reloaded to the newer version when idle')
+    # a page opened from the browser's cached copy notices the newer version on its own within seconds
+    HTML = HTML_OLD
+    ctx = b.new_context(viewport={'width': 1300, 'height': 950}); ctx.route('**/*', handle)
+    ctx.add_init_script('localStorage.setItem("hx_session",%s);localStorage.setItem("hx_state","st-mo");localStorage.setItem("hx_lic","lic-mo");' % json.dumps(json.dumps(sess)))
+    pg = ctx.new_page(); pg.on('pageerror', lambda e: errors.append('JS: ' + str(e)))
+    pg.goto(BASE); pg.wait_for_selector('text=Dashboard'); HTML = HTML_NEW
+    pg.wait_for_selector('#hx-update', timeout=20000)
+    check(True, 'stale copy: bar appears about 10 seconds after loading, without waiting a minute')
+    reqs = []; pg.on('request', lambda r: reqs.append(r.url) if 'hxv=' not in r.url and r.url.split('?')[0].rstrip('/') == BASE.split('?')[0].rstrip('/') else None)
+    pg.locator('#hx-update').get_by_role('button', name='Reload').click(); pg.wait_for_selector('text=Dashboard')
+    check(len(reqs) >= 2 and 'Release 99' in pg.content(), 'Reload refreshes the cached page first, then reloads (%d requests)' % len(reqs))
     b.close()
 print('\nJS/assert errors:', errors if errors else 'none')
