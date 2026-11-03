@@ -7191,21 +7191,71 @@ async function ppCalculate(o){
 }
 function ppWorksheetPdf(plan,lic,sku,track,only){
   if(!window.jspdf){window.alert('The PDF library did not load.');return;}
-  const doc=pdfSafeDoc(new window.jspdf.jsPDF({unit:'mm',format:'letter'})),W=215.9,m=14,tf=ppTrack(plan.product_type,sku);
+  const doc=pdfSafeDoc(new window.jspdf.jsPDF({unit:'mm',format:'letter'})),W=215.9,H=279.4,m=14,CW=W-2*m,tf=ppTrack(plan.product_type,sku);
   const list=(plan.lines||[]).filter(function(l){return !only||l.flavor===only;});
-  list.forEach(function(l,ix){if(ix)doc.addPage();let y=16;
-    doc.setFont('helvetica','bold');doc.setFontSize(18);doc.text('Production Worksheet',m,y);y+=7;
-    doc.setFont('helvetica','normal');doc.setFontSize(10);doc.text(lic.name+(lic.license_number?' ('+lic.license_number+')':'')+' | '+(plan.number||'Draft plan')+' | planned for '+(plan.planned_for||todayStr()),m,y);y+=5;
-    doc.text(ptName(plan.product_type)+' | '+(plan.sku_name||'')+' | '+l.flavor,m,y);y+=5;doc.text('Target: '+l.units+' units'+(l.source==='ai'?'   (AI estimate - check before use)':l.source==='base'?'   (base recipe)':''),m,y);y+=7;
-    doc.setDrawColor(180);doc.line(m,y,W-m,y);y+=7;
-    doc.setFont('helvetica','bold');doc.setFontSize(12);doc.text('Required ingredients',m,y);y+=6;doc.setFontSize(9);doc.text('Ingredient',m,y);doc.text('Quantity',W-m-24,y);doc.text('Lot / tag used',W-m-70,y);y+=3;doc.line(m,y,W-m,y);y+=5;
-    doc.setFont('helvetica','normal');(l.ingredients||[]).forEach(function(i){doc.text(String(i.name||''),m,y);doc.text('______________',W-m-70,y);doc.text((i.qty||'')+' '+(i.unit||''),W-m-24,y);y+=6;});
-    y+=3;doc.line(m,y,W-m,y);y+=8;doc.setFont('helvetica','bold');doc.setFontSize(12);doc.text('Production tracking',m,y);y+=7;doc.setFontSize(9);
-    const trk=(track&&track[l.flavor])||{};
-    tf.forEach(function(t){doc.setFont('helvetica','bold');doc.text(t[1]+':',m,y);doc.setFont('helvetica','normal');doc.text(ppTval(trk,t[0],plan.product_type,sku)||'____________________',m+70,y);y+=7;});
-    y+=8;doc.text('Batch #: ____________________     METRC tag: ____________________',m,y);y+=16;
-    doc.line(m,y,m+70,y);doc.line(W-m-70,y,W-m,y);y+=4;doc.setFontSize(8);doc.text('Operator signature / date',m,y);doc.text('Manager signature / date',W-m-70,y);});
-  doc.save(String((plan.number||'plan')+'_'+(plan.sku_name||'')+(only?'_'+only:'')).replace(/[^a-z0-9]+/gi,'_')+'_worksheets.pdf');
+  const planNo=plan.number||'DRAFT',when=plan.planned_for||todayStr(),licTxt=lic.name+(lic.license_number?' · '+lic.license_number:'');
+  const ink=function(g){doc.setTextColor(g,g,g);},fill=function(g){doc.setFillColor(g,g,g);},stroke=function(g,w){doc.setDrawColor(g,g,g);doc.setLineWidth(w||0.2);};
+  const font=function(st,sz){doc.setFont('helvetica',st);doc.setFontSize(sz);};
+  const cap=function(t,x,y,sz,g,opt){font('bold',sz||6.5);ink(g===undefined?120:g);doc.text(String(t).toUpperCase(),x,y,Object.assign({charSpace:0.6},opt||{}));};
+  // black header band
+  function header(l,cont){
+    fill(0);doc.rect(0,0,W,cont?20:36,'F');
+    cap('Production work order',m,cont?8:10,7,170);
+    font('bold',cont?12:21);ink(255);doc.text(String(l.flavor||''),m,cont?15:21.5,{maxWidth:CW-62});
+    if(!cont){font('normal',9);ink(200);doc.text(ptName(plan.product_type)+'  ·  '+(plan.sku_name||''),m,29);}
+    font('bold',cont?11:15);ink(255);doc.text(planNo,W-m,cont?10:16,{align:'right'});
+    font('normal',8);ink(185);doc.text('Planned '+when+(cont?'  ·  continued':''),W-m,cont?15:22.5,{align:'right'});
+    if(!cont){fill(255);doc.rect(W-m-22,26.5,22,5.2,'F');font('bold',7);ink(0);doc.text(l.units+' UNITS',W-m-11,30.2,{align:'center'});}
+    return cont?28:44;
+  }
+  function section(t,y){fill(0);doc.rect(m,y-2.6,2.4,2.4,'F');cap(t,m+4.5,y,8.5,0);const w=doc.getTextWidth(String(t).toUpperCase())+String(t).length*0.6;stroke(190);doc.line(m+7+w,y-1.3,W-m,y-1.3);return y+5;}
+  function cell(x,y,w,h,label,val,big){stroke(0,0.25);doc.rect(x,y,w,h);cap(label,x+2.5,y+4.2,6,110);
+    if(val){font('bold',big?13:10.5);ink(0);doc.text(String(val),x+2.5,y+h-3.2,{maxWidth:w-5});}}
+  let y=0;
+  function room(need,l){if(y+need>H-18){doc.addPage();y=header(l,true);return true;}return false;}
+  list.forEach(function(l,ix){if(ix)doc.addPage();y=header(l,false);
+    // facts
+    const f4=CW/4;fill(242);doc.rect(m,y,CW,15,'F');
+    [['License',licTxt],['Product',ptName(plan.product_type)],['SKU',plan.sku_name||'-'],['Target',l.units+' units']].forEach(function(c,i){const x=m+i*f4;
+      if(i){stroke(200);doc.line(x,y+3,x,y+12);}cap(c[0],x+3,y+5,6,110);font('bold',9.5);ink(0);doc.text(doc.splitTextToSize(String(c[1]),f4-6)[0],x+3,y+11);});
+    y+=20;
+    if(l.source==='ai'||l.source==='base'){stroke(0,0.35);doc.rect(m,y,CW,8);fill(0);doc.rect(m,y,l.source==='ai'?22:28,8,'F');cap(l.source==='ai'?'AI estimate':'Base recipe',m+2.5,y+5.2,6.5,255);
+      font('normal',8.5);ink(40);doc.text(l.source==='ai'?'Quantities were estimated by AI. Check them against the formulation before weighing.':'No formulation for this flavor: quantities come from the SKU base recipe.',m+(l.source==='ai'?25:31),y+5.3);y+=13;}
+    // ingredients
+    y=section('Required ingredients',y+2);
+    const X={n:m+3,name:m+11,req:m+96,act:m+101,lot:m+133,chk:W-m-7};
+    const head=function(){fill(0);doc.rect(m,y,CW,7,'F');[['#',X.n],['Ingredient',X.name],['Actual',X.act],['Lot / METRC tag',X.lot]].forEach(function(h){cap(h[0],h[1],y+4.7,6.5,255);});
+      cap('Required',X.req,y+4.7,6.5,255,{align:'right',charSpace:0});cap('OK',X.chk+1.75,y+4.7,6.5,255,{align:'center',charSpace:0});y+=7;};
+    head();
+    const ings=l.ingredients||[];
+    if(!ings.length){font('italic',9);ink(110);doc.text('No ingredients listed for this flavor.',X.name,y+5.5);y+=9;}
+    ings.forEach(function(it,i){font('normal',9);const nm=doc.splitTextToSize(String(it.name||''),X.req-X.name-24),h=Math.max(8.5,nm.length*4+4.5);
+      if(room(h+2,l))head();
+      if(i%2===0){fill(246);doc.rect(m,y,CW,h,'F');}
+      font('bold',8);ink(130);doc.text(String(i+1).padStart(2,'0'),X.n,y+5.5);
+      font('normal',9);ink(0);doc.text(nm,X.name,y+5.5);
+      font('bold',9.5);doc.text(String((it.qty||'')+' '+(it.unit||'')).trim(),X.req,y+5.5,{align:'right'});
+      stroke(150);doc.line(X.act,y+h-2.2,X.lot-5,y+h-2.2);doc.line(X.lot,y+h-2.2,X.chk-5,y+h-2.2);
+      stroke(0,0.3);doc.rect(X.chk,y+(h-3.5)/2,3.5,3.5);y+=h;});
+    stroke(0,0.4);doc.line(m,y,W-m,y);y+=9;
+    // tracking
+    room(14+Math.ceil(tf.length/2)*13,l);y=section('Production tracking',y);
+    const trk=(track&&track[l.flavor])||{},hw=(CW-4)/2;
+    tf.forEach(function(t,i){const x=m+(i%2)*(hw+4);cell(x,y,hw,11.5,t[1],ppTval(trk,t[0],plan.product_type,sku));if(i%2===1||i===tf.length-1)y+=13;});
+    y+=3;room(44,l);y=section('Batch',y);
+    const qw=(CW-12)/4;['Batch #','METRC package tag','Start time','Finish time'].forEach(function(t,i){cell(m+i*(qw+4),y,qw,11.5,t,'');});y+=15.5;
+    stroke(0,0.25);doc.rect(m,y,CW,15);cap('Notes / deviations',m+2.5,y+4.2,6,110);y+=21;
+    // sign-off
+    room(34,l);y=section('Sign-off',y);
+    [['Operator',m],['Manager review',m+hw+4]].forEach(function(b){const x=b[1];fill(0);doc.rect(x,y,hw,6,'F');cap(b[0],x+2.5,y+4.1,6.5,255);stroke(0,0.25);doc.rect(x,y,hw,25);
+      stroke(160);[['Name'],['Signature'],['Date']].forEach(function(r,k){const ly=y+6+(k+1)*5.8;cap(r[0],x+2.5,ly-0.6,5.5,130);doc.line(x+20,ly,x+hw-3,ly);});});
+    y+=28;
+  });
+  // footer on every page
+  const n=doc.getNumberOfPages();
+  for(let p=1;p<=n;p++){doc.setPage(p);stroke(0,0.3);doc.line(m,H-12,W-m,H-12);cap('Hendrix QMS',m,H-7.5,6.5,0);
+    font('normal',7.5);ink(110);doc.text(licTxt+'  ·  '+planNo+'  ·  printed '+todayStr(),m+30,H-7.5);font('bold',7.5);ink(0);doc.text('Page '+p+' of '+n,W-m,H-7.5,{align:'right'});}
+  doc.save(String(planNo+'_'+(plan.sku_name||'')+(only?'_'+only:'')).replace(/[^a-z0-9]+/gi,'_')+'_work_orders.pdf');
 }
 function PlanResults(props){
   const plan=props.plan,lic=props.license,sku=props.sku,lots=props.lots,track=props.track,setTrack=props.setTrack,tf=ppTrack(plan.product_type,sku),batches=props.batches||[];
@@ -7213,7 +7263,7 @@ function PlanResults(props){
   return el('div',null,
     el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'center',marginBottom:10}},
       el('h3',{style:{margin:0}},(plan.sku_name||'')+' \u2014 '+(plan.lines||[]).length+' flavor'+((plan.lines||[]).length===1?'':'s')+' \u00d7 '+plan.units_per_flavor+' units'),
-      el('div',{className:'row',style:{gap:6}},props.actions,el('button',{className:'btn ghost',onClick:function(){ppWorksheetPdf(plan,lic,sku,track);}},'Worksheets PDF ('+(plan.lines||[]).length+')'))),
+      el('div',{className:'row',style:{gap:6}},props.actions,el('button',{className:'btn ghost',onClick:function(){ppWorksheetPdf(plan,lic,sku,track);}},'Work orders PDF ('+(plan.lines||[]).length+')'))),
     el('div',{className:'card gold',style:{padding:'12px 16px'}},el('div',{className:'row',style:{justifyContent:'space-between'}},el('div',{className:'k'},'Grand total \u2014 all flavors'),lots&&el('span',{className:'badge '+(short?'bad':'ok')},short?short+' short in inventory':'Checked against inventory')),
       el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))',gap:8,marginTop:8}},(plan.grand_total||[]).map(function(g,i){const h=lots?ppOnHand(g.name,g.unit,lots):null,need=ppBase(g.qty,g.unit),low=h!==null&&h<need[0];
         return el('div',{key:i,style:{background:'rgba(255,255,255,.04)',border:'1px solid '+(low?'#5a2a26':'#2a2a2a'),borderRadius:8,padding:'8px 10px'}},el('div',{className:'muted',style:{fontSize:11}},g.name),el('div',{style:{fontSize:17,fontWeight:800}},g.qty+' '+g.unit),
