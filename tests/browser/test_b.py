@@ -14,7 +14,8 @@ T['hx_skus'] += [
  {'id':'pr2','state_id':'st-mo','product_type':'pre_rolls','name':'Off SKU','spec':{},'license_ids':[],'active':False,'sort':1},
  {'id':'bh1','state_id':'st-mo','product_type':'butane_extraction','name':'THCA/HTE','spec':{'dual':'Yes'},'license_ids':[],'active':True,'sort':0},
  {'id':'ca1','state_id':'st-mo','product_type':'cartridges','name':'2G AIO','spec':{'oil_per_unit':2},'license_ids':[],'active':True,'sort':0},
- {'id':'if1','state_id':'st-mo','product_type':'infused_flower','name':'Infused Flower 3.5g','spec':{'unit_size':3.5},'license_ids':[],'active':True,'sort':0}]
+ {'id':'if1','state_id':'st-mo','product_type':'infused_flower','name':'Infused Flower 3.5g','spec':{'unit_size':3.5},'license_ids':[],'active':True,'sort':0},
+ {'id':'if7','state_id':'st-mo','product_type':'infused_flower','name':'Infused Flower 7G','spec':{},'license_ids':[],'active':True,'sort':1}]
 T['hx_flavors'] += [{'id':'fl1','state_id':'st-mo','sku_id':'pr1','name':'Berry Blast','active':True,'sort':0},{'id':'fl2','state_id':'st-mo','sku_id':'pr1','name':'Honey Melon','active':True,'sort':1}]
 T['hx_formulations'] += [{'id':'fo1','state_id':'st-mo','sku_id':'pr1','flavor_id':None,'name':'Mates base','batch_size':'1000','raw_materials':[{'name':'Flower','qty':'1000','unit':'g'},{'name':'THCA','qty':'200','unit':'g'}],'packaging':[],'labor':[],'notes':''}]
 with sync_playwright() as pw:
@@ -103,6 +104,12 @@ with sync_playwright() as pw:
     md.get_by_role('button', name='Submit & Sign').click(); pg.wait_for_selector('.card >> text=IF-001')
     d = T['hx_batches'][-1]['data']
     check(d['if_total_packaged'] == '350' and d['metrc_tag'] == '1A4000000000000000000123', 'saved with total packaged and the packaged METRC tag')
+    pg.get_by_role('button', name='+ New Batch').click(); md = pg.locator('.md')
+    field(md, 'SKU').select_option(label='Infused Flower 7G'); field(md, 'Batch / Lot Number').fill('IF-002')
+    md.locator('div.f', has=pg.locator('span', has_text='R&D Test')).first.get_by_role('button', name='Passed').click()
+    field(md, 'Total Bags Filled').fill('100')
+    check(md.locator('label.f, div.f', has=pg.locator('span', has_text='Total Infused Flower Packaged (g)')).locator('.autov').inner_text() == '700', '7G SKU (size from the name): 100 bags = 700 g')
+    md.get_by_role('button', name='Cancel').click()
     # Michigan label uses BioTrack
     pg.locator('.ctx select').first.select_option(label='Michigan'); pg.locator('.tabs button', has_text='Ethanol Extraction').click()
     pg.get_by_role('button', name='+ New Batch').click(); md = pg.locator('.md')
