@@ -2786,6 +2786,9 @@ function btDirect(exp,act){if(!exp&&!act)return 'none';if(act<exp*(1-BT_TOL))ret
 function btCount(exp,act){if(!exp&&!act)return 'none';if(act>exp*(1+BT_TOL))return 'under';if(act<exp*(1-BT_TOL))return 'over';return 'pass';}
 function btSpec(sku){return (sku&&sku.spec)||{};}
 function prKief(spec){return numOk(spec.grams_kiefed)?num(spec.grams_kiefed):0;}
+// grams per bag for infused flower: the SKU's Unit size, else the grams in its name (7g, 7 G, 3.5g, 14g), else 3.5
+function ifUnitSize(sku){const sp=(sku&&sku.spec)||{};if(numOk(sp.unit_size)&&num(sp.unit_size)>0)return num(sp.unit_size);
+  const m=String((sku&&sku.name)||'').match(/(\d+(?:\.\d+)?)\s*(?:g|gram|grams)\b/i);const g=m?parseFloat(m[1]):0;return g>0&&g<=1000?g:3.5;}
 function btRecalc(type,f,sku){
   const spec=btSpec(sku),name=sku?sku.name:'';
   if(type==='ethanol_extraction'||type==='butane_extraction'){
@@ -2812,7 +2815,7 @@ function btRecalc(type,f,sku){
   }
   if(type==='infused_flower'){
     const sum=['flower_qty','thca_qty','live_resin_qty','hte_qty','decarbed_resin_qty','distillate_qty','terp_qty'].reduce(function(s,k){return s+n0(f[k]);},0);
-    const size=numOk(spec.unit_size)?num(spec.unit_size):(String(name).indexOf('7g')>=0?7:3.5);
+    const size=ifUnitSize(sku);
     const exp=n0(f.infused_flower_used)/size;
     return {...f,if_total_packaged:r2(n0(f.units_produced)*size),flower_check_expected:r2(sum),flower_check_status:btDirect(sum,n0(f.infused_flower_total_wt)),packaging_check_expected:r2(exp),packaging_check_status:btCount(exp,n0(f.units_produced))};
   }
@@ -7189,7 +7192,7 @@ function ppTrack(type,sku){
   if(type==='gummies')return [['mix_weight','Gummy mixture weight'],['gummies_made','Gummies made'],['gummies_rejected','Gummies rejected'],['packages','Packages filled']];
   return [['input_used','Input used'],['produced','Produced'],['waste','Waste'],['remaining','Remaining']];
 }
-function ppIfSize(sku){const s=sku&&sku.spec&&ppNum(sku.spec.unit_size);return s||(/7\s*g/i.test((sku&&sku.name)||'')?7:3.5);}
+function ppIfSize(sku){return ifUnitSize(sku);}
 function ppTval(trk,key,type,sku){if(type==='infused_flower'&&key==='if_packaged'&&!(trk.if_packaged||'').trim()){const b=trk.if_bags_filled;return String(b||'').trim()!==''?ppR(ppNum(b)*ppIfSize(sku)):'';}
   if(type==='infused_flower'&&key==='if_remaining'&&!(trk.if_remaining||'').trim()){const w=trk.if_total_weight,b=trk.if_bags_filled,ws=trk.if_waste;
     if([w,b,ws].every(function(x){return String(x||'').trim()!=='';}))return ppR(ppNum(w)-ppNum(b)*ppIfSize(sku)-ppNum(ws));return '';}return trk[key]||'';}
