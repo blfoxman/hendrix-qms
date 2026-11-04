@@ -277,7 +277,7 @@ with sync_playwright() as pw:
     pg.get_by_role('button', name='Facility Logs').click()
     pg.wait_for_selector('h2 >> text=Sanitation Log')
     names = pg.locator('.tabs button').all_inner_texts()
-    check(names == ['Sanitation', 'Waste Destruction', 'Scale Calibration', 'Security Malfunction', 'Security Equipment Inspection', 'Pest Control', 'Equipment Maintenance', 'Temp / Humidity', 'Environmental Monitoring', 'Maintenance Request', 'Purchase Request'], '9 Black Fox logs in Black Fox order, then the two request forms: ' + str(names))
+    check(names == ['Sanitation', 'Waste Destruction', 'Scale Calibration', 'Security Malfunction', 'Security Equipment Inspection', 'Pest Control', 'Equipment Maintenance', 'Temp / Humidity', 'Environmental Monitoring', 'Maintenance Request', 'Purchase Request', 'GMP Hygiene Walk', 'Employee Illness and Exclusion'], '9 Black Fox logs in Black Fox order, the two request forms, then the food safety logs: ' + str(names))
 
     # --- Sanitation
     pg.get_by_role('button', name='Manage lists').click()
