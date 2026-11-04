@@ -2670,7 +2670,7 @@ function AuditTrail(props){
 const BT_STATUS=['In Progress','QC Hold','Passed','Failed','Completed'];
 const BT_TESTS=['Not Submitted','Submitted','Passed','Failed'];
 const BT_TOL=0.10;
-function bS(l){return {t:'section',l:l};}
+function bS(l,x){return Object.assign({t:'section',l:l},x||{});}
 function bT(k,l,ph,x){return Object.assign({k:k,l:l,t:'text',ph:ph||''},x||{});}
 function bC(k,x){return Object.assign({k:k,l:'Recorded on METRC?',t:'checkbox',metrc:1},x||{});}
 function bD(k,l,x){return Object.assign({k:k,l:l,t:'display'},x||{});}
@@ -2964,6 +2964,8 @@ function BatchForm(props){
   }
   const lockNote=el('div',{className:'muted',style:{fontSize:11,marginTop:3}},'Already entered \u2014 locked (an admin can change it with a reason)');
   function field(f,i){
+    if(f.t==='section'&&f.ifPkg&&!btVisible(def.id,f,fd,sku,init))return el('div',{key:'s'+i},el('div',{className:'secth'},btLabel(def.id,f,ts,sku)),
+      el('div',{className:'msg',style:{marginBottom:12}},'Mark the R&D Test Passed to fill in Infused Flower Used, Total Bags Filled, Total Infused Flower Packaged and the Packaged METRC Tag.'));
     if(!btVisible(def.id,f,fd,sku,init))return null;
     const key=f.k||('s'+i),lab=btLabel(def.id,f,ts,sku),lk=f.k&&locked(f.k);
     if(f.t==='section')return el('div',{key:key,className:'secth'},lab);
