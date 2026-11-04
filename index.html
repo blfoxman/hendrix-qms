@@ -7183,14 +7183,15 @@ const PP_STATUS={planned:'Planned',in_progress:'In production',completed:'Comple
 const PP_TONE={planned:'warn',in_progress:'warn',completed:'ok',cancelled:'off'};
 // the blanks on the worksheet (Black Fox sets for pre-rolls and infused flower; a general set for the rest)
 function ppTrack(type,sku){
-  if(type==='infused_flower')return [['if_total_weight','Total infused flower weight'],['if_bags_filled','Total bags filled'],['if_waste','Total infused flower waste'],['if_remaining','Remaining infused flower']];
+  if(type==='infused_flower')return [['if_total_weight','Total infused flower weight'],['if_bags_filled','Total bags filled'],['if_packaged','Total infused flower packaged'],['if_waste','Total infused flower waste'],['if_remaining','Remaining infused flower'],['if_pkg_tag','Packaged METRC tag']];
   if(type==='pre_rolls')return [['infused_flower_wt','Infused flower wt'],['infused_flower_waste','Infused flower waste'],['infused_preroll_produced','Infused pre-roll produced'],['kief_used','Kief used'],['infused_preroll_waste','Infused pre-roll waste'],['infused_kiefed_produced','Infused kiefed pre-roll produced'],['infused_kiefed_waste','Infused kiefed pre-roll waste']];
   if(type==='cartridges')return [['oil_used','Oil used'],['units_filled','Cartridges filled'],['units_rejected','Cartridges rejected'],['oil_waste','Oil waste']];
   if(type==='gummies')return [['mix_weight','Gummy mixture weight'],['gummies_made','Gummies made'],['gummies_rejected','Gummies rejected'],['packages','Packages filled']];
   return [['input_used','Input used'],['produced','Produced'],['waste','Waste'],['remaining','Remaining']];
 }
 function ppIfSize(sku){const s=sku&&sku.spec&&ppNum(sku.spec.unit_size);return s||(/7\s*g/i.test((sku&&sku.name)||'')?7:3.5);}
-function ppTval(trk,key,type,sku){if(type==='infused_flower'&&key==='if_remaining'&&!(trk.if_remaining||'').trim()){const w=trk.if_total_weight,b=trk.if_bags_filled,ws=trk.if_waste;
+function ppTval(trk,key,type,sku){if(type==='infused_flower'&&key==='if_packaged'&&!(trk.if_packaged||'').trim()){const b=trk.if_bags_filled;return String(b||'').trim()!==''?ppR(ppNum(b)*ppIfSize(sku)):'';}
+  if(type==='infused_flower'&&key==='if_remaining'&&!(trk.if_remaining||'').trim()){const w=trk.if_total_weight,b=trk.if_bags_filled,ws=trk.if_waste;
     if([w,b,ws].every(function(x){return String(x||'').trim()!=='';}))return ppR(ppNum(w)-ppNum(b)*ppIfSize(sku)-ppNum(ws));return '';}return trk[key]||'';}
 function ppGrand(lines){const s={};lines.forEach(function(l){(l.ingredients||[]).forEach(function(i){const k=String(i.name||'').toLowerCase()+'|'+(i.unit||'g');if(!s[k])s[k]={name:i.name,unit:i.unit||'g',qty:0};s[k].qty+=ppNum(i.qty);});});
   return Object.keys(s).map(function(k){return s[k];}).sort(function(a,b){return String(a.name).localeCompare(String(b.name));}).map(function(x){return {name:x.name,qty:ppR(x.qty),unit:x.unit};});}
@@ -7316,7 +7317,7 @@ function PlanResults(props){
         bs.length>0&&el('div',{style:{fontSize:12,marginTop:8}},'Batches: ',bs.map(function(b){return el('span',{key:b.id,className:'badge off',style:{marginRight:4}},b.batch_number+' \u00b7 '+b.status);})),
         el('div',{className:'k',style:{margin:'10px 0 4px'}},'Production tracking (prints on the worksheet)'),
         tf.map(function(t){return el('div',{key:t[0],className:'row',style:{gap:8,flexWrap:'nowrap',marginBottom:3}},el('span',{style:{fontSize:11,width:180,flexShrink:0}},t[1]),
-          el('input',{value:ppTval(trk,t[0],plan.product_type,sku),placeholder:t[0]==='if_remaining'?'auto: weight - bags \u00d7 '+ppIfSize(sku)+' - waste':'',style:{flex:1,padding:'4px 8px',fontSize:12},onChange:function(e){setTrack(l.flavor,t[0],e.target.value);}}));}));})));
+          el('input',{value:ppTval(trk,t[0],plan.product_type,sku),placeholder:t[0]==='if_remaining'?'auto: weight - bags \u00d7 '+ppIfSize(sku)+' - waste':t[0]==='if_packaged'?'auto: bags \u00d7 '+ppIfSize(sku)+' g':t[0]==='if_pkg_tag'?'1A4...':'',style:{flex:1,padding:'4px 8px',fontSize:12},onChange:function(e){setTrack(l.flavor,t[0],e.target.value);}}));}));})));
 }
 function ProductionPlanner(props){
   const st=props.state,lic=props.license,lid=lic?lic.id:'',sid=st?st.id:'';
