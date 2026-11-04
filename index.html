@@ -9788,12 +9788,16 @@ function SopsPage(props){
         canE&&el('button',{className:'btn ghost',onClick:function(){setModal({t:'pack'});}},'Food safety SOP pack'),
         canE&&el('button',{className:'btn ghost',onClick:function(){setModal({t:'gen'});}},'\ud83e\udd16 AI Generate SOP'),
         canE&&el('button',{className:'btn',onClick:function(){setModal({t:'form',mode:'new'});}},'+ Manual SOP'))),
-    msg&&el('div',{className:/^(Published|Archived|Restored|Saved|Signed|Revised|Created)/.test(msg)?'msg':'msg err'},msg),
+    msg&&el('div',{className:/^(Published|Archived|Restored|Saved|Signed|Revised|Created|Added)/.test(msg)?'msg':'msg err'},msg),
     el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',marginBottom:14}},
       stat('Total SOPs',visible.filter(function(s){return s.status!=='archived';}).length),stat('Published',pub.length,'var(--green)'),
       stat('Needs my signature',needs.length,needs.length?'var(--red)':'var(--faint)'),stat("I've signed",pub.filter(mineSigned).length,'var(--gold-hi)'),
       canE&&stat('Review overdue',late.length,late.length?'var(--red)':'var(--faint)'),
       canE&&roster&&stat('Signatures complete',reqTot?Math.round(reqDone*100/reqTot)+'%':'-',reqTot&&reqDone<reqTot?'var(--gold-hi)':'var(--green)')),
+    (function(){if(!canE||sops===null||licOp(lic)==='cultivation')return null;const miss=SOP_PACK_CFS.filter(function(p){return !sopPackHave(p,all);}).length;if(!miss)return null;
+      return el('div',{className:'card gold',style:{display:'flex',gap:12,alignItems:'center',flexWrap:'wrap'}},
+        el('div',{style:{flex:1,minWidth:240}},el('b',null,miss+' of '+SOP_PACK_CFS.length+' food safety SOPs are not in Hendrix yet'),el('div',{className:'muted',style:{fontSize:12}},'SOP-CFS-001 to 013 for the Missouri CFS checklist (21 CFR 117). They are added as drafts to review and publish.')),
+        el('button',{className:'btn',onClick:function(){setModal({t:'pack'});}},'Add them'));})(),
     needs.length>0&&el('div',{className:'msg err',style:{marginBottom:12}},el('b',null,'Action required: '),'you have '+needs.length+' SOP'+(needs.length===1?'':'s')+' waiting for your signature.'),
     el('div',{className:'tabs'},tabs.map(function(t){return el('button',{key:t,className:folder===t?'on':'',onClick:function(){setFolder(t);}},t);})),
     sops===null?el('div',{className:'muted'},'Loading...'):!shown.length?el('div',{className:'empty'},all.length?'No SOPs here.':'No SOPs yet for '+lic.name+'. Click "+ Manual SOP" or "AI Generate SOP".'):

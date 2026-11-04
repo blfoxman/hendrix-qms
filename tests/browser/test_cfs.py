@@ -19,9 +19,10 @@ with sync_playwright() as pw:
     pg = ctx.new_page(); pg.on('pageerror', lambda e: errors.append('JS: ' + str(e))); pg.on('dialog', lambda d: d.accept())
     pg.goto(BASE); pg.wait_for_selector('text=Dashboard')
     # SOP pack
-    pg.get_by_role('button', name='SOPs', exact=True).click(); pg.get_by_role('button', name='Food safety SOP pack').click(); md = pg.locator('.md')
+    pg.get_by_role('button', name='SOPs', exact=True).click(); pg.wait_for_selector('text=12 of 13 food safety SOPs are not in Hendrix yet')
+    pg.locator('.card.gold', has_text='food safety SOPs').get_by_role('button', name='Add them').click(); md = pg.locator('.md')
     check(md.locator('label', has_text='Handwashing and Hand and Arm Hygiene').locator('.badge', has_text='In Hendrix').count() == 1, 'an SOP already in Hendrix (same title) is not added again')
-    md.get_by_role('button', name='Add 12 SOPs as drafts').click(); pg.wait_for_selector('.msg >> text=Added 12 food safety SOPs as drafts')
+    md.get_by_role('button', name='Add 12 SOPs as drafts').click(); pg.wait_for_selector('.msg >> text=Added 12 food safety SOPs as drafts'); check(pg.locator('text=food safety SOPs are not in Hendrix yet').count() == 0 and pg.locator('.msg.err', has_text='Added 12').count() == 0, 'banner gone once all are in; message not shown as an error')
     new = [s for s in T['hx_sops'] if s['sop_number'].startswith('SOP-CFS-')]
     check(len(new) == 12 and all(s['status'] == 'draft' and s['generated_content']['steps'] and s['regulatory_references'] for s in new), '12 SOPs added as drafts with steps and references')
     ill = next(s for s in new if s['title'].startswith('Employee Health'))
