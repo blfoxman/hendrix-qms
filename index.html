@@ -9461,6 +9461,33 @@ async function sopRegContext(st){
   let rules=[];try{rules=(await db.get('hx_rules','state_id=eq.'+encodeURIComponent(st.id)+'&select=category,citation,title&limit=40'))||[];}catch(e){rules=[];}
   return {agency:st.agency||'the state regulator',code:st.code||'',rules:rules.map(function(r){return (r.citation?r.citation+' ':'')+r.title;}).slice(0,12)};
 }
+// ---- the facility's own steps are never dropped by the AI ----
+// one step per line; strips "1.", "1)", "Step 1:", bullets; "Title: text" keeps a short title
+function sopParseSteps(t){return String(t||'').split(/\r?\n/).map(function(l){return l.replace(/^\s*(?:step\s*)?(?:\d+|[a-z])[.):\-]\s+/i,'').replace(/^\s*[\u2022*\-]\s+/,'').trim();}).filter(Boolean).map(function(l){
+  const m=l.match(/^([^:]{2,60}):\s+(.+)$/);return m&&!/\d\s*$/.test(m[1])?{title:m[1].trim(),text:m[2].trim()}:{title:'',text:l};});}
+function sopStepsText(list){return (list||[]).map(function(x,i){return (i+1)+'. '+(x.title?x.title+': ':'')+x.text;}).join('\n');}
+// every procedure step in a reference document, word for word (PDF as a document, text pasted in)
+async function sopExtractSteps(title,ref){
+  const pdf=ref.indexOf('__PDF__:')===0,body=pdf?'':'\n\nDOCUMENT:\n'+ref.slice(0,60000);
+  const r=await sopAiJ('This is a facility\'s existing procedure / SOP document for "'+title+'". List EVERY procedure step in it, in the same order, word for word (fix only obvious typos). Do not summarize, merge, shorten or skip any step, and do not add steps. Then give the other useful facts (scope, materials, limits, records) as short notes.\n\nRespond with ONLY this JSON (no markdown):\n{"steps":[{"title":"short title or empty","text":"the step exactly as written"}],"notes":"under 300 words"}'+body,8000,pdf?ref.slice(8):undefined);
+  return {steps:(Array.isArray(r.steps)?r.steps:[]).map(function(x){return typeof x==='string'?{title:'',text:x}:{title:String(x.title||'').trim(),text:String(x.text||x.instruction||'').trim()};}).filter(function(x){return x.text;}),notes:String(r.notes||'').slice(0,3000)};
+}
+const SOP_KEEP_RULES='The facility\'s steps are numbered S1, S2, ... They are all required. Keep EVERY one, in the same order: for each source step output at least one step with "source" set to its number. Keep its full meaning and every detail (quantities, times, temperatures, equipment, people, records). You may reword it for clarity, split it, add a regulatory_note and mark it critical. NEVER drop, merge away or shorten away a source step. You may ADD steps that the regulations or cGMP require and that are missing: give them "source":null and "added":true and say why in regulatory_note.';
+function sopSourceList(src){return src.map(function(x,i){return 'S'+(i+1)+': '+(x.title?x.title+': ':'')+x.text;}).join('\n');}
+// merges the AI's steps with the source steps: any source step the AI left out goes back in, word for word
+function sopKeepSteps(src,ai){
+  const by={},after={0:[]};let last=0,restored=0;
+  (ai||[]).forEach(function(x){const n=parseInt(x&&x.source,10);
+    if(n>=1&&n<=src.length){(by[n]=by[n]||[]).push(x);last=Math.max(last,n);}else{(after[last]=after[last]||[]).push({...x,added:true,source:null});}});
+  const out=[].concat(after[0]||[]);
+  for(let i=1;i<=src.length;i++){
+    if(by[i])by[i].forEach(function(x){out.push({...x,source:i});});
+    else{restored++;out.push({source:i,title:src[i-1].title||'',instruction:src[i-1].text,regulatory_note:'',critical:false,kept:true});}
+    (after[i]||[]).forEach(function(x){out.push(x);});
+  }
+  const steps=out.map(function(x,i){return {step_number:i+1,title:String(x.title||''),instruction:String(x.instruction||x.text||''),regulatory_note:String(x.regulatory_note||''),critical:!!x.critical,...(x.added?{added:true}:{}),...(x.kept?{kept:true}:{})};});
+  steps.restored=restored;return steps;
+}
 function SopGenerator(props){
   const st=props.state,lic=props.license;
   const[step,setStep]=useState(1);
@@ -9468,12 +9495,21 @@ function SopGenerator(props){
   const[category,setCategory]=useState(SOP_CATEGORIES[0]);
   const[refText,setRefText]=useState('');const[refName,setRefName]=useState('');
   const[custom,setCustom]=useState('');
+  const[stepsText,setStepsText]=useState('');const[notes,setNotes]=useState('');const[reading,setReading]=useState('');
   const[gen,setGen]=useState(null);
   const[err,setErr]=useState('');const[busy,setBusy]=useState('');
   async function onFile(file){
-    if(!file)return;setRefName(file.name);
-    if(/\.pdf$/i.test(file.name)){setRefText('__PDF__:'+(await fileB64(file)));}
-    else{try{setRefText((await file.text()).slice(0,5000));}catch(e){setRefText('');}}
+    if(!file)return;setRefName(file.name);setErr('');
+    let ref='';
+    if(/\.pdf$/i.test(file.name))ref='__PDF__:'+(await fileB64(file));
+    else{try{ref=(await file.text()).slice(0,60000);}catch(e){ref='';}}
+    setRefText(ref);if(!ref)return;
+    // read the document's own steps now, so they can be checked here and are never lost
+    setReading('Reading every step from '+file.name+'...');
+    try{const x=await sopExtractSteps(title||file.name.replace(/\.[a-z0-9]+$/i,''),ref);setNotes(x.notes);
+      if(x.steps.length)setStepsText(function(t){return (t.trim()?t.trim()+'\n':'')+sopStepsText(x.steps);});}
+    catch(e){setErr('Could not read the steps from '+file.name+': '+e.message+' Type or paste the steps below instead.');}
+    setReading('');
   }
   async function onImport(file){
     if(!file)return;setErr('');
@@ -9485,18 +9521,22 @@ function SopGenerator(props){
     setErr('');setStep(2);
     try{
       const reg=await sopRegContext(st),today=todayStr();
-      let ref=refText;
-      if(ref.indexOf('__PDF__:')===0){setBusy('Reading the reference PDF...');
-        ref=(await sopAi('Summarize the key procedural and regulatory content of this document relevant to "'+title+'" in under 600 words, plain text, no markdown. Focus on facts useful for writing an SOP.',1000,ref.slice(8))).slice(0,3000);}
+      const src=sopParseSteps(stepsText);
+      let ref=notes||(refText.indexOf('__PDF__:')===0?'':refText.slice(0,3000));
       const ci=custom.trim()?'\nIMPORTANT - follow these instructions from the facility, they take priority over your own judgment:\n'+custom.trim()+'\n':'';
       setBusy('Writing purpose, scope and responsibilities...');
       const meta=(await sopAiJ('You are a cannabis compliance officer writing an SOP for '+st.name+' (license: '+lic.name+(lic.license_type?', '+lic.license_type:'')+').\nRegulatory agency: '+reg.agency+(reg.code?' - '+reg.code:'')+'\n'+
         (reg.rules.length?'Key regulations from the facility rulebook: '+reg.rules.join('; ')+'\n':'')+'\nSOP Title: '+title+'\nCategory: '+category+'\n'+(ref?'Reference material: '+ref+'\n':'')+ci+
         '\nThe facility follows the CSQ Standard for Manufacturing (cGMP). Respond with ONLY this JSON (no markdown, be concise):\n{"sop_number":"SOP-[DEPT]-[3digit]","title":"'+title.replace(/"/g,"'")+'","revision":"1.0","effective_date":"'+today+'","review_frequency":"Annual","department":"...","purpose":"2-3 sentences","scope":"1-2 sentences","regulatory_references":["3-5 specific citations"],"responsibilities":[{"role":"...","responsibility":"..."}],"definitions":[{"term":"...","definition":"..."}],"required_materials":["..."],"deviation_procedure":"1-2 sentences","training_requirements":"1-2 sentences"}',2500));
       setBusy('Writing the procedure steps...');
-      const steps=(await sopAiJ('You are writing the procedure steps for this cannabis SOP:\nTitle: '+title+'\nPurpose: '+(meta.purpose||'')+'\nDepartment: '+(meta.department||'')+'\n'+(ref?'Reference material: '+ref+'\n':'')+ci+
+      const steps=src.length?
+        (await sopAiJ('You are turning a facility\'s own procedure into a compliant cannabis SOP for '+st.name+' (regulator: '+reg.agency+(reg.code?' - '+reg.code:'')+(reg.rules.length?'; rulebook: '+reg.rules.join('; '):'')+'; cGMP / CSQ).\nTitle: '+title+'\nPurpose: '+(meta.purpose||'')+'\n'+(ref?'Other reference notes: '+ref+'\n':'')+ci+
+          '\n'+SOP_KEEP_RULES+' Flag CRITICAL steps where a regulatory violation or product risk exists.\n\nTHE FACILITY\'S STEPS:\n'+sopSourceList(src)+
+          '\n\nRespond with ONLY this JSON (no markdown):\n{"steps":[{"source":1,"title":"short title","instruction":"the step","regulatory_note":"optional, brief","critical":false}],"quality_checks":["5-8 short checkpoints"],"documentation_required":["3-6 short items"]}',8000))
+        :(await sopAiJ('You are writing the procedure steps for this cannabis SOP:\nTitle: '+title+'\nPurpose: '+(meta.purpose||'')+'\nDepartment: '+(meta.department||'')+'\n'+(ref?'Reference material: '+ref+'\n':'')+ci+
         '\nWrite 6-10 clear procedure steps. Keep each instruction to 1-2 sentences. Flag CRITICAL steps where a regulatory violation or product risk exists.\n\nRespond with ONLY this JSON (no markdown, keep instructions short so it is not truncated):\n{"steps":[{"step_number":1,"title":"short title","instruction":"1-2 sentences","regulatory_note":"optional, brief","critical":false}],"quality_checks":["5-8 short checkpoints"],"documentation_required":["3-6 short items"]}',4000));
-      setGen({...meta,license_name:lic.name,state:st.name,steps:steps.steps||[],quality_checks:steps.quality_checks||[],documentation_required:steps.documentation_required||[],definitions:meta.definitions||[],
+      const fin=src.length?sopKeepSteps(src,steps.steps):(steps.steps||[]);
+      setGen({...meta,license_name:lic.name,state:st.name,steps:fin,source_steps:src.length,quality_checks:steps.quality_checks||[],documentation_required:steps.documentation_required||[],definitions:meta.definitions||[],
         revision_history:[{revision:'1.0',date:today,description:'Initial release',approved_by:''}]});
       setStep(3);
     }catch(e){setErr('Generation failed: '+e.message);setStep(1);}
@@ -9507,8 +9547,8 @@ function SopGenerator(props){
     const folder=sopFolderOfCat(category),num=String(gen.sop_number||'').indexOf('[')>=0?'':(gen.sop_number||'');
     try{
       const out=await db.insert('hx_sops',{id:newId('sop'),state_id:st.id,license_id:lic.id,license_ids:[lic.id],title:gen.title||title,sop_number:num,folder:folder,category:category,description:gen.purpose||'',
-        steps:(gen.steps||[]).map(function(x,i){return {id:'s'+i,text:typeof x==='string'?x:'['+(x.step_number||i+1)+'] '+(x.title||'')+': '+(x.instruction||'')};}),
-        generated_content:gen,regulatory_references:gen.regulatory_references||[],version:gen.revision||'1.0',status:'draft',created_by:(ACC.profile&&ACC.profile.name)||''});
+        steps:(gen.steps||[]).map(function(x,i){return {id:'s'+i,text:typeof x==='string'?x:'['+(i+1)+'] '+(x.title||'')+': '+(x.instruction||'')};}),
+        generated_content:{...gen,steps:(gen.steps||[]).map(function(x,i){return typeof x==='string'?x:{...x,step_number:i+1};})},regulatory_references:gen.regulatory_references||[],version:gen.revision||'1.0',status:'draft',created_by:(ACC.profile&&ACC.profile.name)||''});
       props.onDone(out&&out[0]);
     }catch(e){setErr(/hx_sops_number/.test(String(e.message))?'Document number '+num+' is already used - change it below.':sopErr(e));}
     setBusy('');
@@ -9521,11 +9561,13 @@ function SopGenerator(props){
         el('div',{className:'muted',style:{fontSize:12,marginTop:4}},'The AI uses this state\'s Rulebook entries and writes to cGMP / CSQ.')),
       el(Field,{label:'SOP title *'},el('input',{value:title,placeholder:'e.g. Cart Filling and Capping',onChange:function(e){setTitle(e.target.value);}})),
       el(Field,{label:'Category / department'},el('select',{value:category,onChange:function(e){setCategory(e.target.value);}},SOP_CATEGORIES.map(function(c){return el('option',{key:c,value:c},c);}))),
-      el(Field,{label:'Reference document (optional: .pdf, .txt, .md)',plain:true},el('div',null,el('input',{type:'file',accept:'.pdf,.txt,.md,.doc,.docx',onChange:function(e){onFile(e.target.files[0]);}}),refName&&el('div',{className:'muted',style:{fontSize:12}},'AI will incorporate '+refName))),
-      el(Field,{label:'Instructions for the AI (optional)'},el('textarea',{rows:3,value:custom,placeholder:'e.g. Use our 3-person sign-off; include METRC steps; keep to 8 steps',onChange:function(e){setCustom(e.target.value);}})),
+      el(Field,{label:'Existing SOP or reference document (optional: .pdf, .txt, .md)',plain:true},el('div',null,el('input',{type:'file',accept:'.pdf,.txt,.md',onChange:function(e){onFile(e.target.files[0]);}}),refName&&el('div',{className:'muted',style:{fontSize:12}},reading||('Steps read from '+refName+' are listed below.')))),
+      el(Field,{label:'Your procedure steps - one per line (every step here is kept)'},el('textarea',{rows:Math.min(16,Math.max(5,stepsText.split('\n').length+1)),value:stepsText,disabled:!!reading,placeholder:'1. Put on gloves and a hair net\n2. Sanitize the bench and record it\n3. ...',onChange:function(e){setStepsText(e.target.value);}}),
+        el('div',{className:'muted',style:{fontSize:12,marginTop:4}},stepsText.trim()?sopParseSteps(stepsText).length+' steps. The AI keeps every one in this order, rewords only for clarity, adds the compliance notes and adds any step the regulations require (marked "Added by AI"). It never removes a step.':'Leave empty to let the AI write the steps. Uploading an SOP fills this in.')),
+      el(Field,{label:'Instructions for the AI (optional)'},el('textarea',{rows:3,value:custom,placeholder:'e.g. Use our 3-person sign-off; include METRC steps',onChange:function(e){setCustom(e.target.value);}})),
       el(Field,{label:'Or import an SOP exported as JSON (jumps straight to Review & Save)',plain:true},el('input',{type:'file',accept:'.json',onChange:function(e){onImport(e.target.files[0]);}})),
       err&&el('div',{className:'msg err'},err),
-      el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',onClick:generate},'Generate SOP with AI'))),
+      el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:!!reading,onClick:generate},reading?'Reading the document...':'Generate SOP with AI'))),
     step===2&&el('div',{className:'empty'},busy||'Working...'),
     step===3&&gen&&el('div',null,
       el('div',{className:'grid',style:{gridTemplateColumns:'2fr 1fr',gap:10}},
@@ -9534,8 +9576,10 @@ function SopGenerator(props){
       el(Field,{label:'Purpose'},el('textarea',{rows:3,value:gen.purpose||'',onChange:function(e){upd('purpose',e.target.value);}})),
       el(Field,{label:'Scope'},el('textarea',{rows:2,value:gen.scope||'',onChange:function(e){upd('scope',e.target.value);}})),
       el('div',{className:'k',style:{margin:'6px 0'}},'Procedure'),
+      gen.source_steps>0&&el('div',{className:'msg',style:{marginBottom:8}},'All '+gen.source_steps+' of your steps are kept'+((gen.steps||[]).filter(function(x){return x.added;}).length?', plus '+(gen.steps||[]).filter(function(x){return x.added;}).length+' added by the AI for compliance (remove any you do not want).':'.')),
       (gen.steps||[]).map(function(x,i){return el('div',{key:i,style:{marginBottom:8}},
-        el('div',{className:'row',style:{gap:6,marginBottom:4}},el('span',{className:'badge'},String(x.step_number||i+1)),el('b',null,x.title||''),x.critical&&el('span',{className:'badge bad'},'Critical')),
+        el('div',{className:'row',style:{gap:6,marginBottom:4}},el('span',{className:'badge'},String(i+1)),el('b',null,x.title||''),x.critical&&el('span',{className:'badge bad'},'Critical'),x.added&&el('span',{className:'badge warn'},'Added by AI'),
+          x.added&&el('button',{className:'btn ghost sm',title:'Remove this added step',onClick:function(){setGen(function(p){return {...p,steps:p.steps.filter(function(y,j){return j!==i;})};});}},'\u00d7 Remove')),
         el('textarea',{rows:2,value:x.instruction||'',onChange:function(e){const v=e.target.value;setGen(function(p){return {...p,steps:p.steps.map(function(y,j){return j===i?{...y,instruction:v}:y;})};});}}),
         x.regulatory_note&&el('div',{className:'muted',style:{fontSize:12}},'\u2696 '+x.regulatory_note));}),
       [['regulatory_references','Regulatory references'],['quality_checks','Quality checks'],['documentation_required','Documentation required'],['required_materials','Required materials / PPE']].map(function(k){return (gen[k[0]]||[]).length>0&&el('div',{key:k[0],style:{marginBottom:6}},el('div',{className:'k'},k[1]),(gen[k[0]]||[]).map(function(t,i){return el('div',{key:i,style:{fontSize:13}},'\u2022 '+t);}));}),
@@ -9561,10 +9605,12 @@ function SopRevise(props){
     if(!ask.trim()){setErr('Describe what needs to change.');return;}
     setErr('');setBusy('AI is revising the SOP...');
     try{
-      const reg=await sopRegContext(st),orig=gen0||{title:s.title,purpose:s.description,steps:sopStepsOf(s).map(function(x){return {step_number:x.n,title:x.title,instruction:x.text};})};
-      const r=(await sopAiJ('You are revising an existing cannabis SOP. Current SOP (JSON): '+JSON.stringify(orig)+'\n\nLICENSE: '+lic.name+' ('+st.name+')\nREGULATORY CONTEXT: '+reg.agency+(reg.code?' - '+reg.code:'')+'\n\nREQUESTED CHANGES: '+ask+
-        '\n\nReturn a REVISED version as JSON only (no markdown). Set revision to "'+version+'". Add an entry to revision_history dated '+todayStr()+'. Keep all unchanged fields identical. Fields: sop_number, title, revision, effective_date, review_frequency, department, license_name, state, regulatory_references, purpose, scope, responsibilities, definitions, required_materials, steps, quality_checks, documentation_required, deviation_procedure, training_requirements, revision_history',6000));
-      setAiGen(r);setDesc(r.purpose||desc);setSteps((r.steps||[]).map(function(x,i){return {id:'r'+i,n:x.step_number||i+1,title:x.title||'',text:x.instruction||'',note:x.regulatory_note||'',critical:!!x.critical};}));
+      const src=steps.filter(function(x){return x.text.trim();}).map(function(x){return {title:x.title||'',text:x.text};});
+      const reg=await sopRegContext(st),orig={...(gen0||{title:s.title,purpose:s.description})};delete orig.steps;
+      const r=(await sopAiJ('You are revising an existing cannabis SOP. Current SOP without its steps (JSON): '+JSON.stringify(orig)+'\n\nCURRENT STEPS:\n'+sopSourceList(src)+'\n\nLICENSE: '+lic.name+' ('+st.name+')\nREGULATORY CONTEXT: '+reg.agency+(reg.code?' - '+reg.code:'')+'\n\nREQUESTED CHANGES: '+ask+
+        '\n\n'+SOP_KEEP_RULES+'\n\nReturn a REVISED version as JSON only (no markdown). Set revision to "'+version+'". Add an entry to revision_history dated '+todayStr()+'. Keep all unchanged fields identical. Fields: sop_number, title, revision, effective_date, review_frequency, department, license_name, state, regulatory_references, purpose, scope, responsibilities, definitions, required_materials, steps (each {"source":n or null,"title","instruction","regulatory_note","critical"}), quality_checks, documentation_required, deviation_procedure, training_requirements, revision_history',8000));
+      const kept=sopKeepSteps(src,r.steps);r.steps=kept;
+      setAiGen(r);setDesc(r.purpose||desc);setSteps(kept.map(function(x,i){return {id:'r'+i,n:i+1,title:x.title||'',text:x.instruction||'',note:x.regulatory_note||'',critical:!!x.critical,added:!!x.added};}));
       if(!note.trim())setNote(ask.trim());
     }catch(e){setErr('Revision failed: '+e.message);}
     setBusy('');
@@ -9599,7 +9645,7 @@ function SopRevise(props){
     el('div',{className:'k',style:{margin:'6px 0'}},'Procedure'),
     steps.map(function(x,i){return el('div',{key:x.id,className:'row',style:{flexWrap:'nowrap',alignItems:'flex-start',marginBottom:6}},
       el('span',{className:'badge',style:{marginTop:10}},String(i+1)),
-      el('div',{style:{flex:1}},x.title&&el('div',{style:{fontSize:12,fontWeight:700}},x.title,x.critical&&el('span',{className:'badge bad',style:{marginLeft:6}},'Critical')),
+      el('div',{style:{flex:1}},(x.title||x.added)&&el('div',{style:{fontSize:12,fontWeight:700}},x.title,x.critical&&el('span',{className:'badge bad',style:{marginLeft:6}},'Critical'),x.added&&el('span',{className:'badge warn',style:{marginLeft:6}},'Added by AI')),
         el('textarea',{rows:2,value:x.text,onChange:function(e){const v=e.target.value;setSteps(function(p){return p.map(function(y){return y.id===x.id?{...y,text:v}:y;});});}})),
       el('button',{className:'btn ghost sm',onClick:function(){setSteps(function(p){return p.filter(function(y){return y.id!==x.id;});});}},'\u00d7'));}),
     el('button',{className:'btn ghost sm',onClick:function(){setSteps(function(p){return p.concat([{id:'r'+Date.now(),n:p.length+1,title:'',text:'',note:'',critical:false}]);});}},'+ Add step'),
