@@ -16,6 +16,15 @@ def handle(route, request):
         b = json.loads(request.post_data); AIQ.append(b)
         prompt = b['messages'][0]['content']; prompt = prompt if isinstance(prompt, str) else prompt[-1]['text']
         out = META if 'Respond with ONLY this JSON (no markdown, be concise)' in prompt else STEPS
+        if 'List EVERY procedure step' in prompt: out = {'steps': [{'title': '', 'text': 'Doc step %d with 10.5 g' % i} for i in range(1, 15)], 'notes': 'Room 3 only.'}
+        if "THE FACILITY'S STEPS" in prompt or 'CURRENT STEPS:' in prompt:
+            src = re.findall(r'^S(\d+): (.*)$', prompt, re.M); keep = []
+            for n, t in src:
+                n = int(n)
+                if n in (3, 7, 11): continue  # the AI drops three steps
+                keep.append({'source': n, 'title': 'T%d' % n, 'instruction': 'Reworded: ' + t, 'critical': n == 1})
+                if n == 2: keep.append({'source': None, 'added': True, 'title': 'Hair net', 'instruction': 'Wear a hair net.', 'regulatory_note': '21 CFR 117.10(b)(6)'})
+            out = {**STEPS, 'steps': keep, **({'title': 'Doc', 'purpose': 'Revised.', 'revision': '2.0'} if 'CURRENT STEPS:' in prompt else {})}
         mode = AIMODE.pop(0) if AIMODE else ''
         if mode == 'prose': return route.fulfill(status=200, content_type='application/json', body=json.dumps({'content': [{'type': 'text', 'text': 'Here is a draft SOP for your pre-roll infusion process.'}], 'stop_reason': 'end_turn'}))
         if mode == 'thinking': return route.fulfill(status=200, content_type='application/json', body=json.dumps({'content': [{'type': 'thinking', 'thinking': 'planning'}, {'type': 'text', 'text': json.dumps(out)}]}))
@@ -147,6 +156,36 @@ with sync_playwright() as pw:
     field(md, 'SOP title').fill('Pre-Roll Infusion C'); md.get_by_role('button', name='Generate SOP with AI').click(); pg.wait_for_selector('.md >> text=it answered')
     check(md.locator('.msg.err', has_text='Here is a draft SOP').count() == 1, 'still no JSON after the retry: the error shows what the AI answered')
     pg.mouse.click(5, 5)
+    # the facility's own steps: uploaded PDF -> every step listed -> the AI may reword and add, never remove
+    pg.wait_for_timeout(300)
+    if pg.locator('.md').count(): pg.locator('.md').get_by_role('button', name='Cancel').first.click(); pg.wait_for_timeout(200)
+    pg.get_by_role('button', name='🤖 AI Generate SOP').click(); md = pg.locator('.md')
+    field(md, 'SOP title').fill('Kief Coating')
+    pdfp = OUT + 'own_sop.pdf'; open(pdfp, 'wb').write(b'%PDF-1.4 test')
+    md.locator('input[type=file]').first.set_input_files(pdfp); pg.wait_for_selector('.md >> text=14 steps. The AI keeps every one')
+    check('Doc step 14 with 10.5 g' in field(md, 'Your procedure steps').input_value(), 'uploaded SOP: all 14 steps listed word for word before generating')
+    md.get_by_role('button', name='Generate SOP with AI').click(); pg.wait_for_selector('.md >> text=Save as draft')
+    check(md.locator('.msg', has_text='All 14 of your steps are kept, plus 1 added by the AI').count() == 1 and md.locator('.badge', has_text='Added by AI').count() == 1, 'AI dropped 3 steps: all 14 kept anyway, 1 compliance step added and marked')
+    n_sops = len(T['hx_sops']); md.get_by_role('button', name='Save as draft').click(); pg.wait_for_timeout(800)
+    ks = T['hx_sops'][-1]; gs = ks['generated_content']['steps']; check(len(T['hx_sops']) == n_sops + 1, 'saved')
+    txt = json.dumps(gs)
+    check(len(gs) == 15 and all(('Doc step %d with 10.5 g' % i) in txt for i in range(1, 15)) and [x['step_number'] for x in gs] == list(range(1, 16)), 'saved: 15 steps in order, every original step (3, 7, 11 restored word for word)')
+    check(gs[2]['title'] == 'Hair net' and gs[2].get('added') and gs[3]['instruction'] == 'Doc step 3 with 10.5 g', 'added step after step 2; dropped step 3 back in its place')
+    pg.wait_for_timeout(300)
+    if pg.locator('.md').count(): pg.locator('.md').get_by_role('button', name='Close').first.click() if pg.locator('.md').get_by_role('button', name='Close').count() else pg.mouse.click(5, 5)
+    pg.wait_for_timeout(300)
+    # Revise with AI: every current step stays (the mock AI drops step 3)
+    open_sop(pg, 'Cart Filling'); pg.get_by_role('button', name='🔄 Revise SOP').click(); md = pg.locator('.md')
+    for t in ('Weigh each cart, 1.05 g', 'Cap and press', 'Record the lot in METRC'):
+        md.get_by_role('button', name='+ Add step').click(); md.locator('textarea').last.fill(t)
+    n_before = len([v for v in md.locator('textarea').all() if v.input_value().strip()]) - 1
+    md.get_by_role('button', name='Revise with AI').first.click(); field(md, 'What needs to change?').fill('Add PPE')
+    md.locator('.card').get_by_role('button', name='Revise with AI').click(); pg.wait_for_selector('.md >> text=Review the result below')
+    vals = [v.input_value() for v in md.locator('textarea').all()]
+    check(any(v == 'Weigh each cart, 1.05 g' for v in vals) and sum(1 for v in vals if v.startswith('Reworded: ')) >= 3 and md.locator('.badge', has_text='Added by AI').count() == 1, 'revise with AI: the step the AI dropped is back word for word, 1 added step marked')
+    md.get_by_role('button', name='Cancel').click(); pg.wait_for_timeout(200)
+    if pg.locator('.md').count(): pg.locator('.md').get_by_role('button', name='Close').first.click() if pg.locator('.md').get_by_role('button', name='Close').count() else pg.mouse.click(5, 5)
+    pg.wait_for_timeout(300)
     # archive + restore
     open_sop(pg, 'Cart Filling'); pg.get_by_role('button', name='Archive', exact=True).click(); pg.wait_for_selector('.msg >> text=Archived')
     check(sop['status'] == 'archived' and sop['folder'] == 'Archived', 'archived')
