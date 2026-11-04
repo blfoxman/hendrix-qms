@@ -2764,7 +2764,7 @@ const BATCH_TYPES=[
     bT('infused_flower_number','Infused Flower METRC Tag','METRC tag for the infused flower produced'),bT('infused_flower_total_wt','Infused Flower Total WT','e.g. 1,240g'),bC('flower_metrc_confirmed'),
     bS('System Check'),bD('flower_check_result','System Check'),bR('rd1_result','R&D Test'),bR('rd2_result','R&D Test 2'),
     bS('Filling & Packaging',{ifPkg:1}),bT('infused_flower_used','Infused Flower Used','Amount used for this run',{ifPkg:1}),bT('units_produced','Total Bags Filled','e.g. 300 bags',{ifPkg:1}),
-    bT('cart_waste','Infused Flower Waste','Amount wasted',{ifPkg:1}),bT('metrc_tag','Final Packaging METRC Tag','METRC tag for the packaged product',{ifPkg:1}),
+    bA('if_total_packaged','Total Infused Flower Packaged (g)',{ifPkg:1}),bT('cart_waste','Infused Flower Waste','Amount wasted',{ifPkg:1}),bT('metrc_tag','Packaged METRC Tag','METRC tag for the packaged product',{ifPkg:1}),
     bD('packaging_check_result','Validation',{ifPkg:1}),bC('packaging_metrc_confirmed',{ifPkg:1}),bSel('mandatory_testing','Mandatory Testing',BT_TESTS,{afterRd:1})]).concat(bTail())},
   {id:'moon_rocks',name:'Moon Rocks',fields:bHead('e.g. MR-2026-014',true,true).concat([
     bT('oil_source_batch','Base Flower METRC#','METRC tag for the base flower'),bT('input_weight','Base Flower Weight','e.g. 500g'),
@@ -2777,7 +2777,7 @@ const BATCH_TYPES=[
     bT('units_produced','Total Snow Caps Produced','e.g. 620g'),bT('metrc_tag','Final METRC Tag#','METRC tag for the finished product')]).concat(bTail())}
 ];
 const BT_FREE=['status','mandatory_testing','mandatory_test','gummy_mandatory_test','rd1_result','rd2_result','primed_rd1','primed_rd2','gummy_rd1','gummy_rd2',
-  'total_biomass_used','yield_quality_pct','yield_quality_band','gummy_mixture_used','total_sugar_coated_gummies','total_packaged_gummies'];
+  'total_biomass_used','yield_quality_pct','yield_quality_band','gummy_mixture_used','total_sugar_coated_gummies','total_packaged_gummies','if_total_packaged'];
 const BT_SHORT={flower_check_result:'Infused Flower',joints_check_result:'Joints',kiefed_check_result:'Kiefed',packaging_check_result:'Packaging',primed_check_result:'Primed Oil',system_check_result:'Gummy Weight',yield_quality_result:'Yield'};
 function btFree(k){return BT_FREE.indexOf(k)>=0||/(_expected|_status|_suggested)$/.test(k);}
 function n0(v){const n=parseFloat(String(v==null?'':v).replace(/,/g,''));return isNaN(n)?0:n;}
@@ -2814,7 +2814,7 @@ function btRecalc(type,f,sku){
     const sum=['flower_qty','thca_qty','live_resin_qty','hte_qty','decarbed_resin_qty','distillate_qty','terp_qty'].reduce(function(s,k){return s+n0(f[k]);},0);
     const size=numOk(spec.unit_size)?num(spec.unit_size):(String(name).indexOf('7g')>=0?7:3.5);
     const exp=n0(f.infused_flower_used)/size;
-    return {...f,flower_check_expected:r2(sum),flower_check_status:btDirect(sum,n0(f.infused_flower_total_wt)),packaging_check_expected:r2(exp),packaging_check_status:btCount(exp,n0(f.units_produced))};
+    return {...f,if_total_packaged:r2(n0(f.units_produced)*size),flower_check_expected:r2(sum),flower_check_status:btDirect(sum,n0(f.infused_flower_total_wt)),packaging_check_expected:r2(exp),packaging_check_status:btCount(exp,n0(f.units_produced))};
   }
   if(type==='pre_rolls'){
     const used=n0(f.infused_flower_used),filled=numOk(spec.grams_filled)?num(spec.grams_filled):0.55,kief=prKief(spec);
