@@ -1,5 +1,5 @@
 -- =====================================================================
--- Hendrix QMS - ONE-FILE INSTALL of steps 13 to 45 (SOPs ... Line Map, System Health, Security, My Tasks)
+-- Hendrix QMS - ONE-FILE INSTALL of steps 13 to 46 (SOPs ... Line Map, System Health, Security, My Tasks)
 -- For a Hendrix database that already has steps 1-12.
 -- Paste the whole file into Supabase > SQL Editor > Run (one time).
 -- Safe to run again: every step can run more than once.
@@ -5397,7 +5397,7 @@ begin
       (24,'Equipment and chemicals','t','hx_equipment'),(25,'Line clearance and rework','t','hx_line_clearances'),(26,'Facility tests','t','hx_env_points'),(27,'Cultivation','t','hx_grow_areas'),
       (28,'HACCP','t','hx_haccp_team'),(29,'Risk register and change control','t','hx_risks'),(30,'Org chart and objectives','t','hx_org_positions'),(31,'Management review and verification','t','hx_mgmt_reviews'),
       (32,'Time clock and badges','t','hx_badges'),(33,'Production planner','t','hx_production_plans'),(34,'Settings','t','hx_license_settings'),(36,'Line Map','f','hx_line_map'),
-      (37,'System health','f','hx_system_health'),(38,'Security: e-signatures, two-step sign-in','t','hx_esignatures'),(39,'My Tasks and email alerts','t','hx_notify_queue'),(40,'Kiosks keep working offline','t','hx_kiosk_receipts'),(41,'METRC check','t','hx_metrc_snapshots'),(42,'Temporary passwords','f','hx_admin_set_password'),(43,'Maintenance and purchase requests, QR sign-in','f','hx_kiosk_log_add_user'),(44,'CSQ Program Overview online course','f','hx_course_cert_only'),(45,'New password after a reset','f','hx_set_own_password')) as s(step, name, kind, obj)
+      (37,'System health','f','hx_system_health'),(38,'Security: e-signatures, two-step sign-in','t','hx_esignatures'),(39,'My Tasks and email alerts','t','hx_notify_queue'),(40,'Kiosks keep working offline','t','hx_kiosk_receipts'),(41,'METRC check','t','hx_metrc_snapshots'),(42,'Temporary passwords','f','hx_admin_set_password'),(43,'Maintenance and purchase requests, QR sign-in','f','hx_kiosk_log_add_user'),(44,'CSQ Program Overview online course','f','hx_course_cert_only'),(45,'New password after a reset','f','hx_set_own_password'),(46,'Food safety records (GMP walk, illness log)','f','hx_fl_types')) as s(step, name, kind, obj)
   loop
     v_ok := case r.kind
       when 't' then to_regclass('public.' || r.obj) is not null
@@ -6943,5 +6943,64 @@ notify pgrst, 'reload schema';
 select 'Hendrix step 45 (new password after a reset, no current password) installed' as result;
 
 
+-- ###################################################################
+-- ### hendrix_step46.sql
+-- ###################################################################
+-- =====================================================================
+-- Hendrix QMS  -  Step 46: food safety records for the Missouri CFS checklist (21 CFR 117.10)
+--
+--   * Two new facility logs:
+--       - GMP Hygiene Walk (gmp_walk, access "GMP Hygiene Walk" / logs_gmp):
+--         the person in charge checks people (hair, jewelry, nails, garments,
+--         gloves, illness, handwashing) and areas (no food or drink, hand sinks,
+--         warewashing sink, chemicals, surfaces, pests, hoses) every shift.
+--         A Fail needs a corrective action.
+--       - Employee Illness and Exclusion Log (illness, access "Employee Illness
+--         and Exclusion Log" / hr_health): who was excluded or restricted, the
+--         reason category (no medical details), and the return to work.
+--         PRIVATE: hr_health does not start with logs_, so "Facility Logs (all)"
+--         never gives access to it; only that setting (or admin) does.
+--   * hx_fl_types() lists every facility log type; hx_fl_valid_type uses it.
+--
+-- Run in the Hendrix Supabase project (bqrncllndvzbhmxanitq) AFTER steps 1-45.
+-- Safe to run more than once.
+-- =====================================================================
+
+create or replace function hx_fl_types() returns text[]
+language sql immutable as $$
+  select array['sanitation','waste','scale_calibration','security','security_inspection','pest','equipment',
+               'temperature','environmental','maintenance_request','purchase_request','gmp_walk','illness'];
+$$;
+create or replace function hx_fl_valid_type(p_type text) returns boolean
+language sql immutable as $$
+  select coalesce(p_type,'') = any(hx_fl_types());
+$$;
+create or replace function hx_log_mod(p_type text) returns text
+language sql immutable as $$
+  select case p_type
+    when 'sanitation' then 'logs_sanitation' when 'waste' then 'logs_waste'
+    when 'scale_calibration' then 'logs_scale' when 'security' then 'logs_security'
+    when 'security_inspection' then 'logs_security' when 'pest' then 'logs_pest'
+    when 'equipment' then 'logs_equipment' when 'temperature' then 'logs_temp'
+    when 'environmental' then 'logs_env' when 'visitor' then 'logs_visitor'
+    when 'maintenance_request' then 'logs_maintenance' when 'purchase_request' then 'logs_purchase'
+    when 'gmp_walk' then 'logs_gmp' when 'illness' then 'hr_health'
+    else 'logs' end;
+$$;
+grant execute on function hx_fl_types() to authenticated;
+
+-- the illness log has no QR form: entries come only from signed-in people with its own access (insert policy)
+create or replace function hx_fl_private_guard() returns trigger
+language plpgsql as $$
+begin
+  if new.log_type = 'illness' and coalesce(new.source, '') <> 'app' then
+    raise exception 'The Employee Illness and Exclusion Log is filled in Hendrix only (no QR form).';
+  end if;
+  return new;
+end $$;
+drop trigger if exists hx_fl_private_guard on hx_facility_log;
+create trigger hx_fl_private_guard before insert on hx_facility_log for each row execute function hx_fl_private_guard();
+
+
 notify pgrst, 'reload schema';
-select 'Hendrix steps 13-45 installed' as result;
+select 'Hendrix steps 13-46 installed' as result;
