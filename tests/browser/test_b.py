@@ -98,6 +98,7 @@ with sync_playwright() as pw:
     # infused flower: total packaged (bags x unit size) and packaged METRC tag
     pg.locator('.tabs button', has_text='Infused Flower').click(); pg.get_by_role('button', name='+ New Batch').click(); md = pg.locator('.md')
     field(md, 'SKU').select_option(label='Infused Flower 3.5g'); field(md, 'Batch / Lot Number').fill('IF-001')
+    check(md.locator('.msg', has_text='Mark the R&D Test Passed to fill in').count() == 1 and field(md, 'Total Bags Filled').count() == 0, 'packaging fields wait for R&D Passed, with a note saying so')
     md.locator('div.f', has=pg.locator('span', has_text='R&D Test')).first.get_by_role('button', name='Passed').click()
     field(md, 'Infused Flower Used').fill('360'); field(md, 'Total Bags Filled').fill('100'); field(md, 'Packaged METRC Tag').fill('1A4000000000000000000123')
     check(md.locator('label.f, div.f', has=pg.locator('span', has_text='Total Infused Flower Packaged (g)')).locator('.autov').inner_text() == '350', 'total infused flower packaged = 100 bags x 3.5 g')
