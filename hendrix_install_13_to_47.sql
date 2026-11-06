@@ -1,5 +1,5 @@
 -- =====================================================================
--- Hendrix QMS - ONE-FILE INSTALL of steps 13 to 46 (SOPs ... Line Map, System Health, Security, My Tasks)
+-- Hendrix QMS - ONE-FILE INSTALL of steps 13 to 47 (SOPs ... Line Map, System Health, Security, My Tasks)
 -- For a Hendrix database that already has steps 1-12.
 -- Paste the whole file into Supabase > SQL Editor > Run (one time).
 -- Safe to run again: every step can run more than once.
@@ -5397,7 +5397,7 @@ begin
       (24,'Equipment and chemicals','t','hx_equipment'),(25,'Line clearance and rework','t','hx_line_clearances'),(26,'Facility tests','t','hx_env_points'),(27,'Cultivation','t','hx_grow_areas'),
       (28,'HACCP','t','hx_haccp_team'),(29,'Risk register and change control','t','hx_risks'),(30,'Org chart and objectives','t','hx_org_positions'),(31,'Management review and verification','t','hx_mgmt_reviews'),
       (32,'Time clock and badges','t','hx_badges'),(33,'Production planner','t','hx_production_plans'),(34,'Settings','t','hx_license_settings'),(36,'Line Map','f','hx_line_map'),
-      (37,'System health','f','hx_system_health'),(38,'Security: e-signatures, two-step sign-in','t','hx_esignatures'),(39,'My Tasks and email alerts','t','hx_notify_queue'),(40,'Kiosks keep working offline','t','hx_kiosk_receipts'),(41,'METRC check','t','hx_metrc_snapshots'),(42,'Temporary passwords','f','hx_admin_set_password'),(43,'Maintenance and purchase requests, QR sign-in','f','hx_kiosk_log_add_user'),(44,'CSQ Program Overview online course','f','hx_course_cert_only'),(45,'New password after a reset','f','hx_set_own_password'),(46,'Food safety records (GMP walk, illness log)','f','hx_fl_types')) as s(step, name, kind, obj)
+      (37,'System health','f','hx_system_health'),(38,'Security: e-signatures, two-step sign-in','t','hx_esignatures'),(39,'My Tasks and email alerts','t','hx_notify_queue'),(40,'Kiosks keep working offline','t','hx_kiosk_receipts'),(41,'METRC check','t','hx_metrc_snapshots'),(42,'Temporary passwords','f','hx_admin_set_password'),(43,'Maintenance and purchase requests, QR sign-in','f','hx_kiosk_log_add_user'),(44,'CSQ Program Overview online course','f','hx_course_cert_only'),(45,'New password after a reset','f','hx_set_own_password'),(46,'Food safety records (GMP walk, illness log)','f','hx_fl_types'),(47,'Batch Tracker tags from Receiving inventory','f','hx_batch_lots')) as s(step, name, kind, obj)
   loop
     v_ok := case r.kind
       when 't' then to_regclass('public.' || r.obj) is not null
@@ -7002,5 +7002,42 @@ drop trigger if exists hx_fl_private_guard on hx_facility_log;
 create trigger hx_fl_private_guard before insert on hx_facility_log for each row execute function hx_fl_private_guard();
 
 
+-- ###################################################################
+-- ### hendrix_step47.sql
+-- ###################################################################
+-- =====================================================================
+-- Hendrix QMS  -  Step 47: Batch Tracker picks tags from Receiving inventory
+--
+--   * hx_batch_lots(p_lic): the accepted, unexpired lots that still have
+--     something left, for the Batch Tracker's tag search (type the last
+--     digits of a METRC tag, pick the lot). Anyone who can see the Batch
+--     Tracker or Receiving for that license may call it, even without
+--     Receiving access (operators see only the lot, item and amount left).
+--   * When the batch is submitted, Hendrix records the amount used against
+--     the lot (hx_lot_uses, already in step 17): it is deducted from the lot
+--     and shows on the lot's usage history with the batch number.
+--
+-- Run in the Hendrix Supabase project (bqrncllndvzbhmxanitq) AFTER steps 1-46.
+-- Safe to run more than once.
+-- =====================================================================
+
+create or replace function hx_batch_lots(p_lic text)
+returns table (id text, number text, item text, category text, metrc_tag text, supplier_lot text, unit text,
+               qty_left numeric, received_on date, expiry_date date)
+language sql stable security definer set search_path = public as $$
+  select l.id, l.number, l.item, l.category, l.metrc_tag, l.supplier_lot, l.unit,
+         l.quantity - l.qty_used, l.received_on, l.expiry_date
+  from hx_lots l
+  where l.license_id = p_lic
+    and (hx_can('batch', 1, p_lic) or hx_can('receiving', 1, p_lic))
+    and l.status = 'accepted'
+    and l.quantity - l.qty_used > 0
+    and (l.expiry_date is null or l.expiry_date >= current_date)
+  order by l.received_on, l.number;
+$$;
+revoke all on function hx_batch_lots(text) from public;
+grant execute on function hx_batch_lots(text) to authenticated;
+
+
 notify pgrst, 'reload schema';
-select 'Hendrix steps 13-46 installed' as result;
+select 'Hendrix steps 13-47 installed' as result;

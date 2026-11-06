@@ -8,6 +8,22 @@ def field(md, label, exact=False):
     pgx = md if hasattr(md, 'goto') else md.page
     sp = pgx.locator('span', has_text=re.compile('^' + re.escape(label) + ('$' if exact else ''))) 
     return md.locator('label.f, div.f', has=sp).locator('input,select,textarea').first
+T['hx_lots'] = [{'id': 'lot1', 'state_id': 'st-mo', 'license_id': 'lic-mo', 'number': 'RCV-2026-001', 'item': 'Flower OG', 'category': 'Cannabis', 'metrc_tag': '1A40C03000060E1000003275', 'supplier_lot': '', 'unit': 'g', 'quantity': 1240, 'qty_used': 0, 'status': 'accepted', 'received_on': '2026-11-01', 'expiry_date': None},
+                {'id': 'lot2', 'state_id': 'st-mo', 'license_id': 'lic-mo', 'number': 'RCV-2026-002', 'item': 'Flower GSC', 'category': 'Cannabis', 'metrc_tag': '1A40C03000060E1000004411', 'supplier_lot': '', 'unit': 'kg', 'quantity': 2, 'qty_used': 0, 'status': 'accepted', 'received_on': '2026-11-02', 'expiry_date': None}]
+T['hx_lot_uses'] = []
+_hb = handle
+def handle(route, request):
+    u = request.url
+    if '/rest/v1/rpc/hx_batch_lots' in u:
+        return route.fulfill(status=200, content_type='application/json', body=json.dumps([{**l, 'qty_left': l['quantity'] - l['qty_used']} for l in T['hx_lots'] if l['status'] == 'accepted' and l['quantity'] - l['qty_used'] > 0]))
+    if '/rest/v1/hx_lot_uses' in u and request.method == 'POST':
+        b = json.loads(request.post_data); l = next(x for x in T['hx_lots'] if x['id'] == b['lot_id'])
+        if b['quantity'] > l['quantity'] - l['qty_used']: return route.fulfill(status=400, content_type='application/json', body=json.dumps({'message': 'Only %s %s left in lot %s.' % (l['quantity'] - l['qty_used'], l['unit'], l['number'])}))
+        l['qty_used'] += b['quantity']; b['voided'] = False; T['hx_lot_uses'].append(b)
+        return route.fulfill(status=201, content_type='application/json', body=json.dumps([b]))
+    if '/rest/v1/hx_lot_uses' in u:
+        return route.fulfill(status=200, content_type='application/json', body=json.dumps(T['hx_lot_uses']))
+    return _hb(route, request)
 T['hx_states'][0]['tracking_system'] = 'METRC'; T['hx_states'][1]['tracking_system'] = 'BioTrack'
 T['hx_skus'] += [
  {'id':'pr1','state_id':'st-mo','product_type':'pre_rolls','name':'Mates THCA 5 x 0.6g','spec':{'grams_filled':0.55,'grams_kiefed':0.6,'units_per_package':5,'ingredients':['THCA','Terpene'],'coating':'Kief'},'license_ids':[],'active':True,'sort':0},
@@ -52,6 +68,34 @@ with sync_playwright() as pw:
     check(bt['sku'] == 'Mates THCA 5 x 0.6g' and bt['flavor'] == 'Honey Melon' and bt['data']['joints_check_status'] == 'pass' and bt['data']['packaging_check_expected'] == '180', 'batch saved with checks + names from DB')
     check(pg.locator('.badge', has_text='METRC 1/').count() == 1, 'METRC x/y badge')
     pg.screenshot(path=OUT + 'batches.png', full_page=True)
+    # pick the flower tag from Receiving inventory: type the last digits, pick the lot, the amount used is deducted
+    pg.get_by_role('button', name='+ New Batch').click(); md = pg.locator('.md')
+    field(md, 'SKU').select_option(label='Mates THCA 5 x 0.6g'); field(md, 'Batch / Lot Number').fill('PR-002')
+    field(md, 'Flower METRC #').fill('3275'); pg.wait_for_selector('.lotopt')
+    check(md.locator('.lotopt').count() == 1 and '1240 g left' in md.locator('.lotopt').inner_text(), 'typing the last 4 digits lists the matching lot with what is left')
+    md.locator('.lotopt').first.click()
+    check(field(md, 'Flower METRC #').input_value() == '1A40C03000060E1000003275' and md.locator('text=From inventory: RCV-2026-001').count() == 1, 'picking fills the full tag and links the lot')
+    field(md, 'Flower Used').fill('5000'); md.get_by_role('button', name='Submit & Sign').click(); pg.wait_for_timeout(400)
+    check('Only 1240 g left in 1A40C03000060E1000003275' in md.locator('.msg.err').inner_text() and not any(b['batch_number'] == 'PR-002' for b in T['hx_batches']), 'more than is left: refused before saving')
+    field(md, 'Flower Used').fill('1,000g'); md.get_by_role('button', name='Submit & Sign').click(); pg.wait_for_selector('.card >> text=PR-002')
+    pb = next(b for b in T['hx_batches'] if b['batch_number'] == 'PR-002'); us = [x for x in T['hx_lot_uses'] if x['batch_id'] == pb['id']]
+    check(len(us) == 1 and us[0]['lot_id'] == 'lot1' and us[0]['quantity'] == 1000 and '[bt:flower_qty]' in us[0]['notes'] and T['hx_lots'][0]['qty_used'] == 1000, 'saved: 1,000 g recorded against the lot and the batch (240 g left)')
+    # a kg lot: grams typed in the batch are converted
+    pg.get_by_role('button', name='+ New Batch').click(); md = pg.locator('.md')
+    field(md, 'SKU').select_option(label='Mates THCA 5 x 0.6g'); field(md, 'Batch / Lot Number').fill('PR-003')
+    field(md, 'Flower METRC #').fill('4411'); pg.wait_for_selector('.lotopt'); md.locator('.lotopt').first.click()
+    field(md, 'Flower Used').fill('500'); md.get_by_role('button', name='Submit & Sign').click(); pg.wait_for_selector('.card >> text=PR-003')
+    pb = next(b for b in T['hx_batches'] if b['batch_number'] == 'PR-003'); us = [x for x in T['hx_lot_uses'] if x['batch_id'] == pb['id']]
+    check(len(us) == 1 and us[0]['quantity'] == 0.5, '500 g from a kg lot = 0.5 kg deducted')
+    # a tag that is not in Receiving: saved, nothing deducted
+    n_uses = len(T['hx_lot_uses'])
+    pg.get_by_role('button', name='+ New Batch').click(); md = pg.locator('.md')
+    field(md, 'SKU').select_option(label='Mates THCA 5 x 0.6g'); field(md, 'Batch / Lot Number').fill('PR-004')
+    field(md, 'Flower METRC #').fill('1A40ZZZZ0000'); check(md.locator('text=Not in Receiving inventory').count() == 1, 'unknown tag: told nothing will be deducted')
+    field(md, 'Flower Used').fill('100'); md.get_by_role('button', name='Submit & Sign').click(); pg.wait_for_selector('.card >> text=PR-004')
+    check(len(T['hx_lot_uses']) == n_uses, 'unknown tag: batch saved, no use recorded')
+    T['hx_batches'][:] = [b for b in T['hx_batches'] if b['batch_number'] not in ('PR-002', 'PR-003', 'PR-004')]
+    pg.reload(); pg.get_by_role('button', name='Batch Tracker').click(); pg.wait_for_selector('.card >> text=PR-001')
     # duplicate number
     pg.get_by_role('button', name='+ New Batch').click(); md = pg.locator('.md')
     field(md, 'SKU').select_option(label='Mates THCA 5 x 0.6g'); field(md, 'Batch / Lot Number').fill(' pr-001')

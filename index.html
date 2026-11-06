@@ -93,6 +93,8 @@ td{padding:9px 10px;border-bottom:1px solid #1d1d1d;vertical-align:middle}
 .chkp .h{font-weight:800;font-size:15px;letter-spacing:.04em}.chkp .s{font-size:12px;opacity:.9;margin-top:3px}
 .chkp.ok{background:#112218;border-color:#23543a;color:#a6e6c4}.chkp.bad{background:#2a1513;border-color:#5a2a26;color:#ffb4ac}
 .chkp.warn{background:#2a2108;border-color:#6b5414;color:#f1d57a}.chkp.none,.chkp.info{background:#151515;color:var(--muted)}.chkp.info{color:var(--text)}
+.lotpick{position:absolute;left:0;right:0;top:100%;z-index:30;background:var(--card,#141414);border:1px solid var(--gold-lo,#6b5a2a);border-radius:8px;margin-top:2px;max-height:240px;overflow:auto;box-shadow:0 6px 18px rgba(0,0,0,.45)}
+.lotopt{padding:8px 10px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--line,#2a2a2a)}.lotopt:hover{background:rgba(212,175,55,.12)}
 .autov{background:#151515;border:1px dashed var(--line);border-radius:8px;padding:9px 11px;font-weight:700}
 .metrcck{background:#0f1a13;border:1px solid #23543a;border-radius:8px;padding:9px 12px;margin-bottom:12px;color:#a6e6c4;font-weight:700}
 .voidcard{opacity:.55}
@@ -212,7 +214,7 @@ async function sb(path,opt){
   if(!r.ok){
     const m=(j&&(j.message||j.hint||j.details))||txt||('Error '+r.status);
     if(/schema cache|Could not find the table|relation .* does not exist/i.test(m)&&!/Could not find the '[A-Za-z0-9_]+' column/.test(m)){
-      const step=/hx_fl_types|hx_fl_private_guard/.test(m)?'hendrix_step46.sql':/hx_set_own_password/.test(m)?'hendrix_step45.sql':/hx_course_cert_only|This course is an outside certification\. Record it/.test(m)?'hendrix_step44.sql':/hx_kiosk_log_add_user|hx_kiosk_login_free|maintenance_request|purchase_request|logs_maintenance|logs_purchase/.test(m)?'hendrix_step43.sql':/hx_admin_set_password|hx_password_changed|must_change_password/.test(m)?'hendrix_step42.sql':/hx_metrc/.test(m)?'hendrix_step41.sql':/hx_my_tasks|hx_notify|task_email/.test(m)?'hendrix_step39.sql':/hx_esignatures|mfa_required|esig_password|idle_signout/.test(m)?'hendrix_step38.sql':/hx_system_health/.test(m)?'hendrix_step37.sql':/hx_line_map|linemap_idle/.test(m)?'hendrix_step36.sql':/hx_license_settings/.test(m)?'hendrix_step34.sql':/hx_production_plans|hx_planner_recipes/.test(m)?'hendrix_step33.sql':/hx_time_clock|hx_badge|hx_kiosk_clock|hx_clock_fix/.test(m)?'hendrix_step32.sql':/hx_mgmt_reviews|hx_verification_/.test(m)?'hendrix_step31.sql':/hx_org_positions|hx_objective|hx_qms_settings/.test(m)?'hendrix_step30.sql':/hx_risk|hx_changes/.test(m)?'hendrix_step29.sql':/hx_haccp/.test(m)?'hendrix_step28.sql':/hx_grow_|hx_plant_batches/.test(m)?'hendrix_step27.sql':/hx_env_/.test(m)?'hendrix_step26.sql':/hx_line_clearances|hx_rework/.test(m)?'hendrix_step25.sql':/hx_equipment|hx_chemicals/.test(m)?'hendrix_step24.sql':/share_key|hx_training_shared/.test(m)?'hendrix_step23.sql':/hx_rule_sources/.test(m)?'hendrix_step22.sql':/hx_training_keys|hx_training_attempts|hx_course_submit|content_status/.test(m)?'hendrix_step20.sql':/hx_complaints|hx_audits|hx_audit_findings/.test(m)?'hendrix_step19.sql':/hx_recall|hx_trace_data/.test(m)?'hendrix_step18.sql':/hx_lots|hx_lot_uses|hx_holds|hx_shipments/.test(m)?'hendrix_step17.sql':/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
+      const step=/hx_batch_lots/.test(m)?'hendrix_step47.sql':/hx_fl_types|hx_fl_private_guard/.test(m)?'hendrix_step46.sql':/hx_set_own_password/.test(m)?'hendrix_step45.sql':/hx_course_cert_only|This course is an outside certification\. Record it/.test(m)?'hendrix_step44.sql':/hx_kiosk_log_add_user|hx_kiosk_login_free|maintenance_request|purchase_request|logs_maintenance|logs_purchase/.test(m)?'hendrix_step43.sql':/hx_admin_set_password|hx_password_changed|must_change_password/.test(m)?'hendrix_step42.sql':/hx_metrc/.test(m)?'hendrix_step41.sql':/hx_my_tasks|hx_notify|task_email/.test(m)?'hendrix_step39.sql':/hx_esignatures|mfa_required|esig_password|idle_signout/.test(m)?'hendrix_step38.sql':/hx_system_health/.test(m)?'hendrix_step37.sql':/hx_line_map|linemap_idle/.test(m)?'hendrix_step36.sql':/hx_license_settings/.test(m)?'hendrix_step34.sql':/hx_production_plans|hx_planner_recipes/.test(m)?'hendrix_step33.sql':/hx_time_clock|hx_badge|hx_kiosk_clock|hx_clock_fix/.test(m)?'hendrix_step32.sql':/hx_mgmt_reviews|hx_verification_/.test(m)?'hendrix_step31.sql':/hx_org_positions|hx_objective|hx_qms_settings/.test(m)?'hendrix_step30.sql':/hx_risk|hx_changes/.test(m)?'hendrix_step29.sql':/hx_haccp/.test(m)?'hendrix_step28.sql':/hx_grow_|hx_plant_batches/.test(m)?'hendrix_step27.sql':/hx_env_/.test(m)?'hendrix_step26.sql':/hx_line_clearances|hx_rework/.test(m)?'hendrix_step25.sql':/hx_equipment|hx_chemicals/.test(m)?'hendrix_step24.sql':/share_key|hx_training_shared/.test(m)?'hendrix_step23.sql':/hx_rule_sources/.test(m)?'hendrix_step22.sql':/hx_training_keys|hx_training_attempts|hx_course_submit|content_status/.test(m)?'hendrix_step20.sql':/hx_complaints|hx_audits|hx_audit_findings/.test(m)?'hendrix_step19.sql':/hx_recall|hx_trace_data/.test(m)?'hendrix_step18.sql':/hx_lots|hx_lot_uses|hx_holds|hx_shipments/.test(m)?'hendrix_step17.sql':/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
       throw new Error('Database tables are missing - run '+step+' in the Hendrix Supabase project.');
     }
     if(/hx_facility_log_log_type_check/.test(m))throw new Error('This log is not set up in the database yet - run hendrix_step46.sql in the Hendrix Supabase project.');
@@ -2913,6 +2915,56 @@ function compressFile(file){
 }
 function openAttachment(a){const x=document.createElement('a');x.href=a.data;x.download=a.name;x.target='_blank';document.body.appendChild(x);x.click();x.remove();}
 
+// ---- Batch Tracker <-> Receiving: a tag picked from inventory deducts what the batch used (step 47) ----
+// tag field -> its "used" field (inputs only; output / packaged tags are not deducted)
+const BT_LOT_PAIRS={flower_metrc:'flower_qty',thca_metrc:'thca_qty',live_resin_metrc:'live_resin_qty',hte_metrc:'hte_qty',decarbed_resin_metrc:'decarbed_resin_qty',
+  distillate_metrc:'distillate_qty',trim_metrc:'trim_qty',thca_internal_metrc:'thca_internal_qty',kief_metrc:'kief_qty_used',infused_flower_number:'infused_flower_used',
+  infused_preroll_metrc:'total_infused_preroll_used',kiefed_infused_preroll_metrc:'kiefed_infused_joints_used',primed_oil_metrc:'primed_oil_used',ethanol_crude_metrc:'ethanol_crude_weight',decarbed_crude_tag:'total_decarbed_crude_used'};
+const BT_QTY_OF={};Object.keys(BT_LOT_PAIRS).forEach(function(k){BT_QTY_OF[BT_LOT_PAIRS[k]]=k;});
+async function btLoadLots(lid){
+  try{return (await sb('rpc/hx_batch_lots',{method:'POST',body:{p_lic:lid}}))||[];}
+  catch(e){try{const r=(await db.get('hx_lots','license_id=eq.'+encodeURIComponent(lid)+'&status=eq.accepted&select=*&limit=5000'))||[];
+    return r.filter(function(l){return lotLeft(l)>0&&!(l.expiry_date&&l.expiry_date<todayStr());}).map(function(l){return {...l,qty_left:lotLeft(l)};});}catch(e2){return [];}}
+}
+function btLotMatch(lots,q){q=String(q||'').trim().toLowerCase();if(q.length<2)return [];
+  return (lots||[]).filter(function(l){return [l.metrc_tag,l.number,l.supplier_lot].some(function(v){return String(v||'').toLowerCase().indexOf(q)>=0;});}).slice(0,8);}
+function btLotLabel(l){return (l.metrc_tag||l.number)+' · '+l.item+' · '+(Math.round(Number(l.qty_left)*1000)/1000)+' '+l.unit+' left';}
+// "1,240g" / "1.2 kg" / "500 mL" in the lot's unit; no unit = grams (mass lots), mL (volume lots) or the lot's unit
+const BT_MASS={mg:0.001,g:1,gram:1,grams:1,gr:1,kg:1000,lb:453.592,lbs:453.592,oz:28.3495},BT_VOL={ml:1,l:1000};
+function btQtyIn(v,unit){const m=String(v||'').replace(/,/g,'').match(/(\d*\.?\d+)\s*([a-zA-Z]*)/);if(!m)return {q:0};
+  const n=parseFloat(m[1]),u=m[2].toLowerCase(),lu=String(unit||'').toLowerCase();
+  if(BT_MASS[lu]){const f=u?BT_MASS[u]:1;if(!f)return {q:0,err:'is in '+unit+': enter the amount in g, kg, lb or oz'};return {q:Math.round(n*f/BT_MASS[lu]*1000)/1000};}
+  if(BT_VOL[lu]){const f=u?BT_VOL[u]:1;if(!f)return {q:0,err:'is in '+unit+': enter the amount in mL or L'};return {q:Math.round(n*f/BT_VOL[lu]*1000)/1000};}
+  if(u&&u!==lu&&u!==lu+'s')return {q:0,err:'is counted in '+unit+': enter the number of '+unit};return {q:n};}
+// the uses a submit records: [{key,label,lot,q}] or {err}
+function btLotUses(def,fd,orig,mode,lots,ts,sku){
+  const out=[],sum={};const byId={};(lots||[]).forEach(function(l){byId[l.id]=l;});
+  function add(key,label,lotId,v){const l=byId[lotId];if(!l||!String(v||'').trim())return null;const x=btQtyIn(v,l.unit);
+    if(x.err)return label+': lot '+(l.metrc_tag||l.number)+' '+x.err+'.';if(!(x.q>0))return null;
+    sum[l.id]=(sum[l.id]||0)+x.q;if(sum[l.id]>Number(l.qty_left)+1e-9)return 'Only '+l.qty_left+' '+l.unit+' left in '+(l.metrc_tag||l.number)+' ('+l.item+').';
+    out.push({key:key,label:label,lot:l,q:x.q});return null;}
+  if(mode==='edit')return {uses:[]};
+  for(const f of def.fields){
+    if(f.t==='tags'){const rows=Array.isArray(fd[f.k])?fd[f.k]:[],kept=mode==='fill'&&orig?((orig[f.k]||[]).length):0;
+      for(let j=kept;j<rows.length;j++){const r=rows[j]||{};const e=add(f.k+'#'+j,'Biomass '+(r.tag||''),r.lot_id,r.weight);if(e)return {err:e};}continue;}
+    const qk=BT_LOT_PAIRS[f.k];if(!qk||!fd['_lot_'+f.k])continue;
+    if(mode==='fill'&&orig&&String(orig[qk]||'').trim())continue; // already recorded when it was first entered
+    const qf=def.fields.find(function(x){return x.k===qk;});if(!qf)continue;
+    const e=add(qk,btLabel(def.id,qf,ts,sku),fd['_lot_'+f.k],fd[qk]);if(e)return {err:e};
+  }
+  return {uses:out};
+}
+function LotTagInput(props){
+  const[open,setOpen]=useState(false);const v=props.value||'',lot=(props.lots||[]).find(function(l){return l.id===props.lotId;});
+  const hits=open&&!props.disabled?btLotMatch(props.lots,v).filter(function(l){return !lot||l.id!==lot.id;}):[];
+  return el('div',{style:{position:'relative'}},
+    el('input',{value:v,disabled:props.disabled,placeholder:props.placeholder,style:props.style,onFocus:function(){setOpen(true);},onBlur:function(){setTimeout(function(){setOpen(false);},150);},
+      onChange:function(e){const t=e.target.value;const ex=(props.lots||[]).find(function(l){return l.metrc_tag&&l.metrc_tag.toLowerCase()===t.trim().toLowerCase();});props.onChange(t,ex?ex.id:'');setOpen(true);}}),
+    hits.length>0&&el('div',{className:'lotpick'},hits.map(function(l){return el('div',{key:l.id,className:'lotopt',onMouseDown:function(e){e.preventDefault();props.onChange(l.metrc_tag||l.number,l.id);setOpen(false);}},
+      el('b',null,l.metrc_tag||l.number),el('span',{className:'muted'},' · '+l.item+' · '+(Math.round(Number(l.qty_left)*1000)/1000)+' '+l.unit+' left'+(l.metrc_tag?' · '+l.number:'')));})),
+    lot&&el('div',{style:{fontSize:12,color:'var(--gold-hi)',marginTop:4}},'From inventory: '+lot.number+' · '+lot.item+' · '+(Math.round(Number(lot.qty_left)*1000)/1000)+' '+lot.unit+' left'+(props.useNote?' · '+props.useNote:'')),
+    !lot&&v.trim().length>=4&&!props.disabled&&(props.lots||[]).length>0&&!btLotMatch(props.lots,v).length&&el('div',{className:'muted',style:{fontSize:12,marginTop:4}},'Not in Receiving inventory - nothing will be deducted.'));
+}
 /* The batch form: new batch, admin edit (reason required), or "continue" (fill blanks only) */
 function BatchForm(props){
   const def=props.def,init=props.initial,mode=props.mode||'new',ts=props.ts;
@@ -2930,6 +2982,8 @@ function BatchForm(props){
   const[err,setErr]=useState('');
   const[busy,setBusy]=useState(false);
   const orig=useRef(init?{...(init.data||{}),_bn:init.batch_number,_sku:init.sku_id,_fl:init.flavor_id||init.flavor}:null);
+  const[lots,setLots]=useState([]);
+  useEffect(function(){if(!props.licenseId||mode==='edit')return;let dead=false;btLoadLots(props.licenseId).then(function(r){if(!dead)setLots(r||[]);});return function(){dead=true;};},[props.licenseId,mode]);
   const sku=findSku(top.sku_id);
   const spec=btSpec(sku);
   const fd=useMemo(function(){return btRecalc(def.id,d,sku);},[d,sku,def.id]);
@@ -2955,9 +3009,10 @@ function BatchForm(props){
     if(def.id!=='ethanol_extraction'&&!top.sku_id){setErr('Choose the SKU.');return;}
     if(mode==='edit'&&!reason.trim()){setErr('Enter the reason for change. It is saved permanently in the audit trail.');return;}
     const data={...fd};
+    const lu=btLotUses(def,fd,orig.current,mode,lots,ts,sku);if(lu.err){setErr(lu.err);return;}
     setBusy(true);
     try{
-      await props.onSubmit({batch_number:top.batch_number.trim(),sku_id:top.sku_id||null,flavor_id:top.flavor_id||null,flavor:top.flavor_id?undefined:String(top.flavor||'').trim(),
+      await props.onSubmit({uses:lu.uses,batch_number:top.batch_number.trim(),sku_id:top.sku_id||null,flavor_id:top.flavor_id||null,flavor:top.flavor_id?undefined:String(top.flavor||'').trim(),
         status:String(data.status||''),data:data,attachments:att,performed_by:String(data.operator||'').trim(),signature:sig||null,edit_reason:reason.trim()});
     }catch(e){setErr(niceErr(e));}
     setBusy(false);
@@ -2999,7 +3054,7 @@ function BatchForm(props){
       const tags=Array.isArray(fd[f.k])?fd[f.k]:[],keep=lk||(mode==='fill'&&orig.current?((orig.current[f.k]||[]).length):0);
       return el(Field,{key:key,label:lab+' \u2014 add as many as you need',plain:true},
         tags.map(function(r,j){const ro=mode==='fill'&&j<keep;return el('div',{key:j,className:'li'},
-          el('input',{value:(r&&r.tag)||'',disabled:ro,placeholder:'Biomass '+(ts||'METRC')+' Tag #',style:{flex:'2 1 180px'},onChange:function(e){const n=tags.map(function(x,q){return q===j?{...x,tag:e.target.value}:x;});setF(f.k,n);}}),
+          el('div',{style:{flex:'2 1 180px'}},el(LotTagInput,{value:(r&&r.tag)||'',lotId:r&&r.lot_id,lots:lots,disabled:ro,placeholder:'Biomass '+(ts||'METRC')+' Tag # (type the last digits)',onChange:function(t,id){const n=tags.map(function(x,q){return q===j?{...x,tag:t,lot_id:id||''}:x;});setF(f.k,n);}})),
           el('input',{value:(r&&r.weight)||'',disabled:ro,inputMode:'decimal',placeholder:'Weight',style:{flex:'1 1 90px'},onChange:function(e){const n=tags.map(function(x,q){return q===j?{...x,weight:e.target.value}:x;});setF(f.k,n);}}),
           !ro&&el('button',{type:'button',className:'btn danger sm',onClick:function(){setF(f.k,tags.filter(function(_,q){return q!==j;}));}},'\u2715'));}),
         el('button',{type:'button',className:'btn ghost sm',onClick:function(){setF(f.k,tags.concat([{tag:'',weight:''}]));}},'+ Add Biomass Tag'));
@@ -3008,6 +3063,8 @@ function BatchForm(props){
     if(f.t==='date')input=el('input',{type:'date',value:fd[f.k]||'',disabled:lk,onChange:function(e){setF(f.k,e.target.value);}});
     else if(f.t==='select')input=el('select',{style:{width:'100%'},value:fd[f.k]||f.o[0],onChange:function(e){setF(f.k,e.target.value);}},(fd[f.k]&&f.o.indexOf(fd[f.k])<0?[fd[f.k]].concat(f.o):f.o).map(function(o){return el('option',{key:o,value:o},o);}));
     else if(f.t==='textarea')input=el('textarea',{value:fd[f.k]||'',disabled:lk,placeholder:f.ph,style:{minHeight:60},onChange:function(e){setF(f.k,e.target.value);}});
+    else if(BT_LOT_PAIRS[f.k]&&mode!=='edit')input=el(LotTagInput,{value:fd[f.k]||'',lotId:fd['_lot_'+f.k],lots:lots,disabled:lk,placeholder:(f.ph||'').replace(/METRC/g,ts||'METRC')+(lots.length?' (type the last digits)':''),
+      useNote:'the '+((def.fields.find(function(x){return x.k===BT_LOT_PAIRS[f.k];})||{}).l||'amount used').toLowerCase()+' is deducted when you submit',onChange:function(t,id){setD(function(p){return {...p,[f.k]:t,['_lot_'+f.k]:id||''};});}});
     else input=el('input',{value:fd[f.k]||'',disabled:lk,placeholder:(f.ph||'').replace(/METRC/g,ts||'METRC'),onChange:function(e){setF(f.k,e.target.value);}});
     return el(React.Fragment,{key:key},el(Field,{label:lab},input,lk&&lockNote,
         f.sug&&el('div',{style:{fontSize:12,color:'var(--gold-hi)',marginTop:4}},'Average weight for a good to very good yield is usually: '+(fd[f.sug[0]]||'0')+' ('+f.sug[1]+' of Total Biomass Used)')),
@@ -3142,14 +3199,25 @@ function BatchTracker(props){
         const v=d[f.k];if(f.t==='checkbox')return v?'Yes':'No';if(f.t==='tags')return (v||[]).map(function(r){return r.tag+' ('+r.weight+')';}).join('; ');return v;})).concat([b.created_at,b.performed_by]).map(e).join(','));});
     const blob=new Blob([lines.join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=type+'_batches_'+(lic.license_number||lic.id)+'.csv';document.body.appendChild(a);a.click();a.remove();
   }
+  // records what the batch used from each inventory lot (once per field; a later save never records it twice)
+  async function recordUses(bid,bn,uses){
+    if(!uses||!uses.length)return;let have=[];
+    try{have=((await db.get('hx_lot_uses','batch_id=eq.'+encodeURIComponent(bid)+'&voided=eq.false&select=id,notes,batch_id,voided'))||[]).filter(function(u){return u.batch_id===bid&&!u.voided;});}catch(e){have=[];}
+    const bad=[];
+    for(const u of uses){const tag='[bt:'+u.key+']';if(have.some(function(h){return String(h.notes||'').indexOf(tag)>=0;}))continue;
+      try{await db.insert('hx_lot_uses',{id:newId('use'),state_id:sid,license_id:lid,lot_id:u.lot.id,batch_id:bid,quantity:u.q,used_on:todayStr(),notes:'Batch Tracker: '+u.label+' '+tag});}
+      catch(e){bad.push((u.lot.metrc_tag||u.lot.number)+': '+matErr(e));}}
+    if(bad.length)setErr('Batch '+bn+' was saved, but this could not be deducted from Receiving: '+bad.join('; ')+' Record it with Receiving > Record use.');
+  }
   async function create(p){
-    await db.insert('hx_batches',{id:newId('bat'),state_id:sid,license_id:lid,batch_type:type,batch_number:p.batch_number,sku_id:p.sku_id,flavor_id:p.flavor_id,flavor:p.flavor,status:p.status,
+    const id=newId('bat');
+    await db.insert('hx_batches',{id:id,state_id:sid,license_id:lid,batch_type:type,batch_number:p.batch_number,sku_id:p.sku_id,flavor_id:p.flavor_id,flavor:p.flavor,status:p.status,
       data:p.data,attachments:p.attachments,performed_by:p.performed_by,signature:p.signature,source:'app'});
-    setModal(null);loadRows();
+    setModal(null);await recordUses(id,p.batch_number,p.uses);loadRows();
   }
   async function update(b,p){
     await db.update('hx_batches',b.id,{batch_number:p.batch_number,sku_id:p.sku_id,flavor_id:p.flavor_id,flavor:p.flavor,status:p.status,data:p.data,attachments:p.attachments,edit_reason:p.edit_reason||null});
-    setModal(null);loadRows();
+    setModal(null);await recordUses(b.id,p.batch_number||b.batch_number,p.uses);loadRows();
   }
   async function submitTest(b){
     const tags=testFinalTags(b);
@@ -3217,7 +3285,7 @@ function BatchTracker(props){
             !b.voided&&isAdmin&&el('button',{className:'btn danger sm',onClick:function(){setModal({voidb:b});}},'Void'))));
     }),
     modal&&modal.form&&el(Modal,{title:(modal.form==='new'?'New ':modal.form==='fill'?'Continue ':'Edit ')+def.name+' batch'+(modal.b?' \u00b7 '+modal.b.batch_number:''),wide:true,onClose:function(){setModal(null);}},
-      el(BatchForm,{def:def,ts:ts,mode:modal.form,initial:modal.b||null,prefill:modal.prefill||null,skus:usable,allSkus:allSkus,flavors:(cat&&cat.flavors)||[],formulas:canF?(cat&&cat.forms):null,defaultName:props.profile.name||'',
+      el(BatchForm,{def:def,ts:ts,licenseId:lid,mode:modal.form,initial:modal.b||null,prefill:modal.prefill||null,skus:usable,allSkus:allSkus,flavors:(cat&&cat.flavors)||[],formulas:canF?(cat&&cat.forms):null,defaultName:props.profile.name||'',
         onCancel:function(){setModal(null);},onSubmit:function(p){return modal.form==='new'?create(p):update(modal.b,p);}})),
     modal&&modal.ccp&&el(HaccpMonForm,{plans:hps,planId:(hpFor(modal.ccp)||{}).id,batchId:modal.ccp.id,batches:[modal.ccp],state:st,license:lic,profile:props.profile,onClose:function(){setModal(null);},onDone:function(){setModal(null);loadHp();}}),
     modal&&modal.lc&&el(LineClearanceForm,{state:st,license:lic,batch:modal.lc,profile:props.profile,onClose:function(){setModal(null);},onDone:function(){setModal(null);loadLcs();}}),
@@ -7896,8 +7964,8 @@ function LineMapDashCard(props){
 }
 
 /* ---------- System Health (step 37): checks the installation like an IQ, admins only ---------- */
-const HX_RELEASE='Release 46 · November 2026';
-const SH_STEPS_EXPECTED=[4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,36,37,38,39,40,41,42,43,44,45,46];
+const HX_RELEASE='Release 47 · November 2026';
+const SH_STEPS_EXPECTED=[4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,36,37,38,39,40,41,42,43,44,45,46,47];
 function shErr(e){const m=String((e&&e.message)||e);return /hx_system_health/.test(m)&&/missing|does not exist|schema cache|Could not find/i.test(m)?'NOT_INSTALLED':m;}
 function SystemHealthPage(props){
   const[h,setH]=useState(null);const[x38,setX38]=useState(null);const[err,setErr]=useState('');const[ai,setAi]=useState(null);const[busy,setBusy]=useState(false);const[at,setAt]=useState(0);
@@ -7916,7 +7984,7 @@ function SystemHealthPage(props){
   function add(group,label,state,detail,fix){checks.push({group:group,label:label,state:state,detail:detail||'',fix:fix||''});}
   if(h){
     const steps=h.steps||[],missing=steps.filter(function(s){return !s.ok;});
-    add('Database','Database steps installed',missing.length?'bad':'ok',missing.length?'Missing: '+missing.map(function(s){return s.step+' '+s.name;}).join(', '):'All '+steps.length+' steps (4 to '+(steps.length?steps[steps.length-1].step:'')+') are installed.',missing.length?'Run hendrix_install_13_to_46.sql (or the missing step files) in the Supabase SQL editor.':'');
+    add('Database','Database steps installed',missing.length?'bad':'ok',missing.length?'Missing: '+missing.map(function(s){return s.step+' '+s.name;}).join(', '):'All '+steps.length+' steps (4 to '+(steps.length?steps[steps.length-1].step:'')+') are installed.',missing.length?'Run hendrix_install_13_to_47.sql (or the missing step files) in the Supabase SQL editor.':'');
     const drift=at?Math.abs(new Date(h.checked_at).getTime()-at)/1000:0;
     add('Database','Clock',drift>120?'warn':'ok','Database time zone '+h.db_time_zone+'; this device is '+Math.round(drift)+' s '+(drift>120?'off':'in step')+'.',drift>120?'Set this device to the correct time (automatic time).':'');
     add('Security','Row level security on every table',(h.rls_off||[]).length?'bad':'ok',(h.rls_off||[]).length?'Off on: '+h.rls_off.join(', '):'On for all '+h.tables+' Hendrix tables.',(h.rls_off||[]).length?'Run the step file that creates those tables again, or turn on RLS for them in Supabase > Table editor.':'');
@@ -7951,7 +8019,7 @@ function SystemHealthPage(props){
       el('div',{className:'row',style:{gap:8}},el('button',{className:'btn ghost',disabled:busy,onClick:run},busy?'Checking...':'Run checks again'),
         el('button',{className:'btn ghost',disabled:ai&&ai.busy,onClick:testAi},ai&&ai.busy?'Testing...':'Test the AI connection'),
         h&&el('button',{className:'btn',onClick:print},'Print IQ evidence'))),
-    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'System Health is not set up yet - run hendrix_step37.sql (or hendrix_install_13_to_46.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
+    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'System Health is not set up yet - run hendrix_step37.sql (or hendrix_install_13_to_47.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
     h&&el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',gap:10,marginBottom:14}},
       el('div',{className:'card',style:{marginBottom:0,borderTop:'2px solid '+(nBad?'var(--red)':(nWarn?'var(--gold)':'#5fbf8a'))}},el('div',{className:'k'},'Overall'),el('div',{style:{fontSize:22,fontWeight:700,marginTop:4,color:nBad?'var(--red)':(nWarn?'var(--gold-hi)':'#5fbf8a')}},nBad?nBad+' to fix':(nWarn?nWarn+' to check':'Ready')),el('div',{className:'muted',style:{fontSize:12}},nOk+' of '+checks.length+' checks pass')),
       el('div',{className:'card',style:{marginBottom:0}},el('div',{className:'k'},'Steps installed'),el('div',{style:{fontSize:22,fontWeight:700,marginTop:4}},(h.steps||[]).filter(function(s){return s.ok;}).length+' / '+(h.steps||[]).length),el('div',{className:'muted',style:{fontSize:12}},'database steps 4 to '+((h.steps||[]).slice(-1)[0]||{}).step)),
@@ -8133,7 +8201,7 @@ function MyTasksPage(props){
       el('div',null,el('h1',null,el('span',{className:'g'},'My Tasks')),el('div',{className:'sub'},(lic?lic.name+' · ':'')+'everything waiting for you, kept up to date by Hendrix from the records')),
       el('div',{className:'row',style:{gap:8}},el('button',{className:'btn ghost',onClick:load},'Refresh'),lic&&el('button',{className:'btn ghost',disabled:busy,onClick:emailMe},busy?'Sending...':'Email me this list'))),
     msg&&el('div',{className:'msg'},msg),
-    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'My Tasks is not set up yet - run hendrix_step39.sql (or hendrix_install_13_to_46.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
+    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'My Tasks is not set up yet - run hendrix_step39.sql (or hendrix_install_13_to_47.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
     list===null?el('div',{className:'muted'},'Loading...'):el('div',null,
       el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',gap:10,marginBottom:14}},
         stat('All',L.length,'open tasks',undefined,'all'),stat('Waiting for you',mine.length,'assigned to you',undefined,'mine'),
@@ -8286,7 +8354,7 @@ function MetrcPage(props){
     el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-end',gap:12,flexWrap:'wrap',marginBottom:16}},
       el('div',null,el('h1',null,el('span',{className:'g'},'METRC Check')),el('div',{className:'sub'},lic.name+(lic.license_number?' · '+lic.license_number:'')+' · what METRC says compared with Hendrix; read only, nothing is changed in METRC')),
       el('div',{className:'row',style:{gap:8}},res&&el('button',{className:'btn ghost',onClick:print},'Print report'))),
-    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'METRC Check is not set up yet - run hendrix_step41.sql (or hendrix_install_13_to_46.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
+    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'METRC Check is not set up yet - run hendrix_step41.sql (or hendrix_install_13_to_47.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
     busy&&el('div',{className:'msg'},busy),
     canE&&el('div',{className:'card'},el('div',{className:'k',style:{marginBottom:8}},'Get what METRC says'),
       el('div',{className:'row',style:{gap:10,alignItems:'center',flexWrap:'wrap'}},

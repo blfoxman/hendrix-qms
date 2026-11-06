@@ -36,7 +36,7 @@ h = _j.loads(q('select hx_system_health()::text').split('\n')[-1])
 def chk(cond, msg):
     print(('PASS ' if cond else 'FAIL ') + msg)
     if not cond: fails.append(msg)
-chk(len(h['steps']) == 42 and all(x['ok'] for x in h['steps']), 'health: all 42 database steps (4-46) detected')
+chk(len(h['steps']) == 43 and all(x['ok'] for x in h['steps']), 'health: all 43 database steps (4-47) detected')
 chk(set(h['rls_off']) <= {'hx_licenses', 'hx_profiles', 'hx_states'}, 'health: row level security on every table created by steps 4-37')
 chk(h['not_audited'] == [] and h['audit_locked'], 'health: every record table audited and the audit trail locked')
 chk(h['bucket'] == {'exists': True, 'public': False}, 'health: private file bucket')
@@ -178,6 +178,17 @@ e45(r'^Q2 hash\|t$', 'stored as a bcrypt hash')
 e45(r'^Q3 flag\|f$', 'reset flag cleared')
 e45(r'^Q4 audit\|t$', 'in the audit trail')
 e45(r'No temporary password to replace', 'cannot be used again without a new admin reset')
+# ---- step 47: Batch Tracker tags from Receiving inventory
+r47 = subprocess.run(['psql', '-X', '-q', '-At', '-d', DB, '-f', os.path.join(HERE, 't47.sql')], capture_output=True, text=True)
+o47 = r47.stdout + r47.stderr
+def e47(pattern, msg):
+    chk(re.search(pattern, o47, re.M) is not None, msg)
+e47(r'^L1 lots\|LOT-T47-1:1240$', 'batch-only user sees accepted lots with something left (not quarantine, used up or expired)')
+e47(r'^L2 other license\|0$', 'no lots from a license the user cannot reach')
+e47(r'^U1 deducted\|940$', 'the batch use is deducted from the lot')
+e47(r'^U2 use\|PR-T47\|300$', 'the use is recorded against the batch number')
+e47(r'^L3 left now\|940$', 'the picker shows what is left')
+e47(r'Only 940(\.0+)? g left in lot LOT-T47-1', 'cannot use more than is left')
 # ---- step 46: GMP Hygiene Walk, private Employee Illness and Exclusion Log
 r46 = subprocess.run(['psql', '-X', '-q', '-At', '-d', DB, '-f', os.path.join(HERE, 't46.sql')], capture_output=True, text=True)
 o46 = r46.stdout + r46.stderr
