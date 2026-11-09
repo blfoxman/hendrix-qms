@@ -10944,7 +10944,7 @@ const COA_PROMPT='You are reading a cannabis laboratory Certificate of Analysis 
  '"heavy_metals":{"status":"","analytes":[]},"residual_solvents":{"status":"","analytes":[]},"foreign_matter":{"status":"","analytes":[]},"moisture":{"status":"","analytes":[]}},'+
  '"terpenes":[{"name":"","value":0}],"total_terpenes":null,"notes":""}\n'+
  'Rules: lab_license_number is the testing laboratory\'s state license number exactly as printed (search header, footer, accreditation and signature areas). sample_metrc_tag is the package / source tag the sample was taken from, exactly as printed. '+
- 'Numbers as numbers where possible. overall_status is Pass only if the COA states the sample passed all required tests, Fail if any required test failed, otherwise Unknown. For analytes below the detection limit use status ND. Only list analytes that are detected or failed, plus the category status.';
+ 'Numbers as numbers where possible. For a potency value that is not a number, copy the result exactly as printed as a string, e.g. "<LOQ", "ND", "<LOD", "<0.05" (never turn <LOQ into ND or null; use null only when the COA does not list that cannabinoid). overall_status is Pass only if the COA states the sample passed all required tests, Fail if any required test failed, otherwise Unknown. For analytes below the detection limit use status ND. Only list analytes that are detected or failed, plus the category status.';
 function normTag(t){return String(t||'').toUpperCase().replace(/[^A-Z0-9]/g,'');}
 function coaMismatch(rec,an){
   const c=normTag(an&&an.sample_metrc_tag);if(!c)return null;
@@ -11404,10 +11404,14 @@ function labelDates(rec,an){
   const best=new Date(d.getTime());best.setFullYear(best.getFullYear()+1);
   return {tested:fmtUsDate(d),bestBy:fmtUsDate(best)};
 }
+// a result the COA prints as text stays as the COA prints it: <LOQ stays <LOQ (not ND), ND stays ND, <LOD stays <LOD
+function labelResultText(v){if(v==null||typeof v==='number')return '';const t=String(v).trim();if(!t||/^[\d.]+\s*%?$/.test(t))return '';
+  if(/not\s*detected|^n\.?\s*d\.?$/i.test(t))return 'ND';if(/loq/i.test(t))return '<LOQ';if(/lod/i.test(t))return '<LOD';if(/^nr$|not\s*reported/i.test(t))return 'NR';
+  return t.replace(/\s+/g,'').replace(/%$/,'').slice(0,10);}
 function labelData(rec,tpl,licNumber){
   const an=(rec.coa_analysis&&typeof rec.coa_analysis==='object')?rec.coa_analysis:{},pot=an.potency||{},dts=labelDates(rec,an);
   const servings=parseFloat(tpl.servings)||0,wt=parseFloat(String(tpl.weight||'').replace(/[^0-9.]/g,''))||0;
-  const canna=LABEL_CANNABINOIDS.map(function(x){const p=parseFloat(pot[x[0]]);
+  const canna=LABEL_CANNABINOIDS.map(function(x){const raw=pot[x[0]],txt=labelResultText(raw);if(txt)return {name:x[1],mg:txt};const p=parseFloat(raw);
     return {name:x[1],mg:(isFinite(p)&&p>0&&servings>0&&wt>0)?(p/100*wt*1000/servings).toFixed(2):'ND'};});   // % of package weight -> mg per serving
   return {resultsHeading:tpl.results_heading||'TEST RESULTS (mg/serving):',infoHeading:tpl.info_heading||'MARIJUANA PRODUCT INFORMATION',approvalLabel:tpl.approval_label||'MARIJUANA PRODUCT APPROVAL NUMBER',
     layout:tpl.layout||'',approval:tpl.approval_number||'',servings:tpl.servings||'',weight:tpl.weight||'',bestBy:dts.bestBy,producedBy:licNumber||'',
