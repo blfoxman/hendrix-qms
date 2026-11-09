@@ -27,7 +27,7 @@ def sign(pg):
 T['hx_roles'] += [{'id': 'r1', 'name': 'Sanitation', 'description': 'Cleans', 'perms': {}, 'sort': 0}, {'id': 'r2', 'name': 'QA Lead', 'description': '', 'perms': {}, 'sort': 1}]
 T['hx_skus'] += [{'id': 'gm', 'state_id': 'st-mo', 'product_type': 'gummies', 'name': 'Gummies 100mg', 'spec': {}, 'license_ids': [], 'active': True, 'sort': 0}]
 T['hx_flavors'] += [{'id': 'fg', 'state_id': 'st-mo', 'sku_id': 'gm', 'name': 'Mango', 'active': True, 'sort': 0}]
-coa = {'lab_name': 'Green Lab', 'lab_license_number': 'TES000777', 'report_date': '2026-10-20', 'sample_metrc_tag': '1A4000000000000000005555', 'overall_status': 'Pass', 'potency': {'unit': '%', 'd9_thc': 0.5, 'thca': 0}}
+coa = {'lab_name': 'Green Lab', 'lab_license_number': 'TES000777', 'report_date': '2026-10-20', 'sample_metrc_tag': '1A4000000000000000005555', 'overall_status': 'Pass', 'potency': {'unit': '%', 'd9_thc': 0.5, 'thca': 0, 'cbd': '<LOQ', 'cbn': 'ND', 'cbda': '< LOQ'}}
 T['hx_tests'] += [{'id': 'tg', 'state_id': 'st-mo', 'license_id': 'lic-mo', 'batch_id': None, 'batch_number': 'GM-9', 'batch_type': 'gummies', 'sku': 'Gummies 100mg', 'flavor': 'Mango', 'tag': '1A4000000000000000004444', 'tag_label': 'Final Packaged',
   'sample_tag': '1A4000000000000000005555', 'lab_name': 'Green Lab', 'lab_license': 'TES000777', 'status': 'Passed', 'result_at': '2026-10-20T00:00:00Z', 'result_thc': '', 'result_cbd': '', 'result_notes': '', 'notes': '', 'coa_path': 'coa/x.pdf', 'coa_filename': 'x.pdf', 'coa_analysis': coa, 'voided': False, 'created_at': '2026-10-20T00:00:00Z',
   'retention_qty': '', 'retention_location': '', 'retention_until': None}]
@@ -101,6 +101,8 @@ with sync_playwright() as pw:
     check(len(T['hx_label_prints']) == 1 and T['hx_label_prints'][0]['count'] == 30 and T['hx_label_prints'][0]['test_id'] == 'tg' and T['hx_label_prints'][0]['tag'] == '1A4000000000000000004444', 'sticker print logged with count + tag')
     txt = subprocess.run(['pdftotext', OUT + 'labels_allergen.pdf', '-'], capture_output=True, text=True).stdout
     check('ALLERGENS' in txt and 'gelatin' in txt, 'allergen declaration printed on sticker')
+    flat = re.sub(r'\s+', ' ', txt)
+    check(re.search(r'CBD:?\s*<LOQ', flat) and re.search(r'CBDa:?\s*<LOQ', flat) and re.search(r'CBN:?\s*ND', flat), 'sticker shows <LOQ where the COA says <LOQ, ND only where it says ND: ' + flat[flat.find('CBD') - 40:flat.find('CBD') + 80])
     pg.mouse.click(5, 5)
     # ---- retention ----
     pg.locator('.card', has_text='GM-9').get_by_role('button', name='Update').click(); md = pg.locator('.md')
