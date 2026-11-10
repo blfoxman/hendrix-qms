@@ -102,7 +102,7 @@ with sync_playwright() as pw:
     txt = subprocess.run(['pdftotext', OUT + 'labels_allergen.pdf', '-'], capture_output=True, text=True).stdout
     check('ALLERGENS' in txt and 'gelatin' in txt, 'allergen declaration printed on sticker')
     flat = re.sub(r'\s+', ' ', txt)
-    check(re.search(r'CBD:?\s*<LOQ', flat) and re.search(r'CBDa:?\s*<LOQ', flat) and re.search(r'CBN:?\s*ND', flat), 'sticker shows <LOQ where the COA says <LOQ, ND only where it says ND: ' + flat[flat.find('CBD') - 40:flat.find('CBD') + 80])
+    check(re.search(r'CBD:?\s*<LOQ\s*mg/serving', flat) and re.search(r'CBDa:?\s*<LOQ\s*mg/serving', flat) and re.search(r'CBN:?\s*ND', flat), 'sticker shows <LOQ where the COA says <LOQ, ND only where it says ND: ' + flat[flat.find('CBD') - 40:flat.find('CBD') + 80])
     pg.mouse.click(5, 5)
     # ---- retention ----
     pg.locator('.card', has_text='GM-9').get_by_role('button', name='Update').click(); md = pg.locator('.md')
