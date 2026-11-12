@@ -187,6 +187,7 @@ function hxTrPieces(s,lv){
   const o=[];for(let i=0;i<parts.length;i++){const p=parts[i];if(i%2){o.push(p);continue;}
     let e=p?hxTrExact(p):undefined;
     if(e===undefined&&i>0){const w=HX_TR.get(parts[i-1]+p);if(w!==undefined){o.pop();e=w;}}
+    if(e===undefined&&i+1<parts.length){const w=HX_TR.get(p+parts[i+1]);if(w!==undefined){o.push(w);i++;continue;}}
     if(e===undefined&&p){const nm=/^([\d][\d,.]*%?)( [\s\S]+)$/.exec(p);if(nm){const w=HX_TR.get(nm[2])||hxTrExact(nm[2].slice(1));if(w!==undefined)e=nm[1]+(w.charAt(0)===' '?'':' ')+w;}}
     o.push(e!==undefined?e:hxTrPieces(p,lv+1));}
   return o.join('');
@@ -9015,8 +9016,8 @@ function TrainingPage(props){
     el('style',null,'.trcell{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;color:#000;font-weight:800;font-size:12px;border:0;cursor:default}button.trcell{cursor:pointer}'),
     el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
       el('div',null,el('h1',null,el('span',{className:'g'},'Training')),el('div',{className:'sub'},'Training matrix \u00b7 '+lic.name+' \u00b7 required training per role, refreshers, qualified trainers, assessments and SOP signatures (CSQ 2A.13.2)')),
-      el('div',{className:'row'},canE&&el('button',{className:'btn',disabled:!active.length,onClick:function(){setModal({t:'rec'});}},'+ Record training'),canF&&el('button',{className:'btn ghost',onClick:function(){setModal({t:'course'});}},'+ Course'))),
-    msg&&el('div',{className:/^(Added|Saved|Recorded|Voided|Created|Regulatory|Published|Draft|Passed|\d+ (online )?course)/.test(msg)?'msg':'msg err'},msg),
+      el('div',{className:'row'},canE&&el('button',{className:'btn',disabled:!active.length,onClick:function(){setModal({t:'rec'});}},'+ Record training'),canF&&el(EsBulk,{items:C.filter(function(c){return c.online&&c.content_status==='published'&&(c.lessons||[]).length;}),label:'courses',table:'hx_training_courses',state:courseEsState,translate:courseTranslateEs,onDone:function(m){setMsg(m);load();}}),canF&&el('button',{className:'btn ghost',onClick:function(){setModal({t:'course'});}},'+ Course'))),
+    msg&&el('div',{className:/^(Added|Saved|Recorded|Voided|Created|Regulatory|Published|Draft|Passed|Spanish versions saved|\d+ (online )?course)/.test(msg)?'msg':'msg err'},msg),
     canF&&C.some(function(c){return c.content_status==='draft'&&/^Hendrix starter/.test(c.content_source||'');})&&el('div',{className:'card',style:{borderColor:'var(--gold)',padding:'10px 14px',marginBottom:12}},
       el('div',{className:'row',style:{justifyContent:'space-between'}},el('div',null,el('b',null,'Online courses ready: '),C.filter(function(c){return c.content_status==='draft'&&/^Hendrix starter/.test(c.content_source||'');}).map(function(c){return c.name;}).join(', '),
         el('div',{className:'muted',style:{fontSize:12}},'Hendrix starter lessons and quizzes written from the CSQ standard. Review them (Courses tab > Online course), then publish so people can take them.')),
@@ -9980,9 +9981,10 @@ function SopsPage(props){
         el('input',{value:q,placeholder:'Search SOPs...',style:{width:200},onChange:function(e){setQ(e.target.value);}}),
         el('button',{className:'btn ghost',onClick:function(){printRecords('SOP master list - '+lic.name,[sopMasterHtml(lic,st,visible.filter(function(s){return s.status!=='draft';}).concat(canE?visible.filter(function(s){return s.status==='draft';}):[]),acks,roster)]);}},'Master list'),
         canE&&el('button',{className:'btn ghost',onClick:function(){setModal({t:'pack'});}},'Food safety SOP pack'),
+        canE&&el(EsBulk,{items:visible.filter(function(s){return s.status==='published'?canF:s.status==='draft';}),label:'SOPs',table:'hx_sops',state:sopEsState,translate:sopTranslateEs,onDone:function(m){setMsg(m);load();}}),
         canE&&el('button',{className:'btn ghost',onClick:function(){setModal({t:'gen'});}},'\ud83e\udd16 AI Generate SOP'),
         canE&&el('button',{className:'btn',onClick:function(){setModal({t:'form',mode:'new'});}},'+ Manual SOP'))),
-    msg&&el('div',{className:/^(Published|Archived|Restored|Saved|Signed|Revised|Created|Added)/.test(msg)?'msg':'msg err'},msg),
+    msg&&el('div',{className:/^(Published|Archived|Restored|Saved|Signed|Revised|Created|Added|Spanish versions saved)/.test(msg)?'msg':'msg err'},msg),
     el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',marginBottom:14}},
       stat('Total SOPs',visible.filter(function(s){return s.status!=='archived';}).length),stat('Published',pub.length,'var(--green)'),
       stat('Needs my signature',needs.length,needs.length?'var(--red)':'var(--faint)'),stat("I've signed",pub.filter(mineSigned).length,'var(--gold-hi)'),
@@ -10062,6 +10064,25 @@ async function courseTranslateEs(c,onStep){
   return {...out,sig:hxHash(JSON.stringify(src)),by:(ACC.profile&&ACC.profile.name)||'',at:new Date().toISOString()};
 }
 window.hxCourseEs={source:courseEsSource,view:courseEsView,state:courseEsState,hash:hxHash};
+// "Translate all to Spanish": every SOP / course whose Spanish version is missing or out of date, one after another
+function EsBulk(props){
+  // props: items, label ('SOPs'|'courses'), state(item), translate(item,onStep), table, onDone(text)
+  const[busy,setBusy]=useState('');
+  const todo=(props.items||[]).filter(function(x){return props.state(x)!=='current';});
+  if(!(props.items||[]).length)return null;
+  async function run(){
+    if(!todo.length)return;
+    if(!window.confirm('Translate '+todo.length+' '+props.label+' to Spanish with AI? Each takes about half a minute. Keep this page open.'))return;
+    let ok=0;const bad=[];
+    for(let i=0;i<todo.length;i++){const x=todo[i],name=x.title||x.name;
+      try{const es=await props.translate(x,function(m){setBusy((i+1)+' of '+todo.length+' · '+name+' · '+tr(m));});await db.update(props.table,x.id,{es:es});x.es=es;ok++;}
+      catch(e){const m=String(e.message||e);if(/column .*es|'es' column/i.test(m)){setBusy('');props.onDone('Spanish versions are not set up yet - run hendrix_step49.sql.');return;}bad.push(name+': '+m);}
+      setBusy((i+1)+' of '+todo.length+' done');}
+    setBusy('');props.onDone('Spanish versions saved for '+ok+' '+props.label+'.'+(bad.length?' Not translated: '+bad.join('; '):''));
+  }
+  return el('button',{className:'btn ghost',disabled:!!busy||!todo.length,title:todo.length?'Make the Spanish version of every '+props.label.replace(/s$/,'')+' that has none or is out of date':'Every one has an up-to-date Spanish version',onClick:run},
+    busy?'⏳ '+busy:todo.length?'🇪🇸 Translate all to Spanish ('+todo.length+')':'🇪🇸 All in Spanish ✓');
+}
 function EsVersionBar(props){
   // props: state ('none'|'current'|'old'), es, can, busy, onTranslate, what
   const st=props.state,es=props.es;

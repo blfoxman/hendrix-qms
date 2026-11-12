@@ -65,6 +65,14 @@ with sync_playwright() as pw:
     md.locator('text=' + es('Spanish version: out of date (the English changed)')).wait_for(timeout=10000)
     check(md.locator('text=Put on new nitrile gloves.').count() == 1, 'after the English changes, the English is shown until it is translated again')
     pg.keyboard.press('Escape'); pg.mouse.click(5, 5)
+    # Translate all: every SOP without a current Spanish version, one after another
+    btn = pg.get_by_role('button', name=re.compile(re.escape(es('🇪🇸 Translate all to Spanish ('))))
+    n0 = len([x for x in T['hx_sops'] if x['status'] in ('published', 'draft') and x['license_id'] == 'lic-mo'])
+    btn.click(); pg.wait_for_selector('.msg >> text=' + es('Spanish versions saved for '), timeout=30000)
+    check(all(x.get('es') for x in T['hx_sops'] if x['status'] in ('published', 'draft') and x['license_id'] == 'lic-mo') and pg.get_by_role('button', name=es('🇪🇸 All in Spanish ✓')).count() == 1, 'Translate all to Spanish translates every SOP (%d) and then shows all done' % n0)
+    pg.locator('.card', has_text='Zebra line wipe-down').first.click(); pg.locator('.md >> text=ES:Zebra line wipe-down').first.wait_for(timeout=8000)
+    check(True, 'a translated SOP opens in Spanish')
+    pg.keyboard.press('Escape'); pg.mouse.click(5, 5)
     r = pg.evaluate("""() => {const c={name:'GMP',lessons:[{title:'Hands',body:'Wash.'}],quiz:[{q:'When?',options:['Before','Never']}]};
       c.es={name:'BPM',lessons:[{title:'Manos',body:'Lavar.'}],quiz:[{q:'¿Cuándo?',options:['Antes','Nunca']}],sig:hxCourseEs.hash(JSON.stringify(hxCourseEs.source(c)))};
       const a=hxCourseEs.view(c)?hxCourseEs.view(c).lessons[0].title:null; c.lessons[0].body='Wash well.'; return [a, hxCourseEs.state(c)];}""")
