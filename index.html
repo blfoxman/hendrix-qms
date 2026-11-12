@@ -5001,7 +5001,7 @@ function EqDashCard(props){
 }
 
 /* ---------- Chemical register and SDS (CSQ 2A.9.2, 2A.5.1) ---------- */
-const CHEM_PURPOSES=['Cleaner','Sanitizer','Food-contact sanitizer','Lubricant (food grade H1)','Lubricant / maintenance (non-food)','Pesticide / crop protection','Nutrient / fertilizer','Extraction solvent or gas','Lab reagent','Other'];
+const CHEM_PURPOSES=['Cleaner','Sanitizer','Food-contact sanitizer','Lubricant (food grade H1)','Lubricant / maintenance (non-food)','Pesticide / crop protection','Nutrient / fertilizer','Extraction solvent or gas','Terpenes','Lab reagent','Other'];
 const CHEM_GRADES={food_grade:'Food grade',food_contact_sanitizer:'Food-contact sanitizer',non_food:'Not food grade'};
 const CHEM_STATUS={pending:'Waiting for approval',approved:'Approved',removed:'Removed from use'};
 function ChemForm(props){
@@ -5009,7 +5009,7 @@ function ChemForm(props){
   const[f,setF]=useState({name:x.name||'',manufacturer:x.manufacturer||'',product_code:x.product_code||'',purpose:x.purpose||'Cleaner',grade:x.grade||'non_food',sds_files:(x.sds_files||[]).slice(),sds_date:x.sds_date||'',
     hazards:x.hazards||'',ppe:x.ppe||'',first_aid:x.first_aid||'',spill:x.spill||'',storage_area:x.storage_area||'',restricted:!!x.restricted,disposal:x.disposal||'',epa_reg:x.epa_reg||'',supplier_id:x.supplier_id||'',notes:x.notes||''});
   const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
-  function set(k,v){setF(function(p){const n={...p,[k]:v};if(k==='purpose'&&v==='Food-contact sanitizer')n.grade='food_contact_sanitizer';if(k==='purpose'&&v==='Lubricant (food grade H1)')n.grade='food_grade';return n;});}
+  function set(k,v){setF(function(p){const n={...p,[k]:v};if(k==='purpose'&&v==='Food-contact sanitizer')n.grade='food_contact_sanitizer';if(k==='purpose'&&v==='Lubricant (food grade H1)')n.grade='food_grade';if(k==='purpose'&&v==='Terpenes')n.grade='food_grade';return n;});}
   async function save(approve){
     setErr('');if(!f.name.trim()){setErr('Enter the chemical name.');return;}
     if(approve){if(!f.sds_files.length){setErr('Attach the Safety Data Sheet (SDS) before approving.');return;}if(!f.storage_area.trim()){setErr('Enter where it is stored.');return;}if(!f.ppe.trim()){setErr('Enter the PPE needed (from the SDS).');return;}
