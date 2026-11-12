@@ -131,6 +131,7 @@ with sync_playwright() as pw:
     # chemicals
     pg.get_by_role('button', name='Chemicals and SDS', exact=True).click(); pg.wait_for_selector('text=No chemicals yet')
     pg.get_by_role('button', name='+ Chemical').click(); md = pg.locator('.md')
+    field(md, 'Used for').select_option('Terpenes'); check(field(md, 'Grade').input_value() == 'food_grade', 'Terpenes is a Used for option and sets Food grade')
     field(md, 'Product name *').fill('Quat sanitizer 200'); field(md, 'Used for').select_option('Food-contact sanitizer')
     check(field(md, 'Grade').input_value() == 'food_contact_sanitizer', 'food-contact sanitizer grade set automatically')
     md.get_by_role('button', name='Save and approve').click(); pg.wait_for_selector('.md .msg.err >> text=Attach the Safety Data Sheet')
