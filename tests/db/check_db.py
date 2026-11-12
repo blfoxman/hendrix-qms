@@ -36,7 +36,7 @@ h = _j.loads(q('select hx_system_health()::text').split('\n')[-1])
 def chk(cond, msg):
     print(('PASS ' if cond else 'FAIL ') + msg)
     if not cond: fails.append(msg)
-chk(len(h['steps']) == 44 and all(x['ok'] for x in h['steps']), 'health: all 44 database steps (4-48) detected')
+chk(len(h['steps']) == 45 and all(x['ok'] for x in h['steps']), 'health: all 45 database steps (4-49) detected')
 chk(set(h['rls_off']) <= {'hx_licenses', 'hx_profiles', 'hx_states'}, 'health: row level security on every table created by steps 4-37')
 chk(h['not_audited'] == [] and h['audit_locked'], 'health: every record table audited and the audit trail locked')
 chk(h['bucket'] == {'exists': True, 'public': False}, 'health: private file bucket')
@@ -178,6 +178,16 @@ e45(r'^Q2 hash\|t$', 'stored as a bcrypt hash')
 e45(r'^Q3 flag\|f$', 'reset flag cleared')
 e45(r'^Q4 audit\|t$', 'in the audit trail')
 e45(r'No temporary password to replace', 'cannot be used again without a new admin reset')
+# ---- step 49: Spanish versions of SOPs and courses
+r49 = subprocess.run(['psql', '-X', '-q', '-At', '-d', DB, '-f', os.path.join(HERE, 't49.sql')], capture_output=True, text=True)
+o49 = r49.stdout + r49.stderr
+def e49(pattern, msg):
+    chk(re.search(pattern, o49, re.M) is not None, msg)
+e49(r'^E1 columns\|2$', 'hx_sops.es and hx_training_courses.es exist')
+e49(r'^E2 editor draft\|Limpieza del borrador$', 'Edit access can save the Spanish version of a draft SOP')
+e49(r'^E3 editor published\|none$', 'Edit access cannot change a published SOP (Spanish either)')
+e49(r'^E4 full published\|Limpieza de línea\|1\.0\|0$', 'Full access saves the Spanish version of a published SOP: same version, no revision')
+e49(r'^E5 course\|Fundamentos de GMP\|3\|published$', 'a course Spanish version keeps the content version')
 # ---- step 48: alert trigger only reads the saved table's own fields
 r48 = subprocess.run(['psql', '-X', '-q', '-At', '-d', DB, '-f', os.path.join(HERE, 't48.sql')], capture_output=True, text=True)
 o48 = r48.stdout + r48.stderr
