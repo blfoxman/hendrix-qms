@@ -36,7 +36,7 @@ h = _j.loads(q('select hx_system_health()::text').split('\n')[-1])
 def chk(cond, msg):
     print(('PASS ' if cond else 'FAIL ') + msg)
     if not cond: fails.append(msg)
-chk(len(h['steps']) == 43 and all(x['ok'] for x in h['steps']), 'health: all 43 database steps (4-47) detected')
+chk(len(h['steps']) == 44 and all(x['ok'] for x in h['steps']), 'health: all 44 database steps (4-48) detected')
 chk(set(h['rls_off']) <= {'hx_licenses', 'hx_profiles', 'hx_states'}, 'health: row level security on every table created by steps 4-37')
 chk(h['not_audited'] == [] and h['audit_locked'], 'health: every record table audited and the audit trail locked')
 chk(h['bucket'] == {'exists': True, 'public': False}, 'health: private file bucket')
@@ -178,6 +178,17 @@ e45(r'^Q2 hash\|t$', 'stored as a bcrypt hash')
 e45(r'^Q3 flag\|f$', 'reset flag cleared')
 e45(r'^Q4 audit\|t$', 'in the audit trail')
 e45(r'No temporary password to replace', 'cannot be used again without a new admin reset')
+# ---- step 48: alert trigger only reads the saved table's own fields
+r48 = subprocess.run(['psql', '-X', '-q', '-At', '-d', DB, '-f', os.path.join(HERE, 't48.sql')], capture_output=True, text=True)
+o48 = r48.stdout + r48.stderr
+def e48(pattern, msg):
+    chk(re.search(pattern, o48, re.M) is not None, msg)
+e48(r'^S1 submitted\|1$', 'Submit for testing saves (no "priority" error)')
+e48(r'^S2 passed\|Passed$', 'a test result can be entered')
+e48(r'^S3 failed alert\|1$', 'a failed test still sends one alert (not again on later edits)')
+e48(r'^S4 triggers\|6$', 'all six alert triggers use the fixed function')
+e48(r'^S5 old gone\|0$', 'old trigger function removed')
+chk('has no field' not in o48, 'no "has no field" error anywhere')
 # ---- step 47: Batch Tracker tags from Receiving inventory
 r47 = subprocess.run(['psql', '-X', '-q', '-At', '-d', DB, '-f', os.path.join(HERE, 't47.sql')], capture_output=True, text=True)
 o47 = r47.stdout + r47.stderr
