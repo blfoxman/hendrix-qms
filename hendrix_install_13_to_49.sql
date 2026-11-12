@@ -1,5 +1,5 @@
 -- =====================================================================
--- Hendrix QMS - ONE-FILE INSTALL of steps 13 to 48 (SOPs ... Line Map, System Health, Security, My Tasks)
+-- Hendrix QMS - ONE-FILE INSTALL of steps 13 to 49 (SOPs ... Line Map, System Health, Security, My Tasks)
 -- For a Hendrix database that already has steps 1-12.
 -- Paste the whole file into Supabase > SQL Editor > Run (one time).
 -- Safe to run again: every step can run more than once.
@@ -5397,7 +5397,7 @@ begin
       (24,'Equipment and chemicals','t','hx_equipment'),(25,'Line clearance and rework','t','hx_line_clearances'),(26,'Facility tests','t','hx_env_points'),(27,'Cultivation','t','hx_grow_areas'),
       (28,'HACCP','t','hx_haccp_team'),(29,'Risk register and change control','t','hx_risks'),(30,'Org chart and objectives','t','hx_org_positions'),(31,'Management review and verification','t','hx_mgmt_reviews'),
       (32,'Time clock and badges','t','hx_badges'),(33,'Production planner','t','hx_production_plans'),(34,'Settings','t','hx_license_settings'),(36,'Line Map','f','hx_line_map'),
-      (37,'System health','f','hx_system_health'),(38,'Security: e-signatures, two-step sign-in','t','hx_esignatures'),(39,'My Tasks and email alerts','t','hx_notify_queue'),(40,'Kiosks keep working offline','t','hx_kiosk_receipts'),(41,'METRC check','t','hx_metrc_snapshots'),(42,'Temporary passwords','f','hx_admin_set_password'),(43,'Maintenance and purchase requests, QR sign-in','f','hx_kiosk_log_add_user'),(44,'CSQ Program Overview online course','f','hx_course_cert_only'),(45,'New password after a reset','f','hx_set_own_password'),(46,'Food safety records (GMP walk, illness log)','f','hx_fl_types'),(47,'Batch Tracker tags from Receiving inventory','f','hx_batch_lots'),(48,'Alert trigger fix (Submit for testing, test results)','f','hx_notify_row')) as s(step, name, kind, obj)
+      (37,'System health','f','hx_system_health'),(38,'Security: e-signatures, two-step sign-in','t','hx_esignatures'),(39,'My Tasks and email alerts','t','hx_notify_queue'),(40,'Kiosks keep working offline','t','hx_kiosk_receipts'),(41,'METRC check','t','hx_metrc_snapshots'),(42,'Temporary passwords','f','hx_admin_set_password'),(43,'Maintenance and purchase requests, QR sign-in','f','hx_kiosk_log_add_user'),(44,'CSQ Program Overview online course','f','hx_course_cert_only'),(45,'New password after a reset','f','hx_set_own_password'),(46,'Food safety records (GMP walk, illness log)','f','hx_fl_types'),(47,'Batch Tracker tags from Receiving inventory','f','hx_batch_lots'),(48,'Alert trigger fix (Submit for testing, test results)','f','hx_notify_row'),(49,'Spanish SOPs and courses','c','hx_sops.es')) as s(step, name, kind, obj)
   loop
     v_ok := case r.kind
       when 't' then to_regclass('public.' || r.obj) is not null
@@ -7151,4 +7151,30 @@ drop function if exists hx_notify_add();
 notify pgrst, 'reload schema';
 select 'Hendrix step 48 (alert trigger fix: Submit for testing, test results, mock recall) installed' as result;
 
-select 'Hendrix steps 13-48 installed' as result;
+-- ###################################################################
+-- ### hendrix_step49.sql
+-- ###################################################################
+-- =====================================================================
+-- Hendrix QMS  -  Step 49: Spanish versions of SOPs and online courses
+--
+--   The app can show every screen in Spanish (EN / ES switch, no SQL needed).
+--   SOP and course TEXT is data, so its Spanish version is kept with the record:
+--     hx_sops.es                 Spanish title, purpose, scope, steps ... of the current text
+--     hx_training_courses.es     Spanish lessons and quiz of the current content
+--   A manager makes it with "Translate to Spanish (AI)" (SOPs: Edit access for a draft,
+--   Full access once published; courses: Full access to Training). Each Spanish version
+--   remembers which English text it was made from: when the English changes, Spanish
+--   readers see the English again with a note until it is translated again.
+--   The English SOP stays the approved record (PDF, signatures, versions).
+--
+-- Run in the Hendrix Supabase project (bqrncllndvzbhmxanitq) AFTER steps 1-48.
+-- Safe to run more than once.
+-- =====================================================================
+
+alter table hx_sops add column if not exists es jsonb;
+alter table hx_training_courses add column if not exists es jsonb;
+
+notify pgrst, 'reload schema';
+select 'Hendrix step 49 (Spanish SOPs and courses) installed' as result;
+
+select 'Hendrix steps 13-49 installed' as result;

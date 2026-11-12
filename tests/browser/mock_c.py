@@ -89,6 +89,9 @@ def handle(route, request):
 def handle0(route, request):
     url = request.url
     if not url.startswith(SB):
+        if url.startswith(BASE + 'i18n/'):
+            fp = os.path.join(HERE, '..', '..', 'i18n', url[len(BASE) + 5:].split('?')[0])
+            return route.fulfill(status=200, content_type='application/json', body=open(fp, encoding='utf8').read()) if os.path.exists(fp) else route.fulfill(status=404, body='')
         if url.startswith(BASE):
             return route.fulfill(status=200, content_type='text/html', body=HTML)
         L=VENDOR

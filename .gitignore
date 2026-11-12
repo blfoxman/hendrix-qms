@@ -1,2 +1,3 @@
 tests/browser/work/
 __pycache__/
+tests/i18n/node_modules

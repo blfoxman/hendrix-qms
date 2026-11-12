@@ -23,6 +23,13 @@ self.addEventListener('fetch', (e) => {
         return r;
       }).catch(() => caches.match(new Request(u.origin + u.pathname)).then((m) => m || caches.match(u.origin + u.pathname.replace(/[^/]*$/, '')))));
     }
+    // the Spanish screen text (i18n/es.json): network first, the kept copy when offline
+    if (u.pathname.includes('/i18n/')) {
+      e.respondWith(fetch(req).then((r) => {
+        if (r.ok) { const cp = r.clone(); caches.open(CACHE).then((c) => c.put(new Request(u.origin + u.pathname), cp)); }
+        return r;
+      }).catch(() => caches.match(new Request(u.origin + u.pathname))));
+    }
     return;
   }
   if (CDN.test(u.hostname)) {
