@@ -238,15 +238,34 @@ create or replace function hx_notify_add() returns trigger
 language plpgsql security definer set search_path = public as $$
 declare m text; k text; t text; dt text := ''; pg text;
 begin
-  if tg_table_name = 'hx_holds' and tg_op = 'INSERT' then
+  if tg_table_name = 'hx_facility_log' then
+    if tg_op <> 'INSERT' or new.log_type is distinct from 'maintenance_request' then return new; end if;
+    if coalesce(new.data ->> 'priority', '') !~* '^urgent' then return new; end if;
+    m := 'logs_maintenance'; pg := 'logs'; k := 'maintenance_urgent'; t := 'URGENT maintenance request: ' || left(coalesce(new.data ->> 'problem', new.item, ''), 120);
+    dt := concat_ws(' · ', nullif(new.data ->> 'location', ''), nullif(new.data ->> 'equipment', ''), 'by ' || new.performed_by);
+  elsif tg_table_name = 'hx_holds' then
+    if tg_op <> 'INSERT' then return new; end if;
     m := 'holds'; pg := 'holds'; k := 'hold'; t := 'Hold placed: ' || new.number || ' ' || coalesce(nullif(new.item, ''), new.tag, new.kind); dt := coalesce(new.reason, '');
-  elsif tg_table_name = 'hx_tests' and new.status = 'Failed' and (tg_op = 'INSERT' or old.status is distinct from 'Failed') and not coalesce(new.voided, false) then
+  elsif tg_table_name = 'hx_tests' then
+    if new.status is distinct from 'Failed' or coalesce(new.voided, false) then return new; end if;
+    if tg_op = 'UPDATE' then
+      if old.status = 'Failed' then return new; end if;
+    end if;
     m := 'testing'; pg := 'testing'; k := 'test_failed'; t := 'Test FAILED: ' || coalesce(nullif(new.batch_number, ''), new.tag) || coalesce(' ' || nullif(new.sku, ''), ''); dt := coalesce(nullif(new.result_notes, ''), new.lab_name, '');
-  elsif tg_table_name = 'hx_deviations' and new.priority = 'critical' and (tg_op = 'INSERT' or old.priority is distinct from 'critical') then
+  elsif tg_table_name = 'hx_deviations' then
+    if new.priority is distinct from 'critical' then return new; end if;
+    if tg_op = 'UPDATE' then
+      if old.priority = 'critical' then return new; end if;
+    end if;
     m := 'qms'; pg := 'qms'; k := 'deviation_critical'; t := 'Critical deviation ' || new.number || ': ' || new.title; dt := left(coalesce(new.description, ''), 300);
-  elsif tg_table_name = 'hx_complaints' and new.priority = 'critical' and (tg_op = 'INSERT' or old.priority is distinct from 'critical') then
+  elsif tg_table_name = 'hx_complaints' then
+    if new.priority is distinct from 'critical' then return new; end if;
+    if tg_op = 'UPDATE' then
+      if old.priority = 'critical' then return new; end if;
+    end if;
     m := 'complaints'; pg := 'complaints'; k := 'complaint_critical'; t := 'Critical complaint ' || new.number || ': ' || new.title; dt := left(coalesce(new.description, ''), 300);
-  elsif tg_table_name = 'hx_recalls' and tg_op = 'INSERT' and new.kind in ('recall', 'withdrawal') then
+  elsif tg_table_name = 'hx_recalls' then
+    if tg_op <> 'INSERT' or new.kind not in ('recall', 'withdrawal') then return new; end if;
     m := 'recall'; pg := 'recall'; k := 'recall'; t := initcap(new.kind) || ' started: ' || new.number || ' ' || coalesce(new.target_label, ''); dt := coalesce(new.reason, '');
   else
     return new;
