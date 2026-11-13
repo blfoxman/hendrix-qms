@@ -9,7 +9,7 @@ ROSTER = [{'id': 'u-ana', 'name': 'Ana Lopez', 'role_ids': [], 'license_ids': ['
 for i, n in enumerate(['SOP-PR-001', 'SOP-PR-002']):
     T['hx_sops'].append({'id': 'sop-p%d' % i, 'state_id': 'st-mo', 'license_id': 'lic-mo', 'license_ids': ['lic-mo'], 'title': 'Paper SOP %d' % (i + 1), 'sop_number': n, 'version': '1.0', 'status': 'published',
                          'target_mode': 'license', 'target_role_ids': [], 'target_user_ids': [], 'steps': [{'n': 1, 'title': 'Do', 'text': 'Do it.'}], 'folder': 'General', 'category': '', 'description': '',
-                         'regulatory_references': [], 'attachments': [], 'effective_date': '2026-11-01', 'next_review': '2027-11-01'})
+                         'regulatory_references': [], 'attachments': [], 'effective_date': '2026-11-01', 'next_review': '2027-11-01', 'approved_by': 'Sam', 'approved_at': '2026-11-10T16:00:00Z'})
 T['hx_sop_acks'].append({'id': 'ack-ana', 'sop_id': 'sop-p0', 'state_id': 'st-mo', 'license_id': 'lic-mo', 'version': '1.0', 'user_id': 'u-ana', 'name': 'Ana Lopez', 'role_names': '', 'signature': None, 'at': '2026-11-05T15:00:00Z'})
 CALLS = []
 def handle_p(route, request):
@@ -59,5 +59,7 @@ with sync_playwright() as pw:
     a = next((x for x in T['hx_sop_acks'] if x['sop_id'] == 'sop-p0' and x['user_id'] == 'u-ana'), {})
     check('signed on paper May 7, 2026' in t and not any(x['user_id'] == 'u-jakob' for x in T['hx_sop_acks']) and a.get('at') == '2026-11-05T15:00:00Z', 'signature list shows "signed on paper May 7, 2026"; Jakob not added; Ana keeps her Hendrix signing time')
     check(md.locator('[title*="entered Nov 13, 2026 by Sam"]').count() >= 1, 'hover shows when and by whom it was entered')
+    check('2026-05-07' in t and 'May 7, 2026 (paper SOP; entered in Hendrix Nov 10, 2026)' in t and 'Nov 1, 2027' not in t, 'SOP shows the paper date: effective 2026-05-07 and approved May 7, 2026 (paper SOP)')
+    check('2027-05-07' in t, 'next review a year after the paper date')
     b.close()
 print('\nJS/assert errors:', errors if errors else 'none')
