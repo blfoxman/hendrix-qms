@@ -9489,6 +9489,10 @@ function sopTargets(s,roster){
 function hxDay(d){return d?new Date(String(d).slice(0,10)+'T12:00:00').toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'}):'';}
 // a signature made on paper and entered later (step 50) shows the date on the paper, marked as paper
 function ackWhen(a,long){if(a.paper_on)return 'signed on paper '+hxDay(a.paper_on)+(long?' (entered '+hxDay(a.at)+(a.paper_by?' by '+a.paper_by:'')+')':'');return long?'Signed: '+new Date(a.at).toLocaleString():new Date(a.at).toLocaleDateString();}
+// an SOP in effect on paper before it was approved in Hendrix (Paper records, step 50): its date is the paper date
+function sopPaperOn(s){return s&&s.effective_date&&s.approved_at&&String(s.effective_date).slice(0,10)<String(s.approved_at).slice(0,10)?String(s.effective_date).slice(0,10):'';}
+function sopApprovedTxt(s,sep){const pp=sopPaperOn(s);if(!s.approved_by)return '';
+  return s.approved_by+(pp?sep+hxDay(pp)+' (paper SOP; entered in Hendrix '+hxDay(s.approved_at)+')':s.approved_at?sep+new Date(s.approved_at).toLocaleDateString():'');}
 function sopAcksOf(s,acks){return (acks||[]).filter(function(a){return a.sop_id===s.id&&a.version===s.version;});}
 function sopReviewLate(s){return s.status==='published'&&s.next_review&&s.next_review<todayStr();}
 function sopErr(e){const m=String((e&&e.message)||e);return /hx_sop/.test(m)&&/missing|does not exist|schema cache/i.test(m)?'SOPs are not set up yet - run hendrix_step13.sql in the Hendrix Supabase project.':m;}
@@ -9823,7 +9827,7 @@ function SopHistory(props){
   const[rows,setRows]=useState(null);const[open,setOpen]=useState(null);
   useEffect(function(){db.get('hx_sop_versions','sop_id=eq.'+encodeURIComponent(s.id)+'&select=*&order=superseded_at.desc').then(function(r){setRows((r||[]).filter(function(x){return x.sop_id===s.id;}));}).catch(function(e){setRows([]);});},[s.id]);
   return el(Modal,{title:'Version history \u00b7 '+s.title,wide:true,onClose:props.onClose},
-    el('div',{className:'card gold',style:{padding:'8px 12px'}},el('b',null,'v'+s.version+' \u00b7 current'),el('span',{className:'muted',style:{marginLeft:8,fontSize:12}},(s.approved_by?'approved by '+s.approved_by:'')+(s.approved_at?' on '+new Date(s.approved_at).toLocaleDateString():'')+(s.revision_note?' \u00b7 '+s.revision_note:''))),
+    el('div',{className:'card gold',style:{padding:'8px 12px'}},el('b',null,'v'+s.version+' \u00b7 current'),el('span',{className:'muted',style:{marginLeft:8,fontSize:12}},(s.approved_by?'approved by '+sopApprovedTxt(s,' on '):'')+(s.revision_note?' \u00b7 '+s.revision_note:''))),
     rows===null?el('div',{className:'muted'},'Loading...'):!rows.length?el('div',{className:'muted'},'No earlier versions. Revisions keep every earlier version here, unchanged.'):
     rows.map(function(v){const snap=v.snapshot||{},isOpen=open===v.id;
       return el('div',{key:v.id,className:'card',style:{padding:'8px 12px'}},
@@ -9860,7 +9864,7 @@ async function exportSopPdfHx(s,licName,acks){
   doc.setDrawColor(...BORDER);doc.setLineWidth(.5);doc.line(margin,y,W-margin,y);y+=12;
   row('Document Number',s.sop_number);row('Revision',s.version);row('Status',sopStatusLabel(s.status));row('Effective Date',s.effective_date||'');row('Next Review',s.next_review||'');
   row('Folder / Category',s.folder+(s.category?' \u00b7 '+s.category:''));row('License / Facility',licName);row('Prepared By',s.created_by);
-  row('Approved By',s.approved_by?s.approved_by+(s.approved_at?' on '+new Date(s.approved_at).toLocaleDateString():''):'Not approved (draft)');
+  row('Approved By',s.approved_by?sopApprovedTxt(s,' on '):'Not approved (draft)');
   if(s.revision_note)row('Last Revision',s.revision_note);
   y+=4;doc.line(margin,y,W-margin,y);y+=18;
   const refs=(gen&&gen.regulatory_references)||s.regulatory_references||[];
@@ -9886,7 +9890,7 @@ async function exportSopPdfHx(s,licName,acks){
   if(gen&&(gen.documentation_required||[]).length){section('Documentation Required');gen.documentation_required.forEach(function(d){body('\u2022 '+d,{after:5});});}
   if(gen&&gen.deviation_procedure){section('Deviation Procedure');body(gen.deviation_procedure);}
   if(gen&&gen.training_requirements){section('Training Requirements');body(gen.training_requirements);}
-  if(gen&&(gen.revision_history||[]).length){section('Revision History');gen.revision_history.forEach(function(r){body('Rev '+r.revision+' \u2014 '+r.date+' \u2014 '+r.description+(r.approved_by?' (Approved: '+r.approved_by+')':''),{size:10,color:SUB,after:5});});}
+  if(gen&&(gen.revision_history||[]).length){section('Revision History');const pp=sopPaperOn(s);gen.revision_history.forEach(function(r,i){body('Rev '+r.revision+' \u2014 '+(i===0&&pp&&String(r.date||'')>pp?pp+' (paper; in Hendrix '+r.date+')':r.date)+' \u2014 '+r.description+(r.approved_by?' (Approved: '+r.approved_by+')':''),{size:10,color:SUB,after:5});});}
   if(acks&&acks.length){
     section('Acknowledgement Records \u2014 Rev '+s.version);body('The following people have read, understood, and signed this revision:',{color:SUB});y+=6;
     acks.forEach(function(a,i){brk(70);doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...TEXT);doc.text((i+1)+'. '+a.name,margin,y);doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...SUB);
@@ -10148,7 +10152,7 @@ function SopDetail(props){
     el('div',{className:'row',style:{gap:6,marginBottom:10}},el('span',{className:'badge '+SOP_STATUS_TONE[s.status]},sopStatusLabel(s.status)),el('span',{className:'badge off'},s.folder),el('span',{className:'badge off'},'v'+s.version),s.category&&el('span',{className:'muted',style:{fontSize:12}},s.category)),
     el('div',{className:'card gold',style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:10,padding:'10px 14px'}},
       dc('Document number',s.sop_number),dc('Version',s.version),dc('Effective',s.effective_date),dc('Next review',s.next_review+(sopReviewLate(s)?' (overdue)':''),sopReviewLate(s)),
-      dc('Approved by',s.approved_by?s.approved_by+(s.approved_at?' \u00b7 '+new Date(s.approved_at).toLocaleDateString():''):'Not approved'),
+      dc('Approved by',s.approved_by?sopApprovedTxt(s,' \u00b7 '):'Not approved'),
       dc('Who signs',s.target_mode==='roles'?'Roles: '+(ACC.roles||[]).filter(function(r){return (s.target_role_ids||[]).indexOf(r.id)>=0;}).map(function(r){return r.name;}).join(', '):s.target_mode==='people'?(s.target_user_ids||[]).length+' selected people':'Everyone on the license(s)')),
     (gen&&gen.purpose||s.description)&&el('div',{className:'card',style:{padding:'10px 14px',fontSize:13,lineHeight:1.6}},el('div',{className:'k'},'Purpose'),(gen&&gen.purpose)||s.description),
     gen&&gen.scope&&el('div',{style:{fontSize:13,margin:'0 0 10px'}},el('b',null,'Scope: '),gen.scope),
