@@ -36,7 +36,7 @@ h = _j.loads(q('select hx_system_health()::text').split('\n')[-1])
 def chk(cond, msg):
     print(('PASS ' if cond else 'FAIL ') + msg)
     if not cond: fails.append(msg)
-chk(len(h['steps']) == 45 and all(x['ok'] for x in h['steps']), 'health: all 45 database steps (4-49) detected')
+chk(len(h['steps']) == 46 and all(x['ok'] for x in h['steps']), 'health: all 46 database steps (4-50) detected')
 chk(set(h['rls_off']) <= {'hx_licenses', 'hx_profiles', 'hx_states'}, 'health: row level security on every table created by steps 4-37')
 chk(h['not_audited'] == [] and h['audit_locked'], 'health: every record table audited and the audit trail locked')
 chk(h['bucket'] == {'exists': True, 'public': False}, 'health: private file bucket')
@@ -178,6 +178,20 @@ e45(r'^Q2 hash\|t$', 'stored as a bcrypt hash')
 e45(r'^Q3 flag\|f$', 'reset flag cleared')
 e45(r'^Q4 audit\|t$', 'in the audit trail')
 e45(r'No temporary password to replace', 'cannot be used again without a new admin reset')
+# ---- step 50: paper SOP records
+r50 = subprocess.run(['psql', '-X', '-q', '-At', '-d', DB, '-f', os.path.join(HERE, 't50.sql')], capture_output=True, text=True)
+o50 = r50.stdout + r50.stderr
+def e50(pattern, msg):
+    chk(re.search(pattern, o50, re.M) is not None, msg)
+e50(r'Only someone with Full access to SOPs can enter paper records', 'paper records need Full access to SOPs')
+e50(r'not a future date', 'the paper date cannot be in the future')
+e50(r'^P3 done\|\{"new": 1, "sops": 2, "updated": 1\}$', 'paper records: 2 SOPs, 1 Hendrix signature marked, 1 paper signature added')
+e50(r'^P4 sop\|t50-s1\|2026-05-07\|2027-05-07\|1\.0$', 'effective date from the paper, review a year later, same version')
+e50(r'^P5 acks\|t50-s1\|2026-05-07\|t\|f\|2026-11-05$', 'an existing e-signature keeps its own time and gets the paper date')
+e50(r'^P7 count\|2$', 'entering again adds nothing twice')
+e50(r'^P8 locked\|2026-05-07$', 'signatures stay locked outside paper records')
+e50(r'^P9 audit\|2$', 'paper records are in the Audit Trail')
+e50(r'^P10 matrix\|2026-05-07$', 'training matrix counts the paper date')
 # ---- step 49: Spanish versions of SOPs and courses
 r49 = subprocess.run(['psql', '-X', '-q', '-At', '-d', DB, '-f', os.path.join(HERE, 't49.sql')], capture_output=True, text=True)
 o49 = r49.stdout + r49.stderr

@@ -285,7 +285,7 @@ async function sb(path,opt){
       const step=/hx_notify_row/.test(m)?'hendrix_step48.sql':/hx_batch_lots/.test(m)?'hendrix_step47.sql':/hx_fl_types|hx_fl_private_guard/.test(m)?'hendrix_step46.sql':/hx_set_own_password/.test(m)?'hendrix_step45.sql':/hx_course_cert_only|This course is an outside certification\. Record it/.test(m)?'hendrix_step44.sql':/hx_kiosk_log_add_user|hx_kiosk_login_free|maintenance_request|purchase_request|logs_maintenance|logs_purchase/.test(m)?'hendrix_step43.sql':/hx_admin_set_password|hx_password_changed|must_change_password/.test(m)?'hendrix_step42.sql':/hx_metrc/.test(m)?'hendrix_step41.sql':/hx_my_tasks|hx_notify|task_email/.test(m)?'hendrix_step39.sql':/hx_esignatures|mfa_required|esig_password|idle_signout/.test(m)?'hendrix_step38.sql':/hx_system_health/.test(m)?'hendrix_step37.sql':/hx_line_map|linemap_idle/.test(m)?'hendrix_step36.sql':/hx_license_settings/.test(m)?'hendrix_step34.sql':/hx_production_plans|hx_planner_recipes/.test(m)?'hendrix_step33.sql':/hx_time_clock|hx_badge|hx_kiosk_clock|hx_clock_fix/.test(m)?'hendrix_step32.sql':/hx_mgmt_reviews|hx_verification_/.test(m)?'hendrix_step31.sql':/hx_org_positions|hx_objective|hx_qms_settings/.test(m)?'hendrix_step30.sql':/hx_risk|hx_changes/.test(m)?'hendrix_step29.sql':/hx_haccp/.test(m)?'hendrix_step28.sql':/hx_grow_|hx_plant_batches/.test(m)?'hendrix_step27.sql':/hx_env_/.test(m)?'hendrix_step26.sql':/hx_line_clearances|hx_rework/.test(m)?'hendrix_step25.sql':/hx_equipment|hx_chemicals/.test(m)?'hendrix_step24.sql':/share_key|hx_training_shared/.test(m)?'hendrix_step23.sql':/hx_rule_sources/.test(m)?'hendrix_step22.sql':/hx_training_keys|hx_training_attempts|hx_course_submit|content_status/.test(m)?'hendrix_step20.sql':/hx_complaints|hx_audits|hx_audit_findings/.test(m)?'hendrix_step19.sql':/hx_recall|hx_trace_data/.test(m)?'hendrix_step18.sql':/hx_lots|hx_lot_uses|hx_holds|hx_shipments/.test(m)?'hendrix_step17.sql':/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
       throw new Error('Database tables are missing - run '+step+' in the Hendrix Supabase project.');
     }
-    if(/has no field "priority"/.test(m))throw new Error('The database needs a fix before this can be saved - an admin must run hendrix_step48.sql (or hendrix_install_13_to_49.sql) in the Hendrix Supabase project.');
+    if(/has no field "priority"/.test(m))throw new Error('The database needs a fix before this can be saved - an admin must run hendrix_step48.sql (or hendrix_install_13_to_50.sql) in the Hendrix Supabase project.');
     if(/hx_facility_log_log_type_check/.test(m))throw new Error('This log is not set up in the database yet - run hendrix_step46.sql in the Hendrix Supabase project.');
     if(/row-level security|permission denied/i.test(m))throw new Error('Not allowed - your access level does not allow this here. Ask a system admin.');
     throw new Error(m);
@@ -8033,8 +8033,8 @@ function LineMapDashCard(props){
 }
 
 /* ---------- System Health (step 37): checks the installation like an IQ, admins only ---------- */
-const HX_RELEASE='Release 49 · November 2026';
-const SH_STEPS_EXPECTED=[4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,36,37,38,39,40,41,42,43,44,45,46,47,48,49];
+const HX_RELEASE='Release 50 · November 2026';
+const SH_STEPS_EXPECTED=[4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50];
 function shErr(e){const m=String((e&&e.message)||e);return /hx_system_health/.test(m)&&/missing|does not exist|schema cache|Could not find/i.test(m)?'NOT_INSTALLED':m;}
 function SystemHealthPage(props){
   const[h,setH]=useState(null);const[x38,setX38]=useState(null);const[err,setErr]=useState('');const[ai,setAi]=useState(null);const[busy,setBusy]=useState(false);const[at,setAt]=useState(0);
@@ -8053,7 +8053,7 @@ function SystemHealthPage(props){
   function add(group,label,state,detail,fix){checks.push({group:group,label:label,state:state,detail:detail||'',fix:fix||''});}
   if(h){
     const steps=h.steps||[],missing=steps.filter(function(s){return !s.ok;});
-    add('Database','Database steps installed',missing.length?'bad':'ok',missing.length?'Missing: '+missing.map(function(s){return s.step+' '+s.name;}).join(', '):'All '+steps.length+' steps (4 to '+(steps.length?steps[steps.length-1].step:'')+') are installed.',missing.length?'Run hendrix_install_13_to_49.sql (or the missing step files) in the Supabase SQL editor.':'');
+    add('Database','Database steps installed',missing.length?'bad':'ok',missing.length?'Missing: '+missing.map(function(s){return s.step+' '+s.name;}).join(', '):'All '+steps.length+' steps (4 to '+(steps.length?steps[steps.length-1].step:'')+') are installed.',missing.length?'Run hendrix_install_13_to_50.sql (or the missing step files) in the Supabase SQL editor.':'');
     const drift=at?Math.abs(new Date(h.checked_at).getTime()-at)/1000:0;
     add('Database','Clock',drift>120?'warn':'ok','Database time zone '+h.db_time_zone+'; this device is '+Math.round(drift)+' s '+(drift>120?'off':'in step')+'.',drift>120?'Set this device to the correct time (automatic time).':'');
     add('Security','Row level security on every table',(h.rls_off||[]).length?'bad':'ok',(h.rls_off||[]).length?'Off on: '+h.rls_off.join(', '):'On for all '+h.tables+' Hendrix tables.',(h.rls_off||[]).length?'Run the step file that creates those tables again, or turn on RLS for them in Supabase > Table editor.':'');
@@ -8088,7 +8088,7 @@ function SystemHealthPage(props){
       el('div',{className:'row',style:{gap:8}},el('button',{className:'btn ghost',disabled:busy,onClick:run},busy?'Checking...':'Run checks again'),
         el('button',{className:'btn ghost',disabled:ai&&ai.busy,onClick:testAi},ai&&ai.busy?'Testing...':'Test the AI connection'),
         h&&el('button',{className:'btn',onClick:print},'Print IQ evidence'))),
-    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'System Health is not set up yet - run hendrix_step37.sql (or hendrix_install_13_to_49.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
+    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'System Health is not set up yet - run hendrix_step37.sql (or hendrix_install_13_to_50.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
     h&&el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',gap:10,marginBottom:14}},
       el('div',{className:'card',style:{marginBottom:0,borderTop:'2px solid '+(nBad?'var(--red)':(nWarn?'var(--gold)':'#5fbf8a'))}},el('div',{className:'k'},'Overall'),el('div',{style:{fontSize:22,fontWeight:700,marginTop:4,color:nBad?'var(--red)':(nWarn?'var(--gold-hi)':'#5fbf8a')}},nBad?nBad+' to fix':(nWarn?nWarn+' to check':'Ready')),el('div',{className:'muted',style:{fontSize:12}},nOk+' of '+checks.length+' checks pass')),
       el('div',{className:'card',style:{marginBottom:0}},el('div',{className:'k'},'Steps installed'),el('div',{style:{fontSize:22,fontWeight:700,marginTop:4}},(h.steps||[]).filter(function(s){return s.ok;}).length+' / '+(h.steps||[]).length),el('div',{className:'muted',style:{fontSize:12}},'database steps 4 to '+((h.steps||[]).slice(-1)[0]||{}).step)),
@@ -8270,7 +8270,7 @@ function MyTasksPage(props){
       el('div',null,el('h1',null,el('span',{className:'g'},'My Tasks')),el('div',{className:'sub'},(lic?lic.name+' · ':'')+'everything waiting for you, kept up to date by Hendrix from the records')),
       el('div',{className:'row',style:{gap:8}},el('button',{className:'btn ghost',onClick:load},'Refresh'),lic&&el('button',{className:'btn ghost',disabled:busy,onClick:emailMe},busy?'Sending...':'Email me this list'))),
     msg&&el('div',{className:'msg'},msg),
-    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'My Tasks is not set up yet - run hendrix_step39.sql (or hendrix_install_13_to_49.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
+    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'My Tasks is not set up yet - run hendrix_step39.sql (or hendrix_install_13_to_50.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
     list===null?el('div',{className:'muted'},'Loading...'):el('div',null,
       el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',gap:10,marginBottom:14}},
         stat('All',L.length,'open tasks',undefined,'all'),stat('Waiting for you',mine.length,'assigned to you',undefined,'mine'),
@@ -8423,7 +8423,7 @@ function MetrcPage(props){
     el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-end',gap:12,flexWrap:'wrap',marginBottom:16}},
       el('div',null,el('h1',null,el('span',{className:'g'},'METRC Check')),el('div',{className:'sub'},lic.name+(lic.license_number?' · '+lic.license_number:'')+' · what METRC says compared with Hendrix; read only, nothing is changed in METRC')),
       el('div',{className:'row',style:{gap:8}},res&&el('button',{className:'btn ghost',onClick:print},'Print report'))),
-    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'METRC Check is not set up yet - run hendrix_step41.sql (or hendrix_install_13_to_49.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
+    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'METRC Check is not set up yet - run hendrix_step41.sql (or hendrix_install_13_to_50.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
     busy&&el('div',{className:'msg'},busy),
     canE&&el('div',{className:'card'},el('div',{className:'k',style:{marginBottom:8}},'Get what METRC says'),
       el('div',{className:'row',style:{gap:10,alignItems:'center',flexWrap:'wrap'}},
@@ -9486,6 +9486,9 @@ function sopTargets(s,roster){
     return true;
   });
 }
+function hxDay(d){return d?new Date(String(d).slice(0,10)+'T12:00:00').toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'}):'';}
+// a signature made on paper and entered later (step 50) shows the date on the paper, marked as paper
+function ackWhen(a,long){if(a.paper_on)return 'signed on paper '+hxDay(a.paper_on)+(long?' (entered '+hxDay(a.at)+(a.paper_by?' by '+a.paper_by:'')+')':'');return long?'Signed: '+new Date(a.at).toLocaleString():new Date(a.at).toLocaleDateString();}
 function sopAcksOf(s,acks){return (acks||[]).filter(function(a){return a.sop_id===s.id&&a.version===s.version;});}
 function sopReviewLate(s){return s.status==='published'&&s.next_review&&s.next_review<todayStr();}
 function sopErr(e){const m=String((e&&e.message)||e);return /hx_sop/.test(m)&&/missing|does not exist|schema cache/i.test(m)?'SOPs are not set up yet - run hendrix_step13.sql in the Hendrix Supabase project.':m;}
@@ -9887,7 +9890,7 @@ async function exportSopPdfHx(s,licName,acks){
   if(acks&&acks.length){
     section('Acknowledgement Records \u2014 Rev '+s.version);body('The following people have read, understood, and signed this revision:',{color:SUB});y+=6;
     acks.forEach(function(a,i){brk(70);doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...TEXT);doc.text((i+1)+'. '+a.name,margin,y);doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...SUB);
-      doc.text((a.role_names||'')+(a.role_names?' \u00b7 ':'')+'Signed: '+new Date(a.at).toLocaleString(),margin,y+14);y+=22;
+      doc.text((a.role_names||'')+(a.role_names?' \u00b7 ':'')+(a.paper_on?'S'+ackWhen(a,true).slice(1):ackWhen(a,true)),margin,y+14);y+=22;
       if(a.signature){try{doc.addImage(a.signature,'PNG',margin,y,110,30);doc.setDrawColor(...BORDER);doc.line(margin,y+32,margin+120,y+32);y+=40;}catch(e){y+=4;}}
       y+=8;});
     doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(22,130,60);doc.text('Electronically signed in Hendrix QMS \u2014 signatures are permanent and every change is kept in the audit trail.',margin,y);y+=10;
@@ -9944,7 +9947,7 @@ function SopsPage(props){
     if(!lid){setSops([]);return;}
     db.get('hx_sops','license_ids=cs.%7B'+encodeURIComponent(lid)+'%7D&select=*&order=title').then(async function(r){
       const list=(r||[]).filter(function(s){return (s.license_ids||[s.license_id]).indexOf(lid)>=0;});setSops(list);
-      if(list.length){try{const a=await db.get('hx_sop_acks','sop_id=in.('+list.map(function(s){return encodeURIComponent(s.id);}).join(',')+')&select=id,sop_id,version,user_id,name,role_names,at');setAcks(a||[]);}catch(e){setAcks([]);}}else setAcks([]);
+      if(list.length){try{const a=await db.get('hx_sop_acks','sop_id=in.('+list.map(function(s){return encodeURIComponent(s.id);}).join(',')+')&select=*');setAcks((a||[]).map(function(x){delete x.signature;return x;}));}catch(e){setAcks([]);}}else setAcks([]);
     }).catch(function(e){setMsg(sopErr(e));setSops([]);});
     if(can('sops',2))sb('rpc/hx_sop_roster',{method:'POST',body:{p_lic:lid}}).then(function(r){setRoster(r||[]);}).catch(function(){setRoster(null);});
   },[lid]);
@@ -9980,6 +9983,7 @@ function SopsPage(props){
       el('div',{className:'row'},
         el('input',{value:q,placeholder:'Search SOPs...',style:{width:200},onChange:function(e){setQ(e.target.value);}}),
         el('button',{className:'btn ghost',onClick:function(){printRecords('SOP master list - '+lic.name,[sopMasterHtml(lic,st,visible.filter(function(s){return s.status!=='draft';}).concat(canE?visible.filter(function(s){return s.status==='draft';}):[]),acks,roster)]);}},'Master list'),
+        canF&&el('button',{className:'btn ghost',onClick:function(){setModal({t:'paper'});}},'Paper records'),
         canE&&el('button',{className:'btn ghost',onClick:function(){setModal({t:'pack'});}},'Food safety SOP pack'),
         canE&&el(EsBulk,{items:visible.filter(function(s){return s.status==='published'?canF:s.status==='draft';}),label:'SOPs',table:'hx_sops',state:sopEsState,translate:sopTranslateEs,onDone:function(m){setMsg(m);load();}}),
         canE&&el('button',{className:'btn ghost',onClick:function(){setModal({t:'gen'});}},'\ud83e\udd16 AI Generate SOP'),
@@ -10017,6 +10021,7 @@ function SopsPage(props){
       onArchive:function(){if(window.confirm('Archive this SOP? It moves to Archived, visible only with Full access, and stays on file.'))act(sel,{status:'archived'},'Archived: '+sel.title);},
       onRestore:function(){act(sel,{status:'published'},'Restored: '+sel.title);}}),
     modal&&modal.t==='form'&&el(SopForm,{mode:modal.mode,sop:modal.mode==='new'?null:sel,state:st,license:lic,licenses:props.licenses,sops:all,roster:roster,onClose:function(){setModal(null);},onDone:function(r){done(r,modal.mode==='new'?'Created: '+(r?r.title:'SOP'):'Saved.');}}),
+    modal&&modal.t==='paper'&&el(SopPaperRecords,{license:lic,sops:visible,roster:roster,onClose:function(){setModal(null);},onDone:function(m){done(null,m);}}),
     modal&&modal.t==='pack'&&el(SopPack,{state:st,license:lic,sops:all,onClose:function(){setModal(null);},onDone:function(k){done(null,'Added '+k+' food safety SOP'+(k===1?'':'s')+' as drafts. Review, adjust and publish each one.');}}),
     modal&&modal.t==='gen'&&el(SopGenerator,{state:st,license:lic,onClose:function(){setModal(null);},onDone:function(r){done(r,'Created: '+(r?r.title:'SOP')+' (draft)');}}),
     modal&&modal.t==='revise'&&sel&&el(SopRevise,{sop:sel,state:st,license:lic,onClose:function(){setModal(null);},onDone:function(r){done(r,'Revised: '+sel.title+' is now v'+(r?r.version:'')+'. Everyone must sign the new version.');}}),
@@ -10095,6 +10100,38 @@ function EsVersionBar(props){
     props.can&&el('button',{className:'btn ghost sm',disabled:!!props.busy,onClick:props.onTranslate},st==='none'?'Translate to Spanish (AI)':'Translate to Spanish again (AI)'),
     props.busy&&el('span',{className:'muted'},props.busy));
 }
+function SopPaperRecords(props){
+  const pub=(props.sops||[]).filter(function(s){return s.status==='published';}).sort(function(a,b){return String(a.sop_number||'').localeCompare(String(b.sop_number||''));});
+  const people=(props.roster||[]).slice().sort(function(a,b){return String(a.name).localeCompare(String(b.name));});
+  const[on,setOn]=useState('');const[note,setNote]=useState('Signed paper copies');const[busy,setBusy]=useState(false);const[err,setErr]=useState('');
+  const[sel,setSel]=useState(function(){const o={};pub.forEach(function(s){o[s.id]=1;});return o;});
+  const[ppl,setPpl]=useState(function(){const o={};people.forEach(function(p){o[p.id]=1;});return o;});
+  const nS=pub.filter(function(s){return sel[s.id];}).length,nP=people.filter(function(p){return ppl[p.id];}).length;
+  function all(list,set,v){const o={};if(v)list.forEach(function(x){o[x.id]=1;});set(o);}
+  async function save(){setErr('');
+    if(!on){setErr('Enter the date written on the paper.');return;}
+    if(!nS){setErr('Pick at least one SOP.');return;}
+    if(!window.confirm('Record '+nS+' SOPs as effective '+hxDay(on)+' and '+nP+' people as having signed them on paper on '+hxDay(on)+'? Each record is marked as entered from paper, with your name and today\'s date.'))return;
+    setBusy(true);
+    try{const r=await sb('rpc/hx_sop_paper_records',{method:'POST',body:{p_license:props.license.id,p_on:on,p_sop_ids:pub.filter(function(s){return sel[s.id];}).map(function(s){return s.id;}),p_user_ids:people.filter(function(p){return ppl[p.id];}).map(function(p){return p.id;}),p_note:note}});
+      props.onDone('Saved paper records: '+r.sops+' SOPs effective '+hxDay(on)+', '+(r.new+r.updated)+' signatures marked as signed on paper.');}
+    catch(e){setErr(/hx_sop_paper_records/.test(String(e.message))&&/function|schema/i.test(String(e.message))?'Paper records are not set up yet - run hendrix_step50.sql.':sopErr(e));setBusy(false);}
+  }
+  const box={maxHeight:240,overflow:'auto',border:'1px solid var(--line)',borderRadius:8,padding:'6px 10px'};
+  const tick=function(x,on2,set,label,sub2){return el('label',{key:x.id,style:{display:'flex',gap:8,alignItems:'center',padding:'3px 0',fontSize:13}},el('input',{type:'checkbox',checked:!!on2[x.id],onChange:function(e){const o={...on2};if(e.target.checked)o[x.id]=1;else delete o[x.id];set(o);}}),el('span',null,label),sub2&&el('span',{className:'muted',style:{fontSize:12}},sub2));};
+  return el(Modal,{title:'Paper records',wide:true,onClose:props.onClose},
+    el('div',{className:'muted',style:{fontSize:13,marginBottom:10}},el('div',null,'For SOPs that were in use and signed by staff on paper before they were in Hendrix. Each chosen SOP gets the paper date as its effective date (next review one year later). Each chosen person is recorded as having signed the current version on paper on that date.'),el('div',{style:{marginTop:4}},'Every record says it was entered from paper, by you, today, and is kept in the Audit Trail. Keep the paper originals. Untick anyone who did not sign the paper (for example, people hired later).')),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 2fr',gap:10,marginBottom:10}},
+      el('label',{className:'f'},el('span',null,'Date on the paper *'),el('input',{type:'date',value:on,max:new Date().toISOString().slice(0,10),onChange:function(e){setOn(e.target.value);}})),
+      el('label',{className:'f'},el('span',null,'Note (where the paper is kept)'),el('input',{value:note,onChange:function(e){setNote(e.target.value);}}))),
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr',gap:12}},
+      el('div',null,el('div',{className:'row',style:{justifyContent:'space-between',marginBottom:4}},el('b',null,'SOPs ('+nS+' of '+pub.length+')'),el('span',null,el('button',{type:'button',className:'btn ghost sm',onClick:function(){all(pub,setSel,true);}},'All'),' ',el('button',{type:'button',className:'btn ghost sm',onClick:function(){all(pub,setSel,false);}},'None'))),
+        el('div',{style:box},pub.length?pub.map(function(s){return tick(s,sel,setSel,(s.sop_number?s.sop_number+' ':'')+s.title,s.effective_date?'effective '+hxDay(s.effective_date):'');}):el('div',{className:'muted'},'No published SOPs.'))),
+      el('div',null,el('div',{className:'row',style:{justifyContent:'space-between',marginBottom:4}},el('b',null,'Signed the paper ('+nP+' of '+people.length+')'),el('span',null,el('button',{type:'button',className:'btn ghost sm',onClick:function(){all(people,setPpl,true);}},'All'),' ',el('button',{type:'button',className:'btn ghost sm',onClick:function(){all(people,setPpl,false);}},'None'))),
+        el('div',{style:box},people.length?people.map(function(p){return tick(p,ppl,setPpl,p.name);}):el('div',{className:'muted'},'No people found.')))),
+    el('div',{className:'row',style:{justifyContent:'flex-end',marginTop:12}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:save},busy?'Saving...':'Record paper records')));
+}
 function SopDetail(props){
   const s0=props.sop,esv=sopEsView(s0),s=esv?{...s0,title:esv.title||s0.title,description:esv.description}:s0,t=sopTargets(s0,props.roster),signedList=sopAcksOf(s0,props.acks);
   const gen0=sopGen(s0),gen=esv&&gen0?{...gen0,purpose:esv.purpose,scope:esv.scope,responsibilities:esv.responsibilities,required_materials:esv.required_materials,quality_checks:esv.quality_checks,documentation_required:esv.documentation_required,deviation_procedure:esv.deviation_procedure,training_requirements:esv.training_requirements}:gen0;
@@ -10131,7 +10168,7 @@ function SopDetail(props){
       el('div',{className:'row',style:{justifyContent:'space-between'}},el('div',{style:{fontWeight:700}},'Signatures \u00b7 v'+s.version),el('span',{className:'muted',style:{fontSize:12}},t?(t.length-pending.length)+' of '+t.length+' people':signedList.length+' signed')),
       pct!=null&&el('div',{style:{height:6,background:'#222',borderRadius:4,margin:'8px 0',overflow:'hidden'}},el('div',{style:{width:pct+'%',height:'100%',background:'var(--green)'}})),
       t&&el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr',gap:10}},
-        el('div',null,el('div',{className:'k',style:{color:'var(--green)'}},'\u2713 Signed'),signedList.length?signedList.map(function(a){return el('div',{key:a.id,style:{fontSize:12}},a.name,el('span',{className:'muted'},' \u00b7 '+new Date(a.at).toLocaleDateString()));}):el('div',{className:'muted',style:{fontSize:12}},'None yet')),
+        el('div',null,el('div',{className:'k',style:{color:'var(--green)'}},'\u2713 Signed'),signedList.length?signedList.map(function(a){return el('div',{key:a.id,style:{fontSize:12}},a.name,el('span',{className:'muted',title:a.paper_on?ackWhen(a,true):''},' \u00b7 '+ackWhen(a,false)));}):el('div',{className:'muted',style:{fontSize:12}},'None yet')),
         el('div',null,el('div',{className:'k',style:{color:'var(--red)'}},'\u2717 Pending'),pending.length?pending.map(function(u){return el('div',{key:u.id,className:'muted',style:{fontSize:12}},u.name);}):el('div',{style:{fontSize:12,color:'var(--green)'}},'Everyone signed \u2713'))),
       s.status==='published'&&(props.signed?el('div',{className:'msg',style:{textAlign:'center',marginTop:8}},'\u2713 You signed this version'):
         props.must?el('button',{className:'btn',style:{width:'100%',marginTop:8,padding:12},onClick:function(){props.onModal({t:'sign'});}},'\ud83d\udc4d I have read and understood this SOP'):null)),
