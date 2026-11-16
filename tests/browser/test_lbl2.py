@@ -44,9 +44,11 @@ with sync_playwright() as pw:
     check(field(md, 'Labels to print').input_value() == '12' and md.locator('text=Avery 94107').count() >= 1, 'sticker print: one full sheet is 12 labels on Avery 94107')
     with pg.expect_download() as di: md.get_by_role('button', name='Download PDF').click()
     di.value.save_as(OUT + 'labels_94107.pdf')
-    import pdfplumber
-    with pdfplumber.open(OUT + 'labels_94107.pdf') as pdf:
-        pages = len(pdf.pages); words = pdf.pages[0].extract_words(); fit = min(c['size'] for c in pdf.pages[0].chars)
+    bb = subprocess.run(['pdftotext', '-bbox', OUT + 'labels_94107.pdf', '-'], capture_output=True, text=True).stdout
+    pages = bb.count('<page ')
+    words = [{'x0': float(m.group(1)), 'top': float(m.group(2)), 'h': float(m.group(4)) - float(m.group(2)), 'text': m.group(5)}
+             for m in re.finditer(r'<word xMin="([\d.]+)" yMin="([\d.]+)" xMax="([\d.]+)" yMax="([\d.]+)">([^<]*)</word>', bb.split('</page>')[0])]
+    fit = round(min(w['h'] for w in words if w['text'].strip()) / 1.15, 1)   # glyph box height is about 1.15 x the font size
     starts = sorted({(round(w['x0']), round(w['top'])) for w in words if w['text'].startswith('Active')})
     xs = sorted({x for x, y in starts}); ys = sorted({y for x, y in starts})
     check(pages == 1 and len(starts) == 12 and len(xs) == 3 and len(ys) == 4, '12 labels on one page, 3 across and 4 down: %d / %s / %s' % (pages, xs, ys))
