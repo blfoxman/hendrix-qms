@@ -8624,11 +8624,14 @@ async function mcFetchApi(lic){
   if(!r.ok||j.error)throw new Error((j.error&&j.error.message)||('METRC request failed ('+r.status+')'));
   return j;
 }
+// a workbook may hold other sheets (a pivot table first): use the first sheet that has the METRC Tag column
+async function mcXlsxRows(file){await loadXlsx();const wb=window.XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true});let first=null;
+  for(const n of wb.SheetNames){const t=window.XLSX.utils.sheet_to_json(xlsxFixRef(wb.Sheets[n]),{header:1,raw:true,defval:''});try{const r=mcRows(t);if(r.length)return r;}catch(e){if(!first)first=e;}}
+  throw first||new Error('No METRC package tags found in '+file.name+'.');}
 /* ---------- Cannabis Inventory (Release 52): the license's active METRC packages from the latest METRC upload ---------- */
 async function mcUploadFile(file,lid){let table;
-  if(/\.(xlsx|xls)$/i.test(file.name)){await loadXlsx();const wb=window.XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true});table=window.XLSX.utils.sheet_to_json(xlsxFixRef(wb.Sheets[wb.SheetNames[0]]),{header:1,raw:true,defval:''});}
-  else table=imParseText(await file.text());
-  const rows=mcRows(table);if(!rows.length)throw new Error('No METRC package tags found in '+file.name+'.');
+  let rows;if(/\.(xlsx|xls)$/i.test(file.name))rows=await mcXlsxRows(file);
+  else rows=mcRows(imParseText(await file.text()));if(!rows.length)throw new Error('No METRC package tags found in '+file.name+'.');
   return {id:await sb('rpc/hx_metrc_save',{method:'POST',body:{p_lic:lid,p_source:'csv',p_file:file.name,p_rows:rows}}),n:rows.length};}
 async function mcAllPackages(snap){let out=[],off=0;
   for(;;){const r=(await db.get('hx_metrc_packages','snapshot_id=eq.'+encodeURIComponent(snap)+'&select=tag,item,category,quantity,unit,lab_state,on_hold,packaged_date,batch_no,location&order=tag_key&limit=1000&offset='+off))||[];
@@ -8713,9 +8716,7 @@ function MetrcPage(props){
   useEffect(function(){loadSnaps();},[loadSnaps]);
   useEffect(function(){if(!sel){setRes(null);return;}setRes(null);sb('rpc/hx_metrc_reconcile',{method:'POST',body:{p_snapshot:sel}}).then(setRes).catch(function(e){setErr(mcErr(e));});},[sel]);
   async function upload(file){setErr('');setBusy('Reading '+file.name+'...');
-    try{let table;if(/\.(xlsx|xls)$/i.test(file.name)){await loadXlsx();const wb=window.XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true});table=window.XLSX.utils.sheet_to_json(xlsxFixRef(wb.Sheets[wb.SheetNames[0]]),{header:1,raw:true,defval:''});}
-      else table=imParseText(await file.text());
-      const rows=mcRows(table);if(!rows.length)throw new Error('No METRC package tags found in '+file.name+'.');
+    try{const rows=/\.(xlsx|xls)$/i.test(file.name)?await mcXlsxRows(file):mcRows(imParseText(await file.text()));if(!rows.length)throw new Error('No METRC package tags found in '+file.name+'.');
       setBusy('Checking '+rows.length+' packages...');
       const id=await sb('rpc/hx_metrc_save',{method:'POST',body:{p_lic:lid,p_source:'csv',p_file:file.name,p_rows:rows}});loadSnaps(id);}
     catch(e){setErr(mcErr(e));}setBusy('');}
