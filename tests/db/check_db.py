@@ -36,7 +36,7 @@ h = _j.loads(q('select hx_system_health()::text').split('\n')[-1])
 def chk(cond, msg):
     print(('PASS ' if cond else 'FAIL ') + msg)
     if not cond: fails.append(msg)
-chk(len(h['steps']) == 46 and all(x['ok'] for x in h['steps']), 'health: all 46 database steps (4-50) detected')
+chk(len(h['steps']) == 47 and all(x['ok'] for x in h['steps']), 'health: all 47 database steps (4-51) detected')
 chk(set(h['rls_off']) <= {'hx_licenses', 'hx_profiles', 'hx_states'}, 'health: row level security on every table created by steps 4-37')
 chk(h['not_audited'] == [] and h['audit_locked'], 'health: every record table audited and the audit trail locked')
 chk(h['bucket'] == {'exists': True, 'public': False}, 'health: private file bucket')
@@ -178,6 +178,21 @@ e45(r'^Q2 hash\|t$', 'stored as a bcrypt hash')
 e45(r'^Q3 flag\|f$', 'reset flag cleared')
 e45(r'^Q4 audit\|t$', 'in the audit trail')
 e45(r'No temporary password to replace', 'cannot be used again without a new admin reset')
+# ---- step 51: remove from Hendrix
+r51 = subprocess.run(['psql', '-X', '-q', '-At', '-d', DB, '-f', os.path.join(HERE, 't51.sql')], capture_output=True, text=True)
+o51 = r51.stdout + r51.stderr
+def e51(pattern, msg):
+    chk(re.search(pattern, o51, re.M) is not None, msg)
+e51(r'Only a system admin can remove someone from Hendrix', 'only a system admin can remove someone')
+e51(r'Write why this person is removed', 'a reason is required')
+e51(r'You cannot remove yourself', 'an admin cannot remove themselves')
+e51(r'^R5 profile\|f\|member\|\{\}\|Left the company\|t$', 'removed: no approval, no admin, no custom access, reason and who removed')
+e51(r'^R6 blocked\|t\|0$', 'sign-in account blocked and signed out everywhere')
+e51(r'^R7 records kept\|1$', 'their records stay')
+e51(r'Use "Remove from Hendrix" for anyone who has worked in Hendrix', 'someone who worked in Hendrix cannot be deleted')
+e51(r'^R10 restored\|f\|t\|t$', 'restore: can sign in again, waits for approval')
+e51(r'^R12 gone\|0\|0$', 'a sign-up request is deleted completely')
+e51(r'^R13 audit\|1$', 'removal is in the Audit Trail with the reason')
 # ---- step 50: paper SOP records
 r50 = subprocess.run(['psql', '-X', '-q', '-At', '-d', DB, '-f', os.path.join(HERE, 't50.sql')], capture_output=True, text=True)
 o50 = r50.stdout + r50.stderr

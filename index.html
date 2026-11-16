@@ -38,6 +38,14 @@ button,input,select,textarea{font-family:inherit;font-size:14px}
 .nav button.on{color:var(--gold-hi);background:#17140a;border-left-color:var(--gold)}
 .nav button.soon{opacity:.45;cursor:default}
 .nav .tag{margin-left:auto;font-size:9px;letter-spacing:.14em;color:var(--faint);text-transform:uppercase}
+.nav button.gbtn{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);padding:10px 10px 6px;margin-top:6px;border-left:0}
+.nav button.gbtn:hover{color:var(--gold-hi);background:none}
+.nav button.gbtn .gn{margin-left:auto;letter-spacing:0;font-size:10px;color:var(--faint)}
+.nav button.gbtn .gc{display:inline-block;width:10px;transition:transform .15s}
+.nav .gitems{display:flex;flex-direction:column;gap:2px}
+.nav .gitems.shut{display:none}
+.nav .gitems button{padding-left:20px}
+.nav input.nfind{margin:4px 2px 8px;padding:7px 10px;font-size:13px}
 .main{padding:24px 28px 60px;min-width:0}
 h1{font-size:24px;margin:0 0 4px;font-weight:700;letter-spacing:.02em}
 h1 .g{background:var(--gold-grad);-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -113,6 +121,9 @@ select,input,textarea{max-width:100%}
   .top{grid-column:1}
   .side{border-right:0;border-bottom:1px solid var(--line);padding:8px}
   .nav{flex-direction:row;overflow-x:auto}
+  .nav button.gbtn,.nav input.nfind{display:none}
+  .nav .gitems,.nav .gitems.shut{display:contents}
+  .nav .gitems button{padding-left:12px}
   .nav .grp{display:none}
   .nav button{white-space:nowrap}
   .main{padding:16px 16px 50px}
@@ -158,74 +169,8 @@ const {useState,useEffect,useCallback,useRef,useMemo}=React;
   setTimeout(check,10500);setInterval(check,5*60000);
   window.hxUpdateCheckNow=function(){last=0;return check();};
 })();
-/* ---------- Language: English / Español (screen text; records, PDFs and stored data stay as written) ---------- */
-// The Spanish words live in i18n/es.json (English screen text -> Spanish). With Español on, every piece of screen text
-// that el() draws is looked up there: whole strings first, then the fixed parts of sentences built in code
-// ("Approved " + name). Text typed by people and stored records are never changed.
-let HX_LANG='en';try{HX_LANG=localStorage.getItem('hx_lang')==='es'?'es':'en';}catch(e){}
-let HX_TR=null,HX_FRAG=null;const HX_TRC=new Map();
-function hxTrLoad(dict){
-  HX_TR=new Map();Object.keys(dict).forEach(function(k){const v=dict[k];if(typeof v==='string'&&v&&v!==k)HX_TR.set(k,v);});
-  const fr=[];HX_TR.forEach(function(v,k){if((/^[^A-Za-z0-9]/.test(k)||/[\s·:—\-(,'"]$/.test(k))&&(k.match(/[A-Za-z]/g)||[]).length>=3)fr.push(k);});
-  fr.sort(function(a,b){return b.length-a.length;});
-  HX_FRAG=fr.length?new RegExp(fr.map(function(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}).join('|'),'g'):null;
-  try{document.documentElement.lang='es';}catch(e){}
-}
-function hxTrExact(s){let v=HX_TR.get(s);if(v!==undefined)return v;const m=/^(\s*)([\s\S]*?)(\s*)$/.exec(s);if(m[2]!==s){v=HX_TR.get(m[2]);if(v!==undefined)return m[1]+v+m[3];}
-  const k=/^([\s\S]*?\S)(\s*[*:]+\s*)$/.exec(s);if(k){v=HX_TR.get(k[1]);if(v!==undefined)return v+k[2];}return undefined;}
-function hxTrFrag(s){if(!HX_FRAG||!/[A-Za-z]{3}/.test(s))return s;HX_FRAG.lastIndex=0;
-  return s.replace(HX_FRAG,function(x,at){const L=/[A-Za-z]/;if((L.test(x[0])&&at>0&&L.test(s[at-1]))||(L.test(x[x.length-1])&&L.test(s.charAt(at+x.length)||'')))return x;
-    // a one-word piece ("Approved ", " batches") only where code puts such pieces: at the start or the end of the text
-    // a one-word piece (" batches") only right after a number ("3 batches"): names people typed ("Glove change") stay as written
-    if(x.trim().split(/\s+/).length<2&&!/[:(·—]/.test(x)&&!(at>0&&/\d/.test(s[at-1])))return x;
-    return HX_TR.get(x);});}
-// pieces joined in code: "Label · value", "Title — note", then "Name: value", "Text (detail)"
-const HX_SEPS=[/(\s+·\s+|\s+—\s+| – | - )/,/(: | \(|\) )/];
-function hxTrPieces(s,lv){
-  if(lv>=HX_SEPS.length)return hxTrFrag(s);
-  const parts=s.split(HX_SEPS[lv]);if(parts.length<2)return hxTrPieces(s,lv+1);
-  const o=[];for(let i=0;i<parts.length;i++){const p=parts[i];if(i%2){o.push(p);continue;}
-    let e=p?hxTrExact(p):undefined;
-    if(e===undefined&&i>0){const w=HX_TR.get(parts[i-1]+p);if(w!==undefined){o.pop();e=w;}}
-    if(e===undefined&&i+1<parts.length){const w=HX_TR.get(p+parts[i+1]);if(w!==undefined){o.push(w);i++;continue;}}
-    if(e===undefined&&p){const nm=/^([\d][\d,.]*%?)( [\s\S]+)$/.exec(p);if(nm){const w=HX_TR.get(nm[2])||hxTrExact(nm[2].slice(1));if(w!==undefined)e=nm[1]+(w.charAt(0)===' '?'':' ')+w;}}
-    o.push(e!==undefined?e:hxTrPieces(p,lv+1));}
-  return o.join('');
-}
-function tr(s){
-  if(!HX_TR||typeof s!=='string'||s.length<2)return s;
-  let v=HX_TR.get(s);if(v!==undefined)return v;
-  v=HX_TRC.get(s);if(v!==undefined)return v;
-  let r=hxTrExact(s);
-  if(r===undefined){const nm=/^([\d][\d,.]*%?)( [\s\S]+)$/.exec(s);if(nm){const w=HX_TR.get(nm[2])||hxTrExact(nm[2].slice(1));if(w!==undefined)r=nm[1]+(w.charAt(0)===' '?'':' ')+w;}}
-  if(r===undefined)r=s.length<600&&/[A-Za-z]{2}/.test(s)?hxTrPieces(s,0):s;
-  if(HX_TRC.size>20000)HX_TRC.clear();HX_TRC.set(s,r);return r;
-}
-const HX_TR_PROPS=['placeholder','title','aria-label','alt','label'];
-const HX_TR_SKIP={textarea:1,pre:1,code:1,style:1,script:1};
-function hxTrKids(c){return typeof c==='string'?tr(c):Array.isArray(c)?c.map(hxTrKids):c;}
-const HX_SRC=new WeakMap();
-const el=function(type,props){
-  if(!HX_TR||HX_TR_SKIP[type])return React.createElement.apply(null,arguments);
-  if(type==='h1'&&arguments.length>2){let src='',ok=true;for(let i=2;i<arguments.length;i++){const c=arguments[i];if(typeof c==='string')src+=c;else if(c&&HX_SRC.has(c))src+=HX_SRC.get(c);else if(c!==null&&c!==false&&c!==undefined&&c!==''){ok=false;break;}}
-    if(ok&&src){const w=hxTrExact(src);if(w!==undefined)return React.createElement('h1',props,React.createElement('span',{className:'g'},w));}}
-  const n=arguments.length,a=new Array(n);a[0]=type;
-  if(props&&typeof props==='object'){let cp=null;
-    for(let i=0;i<HX_TR_PROPS.length;i++){const k=HX_TR_PROPS[i];if(typeof props[k]==='string'){if(!cp)cp=Object.assign({},props);cp[k]=tr(props[k]);}}
-    if(typeof props.children==='string'&&typeof type==='string'){if(!cp)cp=Object.assign({},props);cp.children=tr(props.children);}
-    a[1]=cp||props;}else a[1]=props;
-  for(let i=2;i<n;i++)a[i]=hxTrKids(arguments[i]);
-  const r=React.createElement.apply(null,a);
-  if(type==='span'&&props&&props.className==='g'&&n===3&&typeof arguments[2]==='string')HX_SRC.set(r,arguments[2]);
-  return r;
-};
-(function(){const c=window.confirm.bind(window),al=window.alert.bind(window),pr=window.prompt.bind(window);
-  window.confirm=function(m){return c(tr(String(m)));};window.alert=function(m){return al(tr(String(m)));};window.prompt=function(m,d){return pr(tr(String(m)),d);};})();
-function hxSetLang(l){try{localStorage.setItem('hx_lang',l);}catch(e){}location.reload();}
-function LangSwitch(props){
-  const b=function(l,txt,ttl){return el('button',{key:l,type:'button',title:ttl,className:'btn sm'+(HX_LANG===l?'':' ghost'),style:{padding:'3px 8px',minWidth:0},onClick:function(){if(HX_LANG!==l)hxSetLang(l);}},txt);};
-  return el('div',{className:'langsw',translate:'no',style:Object.assign({display:'flex',gap:4,alignItems:'center'},props&&props.style)},b('en','EN','English'),b('es','ES','Español'));
-}
+const el=React.createElement;
+function tr(s){return s;}
 
 /* ---------- Supabase connection (a NEW, separate project) ---------- */
 // Optional: paste the new project's URL and anon key here so every browser is pre-connected.
@@ -285,7 +230,7 @@ async function sb(path,opt){
       const step=/hx_notify_row/.test(m)?'hendrix_step48.sql':/hx_batch_lots/.test(m)?'hendrix_step47.sql':/hx_fl_types|hx_fl_private_guard/.test(m)?'hendrix_step46.sql':/hx_set_own_password/.test(m)?'hendrix_step45.sql':/hx_course_cert_only|This course is an outside certification\. Record it/.test(m)?'hendrix_step44.sql':/hx_kiosk_log_add_user|hx_kiosk_login_free|maintenance_request|purchase_request|logs_maintenance|logs_purchase/.test(m)?'hendrix_step43.sql':/hx_admin_set_password|hx_password_changed|must_change_password/.test(m)?'hendrix_step42.sql':/hx_metrc/.test(m)?'hendrix_step41.sql':/hx_my_tasks|hx_notify|task_email/.test(m)?'hendrix_step39.sql':/hx_esignatures|mfa_required|esig_password|idle_signout/.test(m)?'hendrix_step38.sql':/hx_system_health/.test(m)?'hendrix_step37.sql':/hx_line_map|linemap_idle/.test(m)?'hendrix_step36.sql':/hx_license_settings/.test(m)?'hendrix_step34.sql':/hx_production_plans|hx_planner_recipes/.test(m)?'hendrix_step33.sql':/hx_time_clock|hx_badge|hx_kiosk_clock|hx_clock_fix/.test(m)?'hendrix_step32.sql':/hx_mgmt_reviews|hx_verification_/.test(m)?'hendrix_step31.sql':/hx_org_positions|hx_objective|hx_qms_settings/.test(m)?'hendrix_step30.sql':/hx_risk|hx_changes/.test(m)?'hendrix_step29.sql':/hx_haccp/.test(m)?'hendrix_step28.sql':/hx_grow_|hx_plant_batches/.test(m)?'hendrix_step27.sql':/hx_env_/.test(m)?'hendrix_step26.sql':/hx_line_clearances|hx_rework/.test(m)?'hendrix_step25.sql':/hx_equipment|hx_chemicals/.test(m)?'hendrix_step24.sql':/share_key|hx_training_shared/.test(m)?'hendrix_step23.sql':/hx_rule_sources/.test(m)?'hendrix_step22.sql':/hx_training_keys|hx_training_attempts|hx_course_submit|content_status/.test(m)?'hendrix_step20.sql':/hx_complaints|hx_audits|hx_audit_findings/.test(m)?'hendrix_step19.sql':/hx_recall|hx_trace_data/.test(m)?'hendrix_step18.sql':/hx_lots|hx_lot_uses|hx_holds|hx_shipments/.test(m)?'hendrix_step17.sql':/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
       throw new Error('Database tables are missing - run '+step+' in the Hendrix Supabase project.');
     }
-    if(/has no field "priority"/.test(m))throw new Error('The database needs a fix before this can be saved - an admin must run hendrix_step48.sql (or hendrix_install_13_to_50.sql) in the Hendrix Supabase project.');
+    if(/has no field "priority"/.test(m))throw new Error('The database needs a fix before this can be saved - an admin must run hendrix_step48.sql (or hendrix_install_13_to_51.sql) in the Hendrix Supabase project.');
     if(/hx_facility_log_log_type_check/.test(m))throw new Error('This log is not set up in the database yet - run hendrix_step46.sql in the Hendrix Supabase project.');
     if(/row-level security|permission denied/i.test(m))throw new Error('Not allowed - your access level does not allow this here. Ask a system admin.');
     throw new Error(m);
@@ -331,7 +276,7 @@ function Logo(props){
     el('path',{d:'M13 12v16M27 12v16M13 20h14',stroke:'url(#hxg)',strokeWidth:'3',strokeLinecap:'round',fill:'none'}));
 }
 function Brand(props){
-  return el('div',{className:'brand'},el(Logo,{size:32}),el('div',null,el('div',{className:'brand-name'},'HENDRIX'),el('div',{className:'brand-sub'},'QUALITY MANAGEMENT')),!(props&&props.noLang)&&el(LangSwitch,{style:{marginLeft:'auto'}}));
+  return el('div',{className:'brand'},el(Logo,{size:32}),el('div',null,el('div',{className:'brand-name'},'HENDRIX'),el('div',{className:'brand-sub'},'QUALITY MANAGEMENT')));
 }
 function Field(props){
   // plain=true uses a div: a label would turn taps on a canvas into clicks on its first button
@@ -374,7 +319,7 @@ function LoginScreen(props){
         if(j.access_token){saveSession(toSession(j));props.onAuthed();}
         else{setInfo('Account created. If email confirmation is on, confirm your email, then sign in.');setMode('in');}
       }
-    }catch(e){setErr(String(e.message||e));}
+    }catch(e){const m=String(e.message||e);setErr(/banned/i.test(m)?'Your access to Hendrix was removed. Ask a system admin if this is a mistake.':m);}
     setBusy(false);
   }
   return el('div',{className:'auth'},el('div',{className:'box'},
@@ -3483,6 +3428,24 @@ function AccessGrid(props){
 }
 
 /* System admin: one person's approval, roles, licenses and custom access */
+function hxRemoveErr(e){const m=String((e&&e.message)||e);return /hx_admin_(remove_user|restore_user|delete_request)/.test(m)&&/missing|does not exist|schema cache|Could not find/i.test(m)?'Removing people is not set up yet - run hendrix_step51.sql.':m;}
+function RemoveUserBox(props){
+  const u=props.user;const[open,setOpen]=useState(false);const[why,setWhy]=useState('');const[busy,setBusy]=useState(false);const[err,setErr]=useState('');
+  async function go(){setErr('');if(!why.trim()){setErr('Write why this person is removed (for example: left the company).');return;}
+    if(!window.confirm('Remove '+(u.name||u.email)+' from Hendrix? They are signed out and can no longer sign in. Everything they signed or recorded stays, with their name.'))return;
+    setBusy(true);try{await sb('rpc/hx_admin_remove_user',{method:'POST',body:{p_user:u.id,p_reason:why.trim()}});props.onDone();}catch(e){setErr(hxRemoveErr(e));setBusy(false);}}
+  async function del(){if(!window.confirm('Delete the sign-up request of '+(u.name||u.email)+'? The account is deleted completely.'))return;
+    setBusy(true);try{await sb('rpc/hx_admin_delete_request',{method:'POST',body:{p_user:u.id}});props.onDone();}catch(e){setErr(hxRemoveErr(e));setBusy(false);}}
+  if(props.request)return el('div',{className:'card',style:{padding:12,marginTop:10}},err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'center'}},el('span',{className:'muted'},'Not someone who should have an account?'),el('button',{type:'button',className:'btn ghost sm',disabled:busy,onClick:del},'Delete request')));
+  return el('div',{className:'card',style:{padding:12,marginTop:10,borderColor:'rgba(220,80,80,.45)'}},
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'center'}},
+      el('span',null,el('b',null,'Remove from Hendrix'),el('span',{className:'muted'},' \u2014 for someone who left: no sign-in, no access; their records keep their name')),
+      !open&&el('button',{type:'button',className:'btn ghost sm',onClick:function(){setOpen(true);}},'Remove...')),
+    open&&el('div',{style:{marginTop:8}},err&&el('div',{className:'msg err'},err),
+      el(Field,{label:'Reason *'},el('input',{value:why,placeholder:'e.g. Left the company on 11/14/2026',onChange:function(e){setWhy(e.target.value);}})),
+      el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{type:'button',className:'btn ghost sm',onClick:function(){setOpen(false);}},'Cancel'),el('button',{type:'button',className:'btn sm',disabled:busy,onClick:go},busy?'Removing...':'Remove from Hendrix'))));
+}
 function AccessEditor(props){
   const u=props.user,roles=props.roles;
   const[f,setF]=useState({approved:props.approve?true:!!u.approved,admin:u.role==='admin',role_ids:(u.role_ids||[]).slice(),license_ids:(u.license_ids||[]).slice(),perms:{...(u.perms||{})},mfa:!!u.mfa_required});
@@ -3508,6 +3471,7 @@ function AccessEditor(props){
       el('label',{className:'ck'},el('input',{type:'checkbox',checked:f.mfa,onChange:function(e){setF({...f,mfa:e.target.checked});}}),el('span',null,el('b',null,'Require two-step sign-in'),' \u2014 password plus a code from an authenticator app; no access without it')),
       props.isSelf&&el('div',{className:'muted',style:{fontSize:12}},'You cannot remove your own approval or admin rights.')),
     !props.approve&&el(TempPasswordBox,{user:u}),
+    !props.isSelf&&el(RemoveUserBox,{user:u,request:!!props.approve&&!u.approved,onDone:props.onRemoved||props.onDone}),
     el('div',{className:'secth'},'Roles'),
     !roles.length?el('div',{className:'muted',style:{marginBottom:12}},'No roles yet. Create them on the Roles page.'):
     el('div',{className:'cklist',style:{marginBottom:12}},roles.map(function(r){
@@ -3544,7 +3508,11 @@ function Team(props){
   },[]);
   useEffect(load,[load]);
   const licName=function(id){const l=props.licenses.find(function(x){return x.id===id;});return l?l.name:'?';};
-  const waiting=(rows||[]).filter(function(u){return !u.approved;});
+  const waiting=(rows||[]).filter(function(u){return !u.approved&&!u.removed_at;});
+  const removed=(rows||[]).filter(function(u){return !!u.removed_at;});
+  const[showRem,setShowRem]=useState(false);const[msg,setMsg]=useState('');
+  async function restore(u){if(!window.confirm('Restore '+(u.name||u.email)+'? They can sign in again and wait for approval; give them roles and access in Manage.'))return;
+    try{await sb('rpc/hx_admin_restore_user',{method:'POST',body:{p_user:u.id}});setMsg('Restored '+(u.name||u.email)+' - approve them in "waiting for approval".');load();}catch(e){setMsg(hxRemoveErr(e));}}
   function line(u){
     const me=u.id===props.profile.id,rs=(u.role_ids||[]).map(function(id){const r=roles.find(function(x){return x.id===id;});return r?r.name:null;}).filter(Boolean);
     const nC=Object.keys(u.perms||{}).length;
@@ -3561,11 +3529,18 @@ function Team(props){
     el('h1',null,'Team and ',el('span',{className:'g'},'Access')),
     el('div',{className:'sub'},'Approve people, give them roles, choose their licenses and set custom access. The database enforces every setting.'),
     err&&el('div',{className:'msg err'},err),
+    msg&&el('div',{className:'msg'+(/^Restored|^Removed/.test(msg)?'':' err')},msg),
     !rows?el('div',{className:'muted'},'Loading...'):el('div',null,
       waiting.length>0&&el('div',{className:'card gold'},el('h3',null,waiting.length+' waiting for approval'),el('table',null,head,el('tbody',null,waiting.map(line)))),
-      el('div',{className:'card',style:{overflowX:'auto'}},el('table',null,head,el('tbody',null,rows.filter(function(u){return u.approved;}).map(line))))),
+      el('div',{className:'card',style:{overflowX:'auto'}},el('table',null,head,el('tbody',null,rows.filter(function(u){return u.approved;}).map(line)))),
+      removed.length>0&&el('div',{className:'card',style:{overflowX:'auto'}},
+        el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'center'}},el('h3',{style:{margin:0}},'Removed ('+removed.length+')'),el('button',{className:'btn ghost sm',onClick:function(){setShowRem(!showRem);}},showRem?'Hide':'Show')),
+        showRem&&el('table',{style:{marginTop:8}},el('tbody',null,removed.map(function(u){return el('tr',{key:u.id},
+          el('td',null,el('b',null,u.name||'-'),el('div',{className:'muted',style:{fontSize:12}},u.email)),
+          el('td',{className:'muted',style:{fontSize:12}},'Removed '+hxDay(u.removed_at)+(u.removed_by?' by '+u.removed_by:'')+(u.removed_reason?' \u00b7 '+u.removed_reason:'')),
+          el('td',{style:{textAlign:'right'}},el('button',{className:'btn ghost sm',onClick:function(){restore(u);}},'Restore')));}))))),
     edit&&el(AccessEditor,{user:edit.u,approve:edit.approve,isSelf:edit.u.id===props.profile.id,roles:roles,states:props.states,licenses:props.licenses,
-      onClose:function(){setEdit(null);},onDone:function(){setEdit(null);load();if(edit.u.id===props.profile.id&&props.onSelfChange)props.onSelfChange();}}));
+      onClose:function(){setEdit(null);},onRemoved:function(){setMsg('Removed '+(edit.u.name||edit.u.email)+(edit.approve?' (sign-up request deleted).':' from Hendrix.'));setEdit(null);load();},onDone:function(){setEdit(null);load();if(edit.u.id===props.profile.id&&props.onSelfChange)props.onSelfChange();}}));
 }
 
 const LOGS_PROD=['logs_sanitation','logs_waste','logs_scale','logs_equipment','logs_temp','logs_env','logs_gmp'];
@@ -8033,8 +8008,8 @@ function LineMapDashCard(props){
 }
 
 /* ---------- System Health (step 37): checks the installation like an IQ, admins only ---------- */
-const HX_RELEASE='Release 50 · November 2026';
-const SH_STEPS_EXPECTED=[4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50];
+const HX_RELEASE='Release 51 · November 2026';
+const SH_STEPS_EXPECTED=[4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51];
 function shErr(e){const m=String((e&&e.message)||e);return /hx_system_health/.test(m)&&/missing|does not exist|schema cache|Could not find/i.test(m)?'NOT_INSTALLED':m;}
 function SystemHealthPage(props){
   const[h,setH]=useState(null);const[x38,setX38]=useState(null);const[err,setErr]=useState('');const[ai,setAi]=useState(null);const[busy,setBusy]=useState(false);const[at,setAt]=useState(0);
@@ -8053,7 +8028,7 @@ function SystemHealthPage(props){
   function add(group,label,state,detail,fix){checks.push({group:group,label:label,state:state,detail:detail||'',fix:fix||''});}
   if(h){
     const steps=h.steps||[],missing=steps.filter(function(s){return !s.ok;});
-    add('Database','Database steps installed',missing.length?'bad':'ok',missing.length?'Missing: '+missing.map(function(s){return s.step+' '+s.name;}).join(', '):'All '+steps.length+' steps (4 to '+(steps.length?steps[steps.length-1].step:'')+') are installed.',missing.length?'Run hendrix_install_13_to_50.sql (or the missing step files) in the Supabase SQL editor.':'');
+    add('Database','Database steps installed',missing.length?'bad':'ok',missing.length?'Missing: '+missing.map(function(s){return s.step+' '+s.name;}).join(', '):'All '+steps.length+' steps (4 to '+(steps.length?steps[steps.length-1].step:'')+') are installed.',missing.length?'Run hendrix_install_13_to_51.sql (or the missing step files) in the Supabase SQL editor.':'');
     const drift=at?Math.abs(new Date(h.checked_at).getTime()-at)/1000:0;
     add('Database','Clock',drift>120?'warn':'ok','Database time zone '+h.db_time_zone+'; this device is '+Math.round(drift)+' s '+(drift>120?'off':'in step')+'.',drift>120?'Set this device to the correct time (automatic time).':'');
     add('Security','Row level security on every table',(h.rls_off||[]).length?'bad':'ok',(h.rls_off||[]).length?'Off on: '+h.rls_off.join(', '):'On for all '+h.tables+' Hendrix tables.',(h.rls_off||[]).length?'Run the step file that creates those tables again, or turn on RLS for them in Supabase > Table editor.':'');
@@ -8088,7 +8063,7 @@ function SystemHealthPage(props){
       el('div',{className:'row',style:{gap:8}},el('button',{className:'btn ghost',disabled:busy,onClick:run},busy?'Checking...':'Run checks again'),
         el('button',{className:'btn ghost',disabled:ai&&ai.busy,onClick:testAi},ai&&ai.busy?'Testing...':'Test the AI connection'),
         h&&el('button',{className:'btn',onClick:print},'Print IQ evidence'))),
-    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'System Health is not set up yet - run hendrix_step37.sql (or hendrix_install_13_to_50.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
+    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'System Health is not set up yet - run hendrix_step37.sql (or hendrix_install_13_to_51.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
     h&&el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',gap:10,marginBottom:14}},
       el('div',{className:'card',style:{marginBottom:0,borderTop:'2px solid '+(nBad?'var(--red)':(nWarn?'var(--gold)':'#5fbf8a'))}},el('div',{className:'k'},'Overall'),el('div',{style:{fontSize:22,fontWeight:700,marginTop:4,color:nBad?'var(--red)':(nWarn?'var(--gold-hi)':'#5fbf8a')}},nBad?nBad+' to fix':(nWarn?nWarn+' to check':'Ready')),el('div',{className:'muted',style:{fontSize:12}},nOk+' of '+checks.length+' checks pass')),
       el('div',{className:'card',style:{marginBottom:0}},el('div',{className:'k'},'Steps installed'),el('div',{style:{fontSize:22,fontWeight:700,marginTop:4}},(h.steps||[]).filter(function(s){return s.ok;}).length+' / '+(h.steps||[]).length),el('div',{className:'muted',style:{fontSize:12}},'database steps 4 to '+((h.steps||[]).slice(-1)[0]||{}).step)),
@@ -8270,7 +8245,7 @@ function MyTasksPage(props){
       el('div',null,el('h1',null,el('span',{className:'g'},'My Tasks')),el('div',{className:'sub'},(lic?lic.name+' · ':'')+'everything waiting for you, kept up to date by Hendrix from the records')),
       el('div',{className:'row',style:{gap:8}},el('button',{className:'btn ghost',onClick:load},'Refresh'),lic&&el('button',{className:'btn ghost',disabled:busy,onClick:emailMe},busy?'Sending...':'Email me this list'))),
     msg&&el('div',{className:'msg'},msg),
-    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'My Tasks is not set up yet - run hendrix_step39.sql (or hendrix_install_13_to_50.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
+    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'My Tasks is not set up yet - run hendrix_step39.sql (or hendrix_install_13_to_51.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
     list===null?el('div',{className:'muted'},'Loading...'):el('div',null,
       el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',gap:10,marginBottom:14}},
         stat('All',L.length,'open tasks',undefined,'all'),stat('Waiting for you',mine.length,'assigned to you',undefined,'mine'),
@@ -8423,7 +8398,7 @@ function MetrcPage(props){
     el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-end',gap:12,flexWrap:'wrap',marginBottom:16}},
       el('div',null,el('h1',null,el('span',{className:'g'},'METRC Check')),el('div',{className:'sub'},lic.name+(lic.license_number?' · '+lic.license_number:'')+' · what METRC says compared with Hendrix; read only, nothing is changed in METRC')),
       el('div',{className:'row',style:{gap:8}},res&&el('button',{className:'btn ghost',onClick:print},'Print report'))),
-    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'METRC Check is not set up yet - run hendrix_step41.sql (or hendrix_install_13_to_50.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
+    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'METRC Check is not set up yet - run hendrix_step41.sql (or hendrix_install_13_to_51.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
     busy&&el('div',{className:'msg'},busy),
     canE&&el('div',{className:'card'},el('div',{className:'k',style:{marginBottom:8}},'Get what METRC says'),
       el('div',{className:'row',style:{gap:10,alignItems:'center',flexWrap:'wrap'}},
@@ -8849,9 +8824,7 @@ const TRAIN_STATE_CONTENT={'Security manager':{Missouri:{"source": "Hendrix star
 Michigan:{"source": "Hendrix starter course, written from Michigan R 420.209 (Security measures, eff. 3/7/2022), R 420.15 (notifications) and R 420.206 (transport). Check the Rulebook for the current text", "minutes": 40, "lessons": [["Your role as security manager", "Michigan's rules do not name a security manager, but they make the licensee responsible for a security plan that meets every security rule (R 420.209(1)), and the agency checks it at inspections. As security manager you own that plan and keep it working:\n\n- The written security plan and the SOPs behind it.\n- Locks, alarm, video system and their records.\n- Escorts and access to limited and restricted access areas.\n- Reporting theft, loss and criminal activity within 24 hours.\n- Training staff and checking that the plan is followed.\n\nThe CSQ standard adds product defense (CSQ 1.9): protecting product from theft and intentional contamination."], ["Locks, alarm and access", "- Non-employees in limited access and restricted access areas are escorted at all times by the licensee or an employee (R 420.209(2)).\n- The business is securely locked: interior rooms the agency requires, windows, and every entry and exit, with commercial-grade, nonresidential locks or electronic or keypad access. Egress locks must still meet NFPA 1, local fire codes and the Michigan building code (R 420.209(3)).\n- An alarm system is maintained, and all information about the system, its monitoring and alarm activity is given to the agency on request (R 420.209(4)).\n\nKeep the visitor log and badge records so you can show who was in each area and who escorted them."], ["The video surveillance system", "R 420.209(5) to (10):\n\n- The system includes digital or network video recorders, cameras, monitors, digital archiving devices and a color printer that prints still photos.\n- Record every area where product is weighed, packed, stored, loaded, unloaded, prepared or moved; limited access areas and security rooms, including transfers between rooms; the room holding the recording equipment (at least one camera on its access points); every building entrance and exit, from inside and outside; entry and exit points between businesses at the same location; point-of-sale areas; and areas where product is destroyed.\n- Minimum 720p resolution.\n- Cameras permanently mounted in fixed locations, recording clearly within 20 feet of all entry and exit points, so faces and activities (including sales or transfers) can be identified.\n- Enough lighting for all of that.\n- Cameras record when motion is detected, with an accurate time and date on the images.\n- Recording media and storage devices secured against tampering or theft."], ["Recordings, retention and the recording log", "- Keep recordings at least 30 calendar days, and longer while the agency is investigating or inspecting, until it says they may be destroyed (R 420.209(11)).\n- The agency may inspect recordings: it must be able to view and copy them at the business immediately, and you provide copies within the time it sets (R 420.209(12)).\n- A failure notification system alerts the licensee to any interruption or failure of the video system or its storage (R 420.209(13)).\n- Keep a recording log (R 420.209(14)) of the employees who monitor the system, who removed any recording and when, and who destroyed any recording.\n\nHendrix: record failures in the Security Malfunction Log and keep the recording log with your security records."], ["Theft, loss and criminal activity", "R 420.15: notify the agency and local law enforcement within 24 hours of becoming aware, or of when you should have become aware, of:\n\n- Theft or loss of any marihuana product.\n- Criminal activity at the marihuana business.\n\nFailure to notify may result in sanctions, fines or both. Use the agency's current reporting contact, keep a copy of every notice, and correct the statewide monitoring system as the agency directs.\n\nProtect the scene and the recordings: preserve video (it may be needed for longer than 30 days) and log who removes any recording."], ["Transport and transfers", "When a secure transporter picks up or delivers product (R 420.206(7) and (17)):\n\n- Product travels in a locked, secured and sealed container that cannot be reached in transit, separated by business.\n- The transporter carries a route plan and manifest and may not carry product that is not on a manifest.\n- The transporter stays until the product is weighed and accepted or rejected, and a transfer starts within 30 minutes of the transporter's arrival.\n- A transporter may not keep custody of product for more than 96 hours without agency permission.\n\nLoading and unloading areas must be on camera (R 420.209(6)(a)(i))."], ["Daily practice, audits and records", "- Walk the site daily: doors and locks, alarm status, every camera live and recording, lighting, the recording log.\n- Audit the security plan at least twice a year against R 420.209 and the CSQ product defense requirements; close findings through corrective action.\n- Train every employee on the security plan, escorts, alarm response and reporting when hired and yearly; keep the records in Hendrix Training.\n- Check the Rulebook in Hendrix for the current text of the rules; they change."]], "quiz": [["What does R 420.209(1) require every applicant to submit?", ["A list of camera brands", "Nothing", "A floor plan only", "A security plan showing the security rules can be met"], 3, "R 420.209(1)."], ["Non-employees in limited access areas must be:", ["Escorted at all times", "Escorted only at night", "Kept in the lobby", "Allowed after signing in"], 0, "R 420.209(2)."], ["What minimum video resolution does Michigan require?", ["720p", "480p", "4K", "1080p"], 0, "R 420.209(6)(b)."], ["Cameras must clearly record activity within how many feet of entry and exit points?", ["10 feet", "50 feet", "20 feet", "100 feet"], 2, "R 420.209(7)."], ["How long must recordings be kept at minimum?", ["30 calendar days, longer during an investigation", "7 days", "14 days", "1 year"], 0, "R 420.209(11)."], ["The agency asks to see recordings. What must you do?", ["Only show live video", "Let them view and copy at the business immediately, and provide copies within the time set", "Send them next month", "Refuse without a warrant"], 1, "R 420.209(12)."], ["What must the recording log show?", ["Only camera models", "Visitor names", "Who monitors the system, who removed a recording and when, and who destroyed one", "Only alarm codes"], 2, "R 420.209(14)."], ["Product is stolen. Who must be notified and when?", ["The insurer only", "Nobody if the loss is small", "The agency and local law enforcement within 24 hours of becoming aware", "Only the owner, within a week"], 2, "R 420.15."], ["What kind of locks are required?", ["No locks if cameras run", "Padlocks only", "Any residential lock", "Commercial-grade, nonresidential locks or electronic or keypad access"], 3, "R 420.209(3)."], ["Which area must be on camera?", ["Only the office", "Areas where product is destroyed", "Only the break room", "Only the parking lot"], 1, "R 420.209(6)(a)(vii)."], ["How must product travel with a secure transporter?", ["In any box", "In a locked, secured and sealed container not accessible in transit", "In open view", "In the cab with the driver"], 1, "R 420.206(7)(c)."], ["What must the video system do if it fails?", ["Nothing", "Delete old video", "Switch to Wi-Fi", "Alert the licensee through a failure notification system"], 3, "R 420.209(13)."]]}}};
 
 function CoursePlayer(props){
-  const c0=props.course,cx=props.preview?null:courseEsView(c0);
-  const c=cx?{...c0,name:cx.name||c0.name,lessons:(c0.lessons||[]).map(function(l,i){const e=cx.lessons[i]||{};return {...l,title:e.title,body:e.body};}),
-    quiz:(c0.quiz||[]).map(function(q,i){const e=cx.quiz[i]||{};return {...q,q:e.q,options:e.options||q.options,explain:e.explain!=null?e.explain:q.explain};})}:c0;
+  const c=props.course;
   const lic=props.license,L=c.lessons||[],Q=c.quiz||[];
   const[step,setStep]=useState(0);const[ans,setAns]=useState(Q.map(function(){return null;}));const[res,setRes]=useState(null);const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
   const started=useRef(new Date().toISOString());
@@ -8861,7 +8834,6 @@ function CoursePlayer(props){
     catch(e){setErr(/hx_course_submit/.test(String(e.message))?'Online courses are not set up yet - run hendrix_step20.sql.':String(e.message||e));}setBusy(false);}
   const pct=Math.round(Math.min(step,quizStep)*100/Math.max(1,quizStep+1));
   return el(Modal,{title:c.name+(props.preview?' (preview)':''),wide:true,onClose:props.onClose},
-    !props.preview&&HX_LANG==='es'&&!cx&&el(EsVersionBar,{state:courseEsState(c0),es:c0.es,can:false,what:'course'}),
     el('div',{className:'row',style:{justifyContent:'space-between',marginBottom:8}},el('div',{className:'muted',style:{fontSize:12}},(c.minutes?'About '+c.minutes+' min \u00b7 ':'')+L.length+' lesson'+(L.length===1?'':'s')+' \u00b7 '+Q.length+' questions \u00b7 pass mark '+c.pass_mark+'%'+(c.content_version?' \u00b7 version '+c.content_version:'')),
       el('div',{className:'muted',style:{fontSize:12}},done?'Finished':step<quizStep?'Lesson '+(step+1)+' of '+L.length:'Quiz')),
     el('div',{style:{height:6,background:'#1d1d1d',borderRadius:3,overflow:'hidden',marginBottom:14}},el('div',{style:{width:(done?100:pct)+'%',height:'100%',background:'var(--gold-grad)'}})),
@@ -8921,7 +8893,7 @@ async function trAiDraftLaw(st,c){
 }
 function CourseContentEditor(props){
   const c=props.course,st=props.state;const starter=trContentFor(c,st),isLaw=c.topic==='Required by law';
-  const[f,setF]=useState(null);const[err,setErr]=useState('');const[busy,setBusy]=useState('');const[prev,setPrev]=useState(false);const[esBusy,setEsBusy]=useState('');
+  const[f,setF]=useState(null);const[err,setErr]=useState('');const[busy,setBusy]=useState('');const[prev,setPrev]=useState(false);
   useEffect(function(){let dead=false;trKeyGet(c.id).then(function(k){if(dead)return;const a=(k&&k.answers)||[],x=(k&&k.explain)||[];
     setF({lessons:(c.lessons||[]).map(function(l){return {...l};}),quiz:(c.quiz||[]).map(function(q,i){return {q:q.q,options:(q.options||[]).slice(),answer:a[i]!=null?a[i]:0,explain:x[i]||''};}),pass_mark:c.pass_mark||80,minutes:c.minutes||15,content_source:c.content_source||''});})
     .catch(function(e){if(!dead){setErr(String(e.message||e));setF({lessons:[],quiz:[],pass_mark:80,minutes:15,content_source:''});}});return function(){dead=true;};},[c.id]);
@@ -8940,8 +8912,6 @@ function CourseContentEditor(props){
       isLaw&&el('button',{className:'btn ghost sm',disabled:!!busy,onClick:ai},'Draft from the '+st.name+' Rulebook with AI'),
       c.share_key&&el('span',{className:'badge',title:'Publishing updates this course at every license that shares it'},trShareLabel(c,st)),
       el('button',{className:'btn ghost sm',disabled:!f.lessons.length,onClick:function(){setPrev(true);}},'Preview')),
-    c.content_status==='published'&&el(EsVersionBar,{state:courseEsState(c),es:c.es,can:true,busy:esBusy,what:'course',onTranslate:async function(){setErr('');setEsBusy('Translating...');
-      try{const es=await courseTranslateEs(c,setEsBusy);await db.update('hx_training_courses',c.id,{es:es});c.es=es;props.onDone('Spanish version of '+c.name+' saved.');}catch(e){setErr(/column .*es|'es' column/i.test(String(e.message))?'Spanish versions are not set up yet - run hendrix_step49.sql.':String(e.message||e));}setEsBusy('');}}),
     isLaw&&el('div',{className:'muted',style:{fontSize:12,marginBottom:8}},'The '+st.name+' course is written only from the '+st.name+' Rulebook in Hendrix. Read it and correct it before publishing: you are approving the legal content.'),
     el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr 3fr',gap:10}},
       el(Field,{label:'Pass mark %'},el('input',{type:'number',min:50,max:100,value:f.pass_mark,onChange:function(e){set('pass_mark',Math.max(50,Math.min(100,parseInt(e.target.value,10)||80)));}})),
@@ -9016,8 +8986,8 @@ function TrainingPage(props){
     el('style',null,'.trcell{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;color:#000;font-weight:800;font-size:12px;border:0;cursor:default}button.trcell{cursor:pointer}'),
     el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
       el('div',null,el('h1',null,el('span',{className:'g'},'Training')),el('div',{className:'sub'},'Training matrix \u00b7 '+lic.name+' \u00b7 required training per role, refreshers, qualified trainers, assessments and SOP signatures (CSQ 2A.13.2)')),
-      el('div',{className:'row'},canE&&el('button',{className:'btn',disabled:!active.length,onClick:function(){setModal({t:'rec'});}},'+ Record training'),canF&&el(EsBulk,{items:C.filter(function(c){return c.online&&c.content_status==='published'&&(c.lessons||[]).length;}),label:'courses',table:'hx_training_courses',state:courseEsState,translate:courseTranslateEs,onDone:function(m){setMsg(m);load();}}),canF&&el('button',{className:'btn ghost',onClick:function(){setModal({t:'course'});}},'+ Course'))),
-    msg&&el('div',{className:/^(Added|Saved|Recorded|Voided|Created|Regulatory|Published|Draft|Passed|Spanish versions saved|\d+ (online )?course)/.test(msg)?'msg':'msg err'},msg),
+      el('div',{className:'row'},canE&&el('button',{className:'btn',disabled:!active.length,onClick:function(){setModal({t:'rec'});}},'+ Record training'),canF&&el('button',{className:'btn ghost',onClick:function(){setModal({t:'course'});}},'+ Course'))),
+    msg&&el('div',{className:/^(Added|Saved|Recorded|Voided|Created|Regulatory|Published|Draft|Passed|\d+ (online )?course)/.test(msg)?'msg':'msg err'},msg),
     canF&&C.some(function(c){return c.content_status==='draft'&&/^Hendrix starter/.test(c.content_source||'');})&&el('div',{className:'card',style:{borderColor:'var(--gold)',padding:'10px 14px',marginBottom:12}},
       el('div',{className:'row',style:{justifyContent:'space-between'}},el('div',null,el('b',null,'Online courses ready: '),C.filter(function(c){return c.content_status==='draft'&&/^Hendrix starter/.test(c.content_source||'');}).map(function(c){return c.name;}).join(', '),
         el('div',{className:'muted',style:{fontSize:12}},'Hendrix starter lessons and quizzes written from the CSQ standard. Review them (Courses tab > Online course), then publish so people can take them.')),
@@ -9989,10 +9959,9 @@ function SopsPage(props){
         el('button',{className:'btn ghost',onClick:function(){printRecords('SOP master list - '+lic.name,[sopMasterHtml(lic,st,visible.filter(function(s){return s.status!=='draft';}).concat(canE?visible.filter(function(s){return s.status==='draft';}):[]),acks,roster)]);}},'Master list'),
         canF&&el('button',{className:'btn ghost',onClick:function(){setModal({t:'paper'});}},'Paper records'),
         canE&&el('button',{className:'btn ghost',onClick:function(){setModal({t:'pack'});}},'Food safety SOP pack'),
-        canE&&el(EsBulk,{items:visible.filter(function(s){return s.status==='published'?canF:s.status==='draft';}),label:'SOPs',table:'hx_sops',state:sopEsState,translate:sopTranslateEs,onDone:function(m){setMsg(m);load();}}),
         canE&&el('button',{className:'btn ghost',onClick:function(){setModal({t:'gen'});}},'\ud83e\udd16 AI Generate SOP'),
         canE&&el('button',{className:'btn',onClick:function(){setModal({t:'form',mode:'new'});}},'+ Manual SOP'))),
-    msg&&el('div',{className:/^(Published|Archived|Restored|Saved|Signed|Revised|Created|Added|Spanish versions saved)/.test(msg)?'msg':'msg err'},msg),
+    msg&&el('div',{className:/^(Published|Archived|Restored|Saved|Signed|Revised|Created|Added)/.test(msg)?'msg':'msg err'},msg),
     el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',marginBottom:14}},
       stat('Total SOPs',visible.filter(function(s){return s.status!=='archived';}).length),stat('Published',pub.length,'var(--green)'),
       stat('Needs my signature',needs.length,needs.length?'var(--red)':'var(--faint)'),stat("I've signed",pub.filter(mineSigned).length,'var(--gold-hi)'),
@@ -10032,78 +10001,6 @@ function SopsPage(props){
     modal&&modal.t==='sign'&&sel&&el(SopSign,{sop:sel,license:lic,onClose:function(){setModal(null);},onDone:function(){done(null,'Signed: '+sel.title+' v'+sel.version);}}),
     modal&&modal.t==='history'&&sel&&el(SopHistory,{sop:sel,onClose:function(){setModal(null);}}));
 }
-/* ---------- Spanish versions of SOP and course text (step 49): made once by a manager with AI, kept on the record ---------- */
-function hxHash(s){let h=5381;for(let i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))|0;return (h>>>0).toString(36)+'.'+s.length;}
-function sopEsSource(s){const g=sopGen(s)||{};return {title:s.title||'',description:s.description||'',purpose:g.purpose||'',scope:g.scope||'',
-  responsibilities:(g.responsibilities||[]).map(function(r){return {role:r.role||'',responsibility:r.responsibility||''};}),required_materials:(g.required_materials||[]).map(String),
-  quality_checks:(g.quality_checks||[]).map(String),documentation_required:(g.documentation_required||[]).map(String),deviation_procedure:g.deviation_procedure||'',training_requirements:g.training_requirements||'',
-  steps:sopStepsOf(s).map(function(x){return {title:x.title||'',text:x.text||'',note:x.note||''};})};}
-function sopEsState(s){if(!s||!s.es||!s.es.sig)return 'none';return s.es.sig===hxHash(JSON.stringify(sopEsSource(s)))?'current':'old';}
-function sopEsView(s){return HX_LANG==='es'&&sopEsState(s)==='current'?s.es:null;}
-function courseEsSource(c){return {name:c.name||'',lessons:(c.lessons||[]).map(function(l){return {title:l.title||'',body:l.body||''};}),
-  quiz:(c.quiz||[]).map(function(q){const o={q:q.q||'',options:(q.options||[]).map(String)};if(q.explain)o.explain=q.explain;return o;})};}
-function courseEsState(c){if(!c||!c.es||!c.es.sig)return 'none';return c.es.sig===hxHash(JSON.stringify(courseEsSource(c)))?'current':'old';}
-function courseEsView(c){return HX_LANG==='es'&&courseEsState(c)==='current'?c.es:null;}
-function hxSameShape(a,b){if(typeof a==='string')return typeof b==='string';if(Array.isArray(a))return Array.isArray(b)&&a.length===b.length&&a.every(function(x,i){return hxSameShape(x,b[i]);});
-  if(a&&typeof a==='object')return !!b&&typeof b==='object'&&Object.keys(a).every(function(k){return hxSameShape(a[k],b[k]);});return true;}
-async function aiToSpanish(module,obj,what){
-  const sys='You translate '+what+' of a licensed cannabis manufacturing facility in the USA from English to Spanish, for Spanish-speaking production workers. '+
-    'Neutral Latin American Spanish, formal "usted", plain words. Translate every string value completely and faithfully: do not add, drop, merge, shorten or explain anything. '+
-    'Keep exactly: numbers, units, temperatures, times, percentages, regulation citations (21 CFR ..., CSQ ..., state rules), document numbers (SOP-...), METRC, COA, SOP, CAPA, HACCP, GMP, SDS, brand and product names, and text markup ("- " bullets, "## " headings, blank lines). '+
-    'Return ONLY the JSON: the same keys, the same arrays in the same order and length, only the string values translated.';
-  const j=await aiCall({module:module,max_tokens:8000,system:sys,messages:[{role:'user',content:JSON.stringify(obj)}]});
-  const txt=((j.content||[])[0]||{}).text||'';const a=txt.indexOf('{'),b=txt.lastIndexOf('}');let out=null;
-  try{out=JSON.parse(txt.slice(a,b+1));}catch(e){}
-  if(!out||!hxSameShape(obj,out))throw new Error('The AI translation did not come back complete. Try again.');
-  return out;
-}
-async function sopTranslateEs(s,onStep){
-  const src=sopEsSource(s),head={...src,steps:undefined};delete head.steps;
-  if(onStep)onStep('Translating the SOP header...');
-  const h=await aiToSpanish('sops',head,'a standard operating procedure (SOP)');
-  const steps=[];for(let i=0;i<src.steps.length;i+=12){if(onStep)onStep('Translating steps '+(i+1)+' to '+Math.min(i+12,src.steps.length)+' of '+src.steps.length+'...');
-    const part=await aiToSpanish('sops',{steps:src.steps.slice(i,i+12)},'the procedure steps of an SOP');steps.push.apply(steps,part.steps);}
-  return {...h,steps:steps,sig:hxHash(JSON.stringify(src)),by:(ACC.profile&&ACC.profile.name)||'',at:new Date().toISOString()};
-}
-async function courseTranslateEs(c,onStep){
-  const src=courseEsSource(c),out={name:'',lessons:[],quiz:[]};
-  out.name=(await aiToSpanish('training',{name:src.name},'the name of a training course')).name;
-  for(let i=0;i<src.lessons.length;i++){if(onStep)onStep('Translating lesson '+(i+1)+' of '+src.lessons.length+'...');out.lessons.push(await aiToSpanish('training',src.lessons[i],'a lesson of a training course'));}
-  for(let i=0;i<src.quiz.length;i+=15){if(onStep)onStep('Translating the quiz...');const p=await aiToSpanish('training',{quiz:src.quiz.slice(i,i+15)},'quiz questions of a training course (keep the options in the same order)');out.quiz.push.apply(out.quiz,p.quiz);}
-  return {...out,sig:hxHash(JSON.stringify(src)),by:(ACC.profile&&ACC.profile.name)||'',at:new Date().toISOString()};
-}
-window.hxCourseEs={source:courseEsSource,view:courseEsView,state:courseEsState,hash:hxHash};
-// "Translate all to Spanish": every SOP / course whose Spanish version is missing or out of date, one after another
-function EsBulk(props){
-  // props: items, label ('SOPs'|'courses'), state(item), translate(item,onStep), table, onDone(text)
-  const[busy,setBusy]=useState('');
-  const todo=(props.items||[]).filter(function(x){return props.state(x)!=='current';});
-  if(!(props.items||[]).length)return null;
-  async function run(){
-    if(!todo.length)return;
-    if(!window.confirm('Translate '+todo.length+' '+props.label+' to Spanish with AI? Each takes about half a minute. Keep this page open.'))return;
-    let ok=0;const bad=[];
-    for(let i=0;i<todo.length;i++){const x=todo[i],name=x.title||x.name;
-      try{const es=await props.translate(x,function(m){setBusy((i+1)+' of '+todo.length+' · '+name+' · '+tr(m));});await db.update(props.table,x.id,{es:es});x.es=es;ok++;}
-      catch(e){const m=String(e.message||e);if(/column .*es|'es' column/i.test(m)){setBusy('');props.onDone('Spanish versions are not set up yet - run hendrix_step49.sql.');return;}bad.push(name+': '+m);}
-      setBusy((i+1)+' of '+todo.length+' done');}
-    setBusy('');props.onDone('Spanish versions saved for '+ok+' '+props.label+'.'+(bad.length?' Not translated: '+bad.join('; '):''));
-  }
-  return el('button',{className:'btn ghost',disabled:!!busy||!todo.length,title:todo.length?'Make the Spanish version of every '+props.label.replace(/s$/,'')+' that has none or is out of date':'Every one has an up-to-date Spanish version',onClick:run},
-    busy?'⏳ '+busy:todo.length?'🇪🇸 Translate all to Spanish ('+todo.length+')':'🇪🇸 All in Spanish ✓');
-}
-function EsVersionBar(props){
-  // props: state ('none'|'current'|'old'), es, can, busy, onTranslate, what
-  const st=props.state,es=props.es;
-  const txt=st==='current'?'Spanish version: up to date'+(es.by?' · '+es.by:'')+(es.at?' · '+String(es.at).slice(0,10):''):st==='old'?'Spanish version: out of date (the English changed)':'No Spanish version yet';
-  if(!props.can&&HX_LANG!=='es')return null;
-  if(!props.can&&st==='current')return null;
-  return el('div',{className:'row',style:{gap:8,alignItems:'center',margin:'0 0 10px',fontSize:12}},
-    el('span',{className:'badge '+(st==='current'?'ok':st==='old'?'warn':'off')},'ES'),
-    el('span',{className:'muted'},!props.can&&HX_LANG==='es'?'This '+props.what+' is not translated to Spanish yet; it is shown in English.':txt),
-    props.can&&el('button',{className:'btn ghost sm',disabled:!!props.busy,onClick:props.onTranslate},st==='none'?'Translate to Spanish (AI)':'Translate to Spanish again (AI)'),
-    props.busy&&el('span',{className:'muted'},props.busy));
-}
 function SopPaperRecords(props){
   const pub=(props.sops||[]).filter(function(s){return s.status==='published';}).sort(function(a,b){return String(a.sop_number||'').localeCompare(String(b.sop_number||''));});
   const people=(props.roster||[]).slice().sort(function(a,b){return String(a.name).localeCompare(String(b.name));});
@@ -10137,18 +10034,12 @@ function SopPaperRecords(props){
     el('div',{className:'row',style:{justifyContent:'flex-end',marginTop:12}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:save},busy?'Saving...':'Record paper records')));
 }
 function SopDetail(props){
-  const s0=props.sop,esv=sopEsView(s0),s=esv?{...s0,title:esv.title||s0.title,description:esv.description}:s0,t=sopTargets(s0,props.roster),signedList=sopAcksOf(s0,props.acks);
-  const gen0=sopGen(s0),gen=esv&&gen0?{...gen0,purpose:esv.purpose,scope:esv.scope,responsibilities:esv.responsibilities,required_materials:esv.required_materials,quality_checks:esv.quality_checks,documentation_required:esv.documentation_required,deviation_procedure:esv.deviation_procedure,training_requirements:esv.training_requirements}:gen0;
-  const steps=esv?sopStepsOf(s0).map(function(x,i){const e=esv.steps[i]||{};return {...x,title:e.title,text:e.text,note:e.note};}):sopStepsOf(s0);
-  const[esBusy,setEsBusy]=useState('');const[esErr,setEsErr]=useState('');const[,esTick]=useState(0);
-  const canEs=s0.status==='draft'?!!(props.canE||props.canF):!!props.canF;
-  async function translateEs(){setEsErr('');setEsBusy('Translating...');try{const es=await sopTranslateEs(s0,setEsBusy);await db.update('hx_sops',s0.id,{es:es});s0.es=es;esTick(function(n){return n+1;});}catch(e){setEsErr(/column .*es|'es' column/i.test(String(e.message))?'Spanish versions are not set up yet - run hendrix_step49.sql.':eqErr(e));}setEsBusy('');}
+  const s=props.sop,s0=s,gen=sopGen(s),steps=sopStepsOf(s),t=sopTargets(s,props.roster),signedList=sopAcksOf(s,props.acks);
   const pending=t?t.filter(function(u){return !signedList.some(function(a){return a.user_id===u.id;});}):null;
   const pct=t&&t.length?Math.round((t.length-pending.length)*100/t.length):null;
   const lics=(props.licenses||[]);
   const dc=function(l,v,bad){return el('div',{key:l},el('div',{className:'k'},l),el('div',{style:{fontSize:13,color:bad?'var(--red)':'var(--text)'}},v||'-'));};
   return el(Modal,{title:s.title,wide:true,onClose:props.onClose},
-    el(EsVersionBar,{state:sopEsState(s0),es:s0.es,can:canEs,busy:esBusy,onTranslate:translateEs,what:'SOP'}),esErr&&el('div',{className:'msg err'},esErr),
     el('div',{className:'row',style:{gap:6,marginBottom:10}},el('span',{className:'badge '+SOP_STATUS_TONE[s.status]},sopStatusLabel(s.status)),el('span',{className:'badge off'},s.folder),el('span',{className:'badge off'},'v'+s.version),s.category&&el('span',{className:'muted',style:{fontSize:12}},s.category)),
     el('div',{className:'card gold',style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:10,padding:'10px 14px'}},
       dc('Document number',s.sop_number),dc('Version',s.version),dc('Effective',s.effective_date),dc('Next review',s.next_review+(sopReviewLate(s)?' (overdue)':''),sopReviewLate(s)),
@@ -11834,6 +11725,40 @@ function StickersPage(props){
 }
 
 /* ---------- App shell ---------- */
+/* ---------- sidebar groups: modules by the job they serve ---------- */
+const SIDE_GROUPS=[
+  ['production','Production',['planner','batches','testing','stickers','products','metrc','linemap','lineclear']],
+  ['inventory','Inventory and shipping',['receiving','holds','shipping','recall','suppliers']],
+  ['facility','Facility',['logs','equipment','chemicals','envtests','visitors','timeclock','cultivation']],
+  ['quality','Quality',['qms','complaints','intaudits','haccp','risks','changes','verification']],
+  ['docs','SOPs and training',['sops','training','orgchart','rulebook']],
+  ['mgmt','Management',['objectives','mgmtreview','standards']],
+  ['admin','Admin',['locations','team','roles','audit','settings','health','import']]];
+function SideNav(props){
+  // props.top: [{id,label}] always shown; props.items: [{id,label}]; props.page; props.setPage
+  const[shut,setShut]=useState(function(){try{const v=JSON.parse(localStorage.getItem('hx_side_shut')||'null');if(v)return v;}catch(e){}
+    const o={};if(navigator.webdriver)return o;SIDE_GROUPS.forEach(function(g){o[g[0]]=1;});o.other=1;return o;});   // automated tests start with every group open
+  const[q,setQ]=useState('');
+  const by={};props.items.forEach(function(x){by[x.id]=x;});
+  const placed={};const groups=SIDE_GROUPS.map(function(g){const it=g[2].filter(function(id){return by[id];}).map(function(id){placed[id]=1;return by[id];});return {id:g[0],name:g[1],items:it};});
+  const rest=props.items.filter(function(x){return !placed[x.id];});if(rest.length)groups.push({id:'other',name:'Other',items:rest});
+  const cur=groups.find(function(g){return g.items.some(function(x){return x.id===props.page;});});
+  useEffect(function(){if(cur&&shut[cur.id])save({...shut,[cur.id]:0});},[props.page]);
+  function save(v){setShut(v);try{localStorage.setItem('hx_side_shut',JSON.stringify(v));}catch(e){}}
+  const btn=function(x){return el('button',{key:x.id,className:props.page===x.id?'on':'',onClick:function(){props.setPage(x.id);setQ('');}},x.label);};
+  const txt=function(x){return typeof x.label==='string'?tr(x.label):String(x.id);};
+  const qq=q.trim().toLowerCase();
+  return el('div',{className:'nav'},
+    el('div',{className:'grp'},'Hendrix'),
+    props.top.map(btn),
+    props.items.length>8&&el('input',{className:'nfind',value:q,placeholder:'Find a module...',onChange:function(e){setQ(e.target.value);},onKeyDown:function(e){if(e.key==='Escape')setQ('');
+      if(e.key==='Enter'){const m=props.items.find(function(x){return txt(x).toLowerCase().indexOf(qq)>=0;});if(m){props.setPage(m.id);setQ('');}}}}),
+    qq?el('div',{className:'gitems'},props.items.filter(function(x){return txt(x).toLowerCase().indexOf(qq)>=0;}).map(btn)):
+    groups.filter(function(g){return g.items.length;}).map(function(g){const open=!shut[g.id];
+      return el(React.Fragment,{key:g.id},
+        el('button',{className:'gbtn','aria-expanded':open,onClick:function(){save({...shut,[g.id]:open?1:0});}},el('span',{className:'gc',style:{transform:open?'rotate(90deg)':'none'}},'\u203a'),el('span',null,g.name),el('span',{className:'gn'},g.items.length)),
+        el('div',{className:'gitems'+(open?'':' shut')},g.items.map(btn)));}));
+}
 function App(){
   const[,force]=useState(0);
   const rerender=function(){force(function(n){return n+1;});};
@@ -11973,7 +11898,7 @@ function App(){
   return el('div',{className:'shell'},
     el(IdleWatch,{key:'idle'+idleMin,minutes:idleMin,onTimeout:function(m){lsSet('hx_signout_msg','You were signed out after '+m+' minute'+(m===1?'':'s')+' without activity.');saveSession(null);setProfile(null);ACC.profile=null;ACC.roles=[];setPhase('login');}}),
     el('div',{className:'top'},
-      el(Brand,{noLang:true}),
+      el(Brand),
       el('div',{className:'sp'}),
       el('div',{className:'ctx'},
         el('label',null,'State'),
@@ -11985,14 +11910,10 @@ function App(){
           !stLics.length&&el('option',{value:''},'No licenses'),
           stLics.map(function(l){return el('option',{key:l.id,value:l.id},l.name+(l.license_number?' ('+l.license_number+')':''));}))),
       el('div',{className:'row'},
-        el(LangSwitch),
         el('button',{className:'btn ghost sm',title:'My account: password and two-step sign-in',style:{border:'none',color:'var(--muted)',fontWeight:500},onClick:function(){setPage('account');}},profile.name||profile.email),
         el('button',{className:'btn ghost sm',onClick:function(){saveSession(null);setProfile(null);ACC.profile=null;ACC.roles=[];setPhase('login');}},'Sign out'))),
-    el('div',{className:'side'},el('div',{className:'nav'},
-      el('div',{className:'grp'},'Hendrix'),
-      nav.map(function(n){return el('button',{key:n.id,className:page===n.id?'on':'',onClick:function(){setPage(n.id);}},n.label);}),
-      el('div',{className:'grp'},'Modules'),
-      mods.map(function(m){return el('button',{key:m[0],className:page===m[0]?'on':'',onClick:function(){setPage(m[0]);}},m[1]);}))),
+    el('div',{className:'side'},el(SideNav,{page:page,setPage:setPage,top:nav.filter(function(n){return n.id==='home'||n.id==='tasks';}),
+      items:nav.filter(function(n){return n.id!=='home'&&n.id!=='tasks';}).concat(mods.map(function(m){return {id:m[0],label:m[1]};}))})),
     el('div',{className:'main'},body));
 }
 
@@ -12002,12 +11923,9 @@ function App(){
     // kiosks: keep this page and its libraries on the tablet so the kiosk opens again without internet (sw.js)
     navigator.serviceWorker.register('sw.js').then(function(){return navigator.serviceWorker.ready;}).then(function(){return caches.open('hendrix-kiosk-v1');}).then(function(c){
       const page=location.origin+location.pathname;fetch(page,{cache:'no-cache'}).then(function(r){if(r.ok)c.put(page,r);}).catch(function(){});
-      const esu=location.origin+location.pathname.replace(/[^/]*$/,'')+'i18n/es.json';fetch(esu,{cache:'no-cache'}).then(function(r){if(r.ok)c.put(esu,r);}).catch(function(){});
       Array.prototype.forEach.call(document.querySelectorAll('script[src]'),function(x){c.match(x.src).then(function(m){if(!m)fetch(x.src,{mode:'no-cors'}).then(function(r){c.put(x.src,r);}).catch(function(){});});});
     }).catch(function(){});}
-  const start=function(){ReactDOM.createRoot(document.getElementById('root')).render(el(kq==='visitor'?KioskVisitor:kq==='log'?KioskLog:kq==='clock'?KioskClock:qp.get('badge')?BadgeCheck:App));};
-  if(HX_LANG==='es')fetch('i18n/es.json?v='+encodeURIComponent(HX_RELEASE)).then(function(r){if(!r.ok)throw new Error('no es.json');return r.json();}).then(function(d){hxTrLoad(d);start();}).catch(function(){start();});
-  else start();
+  ReactDOM.createRoot(document.getElementById('root')).render(el(kq==='visitor'?KioskVisitor:kq==='log'?KioskLog:kq==='clock'?KioskClock:qp.get('badge')?BadgeCheck:App));
 }
 })();
 </script>
