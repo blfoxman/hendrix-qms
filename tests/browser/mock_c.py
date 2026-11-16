@@ -148,6 +148,7 @@ def handle0(route, request):
             if op == 'gte' and str(r.get(k, '')) < val: return False
             if op == 'neq' and str(r.get(k)) == val: return False
             if op == 'in' and str(r.get(k)) not in val.strip('()').split(','): return False
+            if op == 'not' and val == 'is.null' and r.get(k) is None: return False
         return True
     m = request.method
     if m == 'GET':

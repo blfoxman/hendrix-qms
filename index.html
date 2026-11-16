@@ -230,7 +230,7 @@ async function sb(path,opt){
       const step=/hx_notify_row/.test(m)?'hendrix_step48.sql':/hx_batch_lots/.test(m)?'hendrix_step47.sql':/hx_fl_types|hx_fl_private_guard/.test(m)?'hendrix_step46.sql':/hx_set_own_password/.test(m)?'hendrix_step45.sql':/hx_course_cert_only|This course is an outside certification\. Record it/.test(m)?'hendrix_step44.sql':/hx_kiosk_log_add_user|hx_kiosk_login_free|maintenance_request|purchase_request|logs_maintenance|logs_purchase/.test(m)?'hendrix_step43.sql':/hx_admin_set_password|hx_password_changed|must_change_password/.test(m)?'hendrix_step42.sql':/hx_metrc/.test(m)?'hendrix_step41.sql':/hx_my_tasks|hx_notify|task_email/.test(m)?'hendrix_step39.sql':/hx_esignatures|mfa_required|esig_password|idle_signout/.test(m)?'hendrix_step38.sql':/hx_system_health/.test(m)?'hendrix_step37.sql':/hx_line_map|linemap_idle/.test(m)?'hendrix_step36.sql':/hx_license_settings/.test(m)?'hendrix_step34.sql':/hx_production_plans|hx_planner_recipes/.test(m)?'hendrix_step33.sql':/hx_time_clock|hx_badge|hx_kiosk_clock|hx_clock_fix/.test(m)?'hendrix_step32.sql':/hx_mgmt_reviews|hx_verification_/.test(m)?'hendrix_step31.sql':/hx_org_positions|hx_objective|hx_qms_settings/.test(m)?'hendrix_step30.sql':/hx_risk|hx_changes/.test(m)?'hendrix_step29.sql':/hx_haccp/.test(m)?'hendrix_step28.sql':/hx_grow_|hx_plant_batches/.test(m)?'hendrix_step27.sql':/hx_env_/.test(m)?'hendrix_step26.sql':/hx_line_clearances|hx_rework/.test(m)?'hendrix_step25.sql':/hx_equipment|hx_chemicals/.test(m)?'hendrix_step24.sql':/share_key|hx_training_shared/.test(m)?'hendrix_step23.sql':/hx_rule_sources/.test(m)?'hendrix_step22.sql':/hx_training_keys|hx_training_attempts|hx_course_submit|content_status/.test(m)?'hendrix_step20.sql':/hx_complaints|hx_audits|hx_audit_findings/.test(m)?'hendrix_step19.sql':/hx_recall|hx_trace_data/.test(m)?'hendrix_step18.sql':/hx_lots|hx_lot_uses|hx_holds|hx_shipments/.test(m)?'hendrix_step17.sql':/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
       throw new Error('Database tables are missing - run '+step+' in the Hendrix Supabase project.');
     }
-    if(/has no field "priority"/.test(m))throw new Error('The database needs a fix before this can be saved - an admin must run hendrix_step48.sql (or hendrix_install_13_to_51.sql) in the Hendrix Supabase project.');
+    if(/has no field "priority"/.test(m))throw new Error('The database needs a fix before this can be saved - an admin must run hendrix_step48.sql (or hendrix_install_13_to_52.sql) in the Hendrix Supabase project.');
     if(/hx_facility_log_log_type_check/.test(m))throw new Error('This log is not set up in the database yet - run hendrix_step46.sql in the Hendrix Supabase project.');
     if(/row-level security|permission denied/i.test(m))throw new Error('Not allowed - your access level does not allow this here. Ask a system admin.');
     throw new Error(m);
@@ -5484,10 +5484,10 @@ function EnvDashCard(props){
 
 /* ---------- Cultivation records (CUL licenses; CSQ Standard for Cultivation, Module 3A) ---------- */
 const CUL_AREA_KINDS={indoor:'Indoor grow room',greenhouse:'Greenhouse',outdoor:'Outdoor field',mother:'Mother room',propagation:'Clone / propagation',dry:'Dry room',cure:'Cure room',trim:'Trim room'};
-const CUL_STAGES={propagation:'Propagation',vegetative:'Vegetative',flowering:'Flowering',drying:'Drying',curing:'Curing',done:'Done',destroyed:'Destroyed'};
-const GE_KINDS={input:'Nutrients / amendment',crop_protection:'Crop protection',scouting:'Scouting',stage:'Stage / move',harvest:'Harvest',dry:'Drying',cure:'Cured (dry weight)',destroy:'Destroyed',note:'Note'};
+const CUL_STAGES={propagation:'Propagation',vegetative:'Vegetative',flowering:'Flowering',drying:'Drying',curing:'Curing',trim:'Test + trim',package:'Package',ship:'Ship',done:'Done',destroyed:'Destroyed'};
+const GE_KINDS={input:'Nutrients / amendment',crop_protection:'Crop protection',scouting:'Scouting',stage:'Stage / move',harvest:'Harvest',dry:'Drying',cure:'Cured (dry weight)',lab:'Sent to the lab',tested:'Test passed (COA)',packaged:'Packaged',shipped:'Shipped / transferred',destroy:'Destroyed',note:'Note'};
 function culErr(e){const m=String((e&&e.message)||e);return /hx_grow_|hx_plant_batches/.test(m)&&/missing|does not exist|schema cache/i.test(m)?'Cultivation records are not set up yet - run hendrix_step27.sql in the Hendrix Supabase project.':m;}
-function culActive(b){return ['propagation','vegetative','flowering','drying','curing'].indexOf(b.stage)>=0;}
+function culActive(b){return ['propagation','vegetative','flowering','drying','curing','trim','package','ship'].indexOf(b.stage)>=0;}
 function culGrowing(b){return ['propagation','vegetative','flowering'].indexOf(b.stage)>=0;}
 function culPhiHold(b){return b.harvest_after&&b.harvest_after>todayStr();}
 function culLabelHtml(b,lic,src){const e=esc3;return '<div class="hxrec" style="font-size:20px;border:3px solid #000"><div style="font-size:30px;font-weight:800">'+e(b.cultivar)+'</div><div>'+e(b.number)+' \u00b7 '+e(b.plant_count)+' plants</div><div>Source: '+e(src)+'</div><div>Planted: '+e(b.planted_on)+'</div>'+(b.metrc_tag?'<div>METRC: '+e(b.metrc_tag)+'</div>':'')+'<div style="font-size:12px;color:#555;margin-top:6px">'+e(lic.name)+'</div></div>';}
@@ -5517,7 +5517,7 @@ function GrowAreaForm(props){
 function PlantBatchForm(props){
   const x=props.batch||{},lic=props.license,st=props.state;
   const[f,setF]=useState({cultivar:x.cultivar||'',source_kind:x.source_kind||'lot',source_lot_id:x.source_lot_id||'',mother_batch_id:x.mother_batch_id||'',source_note:x.source_note||'',planted_on:x.planted_on||todayStr(),plant_count:x.plant_count?String(x.plant_count):'',
-    media_lot_id:x.media_lot_id||'',media:x.media||'',metrc_tag:x.metrc_tag||'',area_id:x.area_id||'',notes:x.notes||''});
+    media_lot_id:x.media_lot_id||'',media:x.media||'',metrc_tag:x.metrc_tag||'',area_id:x.area_id||'',notes:x.notes||'',harvest_start:x.harvest_start||''});
   const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
   function set(k,v){setF(function(p){return {...p,[k]:v};});}
   const lots=props.lots||[],prop=lots.filter(function(l){return /clone|seed|propagat/i.test((l.category||'')+' '+(l.item||''));}),media=lots.filter(function(l){return /media|soil|coco|peat|rockwool/i.test((l.category||'')+' '+(l.item||''));});
@@ -5525,6 +5525,7 @@ function PlantBatchForm(props){
     if(!f.cultivar.trim()){setErr('Enter the cultivar / strain.');return;}if(!(n>0)){setErr('Enter the number of plants.');return;}
     if(f.source_kind==='lot'&&!f.source_lot_id){setErr('Choose the received clone / seed lot.');return;}if(f.source_kind==='mother'&&!f.mother_batch_id){setErr('Choose the mother plant batch.');return;}
     const rec={cultivar:f.cultivar.trim(),plant_count:n,source_note:f.source_note.trim(),media_lot_id:f.media_lot_id||null,media:f.media.trim(),metrc_tag:f.metrc_tag.trim(),notes:f.notes.trim()};
+    if(f.harvest_start!==(x.harvest_start||''))rec.harvest_start=f.harvest_start||null;
     if(!x.id)Object.assign(rec,{source_kind:f.source_kind,source_lot_id:f.source_kind==='lot'?f.source_lot_id:null,mother_batch_id:f.source_kind==='mother'?f.mother_batch_id:null,planted_on:f.planted_on,area_id:f.area_id||null});
     setBusy(true);try{if(x.id)await db.update('hx_plant_batches',x.id,rec);else await db.insert('hx_plant_batches',{...rec,id:newId('pb'),state_id:st.id,license_id:lic.id});props.onDone('Saved '+rec.cultivar+'.');}catch(e){setErr(culErr(e));}setBusy(false);}
   return el(Modal,{title:(x.id?'Edit '+x.number:'New plant batch')+' \u00b7 '+lic.name,wide:true,onClose:props.onClose},
@@ -5539,6 +5540,7 @@ function PlantBatchForm(props){
       el(Field,{label:'Media (treated / reused?)'},el('input',{value:f.media,placeholder:'e.g. New coco, pre-washed',onChange:function(e){set('media',e.target.value);}})),
       el(Field,{label:'METRC plant batch tag'},el('input',{value:f.metrc_tag,onChange:function(e){set('metrc_tag',e.target.value);}}))),
     !x.id&&el(Field,{label:'Starts in area'},el('select',{value:f.area_id,onChange:function(e){set('area_id',e.target.value);}},el('option',{value:''},'Choose...'),(props.areas||[]).filter(function(a){return a.active;}).map(function(a){return el('option',{key:a.id,value:a.id},a.name+' \u00b7 '+CUL_AREA_KINDS[a.kind]);}))),
+    (!x.id||culGrowing(x))&&el(Field,{label:'Planned harvest start (leave empty to use the license target)'},el('input',{type:'date',value:f.harvest_start,onChange:function(e){set('harvest_start',e.target.value);}})),
     el(Field,{label:'Notes'},el('textarea',{rows:2,value:f.notes,onChange:function(e){set('notes',e.target.value);}})),
     err&&el('div',{className:'msg err'},err),
     el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:save},busy?'Saving...':'Save')));
@@ -5561,6 +5563,10 @@ function GrowEventForm(props){
     if(kind==='harvest'&&tooEarly){setErr('Too early to harvest: the pre-harvest interval ends on '+b.harvest_after+'.');return;}
     if(kind==='dry'&&!f.conditions.trim()){setErr('Record the drying room conditions.');return;}
     if(kind==='cure'&&!(num(f.dry_weight)>0)){setErr('Enter the final dry weight.');return;}
+    if(kind==='lab'&&!f.observations.trim()){setErr('Enter the lab and the sample sent.');return;}
+    if(kind==='tested'&&!f.tag.trim()){setErr('Enter the COA or sample number of the passing test.');return;}
+    if(kind==='packaged'&&!f.observations.trim()){setErr('Describe what was packaged (units, sizes, package tags).');return;}
+    if(kind==='shipped'&&!f.observations.trim()){setErr('Enter where it went (customer, license or manufacturing) and the manifest.');return;}
     const rec={id:newId('ge'),state_id:st.id,license_id:lic.id,batch_id:b.id,kind:kind,done_on:f.done_on,done_by:f.done_by.trim(),area_id:f.area_id||null,chemical_id:f.chemical_id||null,lot_id:f.lot_id||null,
       product:ch?ch.name:'',epa_reg:ch?ch.epa_reg||'':'',amount:f.amount.trim(),method:f.method.trim(),rei_hours:f.rei_hours===''?null:parseInt(f.rei_hours,10),phi_days:f.phi_days===''?null:parseInt(f.phi_days,10),
       stage:kind==='stage'?f.stage:'',observations:f.observations.trim(),wet_weight:num(f.wet_weight),dry_weight:num(f.dry_weight),waste_weight:num(f.waste_weight),tag:f.tag.trim(),conditions:f.conditions.trim(),files:f.files};
@@ -5588,17 +5594,176 @@ function GrowEventForm(props){
     kind==='dry'&&el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}},el(Field,{label:'Room conditions *'},el('input',{value:f.conditions,placeholder:'e.g. 60 \u00b0F, 60% RH, airflow on',onChange:function(e){set('conditions',e.target.value);}})),areaSel('Moved to (cure room)')),
     kind==='cure'&&el('div',{style:{display:'grid',gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:10}},el(Field,{label:'Final dry weight (g) *'},el('input',{value:f.dry_weight,onChange:function(e){set('dry_weight',e.target.value);}})),
       el(Field,{label:'Waste weight (g)'},el('input',{value:f.waste_weight,onChange:function(e){set('waste_weight',e.target.value);}})),el(Field,{label:'Conditions'},el('input',{value:f.conditions,onChange:function(e){set('conditions',e.target.value);}}))),
-    (kind==='scouting'||kind==='crop_protection'||kind==='harvest')&&el(Field,{label:'Photos / files',plain:true},el(FileList,{files:f.files,folder:'cultivation/'+lic.id,onChange:function(v){set('files',v);},onErr:setErr})),
+    kind==='lab'&&el('div',{style:{display:'grid',gridTemplateColumns:'2fr 1fr',gap:10}},el(Field,{label:'Lab and sample sent *'},el('input',{value:f.observations,placeholder:'e.g. Kaycha Labs, 30 g sample, trim done',onChange:function(e){set('observations',e.target.value);}})),
+      el(Field,{label:'Sample / manifest #'},el('input',{value:f.tag,onChange:function(e){set('tag',e.target.value);}}))),
+    kind==='tested'&&el('div',null,el('div',{className:'muted',style:{fontSize:13,marginBottom:8}},'Record a passing test only. A failed test goes on a Hold and a Deviation, and the batch stays in Test + trim.'),
+      el('div',{style:{display:'grid',gridTemplateColumns:'1fr 2fr',gap:10}},el(Field,{label:'COA / sample number *'},el('input',{value:f.tag,onChange:function(e){set('tag',e.target.value);}})),
+        el(Field,{label:'Results (THC, total cannabinoids...)'},el('input',{value:f.observations,onChange:function(e){set('observations',e.target.value);}})))),
+    kind==='packaged'&&el('div',{style:{display:'grid',gridTemplateColumns:'2fr 1fr',gap:10}},el(Field,{label:'What was packaged *'},el('input',{value:f.observations,placeholder:'e.g. 400 x 3.5 g jars, 2 lb bulk',onChange:function(e){set('observations',e.target.value);}})),
+      el(Field,{label:'Package tags (METRC)'},el('input',{value:f.tag,onChange:function(e){set('tag',e.target.value);}}))),
+    kind==='shipped'&&el('div',null,el('div',{className:'muted',style:{fontSize:13,marginBottom:8}},'This closes the plant batch. Use it when the product is shipped to a customer or transferred to manufacturing.'),
+      el('div',{style:{display:'grid',gridTemplateColumns:'2fr 1fr',gap:10}},el(Field,{label:'Shipped / transferred to *'},el('input',{value:f.observations,placeholder:'e.g. Black Fox MAN000109, bulk flower for pre-rolls',onChange:function(e){set('observations',e.target.value);}})),
+        el(Field,{label:'Manifest #'},el('input',{value:f.tag,onChange:function(e){set('tag',e.target.value);}})))),
+    (kind==='scouting'||kind==='crop_protection'||kind==='harvest'||kind==='tested')&&el(Field,{label:kind==='tested'?'COA (PDF)':'Photos / files',plain:true},el(FileList,{files:f.files,folder:'cultivation/'+lic.id,onChange:function(v){set('files',v);},onErr:setErr})),
     err&&el('div',{className:'msg err'},err),
     el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:kind==='destroy'?'btn danger':'btn',disabled:busy,onClick:save},busy?'Saving...':'Record')));
 }
 function geSummary(v){return [v.product&&(v.product+(v.epa_reg?' (EPA '+v.epa_reg+')':'')),v.amount,v.method,v.rei_hours!=null&&'REI '+v.rei_hours+' h',v.phi_days!=null&&'PHI '+v.phi_days+' d',v.stage&&CUL_STAGES[v.stage],
   v.wet_weight!=null&&'wet '+v.wet_weight+' g',v.dry_weight!=null&&'dry '+v.dry_weight+' g',v.waste_weight!=null&&'waste '+v.waste_weight+' g',v.tag&&'tag '+v.tag,v.conditions,v.observations].filter(Boolean).join(' \u00b7 ');}
+/* ---------- Cultivation Batch Tracker (Release 52): every running plant batch on an 8-step lifecycle ---------- */
+const BT_STEPS=[['veg','Veg','#8FCB7A'],['flower','Flower','#46A96A'],['harvest','Harvest','#D4AF37'],['dry','Dry','#C8932B'],['cure','Cure','#B07CC6'],['trim','Test + Trim','#6FB7D4'],['package','Package','#7F9BB0'],['ship','Ship','#C8A951']];
+const CUL_DEF={cycle_days:80,veg_days:20,window_days:4,dry_days:7,cure_days:14,trim_days:7,package_days:7,ship_days:7};
+const CUL_TGT=[['cycle_days','Seed / clone to harvest start (days)'],['veg_days','Veg days before flower (0 = straight to flower)'],['window_days','Harvest window (days)'],['dry_days','Dry (days)'],['cure_days','Cure (days)'],['trim_days','Test + trim (days)'],['package_days','Package (days)'],['ship_days','Ship (days)']];
+const BT_LIVE=['propagation','vegetative','flowering','drying','curing','trim','package','ship'];
+function btDays(a,b){return Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/864e5);}
+function btFmt(d){return d?new Date(d+'T12:00:00').toLocaleDateString([],{month:'short',day:'numeric'}):'';}
+function btIn(n){return n===0?'today':n===1?'tomorrow':n>0?'in '+n+' days':(-n)+' day'+(n===-1?'':'s')+' ago';}
+function btG(g){return g==null?'-':g>=1000?(g/1000).toFixed(g>=100000?0:1)+' kg':Math.round(g)+' g';}
+function btSet(S,lid){const x=(S||[]).find(function(s){return s.license_id===lid;})||{};const o={};Object.keys(CUL_DEF).forEach(function(k){o[k]=x[k]!=null?x[k]:CUL_DEF[k];});o.saved=!!x.license_id;return o;}
+function btRow(b,ev,S,today){
+  const last=function(k,pred){const xs=ev.filter(function(v){return v.kind===k&&(!pred||pred(v));}).map(function(v){return v.done_on;}).sort();return xs.length?xs[xs.length-1]:'';};
+  const day=btDays(b.planted_on,today)+1,r={b:b,day:day,late:false,prog:0,sub:''};
+  const clamp=function(x){return Math.max(0,Math.min(1,x));};
+  if(b.stage==='propagation'||b.stage==='vegetative'){const due=eqAddDays(b.planted_on,S.veg_days),over=btDays(due,today);
+    r.step='veg';r.now='Day '+day;r.prog=S.veg_days?clamp(day/S.veg_days):1;r.next='Move to flower + METRC tag';
+    if(over>1){r.late=true;r.sub=over+' days past day '+S.veg_days+' — still in veg';}else r.sub='due '+btFmt(due)+' ('+btIn(-over)+')';}
+  else if(b.stage==='flowering'){const hs=b.harvest_start||eqAddDays(b.planted_on,S.cycle_days),he=eqAddDays(hs,S.window_days),flip=last('stage',function(v){return v.stage==='flowering';});
+    r.hs=hs;r.he=he;
+    if(today<hs){const fd=flip?btDays(flip,today)+1:Math.max(1,day-S.veg_days);
+      r.step='flower';r.now='Day '+day+' · flower day '+fd;r.prog=flip?clamp(btDays(flip,today)/Math.max(1,btDays(flip,hs))):clamp((day-S.veg_days)/Math.max(1,S.cycle_days-S.veg_days));
+      r.next='Harvest window opens';r.sub=btFmt(hs)+' ('+btIn(btDays(today,hs))+')'+(b.harvest_start?' · planned':'');}
+    else{r.step='harvest';r.now='Day '+day;r.prog=1;r.next='Harvest now';
+      if(today>he){r.late=true;r.sub='Harvest · '+btDays(he,today)+' days past window ('+btFmt(hs)+' – '+btFmt(he)+')';}else r.sub='window '+btFmt(hs)+' – '+btFmt(he);}}
+  else{const P={drying:['dry',last('harvest')||b.planted_on,S.dry_days,'Dry done → cure'],curing:['cure',last('dry')||last('harvest')||b.planted_on,S.cure_days,'Cure done → test + trim'],
+      trim:['trim',last('cure')||b.planted_on,S.trim_days,'Send to test + trim'],package:['package',last('tested')||last('cure')||b.planted_on,S.package_days,'Package'],ship:['ship',last('packaged')||b.planted_on,S.ship_days,'Ship']}[b.stage];
+    if(!P)return null;const dn=Math.max(0,btDays(P[1],today)),due=eqAddDays(P[1],P[2]);
+    r.step=P[0];r.start=P[1];r.now=dn+' of '+P[2]+' days';r.prog=clamp(dn/P[2]);r.next=P[3];
+    if(b.stage==='trim'){const lab=last('lab');if(lab)r.next='Waiting on COA';r.lab=lab;}
+    if(dn>P[2]){r.late=true;r.sub=(dn-P[2])+' days past the '+P[2]+'-day target';}else r.sub='target '+btFmt(due)+' ('+btIn(btDays(today,due))+')';
+    if(r.lab)r.sub='sent to lab '+btFmt(r.lab)+' · '+r.sub;}
+  r.idx=BT_STEPS.findIndex(function(s){return s[0]===r.step;});
+  return r;
+}
+const BT_CSS='#bt-wall .btx-pills{display:inline-flex;flex-wrap:wrap;gap:4px;padding:4px;border:1px solid #3a342a;border-radius:999px;background:#111}'+
+ '#bt-wall .btx-pills button{border:0;background:none;color:#a29b8c;font:600 12px Oswald,"Arial Narrow",sans-serif;text-transform:uppercase;letter-spacing:.12em;padding:7px 14px;border-radius:999px;cursor:pointer}'+
+ '#bt-wall .btx-pills button.on{background:linear-gradient(135deg,#f1d57a,#d4af37 45%,#a8841c);color:#0a0a0a}'+
+ '#bt-wall .btx-cards{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:10px;margin:16px 0 8px}'+
+ '#bt-wall .btx-card{background:linear-gradient(180deg,#1c1a16,#161513);border:1px solid #3a342a;border-radius:14px;padding:12px 12px 11px;position:relative;overflow:hidden;cursor:pointer;text-align:left;color:inherit;font:inherit}'+
+ '#bt-wall .btx-card::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:var(--kc)}'+
+ '#bt-wall .btx-card.on{border-color:var(--kc);box-shadow:0 0 0 1px var(--kc) inset}'+
+ '#bt-wall .btx-card.dim{opacity:.45}'+
+ '#bt-wall .btx-card .c{font-family:Oswald,"Arial Narrow",sans-serif;text-transform:uppercase;letter-spacing:.12em;font-size:10.5px;color:#a29b8c}'+
+ '#bt-wall .btx-card .b{font-family:Anton,Impact,sans-serif;font-size:30px;line-height:1;margin:8px 0 4px;color:var(--kc);font-variant-numeric:tabular-nums}'+
+ '#bt-wall .btx-card .f{font-size:11px;color:#7a7466;line-height:1.35}'+
+ '#bt-wall .btx-card .f .late{color:#e5645a;font-weight:600}'+
+ '#bt-wall .btx-list{border:1px solid #3a342a;border-radius:16px;overflow:hidden;background:linear-gradient(180deg,#1a1814,#141310)}'+
+ '#bt-wall .btx-row{display:grid;grid-template-columns:minmax(170px,1.3fr) minmax(250px,2fr) minmax(140px,1fr) minmax(170px,1.2fr) 120px;gap:14px;align-items:center;padding:12px 16px;border-top:1px solid #2a2620;position:relative}'+
+ '#bt-wall .btx-row.hd{border-top:0;font-family:Oswald,"Arial Narrow",sans-serif;text-transform:uppercase;letter-spacing:.14em;font-size:10.5px;color:#7a7466;padding:10px 16px}'+
+ '#bt-wall .btx-row.go{cursor:pointer}#bt-wall .btx-row.go:hover{background:rgba(212,175,55,.05)}'+
+ '#bt-wall .btx-row.late{box-shadow:3px 0 0 #C05B4E inset}'+
+ '#bt-wall .btx-strain{font-weight:700;font-size:14.5px}'+
+ '#bt-wall .btx-meta{font-size:11.5px;color:#9a9384;margin-top:3px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}'+
+ '#bt-wall .btx-chip{font:600 10px Oswald,"Arial Narrow",sans-serif;letter-spacing:.1em;text-transform:uppercase;border:1px solid #3a342a;border-radius:999px;padding:1px 7px;color:#c8a951}'+
+ '#bt-wall .btx-life{display:grid;grid-template-columns:repeat(8,1fr);gap:3px}'+
+ '#bt-wall .btx-seg{height:8px;border-radius:3px;background:#2c2822}'+
+ '#bt-wall .btx-seg.cur{box-shadow:0 0 8px var(--sc)}'+
+ '#bt-wall .btx-lbl{display:grid;grid-template-columns:repeat(8,1fr);gap:3px;margin-top:5px;font:600 8.5px Oswald,"Arial Narrow",sans-serif;text-transform:uppercase;letter-spacing:.04em;color:#6e685c;text-align:center;white-space:nowrap;overflow:hidden}'+
+ '#bt-wall .btx-now b{font-family:Oswald,"Arial Narrow",sans-serif;text-transform:uppercase;letter-spacing:.1em;font-size:12.5px}'+
+ '#bt-wall .btx-now div{font-size:12px;color:#c9c3b5;margin-top:2px}'+
+ '#bt-wall .btx-bar{height:3px;background:#2c2822;border-radius:2px;margin-top:6px;overflow:hidden}#bt-wall .btx-bar i{display:block;height:100%}'+
+ '#bt-wall .btx-next b{font-size:13px}#bt-wall .btx-next div{font-size:11.5px;color:#9a9384;margin-top:2px}'+
+ '#bt-wall .btx-next.late b,#bt-wall .btx-next.late div{color:#e5645a}'+
+ '#bt-wall .btx-prod{text-align:right;font-size:12px;color:#c9c3b5;font-variant-numeric:tabular-nums;line-height:1.5}#bt-wall .btx-prod b{color:#fff}'+
+ '#bt-wall .btx-foot{font-size:11.5px;color:#7a7466;margin-top:10px;line-height:1.5}'+
+ '@media (max-width:1100px){#bt-wall .btx-cards{grid-template-columns:repeat(3,minmax(0,1fr))}}'+
+ '@media (max-width:900px){#bt-wall .btx-row.hd{display:none}#bt-wall .btx-row{grid-template-columns:1fr 1fr;gap:10px}#bt-wall .btx-row>.btx-lifec{grid-column:1/-1;order:2}#bt-wall .btx-row>:first-child{grid-column:1/-1;order:1}#bt-wall .btx-row>.btx-now{order:3}#bt-wall .btx-row>.btx-next{order:4}#bt-wall .btx-row>.btx-prod{order:5;grid-column:1/-1;text-align:left}#bt-wall .btx-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}';
+function btSeed(l){return /seed/i.test(l.item||'')||(/seed/i.test(l.category||'')&&!/clone|cutting/i.test(l.item||''));}
+function CulTargetsForm(props){
+  const lic=props.license,S=props.settings;const[f,setF]=useState(function(){const o={};Object.keys(CUL_DEF).forEach(function(k){o[k]=String(S[k]);});return o;});
+  const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  async function save(){setErr('');const rec={};for(const k of Object.keys(CUL_DEF)){const n=parseInt(f[k],10);if(isNaN(n)||n<0){setErr('Enter whole numbers of days.');return;}rec[k]=n;}
+    if(rec.veg_days>=rec.cycle_days){setErr('Veg days must be shorter than seed to harvest days.');return;}
+    setBusy(true);try{if(S.saved)await sb('hx_cul_settings?license_id=eq.'+encodeURIComponent(lic.id),{method:'PATCH',body:rec,prefer:'return=representation'});else await db.insert('hx_cul_settings',{...rec,license_id:lic.id,state_id:lic.state_id});props.onDone('Saved the targets for '+lic.name+'.');}
+    catch(e){const m=String((e&&e.message)||e);setErr(/hx_cul_settings/.test(m)&&/does not exist|schema cache/i.test(m)?'The tracker targets are not set up yet - run hendrix_step52.sql in the Hendrix Supabase project.':m);}setBusy(false);}
+  return el(Modal,{title:'Batch tracker targets · '+lic.name,onClose:props.onClose},
+    el('div',{className:'muted',style:{fontSize:13,marginBottom:10}},'The tracker counts days from these targets. A batch is late when it passes them.'),
+    el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}},CUL_TGT.map(function(t){return el(Field,{key:t[0],label:t[1]},el('input',{type:'number',min:0,value:f[t[0]],onChange:function(e){const v=e.target.value;setF(function(p){return {...p,[t[0]]:v};});}}));})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:save},busy?'Saving...':'Save')));
+}
+function CulBatchTracker(props){
+  const st=props.state,lic=props.license,lid=lic.id,cul=(props.licenses||[]).filter(function(l){return l.state_id===st.id&&l.active!==false&&licOp(l)==='cultivation';});
+  const[scope,setScope]=useState(function(){const s=lsGet('hx_bt_scope');return s==='all'&&cul.length>1?'all':lid;});
+  const[d,setD]=useState(null);const[err,setErr]=useState('');const[stepF,setStepF]=useState(null);const[seedOpen,setSeedOpen]=useState(false);const[modal,setModal]=useState(false);const[msg,setMsg]=useState('');
+  const load=useCallback(function(){const F=scope==='all'?'state_id=eq.'+encodeURIComponent(st.id):'license_id=eq.'+encodeURIComponent(scope);
+    const mine=function(x){return scope==='all'?x.state_id===st.id:x.license_id===scope;};
+    Promise.all([db.get('hx_plant_batches',F+'&stage=in.('+BT_LIVE.join(',')+')&select=*&order=planted_on&limit=3000'),
+      db.get('hx_grow_events',F+'&voided=eq.false&kind=in.(stage,harvest,dry,cure,lab,tested,packaged,shipped)&select=batch_id,kind,done_on,stage,state_id,license_id&limit=20000').catch(function(){return [];}),
+      db.get('hx_grow_areas',F+'&select=id,name,state_id,license_id').catch(function(){return [];}),
+      db.get('hx_cul_settings',F+'&select=*').catch(function(){return null;}),
+      can('receiving',1)?db.get('hx_lots',F+'&status=eq.accepted&select=id,number,item,category,quantity,qty_used,unit,state_id,license_id&limit=2000').catch(function(){return null;}):Promise.resolve(null),
+      db.get('hx_plant_batches',F+'&source_lot_id=not.is.null&select=source_lot_id,plant_count,state_id,license_id&limit=5000').catch(function(){return [];})])
+    .then(function(r){setErr('');setD({B:(r[0]||[]).filter(mine),E:(r[1]||[]).filter(mine),A:(r[2]||[]).filter(mine),S:r[3],L:r[4]&&r[4].filter(mine),P:(r[5]||[]).filter(mine),at:new Date()});})
+    .catch(function(e){setErr(culErr(e));setD({B:[],E:[],A:[],S:[],L:null,P:[],at:new Date()});});},[scope,st.id]);
+  useEffect(function(){load();const t=setInterval(function(){if(document.visibilityState==='visible')load();},60000);
+    const v=function(){if(document.visibilityState==='visible')load();};document.addEventListener('visibilitychange',v);return function(){clearInterval(t);document.removeEventListener('visibilitychange',v);};},[load]);
+  useEffect(function(){lmFonts();},[]);
+  useEffect(function(){if(props.ver)load();},[props.ver]);
+  function pick(s){setScope(s);lsSet('hx_bt_scope',s==='all'?'all':'one');setStepF(null);}
+  const today=todayStr(),lname=function(id){const l=cul.find(function(x){return x.id===id;})||(id===lid?lic:null);return l?l.name:'';};
+  const shortL=function(id){const n=lname(id),m=n.match(/\d+\s*$/);return m&&cul.length>1?'Cul '+m[0].trim():n;};
+  const rows=d?d.B.map(function(b){return btRow(b,d.E.filter(function(v){return v.batch_id===b.id;}),btSet(d.S,b.license_id),today);}).filter(Boolean):[];
+  rows.sort(function(a,b){return b.idx-a.idx||(b.late?1:0)-(a.late?1:0)||(a.b.planted_on<b.b.planted_on?-1:a.b.planted_on>b.b.planted_on?1:0);});
+  const shown=stepF?rows.filter(function(r){return r.step===stepF;}):rows;
+  const aName=function(id){const a=d&&d.A.find(function(x){return x.id===id;});return a?a.name:'';};
+  // seed vault: accepted seed lots, minus what was used and planted
+  const seeds=(function(){if(!d||!d.L)return null;const by={};d.L.filter(btSeed).forEach(function(l){const planted=d.P.filter(function(p){return p.source_lot_id===l.id;}).reduce(function(a,p){return a+(p.plant_count||0);},0);
+    const left=Math.max(0,(Number(l.quantity)||0)-(Number(l.qty_used)||0)-planted),name=String(l.item||'').replace(/\s*(feminized|regular|auto(flower)?)?\s*seeds?\s*$/i,'').trim()||l.item;
+    const s=by[name.toLowerCase()]||(by[name.toLowerCase()]={name:name,n:0,lots:[]});s.n+=left;s.lots.push(l.number+' ('+left+')');});
+    const L=Object.keys(by).map(function(k){return by[k];}).sort(function(a,b){return a.n-b.n;});return {L:L,n:L.reduce(function(a,s){return a+s.n;},0),low:L.filter(function(s){return s.n<100;}).length};})();
+  const S1=btSet(d&&d.S,scope==='all'?lid:scope),canF=can('cultivation',3),notSet=d&&d.S===null;
+  const card=function(s,i){const xs=rows.filter(function(r){return r.step===s[0];}),late=xs.filter(function(r){return r.late;}).length;
+    return el('button',{key:s[0],className:'btx-card'+(stepF===s[0]?' on':stepF?' dim':''),style:{'--kc':s[2]},title:'Show only '+s[1],onClick:function(){setStepF(stepF===s[0]?null:s[0]);}},
+      el('div',{className:'c'},(i+1)+' · '+s[1]),el('div',{className:'b'},xs.length),
+      el('div',{className:'f'},xs.reduce(function(a,r){return a+(r.b.plant_count||0);},0)+' plants',late?el('span',null,' · ',el('span',{className:'late'},late+' late')):null));};
+  return el('div',{id:'bt-wall'},el('style',null,BT_CSS+LM_CSS.replace(/#lm-wall/g,'#bt-wall')),
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-end',gap:12,flexWrap:'wrap'}},
+      el('div',null,el('div',{className:'lmx-eyebrow'},'Cultivation · every batch in the building'),el('h2',{className:'lmx-title'},'Batch Tracker'),
+        el('div',{className:'lmx-sub'},'Every running plant batch from veg to shipped: where it is, how long it has been there, what happens next and when, and whether it is late.')),
+      el('div',{className:'row',style:{gap:8}},cul.length>1&&el('div',{className:'btx-pills'},el('button',{className:scope==='all'?'on':'',onClick:function(){pick('all');}},'All'),
+          cul.map(function(l){return el('button',{key:l.id,className:scope===l.id?'on':'',onClick:function(){pick(l.id);}},shortL(l.id));})),
+        canF&&scope===lid&&el('button',{className:'btn ghost sm',onClick:function(){setModal(true);}},'Targets'))),
+    msg&&el('div',{className:'msg',style:{marginTop:10}},msg),err&&el('div',{className:'msg err',style:{marginTop:10}},err),
+    notSet&&el('div',{className:'msg err',style:{marginTop:10}},'Test + trim, Package and Ship need hendrix_step52.sql in the Hendrix Supabase project. Until then batches close at the cure and the default targets are used.'),
+    !d?el('div',{className:'muted',style:{marginTop:16}},'Loading batches…'):el('div',null,
+      el('div',{className:'btx-cards'},
+        el('button',{className:'btx-card'+(seedOpen?' on':''),style:{'--kc':'#9A9384'},title:'Seed inventory',onClick:function(){setSeedOpen(!seedOpen);}},el('div',{className:'c'},'Seed vault'),
+          el('div',{className:'b'},seeds?seeds.n.toLocaleString():'–'),el('div',{className:'f'},seeds?seeds.L.length+' strain'+(seeds.L.length===1?'':'s'):'Receiving access needed',seeds&&seeds.low?el('span',null,' · ',el('span',{className:'late'},seeds.low+' low')):null)),
+        BT_STEPS.map(card)),
+      seedOpen&&el('div',{className:'lmx-panel',style:{margin:'8px 0 12px'}},el('div',{className:'lmx-h',style:{marginTop:0}},'Seed vault'),
+        !seeds?el('div',{className:'muted'},'Seed lots come from Receiving. You need View access to Receiving to see them.'):!seeds.L.length?el('div',{className:'muted'},'No accepted seed lots. Receive seeds in Receiving (category Clones / seeds) and they show here.'):
+        el('table',null,el('thead',null,el('tr',null,el('th',null,'Strain'),el('th',null,'Seeds on hand'),el('th',null,'Lots (on hand)'))),el('tbody',null,seeds.L.map(function(s){return el('tr',{key:s.name},el('td',null,el('b',null,s.name)),el('td',{style:{color:s.n<100?'var(--red)':''}},s.n.toLocaleString()+(s.n<100?' · low':'')),el('td',{className:'muted',style:{fontSize:12}},s.lots.join(', ')));}))),
+        el('div',{className:'btx-foot'},'On hand = lot quantity received, minus quantity used, minus plants started from the lot. Low = fewer than 100 seeds.')),
+      stepF&&el('div',{style:{margin:'6px 0 10px'}},el('button',{className:'btn ghost sm',onClick:function(){setStepF(null);}},'Show every stage')),
+      !shown.length?el('div',{className:'empty'},stepF?'No batches in '+BT_STEPS.find(function(s){return s[0]===stepF;})[1]+'.':(props.noAreas?'Start by adding your grow areas (rooms, greenhouses, fields, dry and cure rooms).':'No plant batches running. Add one with + Plant batch.')):
+      el('div',{className:'btx-list'},el('div',{className:'btx-row hd'},el('div',null,'Batch'),el('div',null,'Lifecycle'),el('div',null,'Now'),el('div',null,'Next step'),el('div',{style:{textAlign:'right'}},'Production')),
+        shown.map(function(r){const b=r.b,col=BT_STEPS[r.idx][2],go=b.license_id===lid;
+          return el('div',{key:b.id,className:'btx-row'+(r.late?' late':'')+(go?' go':''),title:go?'Open '+b.number:'Switch to '+lname(b.license_id)+' at the top to record on this batch',onClick:function(){if(go)props.onOpen(b.id);}},
+            el('div',null,el('div',{className:'btx-strain'},b.cultivar),el('div',{className:'btx-meta'},cul.length>1&&el('span',{className:'btx-chip'},shortL(b.license_id)),el('span',null,b.number),aName(b.area_id)&&el('span',null,'· '+aName(b.area_id)),
+              el('span',null,'· '+(r.idx>=3&&b.wet_weight!=null?'harvested '+btFmt(d.E.filter(function(v){return v.batch_id===b.id&&v.kind==='harvest';}).map(function(v){return v.done_on;}).sort().pop()||b.planted_on):'planted '+btFmt(b.planted_on))))),
+            el('div',{className:'btx-lifec'},el('div',{className:'btx-life'},BT_STEPS.map(function(s,i){return el('div',{key:s[0],className:'btx-seg'+(i===r.idx?' cur':''),style:{background:i<r.idx?s[2]+'66':i===r.idx?s[2]:'#2c2822','--sc':s[2]}});})),
+              el('div',{className:'btx-lbl'},BT_STEPS.map(function(s,i){return el('span',{key:s[0],style:i===r.idx?{color:s[2]}:null},s[1]);}))),
+            el('div',{className:'btx-now'},el('b',{style:{color:col}},BT_STEPS[r.idx][1],r.late&&el('span',{style:{color:'#e5645a'}},' · LATE')),el('div',null,r.now),el('div',{className:'btx-bar'},el('i',{style:{width:Math.round(r.prog*100)+'%',background:r.late?'#C05B4E':col}}))),
+            el('div',{className:'btx-next'+(r.late?' late':'')},el('b',null,r.next),el('div',null,r.sub)),
+            el('div',{className:'btx-prod'},el('div',null,el('b',null,b.plant_count),' plants'),b.wet_weight!=null&&el('div',null,'wet ',btG(b.wet_weight)),b.dry_weight!=null&&el('div',null,'dry ',btG(b.dry_weight))));})),
+      el('div',{className:'btx-foot'},'From the plant batches and grow records in Hendrix. Targets'+(scope==='all'?' (this license)':'')+': harvest starts '+S1.cycle_days+' days after planting (or the planned harvest start on the batch), '+S1.window_days+'-day window, veg '+S1.veg_days+' days, dry '+S1.dry_days+', cure '+S1.cure_days+', test + trim '+S1.trim_days+', package '+S1.package_days+', ship '+S1.ship_days+' days. Updated '+d.at.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+'; refreshes every minute.')),
+    modal&&el(CulTargetsForm,{license:lic,settings:S1,onClose:function(){setModal(false);},onDone:function(m){setModal(false);setMsg(m);load();}}));
+}
 function CultivationPage(props){
   const st=props.state,lic=props.license,lid=lic?lic.id:'',canE=can('cultivation',2),canF=can('cultivation',3);
-  const[tab,setTab]=useState(lsGet('hx_cultab')||'batches');const[areas,setAreas]=useState([]);const[batches,setBatches]=useState(null);const[evs,setEvs]=useState([]);const[lots,setLots]=useState([]);const[chems,setChems]=useState([]);
+  const[tab,setTab]=useState(lsGet('hx_cultab')||'tracker');const[ver,setVer]=useState(0);const[areas,setAreas]=useState([]);const[batches,setBatches]=useState(null);const[evs,setEvs]=useState([]);const[lots,setLots]=useState([]);const[chems,setChems]=useState([]);
   const[msg,setMsg]=useState('');const[modal,setModal]=useState(null);const[open,setOpen]=useState(null);const[show,setShow]=useState('active');
-  const load=useCallback(function(){if(!lid)return;const L='license_id=eq.'+encodeURIComponent(lid);
+  const load=useCallback(function(){if(!lid)return;const L='license_id=eq.'+encodeURIComponent(lid);setVer(function(n){return n+1;});
     db.get('hx_grow_areas',L+'&select=*&order=sort,name').then(function(r){setAreas((r||[]).filter(function(x){return x.license_id===lid;}));}).catch(function(e){setMsg(culErr(e));});
     db.get('hx_plant_batches',L+'&select=*&order=created_at.desc&limit=3000').then(function(r){setBatches((r||[]).filter(function(x){return x.license_id===lid;}));}).catch(function(e){setMsg(culErr(e));setBatches([]);});
     db.get('hx_grow_events',L+'&select=*&order=done_on.desc,created_at.desc&limit=20000').then(function(r){setEvs((r||[]).filter(function(x){return x.license_id===lid;}));}).catch(function(){setEvs([]);});
@@ -5617,13 +5782,13 @@ function CultivationPage(props){
   const ob=open&&B.find(function(x){return x.id===open;});
   function printApps(){const e=esc3;printRecords('Nutrient and crop protection applications - '+lic.name,['<div class="hxrec"><h2>Nutrient and crop protection applications \u2014 '+e(lic.name)+'</h2><div class="m">'+e(st.name)+' \u00b7 CSQ 3A.1.5, 3A.1.7, 3A.1.14 \u00b7 printed '+e(new Date().toLocaleString())+'</div><table><tr><th>Date</th><th>Plant batch</th><th>Type</th><th>Product</th><th>Rate</th><th>REI / PHI</th><th>By</th></tr>'+
     apps.map(function(v){const b=B.find(function(x){return x.id===v.batch_id;});return '<tr><td>'+e(v.done_on)+'</td><td>'+e(b?b.number+' '+b.cultivar:'')+'</td><td>'+e(GE_KINDS[v.kind])+'</td><td>'+e(v.product+(v.epa_reg?' (EPA '+v.epa_reg+')':''))+'</td><td>'+e(v.amount+(v.method?' \u00b7 '+v.method:''))+'</td><td>'+(v.kind==='crop_protection'?e(v.rei_hours+' h / '+v.phi_days+' d'):'-')+'</td><td>'+e(v.done_by)+'</td></tr>';}).join('')+'</table></div>']);}
-  const tabs=[['batches','Plant batches'],['areas','Grow areas ('+areas.filter(function(a){return a.active;}).length+')'],['apps','Applications'],['inputs','Approved inputs']];
+  const tabs=[['tracker','Batch tracker'],['batches','Plant batches'],['areas','Grow areas ('+areas.filter(function(a){return a.active;}).length+')'],['apps','Applications'],['inputs','Approved inputs']];
   const shownB=B.filter(function(b){return show==='all'||(show==='active'?culActive(b):!culActive(b));});
   return el('div',null,
     el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
       el('div',null,el('h1',null,el('span',{className:'g'},'Cultivation')),el('div',{className:'sub'},lic.name+' \u00b7 plant batches from propagation to cure, nutrients, crop protection and harvest (CSQ Standard for Cultivation, Module 3A)')),
       canE&&el('div',{className:'row'},el('button',{className:'btn ghost',onClick:function(){setModal({t:'area'});}},'+ Grow area'),el('button',{className:'btn',disabled:!areas.length,title:areas.length?'':'Add a grow area first',onClick:function(){setModal({t:'batch'});}},'+ Plant batch'))),
-    msg&&el('div',{className:/^(Saved|Nutrients|Crop protection|Scouting|Stage|Harvest|Drying|Cured|Destroyed|Note|Voided)/.test(msg)?'msg':'msg err'},msg),
+    msg&&el('div',{className:/^(Saved|Nutrients|Crop protection|Scouting|Stage|Harvest|Drying|Cured|Sent to the lab|Test passed|Packaged|Shipped|Destroyed|Note|Voided)/.test(msg)?'msg':'msg err'},msg),
     batches!==null&&el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',marginBottom:14}},
       stat('Active plant batches',act.length,'var(--text)',act.filter(culGrowing).reduce(function(a,b){return a+(b.plant_count||0);},0)+' plants growing'),
       stat('Harvest on hold (PHI)',act.filter(culPhiHold).length,act.filter(culPhiHold).length?'var(--gold-hi)':'var(--green)','pre-harvest interval running'),
@@ -5632,6 +5797,7 @@ function CultivationPage(props){
       outdoor.length>0&&stat('Site risk assessment due',riskDue.length,riskDue.length?'var(--red)':'var(--green)','outdoor / greenhouse, yearly')),
     el('div',{className:'tabs'},tabs.map(function(t){return el('button',{key:t[0],className:tab===t[0]?'on':'',onClick:function(){go(t[0]);}},t[1]);})),
     batches===null?el('div',{className:'muted'},'Loading...'):
+    tab==='tracker'?el(CulBatchTracker,{state:st,license:lic,licenses:props.licenses,noAreas:!areas.length,ver:ver>1?ver:0,onOpen:setOpen}):
     tab==='batches'?el('div',null,el('div',{className:'row',style:{marginBottom:10}},el('select',{value:show,onChange:function(e){setShow(e.target.value);}},el('option',{value:'active'},'Active batches'),el('option',{value:'closed'},'Done and destroyed'),el('option',{value:'all'},'All'))),
       !areas.length?el('div',{className:'empty'},'Start by adding your grow areas (rooms, greenhouses, fields, dry and cure rooms).'):!shownB.length?el('div',{className:'empty'},'No plant batches '+(show==='active'?'growing.':'here.')):
       el('div',{className:'card',style:{overflowX:'auto',padding:0}},el('table',null,el('thead',null,el('tr',null,['Batch','Cultivar','Plants','Stage','Area','Planted','Harvest',''].map(function(h,i){return el('th',{key:i},h);}))),
@@ -5659,7 +5825,7 @@ function CultivationPage(props){
         el('div',{className:'row',style:{gap:6,marginBottom:8}},el('span',{className:'badge'},CUL_STAGES[ob.stage]),el('span',{className:'muted',style:{fontSize:13}},ob.plant_count+' plants \u00b7 '+aName(ob.area_id)+' \u00b7 planted '+ob.planted_on+' \u00b7 '+srcName(ob)+(ob.media?' \u00b7 media: '+ob.media:'')+(ob.metrc_tag?' \u00b7 '+ob.metrc_tag:''))),
         culPhiHold(ob)&&el('div',{className:'msg err'},'Pre-harvest interval running: no harvest before '+ob.harvest_after+'.'),
         canE&&culActive(ob)&&el('div',{className:'row',style:{gap:6,marginBottom:12}},growing&&act2('input','Nutrients','btn sm'),growing&&act2('crop_protection','Crop protection'),growing&&act2('scouting','Scouting'),growing&&act2('stage','Stage / move'),
-          ob.stage!=='propagation'&&growing&&act2('harvest','Harvest','btn sm'),ob.stage==='drying'&&act2('dry','Drying','btn sm'),post&&act2('cure','Cured (dry weight)','btn sm'),act2('note','Note'),
+          ob.stage!=='propagation'&&growing&&act2('harvest','Harvest','btn sm'),ob.stage==='drying'&&act2('dry','Drying','btn sm'),post&&act2('cure','Cured (dry weight)','btn sm'),ob.stage==='trim'&&act2('lab','Sent to lab'),ob.stage==='trim'&&act2('tested','Test passed (COA)','btn sm'),ob.stage==='package'&&act2('packaged','Packaged','btn sm'),['trim','package','ship'].indexOf(ob.stage)>=0&&act2('shipped','Shipped / transferred',ob.stage==='ship'?'btn sm':''),act2('note','Note'),
           el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'batch',b:ob});}},'Edit'),el('button',{className:'btn ghost sm',onClick:function(){printRecords('Plant label '+ob.number,[culLabelHtml(ob,lic,srcName(ob))]);}},'Print label'),
           canF&&act2('destroy','Destroy','btn danger sm')),
         !ev.length?el('div',{className:'muted'},'No records yet.'):el('table',null,el('tbody',null,ev.map(function(v){return el('tr',{key:v.id,className:v.voided?'voidrow':''},el('td',{style:{whiteSpace:'nowrap'}},v.done_on),
@@ -5674,11 +5840,11 @@ function CulDashCard(props){
   const lic=props.license,lid=lic?lic.id:'';const[d,setD]=useState(null);
   useEffect(function(){if(!lid||!can('cultivation',1)||licOp(lic)!=='cultivation'){setD(null);return;}let dead=false;
     db.get('hx_plant_batches','license_id=eq.'+encodeURIComponent(lid)+'&select=stage,plant_count,harvest_after,license_id').then(function(r){const B=(r||[]).filter(function(x){return x.license_id===lid&&culActive(x);});
-      if(!dead)setD({n:B.length,plants:B.filter(culGrowing).reduce(function(a,b){return a+(b.plant_count||0);},0),phi:B.filter(culPhiHold).length,post:B.filter(function(b){return b.stage==='drying'||b.stage==='curing';}).length});}).catch(function(){if(!dead)setD(null);});
+      if(!dead)setD({n:B.length,plants:B.filter(culGrowing).reduce(function(a,b){return a+(b.plant_count||0);},0),phi:B.filter(culPhiHold).length,post:B.filter(function(b){return !culGrowing(b);}).length});}).catch(function(){if(!dead)setD(null);});
     return function(){dead=true;};},[lid]);
   if(!d)return null;
   return el('div',{className:'card gold'},el('div',{className:'k'},'Cultivation'),el('div',{className:'v'},d.plants+' plants'),
-    el('div',{className:'muted',style:{margin:'4px 0 8px'}},d.n+' active batch'+(d.n===1?'':'es')+' \u00b7 '+d.post+' drying / curing'+(d.phi?' \u00b7 '+d.phi+' on pre-harvest hold':'')),
+    el('div',{className:'muted',style:{margin:'4px 0 8px'}},d.n+' active batch'+(d.n===1?'':'es')+' \u00b7 '+d.post+' post-harvest'+(d.phi?' \u00b7 '+d.phi+' on pre-harvest hold':'')),
     el('a',{href:'#',style:{color:'var(--gold-hi)',fontSize:13},onClick:function(e){e.preventDefault();props.go('cultivation');}},'Open cultivation'));
 }
 
@@ -8089,8 +8255,8 @@ function LineMapDashCard(props){
 }
 
 /* ---------- System Health (step 37): checks the installation like an IQ, admins only ---------- */
-const HX_RELEASE='Release 51 · November 2026';
-const SH_STEPS_EXPECTED=[4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51];
+const HX_RELEASE='Release 52 · November 2026';
+const SH_STEPS_EXPECTED=[4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52];
 function shErr(e){const m=String((e&&e.message)||e);return /hx_system_health/.test(m)&&/missing|does not exist|schema cache|Could not find/i.test(m)?'NOT_INSTALLED':m;}
 function SystemHealthPage(props){
   const[h,setH]=useState(null);const[x38,setX38]=useState(null);const[err,setErr]=useState('');const[ai,setAi]=useState(null);const[busy,setBusy]=useState(false);const[at,setAt]=useState(0);
@@ -8109,7 +8275,7 @@ function SystemHealthPage(props){
   function add(group,label,state,detail,fix){checks.push({group:group,label:label,state:state,detail:detail||'',fix:fix||''});}
   if(h){
     const steps=h.steps||[],missing=steps.filter(function(s){return !s.ok;});
-    add('Database','Database steps installed',missing.length?'bad':'ok',missing.length?'Missing: '+missing.map(function(s){return s.step+' '+s.name;}).join(', '):'All '+steps.length+' steps (4 to '+(steps.length?steps[steps.length-1].step:'')+') are installed.',missing.length?'Run hendrix_install_13_to_51.sql (or the missing step files) in the Supabase SQL editor.':'');
+    add('Database','Database steps installed',missing.length?'bad':'ok',missing.length?'Missing: '+missing.map(function(s){return s.step+' '+s.name;}).join(', '):'All '+steps.length+' steps (4 to '+(steps.length?steps[steps.length-1].step:'')+') are installed.',missing.length?'Run hendrix_install_13_to_52.sql (or the missing step files) in the Supabase SQL editor.':'');
     const drift=at?Math.abs(new Date(h.checked_at).getTime()-at)/1000:0;
     add('Database','Clock',drift>120?'warn':'ok','Database time zone '+h.db_time_zone+'; this device is '+Math.round(drift)+' s '+(drift>120?'off':'in step')+'.',drift>120?'Set this device to the correct time (automatic time).':'');
     add('Security','Row level security on every table',(h.rls_off||[]).length?'bad':'ok',(h.rls_off||[]).length?'Off on: '+h.rls_off.join(', '):'On for all '+h.tables+' Hendrix tables.',(h.rls_off||[]).length?'Run the step file that creates those tables again, or turn on RLS for them in Supabase > Table editor.':'');
@@ -8144,7 +8310,7 @@ function SystemHealthPage(props){
       el('div',{className:'row',style:{gap:8}},el('button',{className:'btn ghost',disabled:busy,onClick:run},busy?'Checking...':'Run checks again'),
         el('button',{className:'btn ghost',disabled:ai&&ai.busy,onClick:testAi},ai&&ai.busy?'Testing...':'Test the AI connection'),
         h&&el('button',{className:'btn',onClick:print},'Print IQ evidence'))),
-    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'System Health is not set up yet - run hendrix_step37.sql (or hendrix_install_13_to_51.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
+    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'System Health is not set up yet - run hendrix_step37.sql (or hendrix_install_13_to_52.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
     h&&el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',gap:10,marginBottom:14}},
       el('div',{className:'card',style:{marginBottom:0,borderTop:'2px solid '+(nBad?'var(--red)':(nWarn?'var(--gold)':'#5fbf8a'))}},el('div',{className:'k'},'Overall'),el('div',{style:{fontSize:22,fontWeight:700,marginTop:4,color:nBad?'var(--red)':(nWarn?'var(--gold-hi)':'#5fbf8a')}},nBad?nBad+' to fix':(nWarn?nWarn+' to check':'Ready')),el('div',{className:'muted',style:{fontSize:12}},nOk+' of '+checks.length+' checks pass')),
       el('div',{className:'card',style:{marginBottom:0}},el('div',{className:'k'},'Steps installed'),el('div',{style:{fontSize:22,fontWeight:700,marginTop:4}},(h.steps||[]).filter(function(s){return s.ok;}).length+' / '+(h.steps||[]).length),el('div',{className:'muted',style:{fontSize:12}},'database steps 4 to '+((h.steps||[]).slice(-1)[0]||{}).step)),
@@ -8326,7 +8492,7 @@ function MyTasksPage(props){
       el('div',null,el('h1',null,el('span',{className:'g'},'My Tasks')),el('div',{className:'sub'},(lic?lic.name+' · ':'')+'everything waiting for you, kept up to date by Hendrix from the records')),
       el('div',{className:'row',style:{gap:8}},el('button',{className:'btn ghost',onClick:load},'Refresh'),lic&&el('button',{className:'btn ghost',disabled:busy,onClick:emailMe},busy?'Sending...':'Email me this list'))),
     msg&&el('div',{className:'msg'},msg),
-    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'My Tasks is not set up yet - run hendrix_step39.sql (or hendrix_install_13_to_51.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
+    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'My Tasks is not set up yet - run hendrix_step39.sql (or hendrix_install_13_to_52.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
     list===null?el('div',{className:'muted'},'Loading...'):el('div',null,
       el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',gap:10,marginBottom:14}},
         stat('All',L.length,'open tasks',undefined,'all'),stat('Waiting for you',mine.length,'assigned to you',undefined,'mine'),
@@ -8479,7 +8645,7 @@ function MetrcPage(props){
     el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-end',gap:12,flexWrap:'wrap',marginBottom:16}},
       el('div',null,el('h1',null,el('span',{className:'g'},'METRC Check')),el('div',{className:'sub'},lic.name+(lic.license_number?' · '+lic.license_number:'')+' · what METRC says compared with Hendrix; read only, nothing is changed in METRC')),
       el('div',{className:'row',style:{gap:8}},res&&el('button',{className:'btn ghost',onClick:print},'Print report'))),
-    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'METRC Check is not set up yet - run hendrix_step41.sql (or hendrix_install_13_to_51.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
+    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'METRC Check is not set up yet - run hendrix_step41.sql (or hendrix_install_13_to_52.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
     busy&&el('div',{className:'msg'},busy),
     canE&&el('div',{className:'card'},el('div',{className:'k',style:{marginBottom:8}},'Get what METRC says'),
       el('div',{className:'row',style:{gap:10,alignItems:'center',flexWrap:'wrap'}},
@@ -11960,7 +12126,7 @@ function App(){
   else if(['orgchart','objectives','mgmtreview','verification'].indexOf(page)>=0&&(can('orgchart',1)||can('objectives',1)||can('mgmtreview',1)||can('verification',1)))body=el(QualitySysPage,{key:licId,state:st,license:lic,profile:profile,go:setPage,tab:{orgchart:'org',objectives:'kpi',mgmtreview:'mr',verification:'ver'}[page]});
   else if((page==='risks'||page==='changes')&&(can('risks',1)||can('changes',1)))body=el(RiskChangePage,{key:licId,state:st,license:lic,profile:profile,go:setPage,tab:page==='changes'?'cc':'rk'});
   else if(page==='haccp'&&can('haccp',1))body=el(HaccpPage,{key:licId,state:st,license:lic,profile:profile,go:setPage});
-  else if(page==='cultivation'&&can('cultivation',1))body=el(CultivationPage,{key:licId,state:st,license:lic,profile:profile,go:setPage});
+  else if(page==='cultivation'&&can('cultivation',1))body=el(CultivationPage,{key:licId,state:st,license:lic,licenses:licenses,profile:profile,go:setPage});
   else if(page==='envtests'&&can('envtests',1))body=el(EnvTestsPage,{key:licId,state:st,license:lic,go:setPage});
   else if((page==='lineclear'||page==='rework')&&(can('lineclear',1)||can('rework',1)))body=el(LineReworkPage,{key:licId+page,state:st,license:lic,profile:profile,go:setPage,tab:page==='rework'?'rw':null});
   else if(page==='equipment'&&can('equipment',1))body=el(EquipmentPage,{key:licId,state:st,license:lic,go:setPage});

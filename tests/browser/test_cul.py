@@ -31,7 +31,10 @@ def handle(route, request):
         if r['kind'] == 'stage': b['stage'] = r['stage'] or b['stage']; b['area_id'] = r['area_id'] or b['area_id']
         if r['kind'] == 'harvest': b.update({'stage': 'drying', 'wet_weight': r['wet_weight'], 'harvest_tag': r['tag'], 'area_id': r['area_id'] or b['area_id']})
         if r['kind'] == 'dry': b['stage'] = 'curing'
-        if r['kind'] == 'cure': b.update({'stage': 'done', 'dry_weight': r['dry_weight']})
+        if r['kind'] == 'cure': b.update({'stage': 'trim', 'dry_weight': r['dry_weight']})
+        if r['kind'] == 'tested': b['stage'] = 'package'
+        if r['kind'] == 'packaged': b['stage'] = 'ship'
+        if r['kind'] == 'shipped': b['stage'] = 'done'
         apply(b['id']); return jr(route, [r], 201)
     if tbl == 'hx_grow_events' and m == 'PATCH':
         bd = json.loads(request.post_data); cid = urllib.parse.unquote(u.split('id=eq.')[1].split('&')[0]); v = next(x for x in T['hx_grow_events'] if x['id'] == cid); v.update(bd); apply(v['batch_id']); return jr(route, [v])
@@ -66,6 +69,8 @@ with sync_playwright() as pw:
     field(md, 'Lot (Receiving) *').select_option('lt-cl'); field(md, 'Grow media lot').select_option('lt-md'); field(md, 'METRC plant batch tag').fill('1A4-PB-01')
     field(md, 'Starts in area').select_option(label='Flower 1 · Indoor grow room'); md.get_by_role('button', name='Save').click(); pg.wait_for_selector('.msg >> text=Saved Gelato')
     check(pb()['source_lot_id'] == 'lt-cl' and pb()['media_lot_id'] == 'lt-md' and pb()['area_id'], 'plant batch traced to the clone lot and media lot')
+    check(pg.locator('#bt-wall .btx-row', has_text='Gelato').count() == 1, 'new plant batch on the Batch tracker (opens first)')
+    pg.locator('.tabs button', has_text='Plant batches').click(); pg.wait_for_timeout(200)
     pg.locator('tr', has_text='PB-2026-001').get_by_role('button', name='Open').click(); md = pg.locator('.md')
     with pg.expect_popup() as pop: md.get_by_role('button', name='Print label').click()
     w = pop.value; w.wait_for_load_state(); html = w.content(); check('Gelato' in html and 'Lot RCV-2026-010 Gelato clones' in html and 'Planted' in html, 'printable plant label with name, source and date'); w.close()
@@ -98,7 +103,21 @@ with sync_playwright() as pw:
     md.get_by_role('button', name='Drying').click(); md = pg.locator('.md'); field(md, 'Room conditions *').fill('60 F, 60% RH'); md.get_by_role('button', name='Record').click(); pg.wait_for_selector('.msg >> text=Drying recorded')
     md = pg.locator('.md').first
     md.get_by_role('button', name='Cured (dry weight)').click(); md = pg.locator('.md'); field(md, 'Final dry weight (g) *').fill('2600'); md.get_by_role('button', name='Record').click(); pg.wait_for_selector('.msg >> text=Cured (dry weight) recorded')
-    check(pb()['stage'] == 'done' and pb()['wet_weight'] == 12000 and pb()['dry_weight'] == 2600 and pb()['harvest_tag'] == '1A4-HB-77', 'harvest, drying and curing complete the batch')
+    check(pb()['stage'] == 'trim' and pb()['wet_weight'] == 12000 and pb()['dry_weight'] == 2600 and pb()['harvest_tag'] == '1A4-HB-77', 'after harvest, drying and curing the batch goes to Test + trim')
+    md = pg.locator('.md').first
+    check(md.get_by_role('button', name='Packaged').count() == 0, 'no packaging before the test result')
+    md.get_by_role('button', name='Sent to lab').click(); md = pg.locator('.md'); md.get_by_role('button', name='Record').click(); pg.wait_for_selector('.md .msg.err >> text=Enter the lab and the sample sent')
+    field(md, 'Lab and sample sent *').fill('Kaycha, 30 g'); md.get_by_role('button', name='Record').click(); pg.wait_for_selector('.msg >> text=Sent to the lab recorded')
+    md = pg.locator('.md').first
+    md.get_by_role('button', name='Test passed (COA)').click(); md = pg.locator('.md'); md.get_by_role('button', name='Record').click(); pg.wait_for_selector('.md .msg.err >> text=Enter the COA or sample number')
+    field(md, 'COA / sample number *').fill('COA-77'); md.get_by_role('button', name='Record').click(); pg.wait_for_selector('.msg >> text=Test passed (COA) recorded')
+    check(pb()['stage'] == 'package', 'passing test moves the batch to Package')
+    md = pg.locator('.md').first
+    md.get_by_role('button', name='Packaged').click(); md = pg.locator('.md'); field(md, 'What was packaged *').fill('400 x 3.5 g'); md.get_by_role('button', name='Record').click(); pg.wait_for_selector('.msg >> text=Packaged recorded')
+    md = pg.locator('.md').first
+    md.get_by_role('button', name='Shipped / transferred').click(); md = pg.locator('.md'); field(md, 'Shipped / transferred to *').fill('Black Fox MAN000109'); field(md, 'Manifest #').fill('MAN-1')
+    md.get_by_role('button', name='Record').click(); pg.wait_for_selector('.msg >> text=Shipped / transferred recorded')
+    check(pb()['stage'] == 'done', 'shipped / transferred closes the batch')
     pg.locator('.mo').click(position={'x': 5, 'y': 5}); pg.wait_for_timeout(200)
     pg.locator('.tabs button', has_text='Applications').click(); pg.wait_for_selector('td >> text=Bloom A+B')
     check(pg.locator('td', has_text='Neem oil').count() == 0, 'voided application not in the application log')
