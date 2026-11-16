@@ -48,6 +48,7 @@ with sync_playwright() as pw:
     field(md, 'SKU').select_option(label='Mates THCA 5 x 0.6g'); field(md, 'Flavor').select_option(label='Honey Melon')
     check(md.locator('text=Formulation — Mates base').count() == 1, 'formulation card shown to admin')
     check(field(md, 'THCA Used').count() == 1 and field(md, 'Terpene Used').count() == 1 and md.locator('span', has_text='Live Resin Used').count() == 0, 'only the SKU ingredients shown')
+    check(md.locator('span', has_text=re.compile('^Flower Used')).count() == 1 and "PRE_ROLL_INGREDIENTS=['Flower'," in HTML, 'Flower is an infusion ingredient choice; flower fields show whether it is ticked or not')
     check(md.locator('span', has_text='Mandatory Testing').count() == 0 and md.locator('span', has_text='R&D 2').count() == 0, 'mandatory testing + R&D 2 hidden until R&D 1')
     field(md, 'Batch / Lot Number').fill('PR-001')
     field(md, 'Flower Used').fill('1000'); field(md, 'THCA Used').fill('200'); field(md, 'Terpene Used').fill('40'); field(md, 'Infused Flower Total WT').fill('1240')

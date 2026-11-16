@@ -2178,7 +2178,7 @@ const PRODUCT_TYPES=[
   {id:'pre_rolls',name:'Pre-Rolls'},{id:'cartridges',name:'Cartridges'},{id:'gummies',name:'Gummies'},
   {id:'infused_flower',name:'Infused Flower'},{id:'moon_rocks',name:'Moon Rocks'},{id:'snow_caps',name:'Snow Caps'}];
 function ptName(id){const t=PRODUCT_TYPES.find(function(x){return x.id===id;});return t?t.name:id;}
-const PRE_ROLL_INGREDIENTS=['THCA','Terpene','Live Resin','HTE','Decarbed Cured Resin','Distillate','Trim','THCA (internal)'];
+const PRE_ROLL_INGREDIENTS=['Flower','THCA','Terpene','Live Resin','HTE','Decarbed Cured Resin','Distillate','Trim','THCA (internal)'];
 const SKU_SPECS={
   pre_rolls:[{k:'grams_filled',l:'Grams per joint, filled / infused',ph:'e.g. 0.55',num:1},{k:'grams_kiefed',l:'Grams per joint after coating (blank = no coating step)',ph:'e.g. 0.60',num:1},
     {k:'coating',l:'Coating step',t:'select',o:['Kief','Diamond']},{k:'flower_type',l:'Flower used',t:'select',o:['Infused','Ground']},
