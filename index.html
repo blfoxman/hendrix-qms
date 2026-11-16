@@ -7863,12 +7863,87 @@ function lmLook(state,color){
 function lmTagOf(t){if(t.state==='stopped')return LM_TAG[t.reasons[0].kind]||'STOPPED';if(t.state==='waiting')return 'AT LAB';if(t.state==='planned')return t.planned_for?'PLANNED '+lmTime(t.planned_for).toUpperCase():'PLANNED';
   if(t.state==='done')return 'SHIPPED';return t.live?'WORKING NOW':'MOVING';}
 
+/* ---------- Line Map look: condensed headline type, tiles with colour bars, live line flow ---------- */
+function lmFonts(){if(document.getElementById('lm-fonts'))return;const l=document.createElement('link');l.id='lm-fonts';l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&display=swap';document.head.appendChild(l);}
+const LM_CSS='#lm-wall .lmx-eyebrow{font-family:Oswald,"Arial Narrow",sans-serif;text-transform:uppercase;letter-spacing:.3em;font-size:12px;color:var(--gold);display:flex;align-items:center;gap:12px;margin-bottom:10px}'+
+ '#lm-wall .lmx-eyebrow::before{content:"";width:26px;height:2px;background:var(--gold)}'+
+ '#lm-wall .lmx-title{font-family:Anton,Impact,"Arial Narrow",sans-serif;font-weight:400;font-size:clamp(30px,4.4vw,48px);line-height:1;text-transform:uppercase;letter-spacing:.01em;margin:0;color:#fff}'+
+ '#lm-wall .lmx-sub{color:#a29b8c;max-width:78ch;margin-top:10px;font-size:14.5px}'+
+ '#lm-wall .lmx-h{font-family:Oswald,"Arial Narrow",sans-serif;text-transform:uppercase;letter-spacing:.16em;font-size:14px;font-weight:600;color:var(--gold);margin:26px 0 10px}'+
+ '#lm-wall .lmx-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:12px;margin:18px 0 6px}'+
+ '#lm-wall .lmx-kpi{background:linear-gradient(180deg,#1c1a16,#161513);border:1px solid #3a342a;border-radius:14px;padding:15px 16px 14px;position:relative;overflow:hidden}'+
+ '#lm-wall .lmx-kpi::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:var(--kc,var(--gold))}'+
+ '#lm-wall .lmx-kpi.bad{background:linear-gradient(180deg,#241312,#180e0d);border-color:#5a2a26}'+
+ '#lm-wall .lmx-kpi .c{font-family:Oswald,"Arial Narrow",sans-serif;text-transform:uppercase;letter-spacing:.12em;font-size:10.5px;color:#a29b8c;min-height:15px}'+
+ '#lm-wall .lmx-kpi .b{font-family:Anton,Impact,sans-serif;font-size:clamp(28px,3vw,38px);line-height:1;margin:9px 0 5px;color:var(--kc,var(--gold));font-variant-numeric:tabular-nums}'+
+ '#lm-wall .lmx-kpi .f{font-size:11.5px;color:#7a7466;line-height:1.35}'+
+ '#lm-wall .lmx-panel{background:linear-gradient(180deg,#1a1814,#141310);border:1px solid #3a342a;border-radius:16px;padding:18px 18px 14px}'+
+ '#lm-wall .lmx-line{display:flex;align-items:flex-start;padding:6px 0 14px;overflow-x:auto}'+
+ '#lm-wall .lmx-line+.lmx-line{border-top:1px solid #2a2620;padding-top:16px}'+
+ '#lm-wall .lmx-lname{width:128px;flex:none;padding-top:14px}'+
+ '#lm-wall .lmx-lname b{display:block;font-family:Oswald,"Arial Narrow",sans-serif;text-transform:uppercase;letter-spacing:.1em;font-size:13px;font-weight:600}'+
+ '#lm-wall .lmx-lname span{font-size:11.5px;color:#7a7466}'+
+ '#lm-wall .lmx-st{flex:none;width:84px;display:flex;flex-direction:column;align-items:center;text-align:center;cursor:default;background:none;border:0;color:inherit;font:inherit;padding:0}'+
+ '#lm-wall .lmx-st.has{cursor:pointer}'+
+ '#lm-wall .lmx-ring{width:56px;height:56px;border-radius:50%;border:2px solid #3a342a;display:flex;align-items:center;justify-content:center;background:#100f0d;position:relative}'+
+ '#lm-wall .lmx-ring svg{width:24px;height:24px}'+
+ '#lm-wall .lmx-st.has .lmx-ring{border-width:3px;box-shadow:0 0 0 5px rgba(255,255,255,.03)}'+
+ '#lm-wall .lmx-st.stop .lmx-ring{border-color:#e5645a!important;background:#1d0f0e}'+
+ '#lm-wall .lmx-st.has:hover .lmx-ring{box-shadow:0 0 0 5px rgba(212,175,55,.18)}'+
+ '#lm-wall .lmx-n{position:absolute;top:-6px;right:-8px;min-width:22px;height:22px;border-radius:11px;padding:0 6px;font:700 12px/22px Archivo,system-ui,sans-serif;color:#0a0a0a;background:var(--lc)}'+
+ '#lm-wall .lmx-st.stop .lmx-n{background:#e5645a;color:#fff}'+
+ '#lm-wall .lmx-sl{font-family:Oswald,"Arial Narrow",sans-serif;text-transform:uppercase;letter-spacing:.06em;font-size:10.5px;color:#a29b8c;margin-top:8px;line-height:1.25;max-width:82px}'+
+ '#lm-wall .lmx-st.has .lmx-sl{color:#f2efe6}'+
+ '#lm-wall .lmx-ss{font-size:10.5px;margin-top:2px;color:#7a7466;min-height:14px}'+
+ '#lm-wall .lmx-st.stop .lmx-ss{color:#f08a80}'+
+ '#lm-wall .lmx-con{flex:1 0 8px;min-width:8px;height:3px;margin-top:27px;background:#2c2822;border-radius:2px}'+
+ '#lm-wall .lmx-con.on{background:repeating-linear-gradient(90deg,var(--lc) 0 8px,transparent 8px 14px);background-size:28px 3px;animation:lmxrun 1.1s linear infinite}'+
+ '#lm-wall .lmx-con.past{background:color-mix(in srgb,var(--lc) 45%,#2c2822)}'+
+ '@keyframes lmxrun{to{background-position:28px 0}}'+
+ '@media (prefers-reduced-motion:reduce){#lm-wall .lmx-con.on{animation:none}}'+
+ '#lm-wall .card{background:linear-gradient(180deg,#1a1814,#141310);border-color:#3a342a;border-radius:16px}'+
+ '#lm-wall h3{font-family:Oswald,"Arial Narrow",sans-serif;text-transform:uppercase;letter-spacing:.12em;font-weight:600;font-size:15px}';
+function lmIcon(name){const n=String(name).toLowerCase();const p=
+  /plan/.test(n)?'M7 3v3M17 3v3M4 8h16M5 5h14v15H5z':
+  /clear/.test(n)?'M5 12l4 4 10-10':
+  /label|sticker/.test(n)?'M3 12V4h8l10 10-8 8z M7.5 7.5h.01':
+  /lab|test|r&d|coa/.test(n)?'M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3':
+  /qc|release|hold/.test(n)?'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z':
+  /ship/.test(n)?'M3 7h11v9H3zM14 10h4l3 3v3h-7M7 19a2 2 0 1 0 0-.01M17 19a2 2 0 1 0 0-.01':
+  /pack|fill|bag|jar|cart/.test(n)?'M4 8l8-4 8 4v9l-8 4-8-4zM4 8l8 4 8-4M12 12v9':
+  /dry|cure|oven|decarb|heat|bake/.test(n)?'M12 3c3 4 5 6 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 1-9z':
+  /extract|wash|wipe|winter|filter|solvent|mix|infus|blend|cook/.test(n)?'M12 3c4 5 6 8 6 11a6 6 0 0 1-12 0c0-3 2-6 6-11z':
+  /roll|cone|grind|kief|coat/.test(n)?'M5 19L19 5M8 20l12-12M4 16l12-12':
+  'M12 8a4 4 0 1 0 0 8 4 4 0 1 0 0-8zM12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2';
+  return el('svg',{viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.7,strokeLinecap:'round',strokeLinejoin:'round','aria-hidden':'true'},el('path',{d:p}));}
+function LineFlow(props){
+  // one row per product line: every station as a ring, the number of batches there, moving connectors
+  return el('div',{className:'lmx-panel'},props.types.map(function(type){
+    const c=LM_COLORS[type]||'#d4af37',st=lmStations(type).concat(LM_TRUNK),n0=lmStations(type).length;
+    const at=st.map(function(){return [];});
+    props.trains.forEach(function(t){if(t.type!==type||t.state==='planned'&&!t.where)return;const i=t.where.trunk!==undefined?n0+t.where.trunk:t.where.st;if(at[i]&&t.state!=='done')at[i].push(t);});
+    const done=props.trains.filter(function(t){return t.type===type&&t.state==='done';}).length;at[st.length-1]=at[st.length-1].concat(props.trains.filter(function(t){return t.type===type&&t.state==='done';}));
+    const last=at.reduce(function(m,a,i){return a.length?i:m;},-1);
+    const inWork=props.trains.filter(function(t){return t.type===type&&(t.state==='moving'||t.state==='stopped'||t.state==='waiting');}).length;
+    const nodes=[];
+    st.forEach(function(name,i){const g=at[i],stop=g.filter(function(t){return t.state==='stopped';}).length,mov=g.filter(function(t){return t.state==='moving';}).length,wait=g.filter(function(t){return t.state==='waiting';}).length,pl=g.filter(function(t){return t.state==='planned';}).length;
+      if(i>0){const runs=at[i-1].some(function(t){return t.state==='moving';});nodes.push(el('div',{key:'c'+i,className:'lmx-con'+(runs?' on':(i<=last?' past':''))}));}
+      const sub=stop?stop+' stopped':wait?wait+' waiting':mov?mov+' moving':pl?pl+' planned':(i===st.length-1&&done?done+' shipped':'');
+      nodes.push(el('button',{key:'s'+i,type:'button',className:'lmx-st'+(g.length?' has':'')+(stop?' stop':''),disabled:!g.length,title:g.map(function(t){return t.label;}).join(', '),
+        onClick:function(){if(g.length)props.onPick(g.length===1?g[0].key:'G:'+(i>=n0?'T'+(i-n0):type+':'+i));}},
+        el('span',{className:'lmx-ring',style:{color:g.length?c:'#6c685e',borderColor:g.length?c:undefined}},lmIcon(name),g.length?el('span',{className:'lmx-n'},g.length):null),
+        el('span',{className:'lmx-sl'},name),el('span',{className:'lmx-ss'},sub)));});
+    return el('div',{key:type,className:'lmx-line',style:{'--lc':c}},
+      el('div',{className:'lmx-lname'},el('b',{style:{color:c}},lmTypeName(type)),el('span',null,inWork+' in work')),nodes);
+  }));
+}
 function LineMapPage(props){
   const lic=props.license,lid=lic?lic.id:'';
   const[d,setD]=useState(null);const[err,setErr]=useState('');const[sel,setSel]=useState(null);const[stopsOnly,setStopsOnly]=useState(false);const[at,setAt]=useState(0);const boxRef=useRef(null);const[bw,setBw]=useState(LM_W);
   useEffect(function(){function m(){if(boxRef.current)setBw(boxRef.current.clientWidth||LM_W);}m();window.addEventListener('resize',m);document.addEventListener('fullscreenchange',m);return function(){window.removeEventListener('resize',m);document.removeEventListener('fullscreenchange',m);};},[d]);
   const load=useCallback(function(){if(!lid)return;sb('rpc/hx_line_map',{method:'POST',body:{p_lic:lid}}).then(function(r){setD(r||{});setErr('');setAt(Date.now());}).catch(function(e){setErr(lmErr(e));});},[lid]);
   useEffect(function(){load();const t=setInterval(load,60000);return function(){clearInterval(t);};},[load]);
+  useEffect(function(){lmFonts();},[]);
   if(!lic)return el('div',null,el('h1',null,el('span',{className:'g'},'Line Map')),el('div',{className:'empty'},'Pick a state and a license at the top first.'));
   const now=d&&d.now?new Date(d.now).getTime()+(Date.now()-at):Date.now();
   const trains=d?lmModel(d,now):[];
@@ -7888,8 +7963,8 @@ function LineMapPage(props){
   const stopped=trains.filter(function(t){return t.state==='stopped';}),waiting=trains.filter(function(t){return t.state==='waiting';});
   const longest=stopped.slice().sort(function(a,b){return String(a.since||'z').localeCompare(String(b.since||'z'));})[0];
   const shipped=trains.filter(function(t){return t.state==='done';}),planned=trains.filter(function(t){return t.state==='planned';});
-  const kpi=function(label,val,sub,color,bad){return el('div',{className:'card',style:{marginBottom:0,borderTop:'2px solid '+(color||'var(--gold)'),background:bad?'#160d0c':undefined,borderColor:bad?'#4a2320':undefined}},
-    el('div',{className:'k',style:{color:color||undefined}},label),el('div',{style:{fontSize:28,fontWeight:600,marginTop:2,color:bad?'var(--red)':(color==='#5fbf8a'?'#5fbf8a':undefined)}},val),el('div',{className:'muted',style:{fontSize:12}},sub));};
+  const kpi=function(label,val,sub,color,bad){return el('div',{className:'lmx-kpi'+(bad?' bad':''),style:{'--kc':bad?'#e5645a':(color||'var(--gold)')}},
+    el('div',{className:'c'},label),el('div',{className:'b'},val),el('div',{className:'f'},sub));};
   /* map pieces */
   const parts=[];
   types.forEach(function(t){const c=LM_COLORS[t]||'#d4af37',y=lineY[t],s=slot[t],st=lmStations(t),w=Math.min(110,sp(t)-6);
@@ -7949,18 +8024,20 @@ function LineMapPage(props){
   const stopRows=trains.filter(function(t){return t.state==='stopped'||t.state==='waiting';}).sort(function(a,b){return LM_RANK[a.state]-LM_RANK[b.state]||String(a.since||'z').localeCompare(String(b.since||'z'));});
   const where=function(t){return t.where.trunk!==undefined?LM_TRUNK[t.where.trunk]:lmStations(t.type)[t.where.st];};
   return el('div',{id:'lm-wall',style:{background:'var(--bg)'}},
+    el('style',null,LM_CSS),
     el('style',null,'@keyframes lmpulse{0%{box-shadow:0 0 0 0 rgba(95,191,138,.75)}70%{box-shadow:0 0 0 9px rgba(95,191,138,0)}100%{box-shadow:0 0 0 0 rgba(95,191,138,0)}}.lm-live{animation:lmpulse 1.8s infinite}#lm-wall:fullscreen{padding:24px;overflow:auto}'),
     el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-end',gap:12,flexWrap:'wrap'}},
-      el('div',null,el('h1',null,el('span',{className:'g'},'Production Line Map')),
-        el('div',{className:'sub',style:{display:'flex',alignItems:'center',gap:8}},el('span',{className:'lm-live',style:{width:9,height:9,borderRadius:'50%',background:'#5fbf8a',display:'inline-block'}}),
-          'Live · '+lic.name+(lic.license_number?' · '+lic.license_number:'')+' · every batch from plan to shipment'+(at?' · updated '+new Date(at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):''))),
+      el('div',null,el('div',{className:'lmx-eyebrow'},'Live · '+lic.name+(lic.license_number?' · '+lic.license_number:'')+' · tracked by batch'),
+        el('h1',{className:'lmx-title'},'Production Line Map'),
+        el('div',{className:'lmx-sub'},el('span',{className:'lm-live',style:{width:9,height:9,borderRadius:'50%',background:'#5fbf8a',display:'inline-block',marginRight:8,verticalAlign:'1px'}}),
+          'Every batch from plan to shipment: where it is, what is moving and what stopped it.'+(at?' Updated '+new Date(at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+'.':''))),
       el('div',{className:'row',style:{gap:8}},
         el('div',{className:'tabs',style:{margin:0}},el('button',{className:stopsOnly?'':'on',onClick:function(){setStopsOnly(false);}},'All batches'),el('button',{className:stopsOnly?'on':'',onClick:function(){setStopsOnly(true);}},'Stops only')),
         el('button',{className:'btn ghost sm',onClick:load},'Refresh'),
         el('button',{className:'btn ghost sm',onClick:function(){const w=document.getElementById('lm-wall');if(document.fullscreenElement)document.exitFullscreen();else if(w&&w.requestFullscreen)w.requestFullscreen();}},'Wall display'))),
     err&&el('div',{className:'msg err'},err),
     !d&&!err&&el('div',{className:'muted'},'Loading the line map...'),
-    d&&el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:10,marginBottom:14}},
+    d&&el('div',{className:'lmx-kpis'},
       kpi('In production',act.length,'batches on the lines'),
       kpi('Moving',trains.filter(function(t){return t.state==='moving';}).length,trains.filter(function(t){return t.live;}).length+' worked on in the last '+LM_LIVE_MIN+' min','#5fbf8a'),
       kpi('Stopped',stopped.length,longest&&longest.since?'longest: '+lmDur(now-new Date(longest.since).getTime())+' ('+(LM_TAG[longest.reasons[0].kind]||'').toLowerCase()+')':'nothing stopped','#e5645a',stopped.length>0),
@@ -7968,6 +8045,9 @@ function LineMapPage(props){
       kpi('Shipped',shipped.length,'last '+LM_SHIP_DAYS+' days · '+planned.length+' planned'),
       d.on_floor!==null&&d.on_floor!==undefined&&kpi('On the floor',d.on_floor,'clocked in (Time Clock)')),
     d&&!L&&el('div',{className:'empty'},'No batches or plans in the last 45 days at this license. Batches from Batch Tracker and plans from Production Planner appear here automatically.'),
+    d&&L>0&&el('div',{className:'lmx-h'},'Live line flow'),
+    d&&L>0&&el(LineFlow,{types:types,trains:trains,onPick:setSel}),
+    d&&L>0&&el('div',{className:'lmx-h'},'Line map'),
     d&&L>0&&el('div',{className:'card',style:{padding:'16px 16px 8px'}},
       el('div',{className:'row',style:{gap:16,fontSize:12,color:'var(--muted)',marginBottom:6,flexWrap:'wrap'}},
         [['Moving',{background:'#d4af37'}],['Stopped',{background:'#e5645a'}],['Waiting',{border:'2px dashed #c8c2b0'}],['Planned',{border:'2px solid #d4af37'}],['Shipped',{background:'#232323',border:'2px solid #3a3a3a'}]].map(function(x){
@@ -7975,6 +8055,7 @@ function LineMapPage(props){
         el('span',{className:'row',style:{gap:6,alignItems:'center'}},el('span',{className:'lm-live',style:{width:9,height:9,borderRadius:'50%',background:'#5fbf8a',display:'inline-block'}}),'Worked on now'),
         el('span',{style:{flex:1}}),'Click a batch to see where it is and why it stopped'),
       el('div',{ref:boxRef,style:{overflowX:'auto'}},(function(){const sc=Math.max(.72,Math.min(1.25,bw/LM_W));return el('div',{style:{width:LM_W*sc,height:H*sc}},el('div',{style:{position:'relative',width:LM_W,height:H,transform:'scale('+sc+')',transformOrigin:'top left'}},parts));})())),
+    d&&L>0&&el('div',{className:'lmx-h'},'Batch detail and stops'),
     d&&L>0&&el('div',{className:'row',style:{gap:14,alignItems:'flex-start',flexWrap:'wrap'}},
       el('div',{className:'card',style:{flex:'1 1 380px',minWidth:0,borderColor:selT&&selT.state==='stopped'?'#5a2a26':undefined}},
         selT?detail(selT):selG?el('div',null,el('div',{className:'k',style:{marginBottom:8}},selG.length+' batches at '+where(selG[0])),

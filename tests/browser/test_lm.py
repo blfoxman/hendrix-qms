@@ -39,7 +39,7 @@ with sync_playwright() as pw:
     card = pg.locator('.card.gold', has_text='Line map')
     check(card.locator('text=5 batches stopped').count() == 1, 'dashboard card: 5 batches stopped')
     pg.get_by_role('button', name='Line Map', exact=True).click(); pg.wait_for_selector('text=Production Line Map'); pg.wait_for_selector('text=Stops right now')
-    kp = lambda k: pg.locator('.card', has=pg.locator('.k', has_text=re.compile('^' + k + '$'))).first.inner_text()
+    kp = lambda k: pg.locator('.lmx-kpi', has=pg.locator('.c', has_text=re.compile('^' + k + '$'))).first.inner_text()
     print(kp('In production').replace('\n', ' | '), '/', kp('Stopped').replace('\n', ' | '))
     check(kp('In production').split('\n')[1] == '7' and kp('Moving').split('\n')[1] == '1' and kp('Stopped').split('\n')[1] == '5' and kp('At the lab').split('\n')[1] == '1', 'KPIs: 7 in production, 1 moving, 5 stopped, 1 at the lab')
     check(kp('Shipped').split('\n')[1] == '1' and '1 planned' in kp('Shipped') and kp('On the floor').split('\n')[1] == '1', 'KPIs: 1 shipped, 1 planned, 1 on the floor')
@@ -54,6 +54,14 @@ with sync_playwright() as pw:
     check(pg.locator('button[aria-label^="2 batches at Lab testing"]').count() == 1, 'two batches at Lab testing grouped into one marker')
     check(train(pg, 'CT-2026-112').locator('text=MOVING').count() == 1 and train(pg, 'GM-2026-038').locator('text=SHIPPED').count() == 1 and train(pg, 'PP-2026-019').locator('text=PLANNED').count() == 1, 'released batch moving at QC release; shipped batch; plan on the Planned station')
     check(pg.locator('text=GM-2025-001').count() == 0 and pg.locator('text=MI-1').count() == 0, 'old batches and other licenses are not on the map')
+    # live line flow: one row per product line, a ring per station with the batch count, moving connectors
+    flow = pg.locator('.lmx-panel')
+    rows = flow.locator('.lmx-line')
+    check(rows.count() == 3 and pg.locator('.lmx-h', has_text='Live line flow').count() == 1, 'live line flow: %d product lines' % rows.count())
+    nb = sum(int(x) for x in flow.locator('.lmx-n').all_inner_texts())
+    check(nb >= 8, 'every batch counted at its station in the flow (%d)' % nb)
+    check(flow.locator('.lmx-st.stop').count() >= 3 and flow.locator('.lmx-con.on').count() >= 1, 'stopped stations in red; a moving batch animates its connector')
+    pg.screenshot(path=SP + 'linemap_flow.png', full_page=True)
     # click a stopped batch: why + journey + jump
     train(pg, 'CT-2026-119').click(); pg.wait_for_selector('text=WHY IT IS STOPPED')
     det = pg.locator('.card', has=pg.locator('text=WHY IT IS STOPPED')).first
