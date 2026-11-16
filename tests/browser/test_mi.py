@@ -40,6 +40,7 @@ with sync_playwright() as pw:
     pg.goto(BASE); pg.wait_for_selector('text=Quality standard')
     side = pg.locator('.side, nav, aside').first
     pg.get_by_role('button', name='Cannabis Inventory', exact=True).click(); pg.wait_for_selector('h1 >> text=Cannabis Inventory')
+    pg.wait_for_selector('.empty >> text=No METRC inventory yet', timeout=15000)
     check(pg.locator('.empty', has_text='No METRC inventory yet').count() == 1, 'empty page explains how to get the METRC export')
     pg.set_input_files('input[aria-label="METRC export file"]', SRC)
     pg.wait_for_selector('.card.gold >> text=Packages', timeout=120000); pg.wait_for_timeout(500)
