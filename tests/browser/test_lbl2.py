@@ -13,6 +13,8 @@ def field(md, label):
 T['hx_skus'] += [{'id': 'if7', 'state_id': 'st-mo', 'product_type': 'infused_flower', 'name': 'Infused Flower 3.5G', 'spec': {}, 'license_ids': [], 'active': True, 'sort': 0},
                  {'id': 'pr2', 'state_id': 'st-mo', 'product_type': 'pre_rolls', 'name': 'Infused Pre Roll 2G', 'spec': {}, 'license_ids': [], 'active': True, 'sort': 1}]
 T['hx_flavors'] += [{'id': 'fb', 'state_id': 'st-mo', 'sku_id': 'if7', 'name': 'Banana Pie', 'active': True, 'sort': 0}]
+T['hx_flavors'] += [{'id': 'fp', 'state_id': 'st-mo', 'sku_id': 'if7', 'name': 'Peaches and Cream', 'active': True, 'sort': 1},
+                    {'id': 'fc', 'state_id': 'st-mo', 'sku_id': 'if7', 'name': 'Piña Colada', 'active': True, 'sort': 2}]
 coa = {'lab_name': 'Green Lab', 'lab_license_number': 'TES000777', 'report_date': '2026-11-10', 'overall_status': 'Pass', 'potency': {'unit': '%', 'd9_thc': 0.8, 'thca': 52.0, 'cbd': '<LOQ', 'cbn': 'ND'}}
 T['hx_tests'] += [{'id': 'ti', 'state_id': 'st-mo', 'license_id': 'lic-mo', 'batch_id': None, 'batch_number': 'IF-77', 'batch_type': 'infused_flower', 'sku': 'Infused Flower 3.5G', 'flavor': 'Banana Pie', 'tag': '1A4000000000000000007777', 'tag_label': 'Packaged METRC Tag',
   'sample_tag': '1A4000000000000000007778', 'lab_name': 'Green Lab', 'lab_license': 'TES000777', 'status': 'Passed', 'result_at': '2026-11-10T00:00:00Z', 'result_thc': '', 'result_cbd': '', 'result_notes': '', 'notes': '', 'coa_path': 'coa/i.pdf', 'coa_filename': 'i.pdf', 'coa_analysis': coa, 'voided': False, 'created_at': '2026-11-10T00:00:00Z',
@@ -32,6 +34,16 @@ with sync_playwright() as pw:
     t = T['hx_label_templates'][-1]
     check(t['stock'] == 'avery-94107' and t['layout'] == '' and pg.locator('.msg.ok').count() == 1, 'infused flower template moved to Avery 94107 (standard layout)')
     check(pg.locator('.card', has_text='Infused Flower 3.5G').locator('text=2" x 2"').count() == 1 and pg.get_by_role('button', name=re.compile('Infused flower')).count() == 0, 'card shows 2" x 2"; button gone when none are left')
+    # Black Fox templates: the 15 infused flower 3.5g labels with their product item numbers
+    n0 = len(T['hx_label_templates'])
+    pg.get_by_role('button', name='Import Black Fox templates').click(); pg.wait_for_selector('.msg >> text=Imported')
+    new = {x['flavor_id']: x for x in T['hx_label_templates'][n0:]}
+    bp, pc, pch = new.get('fb'), new.get('fc'), new.get('fp')
+    check(bp and bp['approval_number'] == 'M00002721353' and bp['servings'] == '350' and bp['weight'] == '3.5g' and bp['stock'] == 'avery-94107' and bp['ingredients'].startswith('Cannabis Flower, Cannabis Live Resin') and bp['ingredients'].endswith('Solvent (Butane or Propane or Ethanol)'),
+          'Banana Pie 3.5g template: item # M00002721353, 350 servings, 3.5g, its ingredients, Avery 94107')
+    check(pc and pc['approval_number'] == 'M00002721426' and pch and pch['approval_number'] == 'M00002721356', 'flavor names match as written in Products ("Piña Colada", "Peaches and Cream")')
+    check('Heat Flower, inhale smoke' in bp['instructions'] and bp['warning'].startswith('Cognitive and physical impairment'), 'instructions and warning from the label file')
+    check(pg.locator('.msg', has_text='flavor "Cotton Candy" not on Infused Flower 3.5G').count() == 1, 'flavors missing in Products are listed as skipped')
     # new template: an infused flower SKU picks the square sheet, a pre-roll SKU keeps 1" x 4"
     pg.get_by_role('button', name='+ New template').click(); md = pg.locator('.md')
     field(md, 'SKU *').select_option('pr2'); check(field(md, 'Label sheet').input_value() == 'avery-94202', 'pre-roll SKU: 1" x 4" sheet')
@@ -54,7 +66,7 @@ with sync_playwright() as pw:
     check(pages == 1 and len(starts) == 12 and len(xs) == 3 and len(ys) == 4, '12 labels on one page, 3 across and 4 down: %d / %s / %s' % (pages, xs, ys))
     check(abs(xs[0] - (0.625 * 72 + 6)) <= 2 and abs((xs[1] - xs[0]) - 2.625 * 72) <= 2 and abs((ys[1] - ys[0]) - 2.6 * 72) <= 2 and abs(ys[0] - (0.6 * 72 + 6)) <= 6, 'positions match Avery 94107: side 0.625", top 0.6", pitch 2.625" x 2.6"')
     txt = re.sub(r'\s+', ' ', subprocess.run(['pdftotext', OUT + 'labels_94107.pdf', '-'], capture_output=True, text=True).stdout)
-    check('WARNING' in txt and 'M0077' in txt and 'CANNABINOID PROFILE' in txt, 'the whole compliance text fits on the square label')
+    check('Keep out of reach of children' in txt and 'M00002721353' in txt and 'CANNABINOID PROFILE' in txt and 'Valencene' in txt, 'the whole Banana Pie label (long ingredient list, item #, warning) fits on the square label')
     check(fit and fit >= 2.8, 'text size on the 2" x 2" label: %s pt' % fit)
     pg.screenshot(path=OUT + 'labels_94107.png')
     subprocess.run(['pdftoppm', '-r', '110', '-png', '-singlefile', OUT + 'labels_94107.pdf', OUT + 'labels_94107_page'])
