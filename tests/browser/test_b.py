@@ -69,32 +69,15 @@ with sync_playwright() as pw:
     check(bt['sku'] == 'Mates THCA 5 x 0.6g' and bt['flavor'] == 'Honey Melon' and bt['data']['joints_check_status'] == 'pass' and bt['data']['packaging_check_expected'] == '180', 'batch saved with checks + names from DB')
     check(pg.locator('.badge', has_text='METRC 1/').count() == 1, 'METRC x/y badge')
     pg.screenshot(path=OUT + 'batches.png', full_page=True)
-    # pick the flower tag from Receiving inventory: type the last digits, pick the lot, the amount used is deducted
-    pg.get_by_role('button', name='+ New Batch').click(); md = pg.locator('.md')
-    field(md, 'SKU').select_option(label='Mates THCA 5 x 0.6g'); field(md, 'Batch / Lot Number').fill('PR-002')
-    field(md, 'Flower METRC #').fill('3275'); pg.wait_for_selector('.lotopt')
-    check(md.locator('.lotopt').count() == 1 and '1240 g left' in md.locator('.lotopt').inner_text(), 'typing the last 4 digits lists the matching lot with what is left')
-    md.locator('.lotopt').first.click()
-    check(field(md, 'Flower METRC #').input_value() == '1A40C03000060E1000003275' and md.locator('text=From inventory: RCV-2026-001').count() == 1, 'picking fills the full tag and links the lot')
-    field(md, 'Flower Used').fill('5000'); md.get_by_role('button', name='Submit & Sign').click(); pg.wait_for_timeout(400)
-    check('Only 1240 g left in 1A40C03000060E1000003275' in md.locator('.msg.err').inner_text() and not any(b['batch_number'] == 'PR-002' for b in T['hx_batches']), 'more than is left: refused before saving')
-    field(md, 'Flower Used').fill('1,000g'); md.get_by_role('button', name='Submit & Sign').click(); pg.wait_for_selector('.card >> text=PR-002')
-    pb = next(b for b in T['hx_batches'] if b['batch_number'] == 'PR-002'); us = [x for x in T['hx_lot_uses'] if x['batch_id'] == pb['id']]
-    check(len(us) == 1 and us[0]['lot_id'] == 'lot1' and us[0]['quantity'] == 1000 and '[bt:flower_qty]' in us[0]['notes'] and T['hx_lots'][0]['qty_used'] == 1000, 'saved: 1,000 g recorded against the lot and the batch (240 g left)')
-    # a kg lot: grams typed in the batch are converted
-    pg.get_by_role('button', name='+ New Batch').click(); md = pg.locator('.md')
-    field(md, 'SKU').select_option(label='Mates THCA 5 x 0.6g'); field(md, 'Batch / Lot Number').fill('PR-003')
-    field(md, 'Flower METRC #').fill('4411'); pg.wait_for_selector('.lotopt'); md.locator('.lotopt').first.click()
-    field(md, 'Flower Used').fill('500'); md.get_by_role('button', name='Submit & Sign').click(); pg.wait_for_selector('.card >> text=PR-003')
-    pb = next(b for b in T['hx_batches'] if b['batch_number'] == 'PR-003'); us = [x for x in T['hx_lot_uses'] if x['batch_id'] == pb['id']]
-    check(len(us) == 1 and us[0]['quantity'] == 0.5, '500 g from a kg lot = 0.5 kg deducted')
-    # a tag that is not in Receiving: saved, nothing deducted
+    # METRC tags are typed freely: no Receiving lot picker, nothing deducted from Receiving
     n_uses = len(T['hx_lot_uses'])
     pg.get_by_role('button', name='+ New Batch').click(); md = pg.locator('.md')
-    field(md, 'SKU').select_option(label='Mates THCA 5 x 0.6g'); field(md, 'Batch / Lot Number').fill('PR-004')
-    field(md, 'Flower METRC #').fill('1A40ZZZZ0000'); check(md.locator('text=Not in Receiving inventory').count() == 1, 'unknown tag: told nothing will be deducted')
-    field(md, 'Flower Used').fill('100'); md.get_by_role('button', name='Submit & Sign').click(); pg.wait_for_selector('.card >> text=PR-004')
-    check(len(T['hx_lot_uses']) == n_uses, 'unknown tag: batch saved, no use recorded')
+    field(md, 'SKU').select_option(label='Mates THCA 5 x 0.6g'); field(md, 'Batch / Lot Number').fill('PR-002')
+    check('last digits' not in (field(md, 'Flower METRC #').get_attribute('placeholder') or ''), 'tag field does not ask for the last digits')
+    field(md, 'Flower METRC #').fill('3275'); pg.wait_for_timeout(300)
+    check(md.locator('.lotopt').count() == 0 and field(md, 'Flower METRC #').input_value() == '3275', 'typing in a tag field lists no lots and keeps what was typed')
+    field(md, 'Flower METRC #').fill('1A40C03000060E1000003275'); field(md, 'Flower Used').fill('5000'); md.get_by_role('button', name='Submit & Sign').click(); pg.wait_for_selector('.card >> text=PR-002')
+    check(len(T['hx_lot_uses']) == n_uses and T['hx_lots'][0]['qty_used'] == 0, 'batch saved with the typed tag; nothing deducted from Receiving')
     T['hx_batches'][:] = [b for b in T['hx_batches'] if b['batch_number'] not in ('PR-002', 'PR-003', 'PR-004')]
     pg.reload(); pg.get_by_role('button', name='Batch Tracker').click(); pg.wait_for_selector('.card >> text=PR-001')
     # duplicate number
