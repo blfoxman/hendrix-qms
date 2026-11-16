@@ -7790,6 +7790,9 @@ function SettingsPage(props){
 /* ---------- Import from Excel / Google Sheets (AI-matched columns, preview, then saved through the normal checks) ---------- */
 let xlsxP=null;
 function loadXlsx(){if(window.XLSX)return Promise.resolve();if(!xlsxP)xlsxP=new Promise(function(ok,no){const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=function(){ok();};s.onerror=function(){xlsxP=null;no(new Error('Could not load the spreadsheet reader. Check the internet connection.'));};document.head.appendChild(s);});return xlsxP;}
+// some exports (METRC) declare a sheet size smaller than the data: work out the real size from the cells
+function xlsxFixRef(ws){if(!ws||!window.XLSX)return ws;let r=0,c=0,any=false;Object.keys(ws).forEach(function(k){if(k[0]==='!')return;const a=window.XLSX.utils.decode_cell(k);any=true;if(a.r>r)r=a.r;if(a.c>c)c=a.c;});if(any)ws['!ref']=window.XLSX.utils.encode_range({s:{r:0,c:0},e:{r:r,c:c}});return ws;}
+window.hxXlsx={fix:xlsxFixRef,load:function(){return loadXlsx();}};
 function imNorm(s){return String(s==null?'':s).toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}
 function imDate(v){if(v==null||v==='')return '';if(v instanceof Date&&!isNaN(v))return v.getFullYear()+'-'+pad2(v.getMonth()+1)+'-'+pad2(v.getDate());
   if(typeof v==='number'&&v>20000&&v<80000){const d=new Date(Math.round((v-25569)*864e5));return d.getUTCFullYear()+'-'+pad2(d.getUTCMonth()+1)+'-'+pad2(d.getUTCDate());}
@@ -7878,7 +7881,7 @@ function ImportPage(props){
   function useRows(b,name){setBook(b);const s=Object.keys(b)[0];setSheet(s);const h=imHeaderRow(b[s]);setHdr(h);setMap(imGuess(tg,(b[s][h]||[]).map(String)));setAiVals(null);setSkip({});setDone(null);}
   async function onFile(ev){const f=ev.target.files&&ev.target.files[0];ev.target.value='';if(!f)return;setErr('');setBusy('Reading '+f.name+'...');
     try{let b={};if(/\.(csv|tsv|txt)$/i.test(f.name)){b={Sheet1:imParseText(await f.text())};}
-      else{await loadXlsx();const wb=window.XLSX.read(await f.arrayBuffer(),{type:'array',cellDates:true});wb.SheetNames.forEach(function(n){b[n]=window.XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:''});});}
+      else{await loadXlsx();const wb=window.XLSX.read(await f.arrayBuffer(),{type:'array',cellDates:true});wb.SheetNames.forEach(function(n){b[n]=window.XLSX.utils.sheet_to_json(xlsxFixRef(wb.Sheets[n]),{header:1,raw:true,defval:''});});}
       setFile(f.name);useRows(b);}catch(e){setErr('Could not read the file: '+String(e.message||e));}setBusy('');}
   function onPaste(){if(!paste.trim())return;setFile('Pasted cells');useRows({Pasted:imParseText(paste)});setPaste('');}
   function pickSheet(n){setSheet(n);const h=imHeaderRow(book[n]);setHdr(h);setMap(imGuess(tg,(book[n][h]||[]).map(String)));setAiVals(null);setSkip({});}
@@ -8621,6 +8624,88 @@ async function mcFetchApi(lic){
   if(!r.ok||j.error)throw new Error((j.error&&j.error.message)||('METRC request failed ('+r.status+')'));
   return j;
 }
+/* ---------- Cannabis Inventory (Release 52): the license's active METRC packages from the latest METRC upload ---------- */
+async function mcUploadFile(file,lid){let table;
+  if(/\.(xlsx|xls)$/i.test(file.name)){await loadXlsx();const wb=window.XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true});table=window.XLSX.utils.sheet_to_json(xlsxFixRef(wb.Sheets[wb.SheetNames[0]]),{header:1,raw:true,defval:''});}
+  else table=imParseText(await file.text());
+  const rows=mcRows(table);if(!rows.length)throw new Error('No METRC package tags found in '+file.name+'.');
+  return {id:await sb('rpc/hx_metrc_save',{method:'POST',body:{p_lic:lid,p_source:'csv',p_file:file.name,p_rows:rows}}),n:rows.length};}
+async function mcAllPackages(snap){let out=[],off=0;
+  for(;;){const r=(await db.get('hx_metrc_packages','snapshot_id=eq.'+encodeURIComponent(snap)+'&select=tag,item,category,quantity,unit,lab_state,on_hold,packaged_date,batch_no,location&order=tag_key&limit=1000&offset='+off))||[];
+    out=out.concat(r);if(r.length<1000)break;off+=1000;if(off>200000)break;}
+  return out;}
+function miItem(s){const m=/^\s*(M\d{6,})\s*:\s*(.*)$/.exec(s||'');return m?{code:m[1],name:m[2]}:{code:'',name:s||'(no item)'};}
+function miQty(q,u){const n=Number(q);if(q==null||q===''||isNaN(n))return '';const t=Math.round(n*1000)/1000;return t.toLocaleString()+' '+(u||'');}
+function miSum(ps){let ea=0,g=0,other={};ps.forEach(function(p){const n=Number(p.quantity)||0,u=String(p.unit||'').toLowerCase();
+  if(u==='ea'||u==='each'||u==='')ea+=n;else if(u==='g'||u==='grams')g+=n;else if(u==='kg'||u==='kilograms')g+=n*1000;else if(u==='mg')g+=n/1000;else if(u==='lb'||u==='lbs'||u==='pounds')g+=n*453.592;else if(u==='oz'||u==='ounces')g+=n*28.3495;else other[u]=(other[u]||0)+n;});
+  const parts=[];if(ea)parts.push(Math.round(ea).toLocaleString()+' ea');if(g)parts.push(g>=1000?(Math.round(g/100)/10).toLocaleString()+' kg':(Math.round(g*10)/10).toLocaleString()+' g');
+  Object.keys(other).forEach(function(u){parts.push(other[u].toLocaleString()+' '+u);});return {ea:ea,g:g,txt:parts.join(' + ')||'0'};}
+const MI_LAB={TestPassed:['Test passed','ok'],TestFailed:['Test failed','bad'],NotSubmitted:['Not submitted','warn'],SubmittedForTesting:['At the lab','warn'],TestingInProgress:['At the lab','warn'],RetestPassed:['Retest passed','ok'],RetestFailed:['Retest failed','bad'],Remediated:['Remediated','warn']};
+function miLab(s){return MI_LAB[s]||[s||'-','off'];}
+function MetrcInventoryPage(props){
+  const lic=props.license,lid=lic?lic.id:'',canE=can('metrc',2);
+  const[snaps,setSnaps]=useState(null);const[sel,setSel]=useState('');const[P,setP]=useState(null);const[err,setErr]=useState('');const[busy,setBusy]=useState('');
+  const[cat,setCat]=useState('');const[loc,setLoc]=useState('');const[lab,setLab]=useState('');const[q,setQ]=useState('');const[view,setView]=useState('item');const[open,setOpen]=useState({});const[more,setMore]=useState(300);
+  const loadSnaps=useCallback(function(pick){if(!lid)return;db.get('hx_metrc_snapshots','license_id=eq.'+encodeURIComponent(lid)+'&select=*&order=created_at.desc&limit=30').then(function(r){r=(r||[]).filter(function(x){return x.license_id===lid;});setSnaps(r);setSel(pick||(r[0]&&r[0].id)||'');}).catch(function(e){setErr(mcErr(e));setSnaps([]);});},[lid]);
+  useEffect(function(){loadSnaps();},[loadSnaps]);
+  useEffect(function(){if(!sel){setP(null);return;}let dead=false;setP(null);mcAllPackages(sel).then(function(r){if(!dead)setP(r);}).catch(function(e){if(!dead){setErr(mcErr(e));setP([]);}});return function(){dead=true;};},[sel]);
+  async function upload(file){setErr('');setBusy('Reading '+file.name+'...');try{const r=await mcUploadFile(file,lid);setBusy('');loadSnaps(r.id);}catch(e){setErr(mcErr(e));setBusy('');}}
+  if(!lic)return el('div',null,el('h1',null,el('span',{className:'g'},'Cannabis Inventory')),el('div',{className:'empty'},'Pick a state and a license at the top first.'));
+  const snap=(snaps||[]).find(function(s){return s.id===sel;});
+  const A=P||[],qq=q.trim().toLowerCase();
+  const F=A.filter(function(p){return (!cat||p.category===cat)&&(!loc||p.location===loc)&&(!lab||p.lab_state===lab)&&
+    (!qq||(p.item+' '+p.tag+' '+p.batch_no+' '+p.location+' '+p.category).toLowerCase().indexOf(qq)>=0);});
+  const count=function(xs,k){const o={};xs.forEach(function(p){o[p[k]||'']=(o[p[k]||'']||0)+1;});return Object.keys(o).sort(function(a,b){return o[b]-o[a];}).map(function(x){return [x,o[x]];});};
+  const cats=count(A,'category'),locs=count(A,'location'),labs=count(A,'lab_state');
+  const tot=miSum(F),held=F.filter(function(p){return p.on_hold;}).length,passed=F.filter(function(p){return /Passed/.test(p.lab_state);}).length;
+  const groups=(function(){const g={};F.forEach(function(p){const x=g[p.item]||(g[p.item]={item:p.item,cat:p.category,ps:[]});x.ps.push(p);});
+    return Object.keys(g).map(function(k){return g[k];}).sort(function(a,b){return b.ps.length-a.ps.length||(a.item<b.item?-1:1);});})();
+  function csv(){const e=function(v){v=v==null?'':String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+    const lines=[['Tag','Item #','Item','Category','Quantity','Unit','Lab status','On hold','Location','Production batch','Packaged'].join(',')].concat(F.map(function(p){const it=miItem(p.item);return [p.tag,it.code,it.name,p.category,p.quantity,p.unit,p.lab_state,p.on_hold?'yes':'',p.location,p.batch_no,p.packaged_date].map(e).join(',');}));
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/csv'}));a.download='Cannabis inventory '+(lic.license_number||lic.name)+' '+todayStr()+'.csv';document.body.appendChild(a);a.click();a.remove();}
+  const kpi=function(l,v,sub,tone){return el('div',{key:l,className:'card gold',style:{marginBottom:0}},el('div',{className:'k'},l),el('div',{className:'v',style:{fontSize:24,color:tone}},v),sub&&el('div',{className:'muted',style:{fontSize:11.5,marginTop:2}},sub));};
+  const labBadge=function(s){const x=miLab(s);return el('span',{className:'badge '+x[1]},x[0]);};
+  const pkgTable=function(ps,lim){return el('table',null,el('thead',null,el('tr',null,['Tag','Quantity','Location','Production batch','Lab','Packaged'].map(function(h){return el('th',{key:h},h);}))),
+    el('tbody',null,ps.slice(0,lim||ps.length).map(function(p){return el('tr',{key:p.tag},el('td',null,el('code',{style:{fontSize:12}},p.tag),p.on_hold&&el('span',{className:'badge bad',style:{marginLeft:6}},'On hold')),el('td',{style:{whiteSpace:'nowrap'}},miQty(p.quantity,p.unit)),el('td',null,p.location),el('td',{style:{fontSize:12}},p.batch_no),el('td',null,labBadge(p.lab_state)),el('td',{style:{whiteSpace:'nowrap'}},p.packaged_date||''));})));};
+  return el('div',null,
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-end',gap:12,flexWrap:'wrap',marginBottom:14}},
+      el('div',null,el('h1',null,el('span',{className:'g'},'Cannabis Inventory')),el('div',{className:'sub'},lic.name+(lic.license_number?' · '+lic.license_number:'')+' · active METRC packages'+(snap?' as of '+fmtTs(snap.created_at)+' ('+(snap.source==='api'?'METRC API':snap.file_name)+')':''))),
+      el('div',{className:'row',style:{gap:8}},P&&P.length>0&&el('button',{className:'btn ghost',onClick:csv},'Export CSV'),
+        canE&&el('label',{className:'btn'},'Upload METRC export',el('input',{type:'file',accept:'.csv,.txt,.xlsx,.xls',style:{display:'none'},'aria-label':'METRC export file',onChange:function(e){const x=e.target.files&&e.target.files[0];e.target.value='';if(x)upload(x);}})))),
+    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'METRC Check is not set up yet - run hendrix_step41.sql (or hendrix_install_13_to_52.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
+    busy&&el('div',{className:'msg'},busy),
+    snaps&&snaps.length>1&&el('div',{className:'row',style:{gap:10,alignItems:'center',margin:'0 0 12px'}},el('span',{className:'muted',style:{fontSize:13}},'Inventory of'),
+      el('select',{value:sel,'aria-label':'METRC upload',onChange:function(e){setSel(e.target.value);setOpen({});}},snaps.map(function(s){return el('option',{key:s.id,value:s.id},fmtTs(s.created_at)+' · '+(s.source==='api'?'METRC API':s.file_name)+' · '+s.packages+' packages');}))),
+    snaps&&!snaps.length&&!err&&el('div',{className:'empty'},'No METRC inventory yet. In METRC open Packages > Active, export to Excel or CSV, and upload the file here'+(canE?'':' (ask someone with Edit access to METRC Check)')+'. Upload a new export whenever you want the inventory current.'),
+    sel&&!P&&el('div',{className:'muted'},'Loading packages...'),
+    P&&el('div',null,
+      el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:10,marginBottom:12}},
+        kpi('Packages',F.length.toLocaleString(),F.length!==A.length?'of '+A.length.toLocaleString()+' (filtered)':groups.length+' items'),
+        kpi('Units',Math.round(tot.ea).toLocaleString(),'counted in each (ea)'),
+        kpi('Weight',tot.g>=1000?(Math.round(tot.g/100)/10).toLocaleString()+' kg':(Math.round(tot.g*10)/10)+' g','g and kg packages together'),
+        kpi('Test passed',passed.toLocaleString(),(F.length-passed).toLocaleString()+' not passed yet',passed<F.length?'var(--gold-hi)':'#5fbf8a'),
+        kpi('On hold',held,held?'administrative hold in METRC':'none',held?'var(--red)':'#5fbf8a')),
+      el('div',{className:'row',style:{gap:6,flexWrap:'wrap',marginBottom:10}},el('button',{className:'btn sm'+(cat?' ghost':''),onClick:function(){setCat('');}},'All ('+A.length.toLocaleString()+')'),
+        cats.map(function(c){return el('button',{key:c[0],className:'btn sm'+(cat===c[0]?'':' ghost'),onClick:function(){setCat(cat===c[0]?'':c[0]);}},(c[0]||'(none)')+' ('+c[1].toLocaleString()+')');})),
+      el('div',{className:'row',style:{gap:8,flexWrap:'wrap',marginBottom:12}},
+        el('input',{value:q,placeholder:'Search item, tag, batch...','aria-label':'Search inventory',style:{minWidth:240,flex:'1 1 240px'},onChange:function(e){setQ(e.target.value);setMore(300);}}),
+        el('select',{value:loc,'aria-label':'Location',onChange:function(e){setLoc(e.target.value);}},el('option',{value:''},'All locations'),locs.map(function(l){return el('option',{key:l[0],value:l[0]},(l[0]||'(none)')+' ('+l[1]+')');})),
+        el('select',{value:lab,'aria-label':'Lab status',onChange:function(e){setLab(e.target.value);}},el('option',{value:''},'Any lab status'),labs.map(function(l){return el('option',{key:l[0],value:l[0]},miLab(l[0])[0]+' ('+l[1]+')');})),
+        el('div',{className:'tabs',style:{margin:0}},el('button',{className:view==='item'?'on':'',onClick:function(){setView('item');}},'By item'),el('button',{className:view==='pkg'?'on':'',onClick:function(){setView('pkg');}},'Packages'))),
+      !F.length?el('div',{className:'empty'},A.length?'No packages match.':'This upload has no packages.'):
+      view==='item'?el('div',{className:'card',style:{padding:0,overflowX:'auto'}},el('table',null,
+        el('thead',null,el('tr',null,['Item','Category','Packages','On hand','Locations','Lab'].map(function(h){return el('th',{key:h},h);}))),
+        el('tbody',null,groups.map(function(g){const it=miItem(g.item),s=miSum(g.ps),ls=count(g.ps,'location'),lb=count(g.ps,'lab_state'),o=open[g.item];
+          return [el('tr',{key:g.item,className:'mirow',style:{cursor:'pointer'},onClick:function(){setOpen(function(x){const y={...x};y[g.item]=!x[g.item];return y;});}},
+            el('td',null,el('b',null,(o?'▾ ':'▸ ')+it.name),it.code&&el('div',{className:'muted',style:{fontSize:11}},it.code)),el('td',{style:{fontSize:12.5}},g.cat),el('td',null,g.ps.length),el('td',{style:{whiteSpace:'nowrap',fontWeight:600}},s.txt),
+            el('td',{style:{fontSize:12}},ls.map(function(l){return (l[0]||'-')+(ls.length>1?' ('+l[1]+')':'');}).join(', ')),el('td',null,lb.map(function(l){const x=miLab(l[0]);return el('span',{key:l[0],className:'badge '+x[1],style:{marginRight:4}},x[0]+(lb.length>1?' '+l[1]:''));}))),
+            o&&el('tr',{key:g.item+'#'},el('td',{colSpan:6,style:{background:'#0f0f0f',padding:'4px 10px 10px'}},pkgTable(g.ps)))];}))))
+      :el('div',null,el('div',{className:'card',style:{padding:0,overflowX:'auto'}},el('table',null,el('thead',null,el('tr',null,['Item','Tag','Quantity','Location','Production batch','Lab','Packaged'].map(function(h){return el('th',{key:h},h);}))),
+          el('tbody',null,F.slice(0,more).map(function(p){const it=miItem(p.item);return el('tr',{key:p.tag},el('td',null,el('b',null,it.name),el('div',{className:'muted',style:{fontSize:11}},p.category+(it.code?' · '+it.code:''))),el('td',null,el('code',{style:{fontSize:12}},p.tag),p.on_hold&&el('span',{className:'badge bad',style:{marginLeft:6}},'On hold')),
+            el('td',{style:{whiteSpace:'nowrap'}},miQty(p.quantity,p.unit)),el('td',null,p.location),el('td',{style:{fontSize:12}},p.batch_no),el('td',null,labBadge(p.lab_state)),el('td',{style:{whiteSpace:'nowrap'}},p.packaged_date||''));})))),
+        F.length>more&&el('div',{className:'row',style:{justifyContent:'center',marginTop:10}},el('button',{className:'btn ghost',onClick:function(){setMore(more+500);}},'Show more ('+(F.length-more).toLocaleString()+' left)'))),
+      el('div',{className:'muted',style:{fontSize:12,marginTop:10}},'Straight from METRC (read only). Upload a new export from METRC > Packages > Active to bring it up to date; METRC Check compares the same upload with Hendrix (tests, holds, lots, shipments).')));
+}
 function MetrcPage(props){
   const lic=props.license,lid=lic?lic.id:'',canE=can('metrc',2);
   const[snaps,setSnaps]=useState(null);const[sel,setSel]=useState('');const[res,setRes]=useState(null);const[err,setErr]=useState('');const[busy,setBusy]=useState('');const[f,setF]=useState('all');
@@ -8628,7 +8713,7 @@ function MetrcPage(props){
   useEffect(function(){loadSnaps();},[loadSnaps]);
   useEffect(function(){if(!sel){setRes(null);return;}setRes(null);sb('rpc/hx_metrc_reconcile',{method:'POST',body:{p_snapshot:sel}}).then(setRes).catch(function(e){setErr(mcErr(e));});},[sel]);
   async function upload(file){setErr('');setBusy('Reading '+file.name+'...');
-    try{let table;if(/\.(xlsx|xls)$/i.test(file.name)){await loadXlsx();const wb=window.XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true});table=window.XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true,defval:''});}
+    try{let table;if(/\.(xlsx|xls)$/i.test(file.name)){await loadXlsx();const wb=window.XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true});table=window.XLSX.utils.sheet_to_json(xlsxFixRef(wb.Sheets[wb.SheetNames[0]]),{header:1,raw:true,defval:''});}
       else table=imParseText(await file.text());
       const rows=mcRows(table);if(!rows.length)throw new Error('No METRC package tags found in '+file.name+'.');
       setBusy('Checking '+rows.length+' packages...');
@@ -11975,7 +12060,7 @@ function StickersPage(props){
 /* ---------- sidebar groups: modules by the job they serve ---------- */
 const SIDE_GROUPS=[
   ['production','Production',['planner','batches','testing','stickers','products','metrc','linemap','lineclear']],
-  ['inventory','Inventory and shipping',['receiving','holds','shipping','recall','suppliers']],
+  ['inventory','Inventory and shipping',['metrcinv','receiving','holds','shipping','recall','suppliers']],
   ['facility','Facility',['logs','equipment','chemicals','envtests','visitors','timeclock','cultivation']],
   ['quality','Quality',['qms','complaints','intaudits','haccp','risks','changes','verification']],
   ['docs','SOPs and training',['sops','training','orgchart','rulebook']],
@@ -12100,7 +12185,7 @@ function App(){
   if(isAdmin)nav.push({id:'health',label:'System Health'});
   if(['suppliers','equipment','chemicals','products','complaints','risks','orgchart'].some(function(m){return can(m,2);}))nav.push({id:'import',label:'Import (Excel / Sheets)'});
   const anyLog=LOG_TYPES.some(function(t){return can(LOG_MOD[t.id],1);});
-  const mods=[can('linemap',1)&&['linemap','Line Map'],can('qms',1)&&['qms','QMS'],can('complaints',1)&&['complaints','Complaints'],can('intaudits',1)&&['intaudits','Internal Audits'],can('haccp',1)&&['haccp','HACCP'],can('risks',1)&&['risks','Risk Register'],can('changes',1)&&['changes','Change Control'],can('orgchart',1)&&['orgchart','Org Chart'],can('objectives',1)&&['objectives','Quality Objectives'],can('mgmtreview',1)&&['mgmtreview','Management Review'],can('verification',1)&&['verification','Verification Schedule'],can('timeclock',1)&&['timeclock','Time Clock and Badges'],can('training',1)&&['training','Training'],can('sops',1)&&['sops','SOPs'],can('suppliers',1)&&['suppliers','Suppliers'],can('receiving',1)&&['receiving','Receiving'],can('holds',1)&&['holds','Hold and Release'],can('shipping',1)&&['shipping','Shipping'],can('recall',1)&&['recall','Traceability and Recall'],can('equipment',1)&&['equipment','Equipment'],can('chemicals',1)&&['chemicals','Chemicals and SDS'],(can('lineclear',1)||can('rework',1))&&['lineclear','Line Clearance and Rework'],can('envtests',1)&&['envtests','Facility Tests'],can('cultivation',1)&&licOp(lic)==='cultivation'&&['cultivation','Cultivation'],can('logs_visitor',1)&&['visitors','Visitor Log'],anyLog&&['logs','Facility Logs'],(can('products',1)||can('formbank',1)||can('cogs',1))&&['products','Products'],can('metrc',1)&&['metrc','METRC Check'],can('planner',1)&&['planner','Production Planner'],can('batch',1)&&['batches','Batch Tracker'],can('testing',1)&&['testing','Testing'],can('stickers',1)&&['stickers','Compliance Stickers']].filter(Boolean);
+  const mods=[can('linemap',1)&&['linemap','Line Map'],can('qms',1)&&['qms','QMS'],can('complaints',1)&&['complaints','Complaints'],can('intaudits',1)&&['intaudits','Internal Audits'],can('haccp',1)&&['haccp','HACCP'],can('risks',1)&&['risks','Risk Register'],can('changes',1)&&['changes','Change Control'],can('orgchart',1)&&['orgchart','Org Chart'],can('objectives',1)&&['objectives','Quality Objectives'],can('mgmtreview',1)&&['mgmtreview','Management Review'],can('verification',1)&&['verification','Verification Schedule'],can('timeclock',1)&&['timeclock','Time Clock and Badges'],can('training',1)&&['training','Training'],can('sops',1)&&['sops','SOPs'],can('suppliers',1)&&['suppliers','Suppliers'],can('receiving',1)&&['receiving','Receiving'],can('holds',1)&&['holds','Hold and Release'],can('shipping',1)&&['shipping','Shipping'],can('recall',1)&&['recall','Traceability and Recall'],can('equipment',1)&&['equipment','Equipment'],can('chemicals',1)&&['chemicals','Chemicals and SDS'],(can('lineclear',1)||can('rework',1))&&['lineclear','Line Clearance and Rework'],can('envtests',1)&&['envtests','Facility Tests'],can('cultivation',1)&&licOp(lic)==='cultivation'&&['cultivation','Cultivation'],can('logs_visitor',1)&&['visitors','Visitor Log'],anyLog&&['logs','Facility Logs'],(can('products',1)||can('formbank',1)||can('cogs',1))&&['products','Products'],can('metrc',1)&&['metrc','METRC Check'],can('metrc',1)&&['metrcinv','Cannabis Inventory'],can('planner',1)&&['planner','Production Planner'],can('batch',1)&&['batches','Batch Tracker'],can('testing',1)&&['testing','Testing'],can('stickers',1)&&['stickers','Compliance Stickers']].filter(Boolean);
   let body;
   if(page==='locations')body=el(Locations,{profile:profile,states:states,licenses:licenses,reload:loadData,openRulebook:function(id){pickState(id);setPage('rulebook');}});
   else if(page==='visitors'&&can('logs_visitor',1))body=el(VisitorLog,{key:licId,state:st,license:lic});
@@ -12121,6 +12206,7 @@ function App(){
   else if((page==='receiving'&&can('receiving',1))||(page==='inventory'&&can('receiving',1))||(page==='holds'&&can('holds',1))||(page==='shipping'&&can('shipping',1)))body=el(MatPage,{key:licId,state:st,license:lic,tab:page,go:setPage});
   else if(page==='linemap'&&can('linemap',1))body=el(LineMapPage,{key:licId,state:st,license:lic,profile:profile,go:setPage});
   else if(page==='metrc'&&can('metrc',1))body=el(MetrcPage,{key:licId,state:st,license:lic,profile:profile,go:setPage});
+  else if(page==='metrcinv'&&can('metrc',1))body=el(MetrcInventoryPage,{key:licId,state:st,license:lic,profile:profile,go:setPage});
   else if(page==='planner'&&can('planner',1))body=el(ProductionPlanner,{key:licId,state:st,license:lic,profile:profile,go:setPage});
   else if(page==='timeclock'&&can('timeclock',1))body=el(TimeClockPage,{key:licId,state:st,license:lic,profile:profile,go:setPage});
   else if(['orgchart','objectives','mgmtreview','verification'].indexOf(page)>=0&&(can('orgchart',1)||can('objectives',1)||can('mgmtreview',1)||can('verification',1)))body=el(QualitySysPage,{key:licId,state:st,license:lic,profile:profile,go:setPage,tab:{orgchart:'org',objectives:'kpi',mgmtreview:'mr',verification:'ver'}[page]});
