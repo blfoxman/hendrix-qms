@@ -7348,7 +7348,7 @@ grant execute on function hx_admin_delete_request(uuid) to authenticated;
 notify pgrst, 'reload schema';
 select 'Hendrix step 51 (remove from Hendrix) installed' as result;
 
-select 'Hendrix steps 13-51 installed' as result;
+-- (steps 52-57 follow)
 
 -- =====================================================================
 -- Hendrix QMS  -  Step 52: Cultivation Batch Tracker
@@ -8407,3 +8407,5 @@ grant execute on function hx_yield_alert_seen(text) to authenticated;
 grant execute on function hx_yield_alert_me() to authenticated;
 
 notify pgrst, 'reload schema';
+
+select 'Hendrix steps 13-57 installed - reload Hendrix' as result;
