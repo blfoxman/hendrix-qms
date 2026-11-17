@@ -67,7 +67,14 @@ with sync_playwright() as pw:
     check(abs(xs[0] - (0.625 * 72 + 6)) <= 2 and abs((xs[1] - xs[0]) - 2.625 * 72) <= 2 and abs((ys[1] - ys[0]) - 2.6 * 72) <= 2 and abs(ys[0] - (0.6 * 72 + 6)) <= 6, 'positions match Avery 94107: side 0.625", top 0.6", pitch 2.625" x 2.6"')
     txt = re.sub(r'\s+', ' ', subprocess.run(['pdftotext', OUT + 'labels_94107.pdf', '-'], capture_output=True, text=True).stdout)
     check('Keep out of reach of children' in txt and 'M00002721353' in txt and 'CANNABINOID PROFILE' in txt and 'Valencene' in txt, 'the whole Banana Pie label (long ingredient list, item #, warning) fits on the square label')
-    check(fit and fit >= 2.8, 'text size on the 2" x 2" label: %s pt' % fit)
+    check(fit and 2.2 <= fit <= 3.4, 'text size like the Word template (about 2.4-3 pt on 2" x 2"): %s pt' % fit)
+    L1 = [w for w in words if w['x0'] < 0.625 * 72 + 2.0 * 72 and w['top'] < 0.6 * 72 + 2.0 * 72]   # first label
+    row = lambda t: next((round(w['top']) for w in L1 if w['text'] == t), None)
+    check(row('Servings/Doses') == row('Best') == row('Produced') and row('Tested') == row('Testing') == row('Weight:') and row('Tested') > row('Servings/Doses'), 'product information on two rows, like the template')
+    prof = row('PROFILE:')
+    check(prof is not None and len({round(w['x0']) for w in L1 if round(w['top']) == prof}) >= 5 and len([w for w in L1 if w['text'] == 'mg/serving-dose']) == 8, 'cannabinoid profile in 3 columns, 8 cannabinoids in mg/serving-dose')
+    tops = sorted({round(w['top']) for w in L1}); gaps = [b - a for a, b in zip(tops, tops[1:])]
+    check(len([g for g in gaps if g > min(gaps) * 1.6]) >= 4, 'a blank line between the parts (ingredients, info, profile, instructions, approval #, warning)')
     pg.screenshot(path=OUT + 'labels_94107.png')
     subprocess.run(['pdftoppm', '-r', '110', '-png', '-singlefile', OUT + 'labels_94107.pdf', OUT + 'labels_94107_page'])
     b.close()
