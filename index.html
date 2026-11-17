@@ -2993,6 +2993,25 @@ async function btLoadLots(lid){
 }
 function btLotMatch(lots,q){q=String(q||'').trim().toLowerCase();if(q.length<2)return [];
   return (lots||[]).filter(function(l){return [l.metrc_tag,l.number,l.supplier_lot].some(function(v){return String(v||'').toLowerCase().indexOf(q)>=0;});}).slice(0,8);}
+// the one lot a typed / scanned tag means: the whole tag, or the only lot whose METRC tag ends with the digits typed (4+); spaces, dashes and case ignored
+function btLotAuto(lots,q){const k=String(q||'').replace(/[^A-Za-z0-9]/g,'').toUpperCase();if(k.length<4)return null;
+  const tk=function(l){return String(l.metrc_tag||'').replace(/[^A-Za-z0-9]/g,'').toUpperCase();};
+  const ex=(lots||[]).filter(function(l){return tk(l)===k||String(l.number||'').toUpperCase()===k;});if(ex.length===1)return ex[0];
+  const end=(lots||[]).filter(function(l){return tk(l)&&tk(l).slice(-k.length)===k;});return end.length===1?end[0]:null;}
+function LotTagInput(props){
+  const[open,setOpen]=useState(false);const v=props.value||'',lot=(props.lots||[]).find(function(l){return l.id===props.lotId;});
+  const hits=open&&!props.disabled?btLotMatch(props.lots,v).filter(function(l){return !lot||l.id!==lot.id;}):[];
+  const full=function(l){return l.metrc_tag||l.number;};
+  return el('div',{style:{position:'relative'}},
+    el('input',{value:v,disabled:props.disabled,placeholder:props.placeholder,style:props.style,onFocus:function(){setOpen(true);},
+      onBlur:function(){setTimeout(function(){setOpen(false);},150);if(lot&&v!==full(lot))props.onChange(full(lot),lot.id);},   // leaving the box fills the whole tag
+      onChange:function(e){const t=e.target.value,a=btLotAuto(props.lots,t);props.onChange(t,a?a.id:'');setOpen(true);}}),
+    hits.length>0&&el('div',{className:'lotpick'},hits.map(function(l){return el('div',{key:l.id,className:'lotopt',onMouseDown:function(e){e.preventDefault();props.onChange(full(l),l.id);setOpen(false);}},
+      el('b',null,full(l)),el('span',{className:'muted'},' · '+l.item+' · '+(Math.round(Number(l.qty_left)*1000)/1000)+' '+l.unit+' left'+(l.metrc_tag?' · '+l.number:'')));})),
+    lot&&el('div',{className:'lotfound',style:{fontSize:12,color:'var(--gold-hi)',marginTop:4}},'\u2713 Found in inventory: '+full(lot)+' \u00b7 '+lot.item+' \u00b7 '+(Math.round(Number(lot.qty_left)*1000)/1000)+' '+lot.unit+' left'+(props.useNote?' \u00b7 '+props.useNote:'')),
+    !lot&&v.trim().length>=4&&!props.disabled&&(props.lots||[]).length>0&&(btLotMatch(props.lots,v).length>1?el('div',{className:'muted',style:{fontSize:12,marginTop:4}},btLotMatch(props.lots,v).length+' lots match - type more digits or pick one.'):
+      !btLotMatch(props.lots,v).length&&el('div',{className:'muted',style:{fontSize:12,marginTop:4}},'Not in Receiving inventory - nothing will be deducted.')));
+}
 function btLotLabel(l){return (l.metrc_tag||l.number)+' · '+l.item+' · '+(Math.round(Number(l.qty_left)*1000)/1000)+' '+l.unit+' left';}
 // "1,240g" / "1.2 kg" / "500 mL" in the lot's unit; no unit = grams (mass lots), mL (volume lots) or the lot's unit
 const BT_MASS={mg:0.001,g:1,gram:1,grams:1,gr:1,kg:1000,lb:453.592,lbs:453.592,oz:28.3495},BT_VOL={ml:1,l:1000};
@@ -3118,7 +3137,8 @@ function BatchForm(props){
       const tags=Array.isArray(fd[f.k])?fd[f.k]:[],keep=lk||(mode==='fill'&&orig.current?((orig.current[f.k]||[]).length):0);
       return el(Field,{key:key,label:lab+' \u2014 add as many as you need',plain:true},
         tags.map(function(r,j){const ro=mode==='fill'&&j<keep;return el('div',{key:j,className:'li'},
-          el('input',{value:(r&&r.tag)||'',disabled:ro,placeholder:(f.ph||'Biomass')+' '+(ts||'METRC')+' Tag #',style:{flex:'2 1 180px'},onChange:function(e){const t=e.target.value;const n=tags.map(function(x,q){return q===j?{...x,tag:t,lot_id:''}:x;});setF(f.k,n);}}),
+          el('div',{style:{flex:'2 1 180px'}},el(LotTagInput,{value:(r&&r.tag)||'',lotId:r&&r.lot_id,lots:mode==='edit'?[]:lots,disabled:ro,placeholder:(f.ph||'Biomass')+' '+(ts||'METRC')+' Tag #'+(lots.length&&mode!=='edit'?' (type the last digits)':''),
+            useNote:mode==='edit'?'':'the weight is deducted when you submit',onChange:function(t,id){setD(function(p){const cur=Array.isArray(p[f.k])?p[f.k]:[];return {...p,[f.k]:cur.map(function(x,q){return q===j?{...x,tag:t,lot_id:id||''}:x;})};});}})),
           el('input',{value:(r&&r.weight)||'',disabled:ro,inputMode:'decimal',placeholder:f.ph?'Weight (g)':'Weight',style:{flex:'1 1 90px'},onChange:function(e){const n=tags.map(function(x,q){return q===j?{...x,weight:e.target.value}:x;});setF(f.k,n);}}),
           !ro&&el('button',{type:'button',className:'btn danger sm',onClick:function(){setF(f.k,tags.filter(function(_,q){return q!==j;}));}},'\u2715'));}),
         el('button',{type:'button',className:'btn ghost sm',onClick:function(){setF(f.k,tags.concat([{tag:'',weight:''}]));}},f.add||'+ Add Biomass Tag'));
@@ -3127,6 +3147,8 @@ function BatchForm(props){
     if(f.t==='date')input=el('input',{type:'date',value:fd[f.k]||'',disabled:lk,onChange:function(e){setF(f.k,e.target.value);}});
     else if(f.t==='select')input=el('select',{style:{width:'100%'},value:fd[f.k]||f.o[0],onChange:function(e){setF(f.k,e.target.value);}},(fd[f.k]&&f.o.indexOf(fd[f.k])<0?[fd[f.k]].concat(f.o):f.o).map(function(o){return el('option',{key:o,value:o},o);}));
     else if(f.t==='textarea')input=el('textarea',{value:fd[f.k]||'',disabled:lk,placeholder:f.ph,style:{minHeight:60},onChange:function(e){setF(f.k,e.target.value);}});
+    else if(BT_LOT_PAIRS[f.k]&&mode!=='edit')input=el(LotTagInput,{value:fd[f.k]||'',lotId:fd['_lot_'+f.k],lots:lots,disabled:lk,placeholder:(f.ph||'').replace(/METRC/g,ts||'METRC')+(lots.length?' (type the last digits)':''),
+      useNote:'the '+((def.fields.find(function(x){return x.k===BT_LOT_PAIRS[f.k];})||{}).l||'amount used').toLowerCase()+' is deducted when you submit',onChange:function(t,id){setD(function(p){return {...p,[f.k]:t,['_lot_'+f.k]:id||''};});}});
     else input=el('input',{value:fd[f.k]||'',disabled:lk,placeholder:(f.ph||'').replace(/METRC/g,ts||'METRC'),onChange:function(e){setF(f.k,e.target.value);}});
     return el(React.Fragment,{key:key},el(Field,{label:lab},input,lk&&lockNote,
         f.sug&&el('div',{style:{fontSize:12,color:'var(--gold-hi)',marginTop:4}},'Average weight for a good to very good yield is usually: '+(fd[f.sug[0]]||'0')+' ('+f.sug[1]+' of '+(f.sugOf||'Total Biomass Used')+')')),

@@ -12,8 +12,15 @@ T['hx_rooms'] = [{'id': 'room-v', 'state_id': 'st-mo', 'license_id': 'lic-mo', '
 T['hx_yield_alerts'] = [{'id': 'ya-b1-distillate', 'state_id': 'st-mo', 'license_id': 'lic-mo', 'batch_id': 'b1', 'batch_number': 'ETH-2026-009', 'batch_type': 'ethanol_extraction', 'stage': 'distillate',
                          'pct': 7.5, 'band': 'bad', 'created_at': '2026-11-16T10:00:00Z', 'updated_at': '2026-11-16T10:00:00Z', 'resolved_at': None, 'seen_by': []}]
 SEEN = []
+T['hx_lots'] = [{'id': 'ff1', 'state_id': 'st-mo', 'license_id': 'lic-mo', 'number': 'RCV-2026-031', 'item': 'Fresh Frozen GMO', 'category': 'Fresh Frozen', 'metrc_tag': '1A40C03000060E1000000001', 'supplier_lot': '', 'unit': 'g', 'quantity': 12000, 'qty_used': 0, 'status': 'accepted', 'received_on': '2026-11-01', 'expiry_date': None}]
+T['hx_lot_uses'] = []
 _h = handle
 def handle(route, request):
+    if request.url.split('?')[0].endswith('/rpc/hx_batch_lots'):
+        return route.fulfill(status=200, content_type='application/json', body=json.dumps([{**l, 'qty_left': l['quantity'] - l['qty_used']} for l in T['hx_lots'] if l['quantity'] > l['qty_used']]))
+    if '/rest/v1/hx_lot_uses' in request.url and request.method == 'POST':
+        x = json.loads(request.post_data); l = next(y for y in T['hx_lots'] if y['id'] == x['lot_id']); l['qty_used'] += x['quantity']; x['voided'] = False; T['hx_lot_uses'].append(x)
+        return route.fulfill(status=201, content_type='application/json', body=json.dumps([x]))
     if request.url.split('?')[0].endswith('/rpc/hx_yield_alert_seen'):
         a = json.loads(request.post_data); SEEN.append(a['p_id'])
         for x in T['hx_yield_alerts']:
@@ -54,8 +61,10 @@ with sync_playwright() as pw:
     field(md, 'Batch / Lot Number').fill('SL-001')
     md.get_by_role('button', name='+ Add Fresh Frozen Tag').click(); md.get_by_role('button', name='+ Add Fresh Frozen Tag').click()
     rows = md.locator('.li')
-    check(rows.nth(0).locator('input').nth(0).get_attribute('placeholder') == 'Fresh Frozen METRC Tag #', 'fresh frozen tag placeholder')
-    rows.nth(0).locator('input').nth(0).fill('1A4000001'); rows.nth(0).locator('input').nth(1).fill('10000'); rows.nth(1).locator('input').nth(0).fill('1A4000002'); rows.nth(1).locator('input').nth(1).fill('5000')
+    check(rows.nth(0).locator('input').nth(0).get_attribute('placeholder') == 'Fresh Frozen METRC Tag # (type the last digits)', 'fresh frozen tag placeholder')
+    rows.nth(0).locator('input').nth(0).fill('0001'); pg.wait_for_timeout(200)
+    check(md.locator('.lotfound', has_text='Found in inventory: 1A40C03000060E1000000001 · Fresh Frozen GMO · 12000 g left').count() == 1, 'fresh frozen tag: last digits find the lot')
+    rows.nth(0).locator('input').nth(1).fill('10000'); rows.nth(1).locator('input').nth(0).fill('1A4000002'); rows.nth(1).locator('input').nth(1).fill('5000')
     check(md.locator('.autov', has_text='15000').count() == 1, 'total fresh frozen weight adds up (15000)')
     check(md.locator('text=900 (6% of Total Fresh Frozen Weight)').count() == 1 and md.locator('text=600 (4% of Total Fresh Frozen Weight)').count() == 1, 'hash and rosin suggestions')
     field(md, 'Hash METRC Tag').fill('1A4000010')
@@ -79,6 +88,7 @@ with sync_playwright() as pw:
     check('Washing' in field(md, 'Status').locator('option').all_inner_texts() and 'Labels' in field(md, 'Status').locator('option').all_inner_texts(), 'status list for solventless')
     md.get_by_role('button', name='Submit & Sign').click(); pg.wait_for_selector('.card >> text=SL-001')
     bt = next(x for x in T['hx_batches'] if x['batch_number'] == 'SL-001')
+    check(len(T['hx_lot_uses']) == 1 and T['hx_lot_uses'][0]['quantity'] == 10000 and T['hx_lots'][0]['qty_used'] == 10000 and bt['data']['biomass_tags'][0]['tag'] == '1A40C03000060E1000000001', 'fresh frozen weight deducted from the lot (10000 g); full tag saved')
     d = bt['data']
     check(bt['batch_type'] == 'solventless' and not bt.get('sku_id') and str(d['total_biomass_used']) == '15000' and str(d['hash_yield_pct']) == '6' and str(d['rosin_yield_pct']) == '4.5' and str(d['press_yield_pct']) == '75' and d['storage_room'] == 'Freezer 2', 'batch saved with yields and storage room')
     c = pg.locator('.card', has_text='SL-001')
