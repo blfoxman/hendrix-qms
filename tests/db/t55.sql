@@ -37,3 +37,4 @@ set session_replication_role=origin;
 set test.uid='11111111-1111-1111-1111-111111111111';
 select 'T13 import', hx_lots_import('lic-mo','[{"item":"T55 import bud","category":"Cannabis (flower, trim, biomass)","quantity":10,"unit":"g","supplier":"T55 Farms","coa_ok":true}]','x.xlsx');
 select 'T14 final', string_agg(id||'='||metrc_tag, ',' order by id) from hx_lots where id in ('t55-old','t55-d');
+select 'T15 metrc cats', hx_lot_canna('Bud/Flower'), hx_lot_canna('Ground Shake/Trim'), hx_lot_canna('Concentrate'), hx_lot_canna('Cones / pre-roll supplies'), hx_lot_canna('Hardware (cartridges, batteries)'), hx_lot_canna('Packaging');

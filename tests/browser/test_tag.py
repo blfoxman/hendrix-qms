@@ -7,7 +7,7 @@ def L(i, item, cat, tag, status='accepted', **kw):
     r = {'id': i, 'state_id': 'st-mo', 'license_id': 'lic-mo', 'number': 'RCV-2026-%s' % i[-3:], 'item': item, 'category': cat, 'quantity': 1000, 'qty_used': 0, 'unit': 'g', 'status': status, 'metrc_tag': tag,
          'supplier_id': 's-ok', 'supplier_name': 'Heritage Missouri', 'supplier_status': 'approved', 'received_on': '2026-10-01', 'expiry_date': None, 'coa_ok': True, 'checks': {}, 'files': [], 'created_at': '2026-10-01', 'decided_by': 'Sam', 'decision_notes': ''}
     r.update(kw); return r
-T['hx_lots'] = [L('lot-001', 'Gelato trim', CAN, '1A40C03000060E1000001111'), L('lot-002', 'Old flower', CAN, ''), L('lot-003', 'Glass jars', 'Packaging', '', unit='each'),
+T['hx_lots'] = [L('lot-001', 'Gelato trim', CAN, '1A40C03000060E1000001111'), L('lot-002', 'Old flower', CAN, ''), L('lot-003', 'Glass jars', 'Packaging', '', unit='each'), L('lot-005', 'LIVE RESIN', 'Concentrate', ''),
                 L('lot-004', 'Distillate', 'Distillate / extract', '', status='quarantine', decided_by='')]
 CALLS = []
 _h = handle
@@ -48,7 +48,7 @@ with sync_playwright() as pw:
     sel.select_option('canna')
     check(pg.locator('tbody tr', has_text='Glass jars').count() == 0 and pg.locator('tbody tr', has_text='Gelato trim').count() == 1, 'filter: cannabis only')
     sel.select_option('notag')
-    check(pg.locator('tbody tr', has_text='Old flower').count() == 1 and pg.locator('tbody tr', has_text='Gelato trim').count() == 0, 'filter: cannabis without a tag')
+    check(pg.locator('tbody tr', has_text='Old flower').count() == 1 and pg.locator('tbody tr', has_text='LIVE RESIN').count() == 1 and pg.locator('tbody tr', has_text='Gelato trim').count() == 0, 'filter: cannabis without a tag (METRC category Concentrate counts)')
     sel.select_option('all')
     # add the missing tag from the Inventory row
     pg.locator('tr', has_text='Old flower').get_by_role('button', name='+ Add tag').click()
@@ -85,7 +85,7 @@ with sync_playwright() as pw:
     md = pg.locator('.md', has_text='Accept RCV-2026-004')
     check(md.locator('.msg.err', has_text='has no METRC tag').count() == 1, 'accept warns: cannabis lot has no METRC tag')
     md.get_by_role('button', name=re.compile('^Accept')).last.click()
-    check(md.locator('.msg.err', has_text='Add the METRC package tag first').count() == 1 and T['hx_lots'][3]['status'] == 'quarantine', 'untagged cannabis lot is not accepted')
+    check(md.locator('.msg.err', has_text='Add the METRC package tag first').count() == 1 and next(x for x in T['hx_lots'] if x['id'] == 'lot-004')['status'] == 'quarantine', 'untagged cannabis lot is not accepted')
     b.close()
 check(not [e for e in errors if e.startswith('JS')], 'no JS errors')
 print('errors:', errors)

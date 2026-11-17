@@ -198,6 +198,7 @@ e55(r'^T10 audit\|1$', 'METRC: tag change in the Audit Trail with the old tag an
 e55(r'^T11 editor adds\|1A4055000000000000000077$', 'METRC: Edit access adds a missing tag')
 e55(r'Only Full access to Receiving can change a METRC tag', 'METRC: Edit access cannot change an existing tag')
 e55(r'A cannabis lot needs its METRC package tag \(T55 import bud\)', 'METRC: Excel upload refuses cannabis rows without a tag')
+e55(r'^T15 metrc cats\|t\|t\|t\|f\|f\|f$', 'METRC: METRC export categories (Bud/Flower, Shake/Trim, Concentrate) count as cannabis; pre-roll cones and cartridge hardware do not')
 e55(r'^T14 final\|t55-d=1A4055000000000000000077,t55-old=1A4055000000000000000098$', 'METRC: final tags as expected')
 # ---- step 54: Facility Map
 r54 = subprocess.run(['psql', '-X', '-q', '-At', '-d', DB, '-f', os.path.join(HERE, 't54.sql')], capture_output=True, text=True)

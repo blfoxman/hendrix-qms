@@ -7918,8 +7918,14 @@ notify pgrst, 'reload schema';
 -- Safe to run more than once.
 -- =====================================================================
 
+-- Hendrix's two cannabis categories, plus METRC item categories (Bud/Flower, Ground Shake/Trim,
+-- Concentrate, Kief, Live Resin, Infused ...) as they come from a METRC export
 create or replace function hx_lot_canna(p_cat text) returns boolean
-language sql immutable as $$ select coalesce(p_cat, '') in ('Cannabis (flower, trim, biomass)', 'Distillate / extract'); $$;
+language sql immutable as $$
+  select coalesce(p_cat, '') in ('Cannabis (flower, trim, biomass)', 'Distillate / extract')
+      or (coalesce(p_cat, '') not in ('Packaging','Labels','Hardware (cartridges, batteries)','Cones / pre-roll supplies','Ingredients','Terpenes','Chemicals / sanitation','Gases','Solvents','Nutrients / fertilizers','Grow media / soil','Clones / seeds','Crop protection products','Other')
+          and p_cat ~* '(bud|flower|shake|trim|kief|concentrate|distillate|resin|rosin|biomass|hash|wax|shatter|crude|cannabis|marijuana|infused|edible|vape|pre-?roll)');
+$$;
 
 create or replace function hx_lot_tag_guard() returns trigger
 language plpgsql security definer set search_path = public as $$
