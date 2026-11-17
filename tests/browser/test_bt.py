@@ -53,6 +53,9 @@ with sync_playwright() as pw:
     pg = ctx.new_page(); pg.on('pageerror', lambda e: errors.append('JS: ' + str(e)))
     pg.goto(BASE); pg.wait_for_selector('text=Quality standard')
     pg.get_by_role('button', name='Cultivation', exact=True).click(); pg.wait_for_selector('#bt-wall .btx-row')
+    MFG = ['Production Planner', 'Batch Tracker', 'Products', 'Compliance Stickers', 'Line Map', 'Line Clearance and Rework']
+    check(all(pg.get_by_role('button', name=n, exact=True).count() == 0 for n in MFG), 'cultivation license: no manufacturing modules (planner, batch tracker, products, stickers, line map, line clearance)')
+    check(pg.locator('.card.gold .k', has_text='Line clearance').count() == 0, 'cultivation license: no manufacturing dashboard cards')
     w = pg.locator('#bt-wall')
     check(w.locator('.lmx-title', has_text='Batch Tracker').count() == 1, 'Batch tracker opens first in Cultivation')
     rows = w.locator('.btx-row:not(.hd)')
@@ -109,6 +112,9 @@ with sync_playwright() as pw:
     check(T['hx_cul_settings'] and T['hx_cul_settings'][0]['veg_days'] == 40 and T['hx_cul_settings'][0]['cycle_days'] == 80, 'targets saved for the license')
     pg.wait_for_timeout(300); check('late' not in row('Runtz').get_attribute('class'), 'late flags follow the license targets')
     # phone
+    pg.locator('select').nth(1).select_option('lic-mo'); pg.wait_for_timeout(600)
+    check(all(pg.get_by_role('button', name=n, exact=True).count() == 1 for n in MFG), 'manufacturing license (Black Fox) keeps those modules')
+    pg.locator('select').nth(1).select_option('lic-c60'); pg.get_by_role('button', name='Cultivation', exact=True).click(); pg.wait_for_selector('#bt-wall .btx-row')
     pg.set_viewport_size({'width': 390, 'height': 900}); pg.wait_for_timeout(300)
     check(pg.evaluate('document.querySelector("#bt-wall .btx-row.hd").offsetParent===null'), 'phone: header row hidden')
     check(pg.evaluate('document.querySelector("#bt-wall").scrollWidth<=document.querySelector("#bt-wall").clientWidth+2'), 'phone: no sideways scroll')
