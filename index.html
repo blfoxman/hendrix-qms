@@ -8326,6 +8326,7 @@ function lmIcon(name){const n=String(name).toLowerCase();const p=
   /label|sticker/.test(n)?'M3 12V4h8l10 10-8 8z M7.5 7.5h.01':
   /lab|test|r&d|coa/.test(n)?'M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3':
   /qc|release|hold/.test(n)?'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z':
+  /pass|fail/.test(n)?'M3 12l3.5 3.5L13 8M15 9l6 6M21 9l-6 6':/sugar/.test(n)?'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM18 16l.8 2.2L21 19l-2.2.8L18 22l-.8-2.2L15 19l2.2-.8z':
   /complete|done/.test(n)?'M12 3a9 9 0 1 0 0.01 0M8 12l3 3 5-6':
   /ship/.test(n)?'M3 7h11v9H3zM14 10h4l3 3v3h-7M7 19a2 2 0 1 0 0-.01M17 19a2 2 0 1 0 0-.01':
   /pack|fill|bag|jar|cart/.test(n)?'M4 8l8-4 8 4v9l-8 4-8-4zM4 8l8 4 8-4M12 12v9':
@@ -8347,7 +8348,7 @@ function LineFlow(props){
     st.forEach(function(name,i){const g=at[i],stop=g.filter(function(t){return t.state==='stopped';}).length,mov=g.filter(function(t){return t.state==='moving';}).length,wait=g.filter(function(t){return t.state==='waiting';}).length,pl=g.filter(function(t){return t.state==='planned';}).length;
       if(i>0){const runs=at[i-1].some(function(t){return t.state==='moving';});nodes.push(el('div',{key:'c'+i,className:'lmx-con'+(runs?' on':(i<=last?' past':''))}));}
       const sub=stop?stop+' stopped':wait?wait+' waiting':mov?mov+' moving':pl?pl+' planned':(i===st.length-1&&done?done+' completed':'');
-      nodes.push(el('button',{key:'s'+i,type:'button',className:'lmx-st'+(g.length?' has':'')+(stop?' stop':''),disabled:!g.length,title:g.map(function(t){return t.label+((t.yields||[]).length?' ('+t.yields.map(btYieldTxt).join(', ')+')':'');}).join(', '),
+      nodes.push(el('button',{key:'s'+i,type:'button',className:'lmx-st'+(g.length?' has':'')+(stop?' stop':''),disabled:!g.length,style:st.length>11?{width:68,fontSize:'.92em'}:null,title:g.map(function(t){return t.label+((t.yields||[]).length?' ('+t.yields.map(btYieldTxt).join(', ')+')':'');}).join(', '),
         onClick:function(){if(g.length)props.onPick(g.length===1?g[0].key:'G:'+(i>=n0?'T'+(i-n0):type+':'+i));}},
         el('span',{className:'lmx-ring',style:{color:g.length?c:'#6c685e',borderColor:g.length?c:undefined}},lmIcon(name),g.length?el('span',{className:'lmx-n'},g.length):null),
         el('span',{className:'lmx-sl'},name),el('span',{className:'lmx-ss'},sub)));});
