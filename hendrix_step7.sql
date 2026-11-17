@@ -22,7 +22,7 @@ alter table hx_states add column if not exists tracking_system text not null def
 
 create or replace function hx_valid_batch_type(p text) returns boolean
 language sql immutable as $$
-  select coalesce(p,'') in ('ethanol_extraction','butane_extraction','pre_rolls','cartridges',
+  select coalesce(p,'') in ('ethanol_extraction','butane_extraction','solventless','pre_rolls','cartridges',
                             'gummies','infused_flower','moon_rocks','snow_caps');
 $$;
 
@@ -113,7 +113,7 @@ begin
   -- SKU / flavor rules (insert, or when they change)
   if tg_op = 'INSERT' or new.sku_id is distinct from old.sku_id or new.flavor_id is distinct from old.flavor_id then
     if new.sku_id is null then
-      if new.batch_type <> 'ethanol_extraction' then
+      if new.batch_type not in ('ethanol_extraction','solventless') then
         raise exception 'Choose the SKU for this batch.';
       end if;
       new.sku := '';

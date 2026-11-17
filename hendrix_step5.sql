@@ -18,7 +18,7 @@
 
 create or replace function hx_valid_product_type(p text) returns boolean
 language sql immutable as $$
-  select coalesce(p,'') in ('ethanol_extraction','butane_extraction','pre_rolls','cartridges',
+  select coalesce(p,'') in ('ethanol_extraction','butane_extraction','solventless','pre_rolls','cartridges',
                             'gummies','infused_flower','moon_rocks','snow_caps');
 $$;
 

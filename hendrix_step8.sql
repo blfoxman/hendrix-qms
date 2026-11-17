@@ -172,7 +172,7 @@ begin
   -- SKU / flavor rules (insert, or when they change)
   if tg_op = 'INSERT' or new.sku_id is distinct from old.sku_id or new.flavor_id is distinct from old.flavor_id then
     if new.sku_id is null then
-      if new.batch_type <> 'ethanol_extraction' then
+      if new.batch_type not in ('ethanol_extraction','solventless') then
         raise exception 'Choose the SKU for this batch.';
       end if;
       new.sku := '';

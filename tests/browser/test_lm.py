@@ -110,6 +110,15 @@ with sync_playwright() as pw:
     check(st_of('Shipped').count() == 0, 'no Shipped station')
     subprocess.run(pgcmd('-c', "set session_replication_role=replica; update hx_batches set status='Passed', updated_at=now()-interval '2 days' where id='lm-g'"))
     pg.get_by_role('button', name='Refresh').click(); pg.wait_for_timeout(600)
+    # yield on the Line Map
+    subprocess.run(pgcmd('-c', "set session_replication_role=replica; delete from hx_batches where id='lm-y'; insert into hx_batches(id,state_id,license_id,batch_type,batch_number,status,data,performed_by,created_at,updated_at) values ('lm-y','st-mo','lic-mo','solventless','SL-2026-007','In Progress','{\"biomass_tags\":[{\"tag\":\"1A40\",\"weight\":\"10000\"}],\"total_biomass_used\":10000,\"hash_metrc\":\"1A41\",\"total_hash_produced\":\"250\",\"hash_yield_pct\":2.5}','Sam',now()-interval '1 day',now()-interval '20 minutes')"))
+    pg.get_by_role('button', name='Refresh').click(); pg.wait_for_timeout(700)
+    check(pg.locator('.lmx-kpi', has=pg.locator('.c', has_text='Low yield')).locator('.b').inner_text() == '1', 'KPI: low yield batches (hash 2.5% = VERY BAD)')
+    check(any('SL-2026-007 (Hash 2.5% VERY BAD)' in (x.get_attribute('title') or '') for x in pg.locator('.lmx-st').all()), 'station hover shows the batch yield')
+    train(pg, 'SL-2026-007').first.click(); pg.wait_for_timeout(300)
+    check(pg.locator('.lm-yield', has_text='Hash 2.5% VERY BAD').count() == 1, 'batch detail shows its yield and grade')
+    subprocess.run(pgcmd('-c', "set session_replication_role=replica; delete from hx_yield_alerts where batch_id='lm-y'; delete from hx_batches where id='lm-y'"))
+    pg.get_by_role('button', name='Refresh').click(); pg.wait_for_timeout(500)
     pg.screenshot(path=SP + 'linemap.png', full_page=True)
     # view-only executive: sees the map, no jump buttons to modules they cannot open
     T['hx_profiles'][0]['role'] = 'member'; T['hx_profiles'][0]['perms'] = {'linemap': 'read'}

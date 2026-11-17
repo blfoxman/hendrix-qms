@@ -1,0 +1,40 @@
+\set ON_ERROR_STOP 0
+-- step 57: solventless batch type and rooms
+select 'S1 types', hx_valid_batch_type('solventless'), hx_valid_product_type('solventless'), hx_valid_batch_type('rosin');
+set session_replication_role=replica;
+delete from hx_rooms where license_id='lic-mo' and name like 'T57%';
+update hx_profiles set perms='{}', license_ids='{}' where id='22222222-2222-2222-2222-222222222222';
+set session_replication_role=origin;
+set test.uid='11111111-1111-1111-1111-111111111111';
+insert into hx_rooms(id,state_id,license_id,name,kind,conditions) values ('t57-r1','st-mo','lic-mo','  T57 Freezer 2 ','freezer','-20 F');
+insert into hx_rooms(id,state_id,license_id,name) values ('t57-r2','st-mo','lic-mo','t57 freezer 2');
+insert into hx_rooms(id,state_id,license_id,name,kind) values ('t57-r3','st-mo','lic-mo','T57 Odd','sauna');
+insert into hx_rooms(id,state_id,license_id,name) values ('t57-r4','st-mo','lic-mi','T57 wrong state');
+select 'R1 room', name, kind, created_by<>'' from hx_rooms where id='t57-r1';
+update hx_rooms set active=false where id='t57-r1';
+delete from hx_rooms where id='t57-r1';
+select 'R2 off', active from hx_rooms where id='t57-r1';
+set test.uid='22222222-2222-2222-2222-222222222222';
+insert into hx_rooms(id,state_id,license_id,name) values ('t57-r5','st-mo','lic-mo','T57 member');
+set test.uid='11111111-1111-1111-1111-111111111111';
+insert into hx_batches(id,state_id,license_id,batch_type,batch_number,status,data,performed_by,signature) values ('t57-b','st-mo','lic-mo','solventless','SL-T57','In Progress','{"storage_room":"T57 Freezer 2"}','Sam','sig');
+select 'B1 batch', batch_type, data->>'storage_room' from hx_batches where id='t57-b';
+select 'H1 health', ok from hx_system_health() h, jsonb_to_recordset(h->'steps') as s(step int, ok boolean) where step=57;
+-- low yield alerts
+select set_config('hx.reason','test',false);
+update hx_batches set data = data || '{"hash_yield_pct":2.1,"rosin_yield_pct":4.5}', edit_reason='test' where id='t57-b';
+select 'Y1 alert', stage, pct, band, resolved_at is null from hx_yield_alerts where batch_id='t57-b' order by stage;
+select 'Y2 queued', count(*) from hx_notify_queue where kind='yield_low' and ref='t57-b';
+update hx_batches set data = data || '{"hash_yield_pct":2.2}', edit_reason='test' where id='t57-b';
+select 'Y3 no new email for same band', count(*) from hx_notify_queue where kind='yield_low' and ref='t57-b';
+select hx_yield_alert_seen('ya-t57-b-hash');
+select 'Y4 seen', array_length(seen_by,1) from hx_yield_alerts where id='ya-t57-b-hash';
+update hx_batches set data = data || '{"hash_yield_pct":4.0}', edit_reason='test' where id='t57-b';
+select 'Y5 band changed', band, coalesce(array_length(seen_by,1),0) from hx_yield_alerts where id='ya-t57-b-hash';
+update hx_batches set data = data || '{"hash_yield_pct":6.5,"rosin_yield_pct":0.5}', edit_reason='test' where id='t57-b';
+select 'Y6 resolved+rosin', id, resolved_at is null, band from hx_yield_alerts where batch_id='t57-b' order by id;
+select 'Y7 bands', hx_yield_band('distillate',22), hx_yield_band('distillate',11), hx_yield_band('distillate',7), hx_yield_low('distillate',2), hx_yield_low('distillate',30), hx_yield_low('rosin',3.5);
+set test.uid='22222222-2222-2222-2222-222222222222';
+select 'Y8 member', hx_yield_alert_me();
+select 'Y9', hx_yield_alert_seen('ya-t57-b-hash');
+set test.uid='11111111-1111-1111-1111-111111111111';
