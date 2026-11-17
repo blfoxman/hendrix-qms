@@ -2815,7 +2815,7 @@ function btRecalc(type,f,sku){
     if(type==='butane_extraction')return o;
     const dist=n0(f.total_distillate_produced),pct=tb>0?dist/tb*100:0;
     let band='none';
-    if(tb>0&&dist>0){band=pct>=16&&pct<=19?'very_good':pct>=13&&pct<16?'good':pct>=10&&pct<13?'bad':pct>=7&&pct<10?'very_bad':'out_of_range';}
+    if(tb>0&&dist>0)band=ethBand(pct);
     return {...o,ethanol_crude_suggested:r2(tb*0.77),decarbed_crude_suggested:r2(tb*0.20),distillate_suggested:r2(tb*0.16),yield_quality_pct:r2(pct),yield_quality_band:band};
   }
   if(type==='cartridges'){
@@ -2859,8 +2859,10 @@ function bhoYieldOf(f,sku){
     return {bio:bio,rows:[{l:'THCA Final',q:t,p:pct(t)},{l:'HTE Final',q:h,p:pct(h)},{l:'Total Yield (THCA + HTE)',q:t+h,p:pct(t+h),tot:1}]};}
   const q=n0(f.product_final_qty);return {bio:bio,rows:[{l:((sku&&sku.name)||'Product')+' Final',q:q,p:pct(q),tot:1}]};
 }
-const BT_YIELD={very_good:['ok','VERY GOOD','16-19% distillate-to-biomass yield'],good:['ok','GOOD','13-16% distillate-to-biomass yield'],bad:['warn','BAD','10-13% distillate-to-biomass yield'],
-  very_bad:['bad','VERY BAD','7-10% distillate-to-biomass yield'],out_of_range:['none','OUT OF RANGE','Outside the 7-19% expected range'],none:['none','AWAITING DATA','Enter biomass and distillate weights to see yield quality']};
+// distillate-to-biomass yield bands (Sam, Nov 17 2026)
+function ethBand(pct){pct=Number(pct)||0;return pct>=20&&pct<=24?'excellent':pct>=15&&pct<20?'very_good':pct>=12&&pct<15?'good':pct>=10&&pct<12?'normal':pct>=6&&pct<10?'bad':pct>=3&&pct<6?'very_bad':'out_of_range';}
+const BT_YIELD={excellent:['ok','EXCELLENT','20-24% distillate-to-biomass yield'],very_good:['ok','VERY GOOD','15-20% distillate-to-biomass yield'],good:['ok','GOOD','12-15% distillate-to-biomass yield'],normal:['warn','NORMAL','10-12% distillate-to-biomass yield'],
+  bad:['bad','BAD','6-10% distillate-to-biomass yield'],very_bad:['bad','VERY BAD','3-6% distillate-to-biomass yield'],out_of_range:['none','OUT OF RANGE','Outside the 3-24% expected range'],none:['none','AWAITING DATA','Enter biomass and distillate weights to see yield quality']};
 // one place that turns a display field into [tone, headline, detail]
 function btCheck(type,key,f,sku){
   const spec=btSpec(sku);
@@ -2868,7 +2870,7 @@ function btCheck(type,key,f,sku){
     const m={pass:['ok','PASS',(noun.pass)],under:['bad','UNDER WEIGHT',noun.under],over:['warn','OVER WEIGHT',noun.over],none:['none','AWAITING DATA','Enter the numbers to run this check']}[status||'none'];
     return [m[0],m[1],m[2]+(status&&status!=='none'?' \u2014 Expected \u2248 '+(exp||'0')+' \u00b110%, Actual: '+(act||'0'):'')];
   }
-  if(key==='yield_quality_result'){const y=BT_YIELD[f.yield_quality_band||'none'];return [y[0],y[1],y[2]+(f.yield_quality_band&&f.yield_quality_band!=='none'?' \u2014 Actual yield: '+(f.yield_quality_pct||'0')+'%':'')];}
+  if(key==='yield_quality_result'){const bd=f.yield_quality_band&&f.yield_quality_band!=='none'&&Number(f.yield_quality_pct)>0?ethBand(f.yield_quality_pct):(f.yield_quality_band||'none'),y=BT_YIELD[bd]||BT_YIELD.none;f={...f,yield_quality_band:bd};return [y[0],y[1],y[2]+(f.yield_quality_band&&f.yield_quality_band!=='none'?' \u2014 Actual yield: '+(f.yield_quality_pct||'0')+'%':'')];}
   if(key==='primed_check_result')return cnt(f.primed_check_status,{pass:'Primed oil weight matches ingredients',under:'Primed oil weighs less than the ingredients that went in',over:'Primed oil weighs more than the ingredients that went in'},f.primed_check_expected,f.primed_oil_total_weight);
   if(key==='flower_check_result'){const w=spec.flower_type==='Ground'?'Ground':'Infused';
     return cnt(f.flower_check_status,{pass:w+' flower weight matches ingredients',under:w+' flower weighs less than the ingredients that went in',over:w+' flower weighs more than the ingredients that went in'},f.flower_check_expected,f.infused_flower_total_wt);}

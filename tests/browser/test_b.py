@@ -96,6 +96,9 @@ with sync_playwright() as pw:
     check(md.locator('.autov', has_text='1500').count() == 1 and md.locator('text=1155 (77% of Total Biomass Used)').count() == 1, 'biomass total + 77% suggestion')
     field(md, 'Total Distillate Produced').fill('240')
     check(md.locator('.chkp.ok', has_text='VERY GOOD').count() == 1, 'yield 16% = VERY GOOD')
+    for g, band, cls in (('330', 'EXCELLENT', 'ok'), ('200', 'GOOD', 'ok'), ('165', 'NORMAL', 'warn'), ('120', 'BAD', 'bad'), ('60', 'VERY BAD', 'bad'), ('30', 'OUT OF RANGE', 'none'), ('240', 'VERY GOOD', 'ok')):
+        field(md, 'Total Distillate Produced').fill(g)
+        check(md.locator('.chkp.' + cls, has_text=re.compile('^' + band + '|' + band)).count() >= 1 and (band != 'GOOD' or md.locator('.chkp', has_text='VERY GOOD').count() == 0), 'yield %s g of 1500 g = %s' % (g, band))
     md.get_by_role('button', name='Submit & Sign').click(); pg.wait_for_selector('.card >> text=ETH-001')
     # BHO dual
     pg.locator('.tabs button', has_text='BHO Extraction').click()
