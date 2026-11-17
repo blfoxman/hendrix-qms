@@ -1,5 +1,5 @@
 -- =====================================================================
--- Hendrix QMS - ONE-FILE INSTALL of steps 13 to 54 (SOPs ... Line Map, System Health, Security, My Tasks)
+-- Hendrix QMS - ONE-FILE INSTALL of steps 13 to 55 (SOPs ... Line Map, System Health, Security, My Tasks)
 -- For a Hendrix database that already has steps 1-12.
 -- Paste the whole file into Supabase > SQL Editor > Run (one time).
 -- Safe to run again: every step can run more than once.
@@ -5397,7 +5397,7 @@ begin
       (24,'Equipment and chemicals','t','hx_equipment'),(25,'Line clearance and rework','t','hx_line_clearances'),(26,'Facility tests','t','hx_env_points'),(27,'Cultivation','t','hx_grow_areas'),
       (28,'HACCP','t','hx_haccp_team'),(29,'Risk register and change control','t','hx_risks'),(30,'Org chart and objectives','t','hx_org_positions'),(31,'Management review and verification','t','hx_mgmt_reviews'),
       (32,'Time clock and badges','t','hx_badges'),(33,'Production planner','t','hx_production_plans'),(34,'Settings','t','hx_license_settings'),(36,'Line Map','f','hx_line_map'),
-      (37,'System health','f','hx_system_health'),(38,'Security: e-signatures, two-step sign-in','t','hx_esignatures'),(39,'My Tasks and email alerts','t','hx_notify_queue'),(40,'Kiosks keep working offline','t','hx_kiosk_receipts'),(41,'METRC check','t','hx_metrc_snapshots'),(42,'Temporary passwords','f','hx_admin_set_password'),(43,'Maintenance and purchase requests, QR sign-in','f','hx_kiosk_log_add_user'),(44,'CSQ Program Overview online course','f','hx_course_cert_only'),(45,'New password after a reset','f','hx_set_own_password'),(46,'Food safety records (GMP walk, illness log)','f','hx_fl_types'),(47,'Batch Tracker tags from Receiving inventory','f','hx_batch_lots'),(48,'Alert trigger fix (Submit for testing, test results)','f','hx_notify_row'),(49,'Spanish SOPs and courses','c','hx_sops.es'),(50,'Paper SOP records (effective date, paper signatures)','f','hx_sop_paper_records'),(51,'Remove from Hendrix (people who left)','f','hx_admin_remove_user'),(52,'Cultivation Batch Tracker (test, package, ship)','t','hx_cul_settings'),(53,'Upload inventory from Excel','f','hx_lots_import'),(54,'Facility Map (zones, overlays, equipment pins)','t','hx_map_zones')) as s(step, name, kind, obj)
+      (37,'System health','f','hx_system_health'),(38,'Security: e-signatures, two-step sign-in','t','hx_esignatures'),(39,'My Tasks and email alerts','t','hx_notify_queue'),(40,'Kiosks keep working offline','t','hx_kiosk_receipts'),(41,'METRC check','t','hx_metrc_snapshots'),(42,'Temporary passwords','f','hx_admin_set_password'),(43,'Maintenance and purchase requests, QR sign-in','f','hx_kiosk_log_add_user'),(44,'CSQ Program Overview online course','f','hx_course_cert_only'),(45,'New password after a reset','f','hx_set_own_password'),(46,'Food safety records (GMP walk, illness log)','f','hx_fl_types'),(47,'Batch Tracker tags from Receiving inventory','f','hx_batch_lots'),(48,'Alert trigger fix (Submit for testing, test results)','f','hx_notify_row'),(49,'Spanish SOPs and courses','c','hx_sops.es'),(50,'Paper SOP records (effective date, paper signatures)','f','hx_sop_paper_records'),(51,'Remove from Hendrix (people who left)','f','hx_admin_remove_user'),(52,'Cultivation Batch Tracker (test, package, ship)','t','hx_cul_settings'),(53,'Upload inventory from Excel','f','hx_lots_import'),(54,'Facility Map (zones, overlays, equipment pins)','t','hx_map_zones'),(55,'METRC tags on cannabis lots','f','hx_lot_set_tag')) as s(step, name, kind, obj)
   loop
     v_ok := case r.kind
       when 't' then to_regclass('public.' || r.obj) is not null
@@ -7895,5 +7895,73 @@ grant select, insert, update on hx_site_maps to authenticated;
 grant select, insert, update, delete on hx_map_zones to authenticated;
 grant select, insert, update on hx_zone_readings to authenticated;
 grant select, insert, update, delete on hx_map_pins to authenticated;
+
+notify pgrst, 'reload schema';
+
+
+-- ###################################################################
+-- ### hendrix_step55.sql
+-- ###################################################################
+-- =====================================================================
+-- Hendrix QMS  -  Step 55: METRC tags on cannabis inventory
+--
+--   * A received lot in a cannabis category ("Cannabis (flower, trim, biomass)" or
+--     "Distillate / extract") needs its METRC package tag: when it is received
+--     (by hand or from the Excel upload) and before it can be accepted.
+--   * A METRC tag can be on only one live lot of a license (rejected, returned and
+--     destroyed lots do not count). Spaces, dashes and case are ignored.
+--   * hx_lot_set_tag(): adds the METRC tag to a lot that has none, at any status
+--     (Edit access to Receiving) - for lots already in stock. Changing a tag that is
+--     already there needs Full access and a reason. Both go to the Audit Trail.
+--
+-- Run in the Hendrix Supabase project (bqrncllndvzbhmxanitq) AFTER steps 1-54.
+-- Safe to run more than once.
+-- =====================================================================
+
+create or replace function hx_lot_canna(p_cat text) returns boolean
+language sql immutable as $$ select coalesce(p_cat, '') in ('Cannabis (flower, trim, biomass)', 'Distillate / extract'); $$;
+
+create or replace function hx_lot_tag_guard() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare v_other text;
+begin
+  new.metrc_tag := trim(coalesce(new.metrc_tag, ''));
+  if hx_lot_canna(new.category) and new.metrc_tag = '' and new.status not in ('rejected','returned','destroyed')
+     and (tg_op = 'INSERT' or (new.status = 'accepted' and old.status <> 'accepted')) then
+    raise exception 'A cannabis lot needs its METRC package tag (%).', new.item;
+  end if;
+  if new.metrc_tag <> '' and new.status not in ('rejected','returned','destroyed')
+     and (tg_op = 'INSERT' or hx_tagkey(new.metrc_tag) is distinct from hx_tagkey(old.metrc_tag) or old.status in ('rejected','returned','destroyed')) then
+    select number into v_other from hx_lots l where l.license_id = new.license_id and l.id <> new.id and hx_tagkey(l.metrc_tag) = hx_tagkey(new.metrc_tag)
+      and l.status not in ('rejected','returned','destroyed') limit 1;
+    if v_other is not null then raise exception 'METRC tag % is already on lot %.', new.metrc_tag, v_other; end if;
+  end if;
+  return new;
+end $$;
+drop trigger if exists hx_lots_tag on hx_lots;
+create trigger hx_lots_tag before insert or update on hx_lots for each row execute function hx_lot_tag_guard();
+
+create or replace function hx_lot_set_tag(p_lot text, p_tag text, p_reason text default '') returns text
+language plpgsql volatile security definer set search_path = public as $$
+declare l record; v_tag text := trim(coalesce(p_tag, '')); v_why text := trim(coalesce(p_reason, ''));
+begin
+  select * into l from hx_lots where id = p_lot;
+  if l.id is null then raise exception 'Unknown lot.'; end if;
+  if not hx_can('receiving', 2, l.license_id) then raise exception 'Adding a METRC tag needs Edit access to Receiving.'; end if;
+  if v_tag = '' then raise exception 'Enter the METRC tag.'; end if;
+  if hx_tagkey(v_tag) = hx_tagkey(l.metrc_tag) then return l.metrc_tag; end if;
+  if trim(l.metrc_tag) <> '' then
+    if not hx_can('receiving', 3, l.license_id) then raise exception 'Only Full access to Receiving can change a METRC tag that is already on a lot.'; end if;
+    if v_why = '' then raise exception 'Give the reason for changing the METRC tag.'; end if;
+  end if;
+  perform set_config('hx.internal', 'on', true);
+  perform set_config('hx.reason', case when trim(l.metrc_tag) = '' then 'METRC tag added' else 'METRC tag changed from ' || l.metrc_tag || ': ' || v_why end, true);
+  update hx_lots set metrc_tag = v_tag where id = p_lot;
+  perform set_config('hx.internal', '', true);
+  return v_tag;
+end $$;
+revoke all on function hx_lot_set_tag(text, text, text) from public;
+grant execute on function hx_lot_set_tag(text, text, text) to authenticated;
+grant execute on function hx_lot_canna(text) to authenticated;
 
 notify pgrst, 'reload schema';
