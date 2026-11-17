@@ -17,6 +17,10 @@ T['hx_tests'] += [{'id':'tb','state_id':'st-mo','license_id':'lic-mo','batch_id'
    'sample_tag':'1A4000000000000000005555','lab_name':'Green Lab','lab_license':'TES000777','status':'Passed','result_at':'2026-10-20T00:00:00Z','result_thc':'','result_cbd':'','result_notes':'','notes':'','coa_path':'coa/x.pdf','coa_filename':'x.pdf','coa_analysis':coa,'voided':False,'created_at':'2026-10-20T00:00:00Z'},
   {'id':'ts','state_id':'st-mo','license_id':'lic-mo','batch_id':None,'batch_number':'SH-12','batch_type':'pre_rolls','sku':'Bodega Boyz - Shorties','flavor':'Sour Apple','tag':'1A40000000000000000077','tag_label':'Final Packaged',
    'sample_tag':'1A40000000000000000078','lab_name':'Green Lab','lab_license':'TES000777','status':'Passed','result_at':'2026-10-20T00:00:00Z','result_thc':'','result_cbd':'','result_notes':'','notes':'','coa_path':'coa/y.pdf','coa_filename':'y.pdf','coa_analysis':coa,'voided':False,'created_at':'2026-10-19T00:00:00Z'}]
+T['hx_licenses'].append({'id': 'lic-mo2', 'state_id': 'st-mo', 'name': 'Black Fox Two', 'license_number': 'MAN000222', 'license_type': 'Manufacturer', 'active': True})
+T['hx_skus'].append({'id': 'if35', 'state_id': 'st-mo', 'product_type': 'moon_rocks', 'name': 'Moon Rocks 1g', 'spec': {}, 'license_ids': [], 'active': True, 'sort': 2})
+T['hx_flavors'].append({'id': 'flt', 'state_id': 'st-mo', 'sku_id': 'if35', 'name': 'Grape Ape', 'active': True, 'sort': 0})
+T['hx_tests'].append(dict(T['hx_tests'][0], id='tlt', batch_number='IF-1', batch_type='moon_rocks', sku='Muha Meds Moon Rocks 1g', flavor='Grape Ape'))
 with sync_playwright() as pw:
     b = pw.chromium.launch(**LAUNCH)
     ctx = b.new_context(viewport={'width': 1300, 'height': 950}, accept_downloads=True); ctx.route('**/*', handle)
@@ -53,6 +57,14 @@ with sync_playwright() as pw:
     pg.locator('.card', has_text='SH-12').get_by_role('button', name='Compliance Sticker').click(); pg.wait_for_selector('.md iframe')
     with pg.expect_download() as di3: pg.locator('.md').get_by_role('button', name='Download PDF').click()
     di3.value.save_as(OUT + 'labels_tri.pdf')
+    # template saved under another license of the state, SKU named a little differently
+    lt = dict(sa, id='lbl-lt', license_id='lic-mo2', sku_id='if35', flavor_id='flt', name='Moon Rocks 1g - Grape Ape', layout='')
+    T['hx_label_templates'].append(lt)
+    pg.keyboard.press('Escape'); pg.mouse.click(5, 5)
+    pg.locator('.card', has_text='IF-1').get_by_role('button', name='Compliance Sticker').click(); pg.wait_for_selector('.md iframe')
+    opt = field(pg.locator('.md'), 'Template').locator('option:checked').inner_text()
+    check('Grape Ape' in opt and 'saved under Black Fox Two' in opt, 'template saved under another license is found and matched (SKU name contains the template SKU): ' + opt)
+    T['hx_label_templates'].remove(lt)
     # access: View can print, cannot edit templates
     T['hx_profiles'][0]['role'] = 'member'; T['hx_profiles'][0]['perms'] = {'stickers': 'read', 'testing': 'read'}
     pg.reload(); pg.get_by_role('button', name='Compliance Stickers').click(); pg.wait_for_selector('.card >> text=Banana Pie')
