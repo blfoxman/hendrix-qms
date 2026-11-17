@@ -12500,8 +12500,8 @@ function FacilityMapInner(props){
         el('text',{x:cx,y:txt?cy-tf*0.25:cy+lf*0.35,fill:'#e8e2d2',fontSize:lf,textAnchor:'middle',fontFamily:'Oswald,"Arial Narrow",sans-serif',transform:rot,stroke:'#0a0a0a',strokeWidth:lf*0.16,paintOrder:'stroke',style:{pointerEvents:'none'}},label),
       txt&&el('text',{x:cx,y:house||z.kind==='room'?y+h/2+tf*0.4:cy+tf*0.95,fill:'#fff',fontSize:tf,textAnchor:'middle',fontFamily:'Archivo,system-ui,sans-serif',fontWeight:600,transform:rot,stroke:'#0a0a0a',strokeWidth:tf*0.18,paintOrder:'stroke',style:{pointerEvents:'none'}},txt),
       edit&&canF&&isSel&&el('rect',{'data-h':'1',x:x+w-r0*0.5,y:y+h-r0*0.5,width:r0,height:r0,fill:'#f1d57a',style:{cursor:'nwse-resize'}}));};
-  const drawPin=function(p0){const p=draft&&draft.pin===p0.id?{...p0,x:draft.x,y:draft.y}:p0,c=(FM_PIN[p.type]||FM_PIN.other)[1],r=r0*0.55;
-    const cone=p.type==='camera'?(function(){const f=(Number(p.fov)||90)*Math.PI/180,d=(Number(p.dir)||0)*Math.PI/180,R=r*7,a1=d-f/2,a2=d+f/2;
+  const drawPin=function(p0){const p=draft&&draft.pin===p0.id?{...p0,x:draft.x,y:draft.y}:p0,c=(FM_PIN[p.type]||FM_PIN.other)[1],r=r0*0.95;
+    const cone=p.type==='camera'?(function(){const f=(Number(p.fov)||90)*Math.PI/180,d=(Number(p.dir)||0)*Math.PI/180,R=r*4.5,a1=d-f/2,a2=d+f/2;
       return el('path',{d:'M0 0L'+fmR(R*Math.cos(a1))+' '+fmR(R*Math.sin(a1))+'A'+R+' '+R+' 0 '+(f>Math.PI?1:0)+' 1 '+fmR(R*Math.cos(a2))+' '+fmR(R*Math.sin(a2))+'Z',fill:'rgba(111,183,212,.14)',stroke:'rgba(111,183,212,.5)',strokeWidth:stroke,style:{pointerEvents:'none'}});})():null;
     return el('g',{key:p.id,'data-pid':p.id,transform:'translate('+p.x+' '+p.y+')',style:{cursor:canE?'grab':'pointer'}},cone,
       el('circle',{r:r,fill:'#0a0a0a',stroke:c,strokeWidth:stroke*2.2}),el('path',{d:FM_PATH[p.type]||FM_PATH.other,transform:'translate('+(-r*0.62)+' '+(-r*0.62)+') scale('+(r*1.24/24)+')',fill:'none',stroke:c,strokeWidth:2.2,strokeLinecap:'round',strokeLinejoin:'round',style:{pointerEvents:'none'}}),
