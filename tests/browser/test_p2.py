@@ -254,7 +254,7 @@ with sync_playwright() as pw:
     pg = ctx.new_page(); pg.on('pageerror', lambda e: errors.append('JS: ' + str(e))); pg.on('dialog', lambda d: d.accept())
     pg.goto(BASE); pg.get_by_role('button', name='Products', exact=True).click()
     pg.wait_for_selector('text=No Ethanol Extraction SKUs in Missouri yet')
-    check(pg.locator('.tabs button').count() == 3 + 8, 'admin tabs + 8 Black Fox product types')
+    check(pg.locator('.tabs button').count() == 3 + 9, 'admin tabs + 9 product types (Solventless added)')
     # price library first
     pg.locator('.tabs button', has_text='Ingredient Prices').click()
     field(pg, 'Name').fill('Distillate'); field(pg, 'Unit').fill('g'); field(pg, 'Cost / unit').fill('1.85')
