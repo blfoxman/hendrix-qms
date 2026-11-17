@@ -101,6 +101,18 @@ with sync_playwright() as pw:
     md.get_by_role('button', name='Submit & Sign').click(); pg.wait_for_timeout(500)
     check(md.locator('.msg.err', has_text='Only 1240 g left in 1A40C03000060E1000003275').count() == 1 and len(T['hx_lot_uses']) == n_uses + 1, 'more than is left is refused before saving')
     md.get_by_role('button', name='Cancel').click()
+    # Missouri manufacturing: the Status list is the line's steps
+    pg.get_by_role('button', name='+ New Batch').click(); md = pg.locator('.md')
+    opts = field(md, 'Status').locator('option').all_inner_texts()
+    check(opts == ['Line Clearance', 'Infused Flower', 'Infused Joints', 'Infused Kiefed Joints', 'Final Packaging', 'Testing', 'Passed', 'Failed', 'QC Release', 'Labels', 'Completed'], 'Missouri pre-roll status steps: ' + str(opts))
+    check(field(md, 'Status').input_value() == 'Line Clearance', 'a new batch starts at Line Clearance')
+    md.get_by_role('button', name='Cancel').click()
+    for tabn, first in (('Gummies', ['Preparation', 'Line Clearance', 'Gummy Mixture', 'Gummy Produced', 'Sugar Coated', 'Final Packaging', 'Testing']), ('Cartridges', ['Line Clearance', 'Oil Primed', 'Filled Hardware', 'Final Packaging', 'Testing']), ('Infused Flower', ['Line Clearance', 'Infused Flower', 'Final Packaging', 'Testing'])):
+        pg.locator('.tabs button', has_text=re.compile('^' + tabn + '$')).click(); pg.get_by_role('button', name='+ New Batch').click(); md = pg.locator('.md')
+        o = field(md, 'Status').locator('option').all_inner_texts()
+        check(o[:len(first)] == first and o[-5:] == ['Passed', 'Failed', 'QC Release', 'Labels', 'Completed'], tabn + ' status steps: ' + str(o))
+        md.get_by_role('button', name='Cancel').click()
+    pg.locator('.tabs button', has_text=re.compile('^Pre-Rolls$')).click()
     # diamond coating SKU (Bodega Boyz): the diamond coating tag is the THCA, so no second THCA
     pg.get_by_role('button', name='+ New Batch').click(); md = pg.locator('.md')
     field(md, 'SKU').select_option(label='Bodega Boyz 1g')

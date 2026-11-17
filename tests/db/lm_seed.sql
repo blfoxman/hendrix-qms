@@ -10,7 +10,7 @@ insert into hx_batches(id,state_id,license_id,batch_type,batch_number,sku,flavor
  ('lm-d','st-mo','lic-mo','gummies','GM-2026-038','Gummies 10pk','Grape','Completed','{}','Ana Morales', now()-interval '6 days', now()-interval '1 day'),
  ('lm-e','st-mo','lic-mo','pre_rolls','PR-2026-207','Infused 1g Pre-Roll','Blue Dream','In Progress','{"flower_metrc":"1A4-77","infused_flower_used":"512"}','Lee Park', now()-interval '1 day', now()-interval '12 minutes'),
  ('lm-f','st-mo','lic-mo','cartridges','CT-2026-115','1g AIO Cartridge','Blue Dream','In Progress','{"cart_packaged":"980"}','Jordan Ortiz', now()-interval '6 days', now()-interval '3 days'),
- ('lm-g','st-mo','lic-mo','cartridges','CT-2026-112','1g AIO Cartridge','Grape','Passed','{"cart_packaged":"990"}','Jordan Ortiz', now()-interval '8 days', now()-interval '2 days'),
+ ('lm-g','st-mo','lic-mo','cartridges','CT-2026-112','1g AIO Cartridge','Grape','QC Release','{"cart_packaged":"990"}','Jordan Ortiz', now()-interval '8 days', now()-interval '2 days'),
  ('lm-h','st-mo','lic-mo','gummies','GM-2026-045','Gummies 10pk','Watermelon','In Progress','{"distillate_qty":"455","units_produced":"9800"}','Ana Morales', now()-interval '1 day', now()-interval '25 minutes'),
  ('lm-old','st-mo','lic-mo','gummies','GM-2025-001','Gummies','Mango','Completed','{}','x', now()-interval '200 days', now()-interval '190 days'),
  ('lm-mi','st-mi','lic-mi','cartridges','MI-1','x','y','','{}','x', now()-interval '1 day', now());

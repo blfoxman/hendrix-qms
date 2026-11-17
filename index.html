@@ -3049,7 +3049,7 @@ function BatchForm(props){
     if(init)return {...(init.data||{})};
     const o={};def.fields.forEach(function(f){
       if(f.t==='date')o[f.k]=todayStr();else if(f.t==='checkbox')o[f.k]=false;else if(f.t==='tags')o[f.k]=[];
-      else if(f.t==='select')o[f.k]=f.o[0];else if(f.t==='text'||f.t==='textarea')o[f.k]='';});
+      else if(f.t==='select')o[f.k]=f.k==='status'&&props.statusList?props.statusList[0]:f.o[0];else if(f.t==='text'||f.t==='textarea')o[f.k]='';});
     o.operator=props.defaultName||'';return o;});
   const[att,setAtt]=useState(function(){return init&&Array.isArray(init.attachments)?init.attachments.slice():[];});
   const[rooms,setRooms]=useState([]);
@@ -3147,7 +3147,8 @@ function BatchForm(props){
     }
     let input;
     if(f.t==='date')input=el('input',{type:'date',value:fd[f.k]||'',disabled:lk,onChange:function(e){setF(f.k,e.target.value);}});
-    else if(f.t==='select')input=el('select',{style:{width:'100%'},value:fd[f.k]||f.o[0],onChange:function(e){setF(f.k,e.target.value);}},(fd[f.k]&&f.o.indexOf(fd[f.k])<0?[fd[f.k]].concat(f.o):f.o).map(function(o){return el('option',{key:o,value:o},o);}));
+    else if(f.t==='select'){const opts=f.k==='status'&&props.statusList?props.statusList:f.o;
+      input=el('select',{style:{width:'100%'},value:fd[f.k]||opts[0],onChange:function(e){setF(f.k,e.target.value);}},(fd[f.k]&&opts.indexOf(fd[f.k])<0?[fd[f.k]].concat(opts):opts).map(function(o){return el('option',{key:o,value:o},o);}));}
     else if(f.t==='textarea')input=el('textarea',{value:fd[f.k]||'',disabled:lk,placeholder:f.ph,style:{minHeight:60},onChange:function(e){setF(f.k,e.target.value);}});
     else if(btLotPair(def,f.k)&&mode!=='edit')input=el(LotTagInput,{value:fd[f.k]||'',lotId:fd['_lot_'+f.k],lots:lots,disabled:lk,placeholder:(f.ph||'').replace(/METRC/g,ts||'METRC')+(lots.length?' (type the last digits)':''),
       useNote:'the '+((def.fields.find(function(x){return x.k===btLotPair(def,f.k);})||{}).l||'amount used').toLowerCase()+' is deducted when you submit',onChange:function(t,id){setD(function(p){return {...p,[f.k]:t,['_lot_'+f.k]:id||''};});}});
@@ -3348,7 +3349,7 @@ function BatchTracker(props){
           el('div',{style:{flex:1,minWidth:240}},
             el('div',{className:'row',style:{gap:8,marginBottom:6}},
               el('b',{style:{color:'var(--gold-hi)'}},b.batch_number||'#'+(list.length-i)),
-              b.voided?el('span',{className:'badge bad',title:b.void_reason||''},'Void'):b.status&&el('span',{className:'badge'+(/Passed|Completed/.test(b.status)?' ok':/^Labels$/.test(b.status)?' warn':/Failed/.test(b.status)?' bad':'')},b.status),
+              b.voided?el('span',{className:'badge bad',title:b.void_reason||''},'Void'):b.status&&el('span',{className:'badge'+(/Passed|Completed|QC Release/.test(b.status)?' ok':/^(Labels|Testing)$/.test(b.status)?' warn':/Failed/.test(b.status)?' bad':'')},b.status),
               el('span',{className:'muted',style:{fontSize:12}},(d.date||'')+'  \u00b7  '+(b.performed_by||'')),
               m.total>0&&el('span',{className:'badge'+(full?' ok':m.done?'':' bad')},ts+' '+m.done+'/'+m.total)),
             el('div',{style:{fontSize:13}},[b.sku,b.flavor].filter(Boolean).join('  \u00b7  ')||(def.id==='ethanol_extraction'?(d.biomass_tags||[]).length+' biomass tag(s), '+(d.total_biomass_used||0)+' g':def.id==='solventless'?(d.biomass_tags||[]).length+' fresh frozen tag(s), '+(d.total_biomass_used||0)+' g'+(d.storage_room?' \u00b7 stored in '+d.storage_room:''):'')),
@@ -3372,7 +3373,7 @@ function BatchTracker(props){
             !b.voided&&isAdmin&&el('button',{className:'btn danger sm',onClick:function(){setModal({voidb:b});}},'Void'))));
     }),
     modal&&modal.form&&el(Modal,{title:(modal.form==='new'?'New ':modal.form==='fill'?'Continue ':'Edit ')+def.name+' batch'+(modal.b?' \u00b7 '+modal.b.batch_number:''),wide:true,onClose:function(){setModal(null);}},
-      el(BatchForm,{def:def,ts:ts,licenseId:lid,tests:modal.b?(tests[modal.b.id]||[]):[],mode:modal.form,initial:modal.b||null,prefill:modal.prefill||null,skus:usable,allSkus:allSkus,flavors:(cat&&cat.flavors)||[],formulas:canF?(cat&&cat.forms):null,defaultName:props.profile.name||'',
+      el(BatchForm,{def:def,ts:ts,licenseId:lid,statusList:btStatusList(def,isMoMfg(st,lic)),tests:modal.b?(tests[modal.b.id]||[]):[],mode:modal.form,initial:modal.b||null,prefill:modal.prefill||null,skus:usable,allSkus:allSkus,flavors:(cat&&cat.flavors)||[],formulas:canF?(cat&&cat.forms):null,defaultName:props.profile.name||'',
         onCancel:function(){setModal(null);},onSubmit:function(p){return modal.form==='new'?create(p):update(modal.b,p);}})),
     modal&&modal.ccp&&el(HaccpMonForm,{plans:hps,planId:(hpFor(modal.ccp)||{}).id,batchId:modal.ccp.id,batches:[modal.ccp],state:st,license:lic,profile:props.profile,onClose:function(){setModal(null);},onDone:function(){setModal(null);loadHp();}}),
     modal&&modal.lc&&el(LineClearanceForm,{state:st,license:lic,batch:modal.lc,profile:props.profile,onClose:function(){setModal(null);},onDone:function(){setModal(null);loadLcs();}}),
@@ -8193,7 +8194,23 @@ function lmTypeName(type){const d=BATCH_TYPES.find(function(t){return t.id===typ
 function lmDur(ms){if(!(ms>=0))return '';const m=Math.round(ms/60000);if(m<60)return m+' min';const h=Math.floor(m/60);if(h<48)return h+' h'+(m%60&&h<10?' '+(m%60)+' min':'');return Math.floor(h/24)+' days';}
 function lmTime(iso){if(!iso)return '';const d=new Date(/^\d{4}-\d{2}-\d{2}$/.test(iso)?iso+'T12:00:00':iso);const t=Date.now()-d.getTime();
   return t<20*3600000&&t>-3600000?d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):d.toLocaleDateString([],{month:'short',day:'numeric'});}
-function lmStations(type){return ['Planned','Line clearance'].concat(lmSections(type).map(function(s){return s.name;}));}
+function lmStations(type){const m=lmMoLine(type);if(m)return ['Planned'].concat(m.map(function(x){return x.n;}));return ['Planned','Line clearance'].concat(lmSections(type).map(function(s){return s.name;}));}
+/* Missouri manufacturing (Sam, Nov 17 2026): each line's own steps, and the same steps as the batch Status list.
+   A station is reached by the form (its sections / fields), the line clearance, the tests or the batch Status - whichever is furthest. */
+const LM_MO_LINES={
+  pre_rolls:[{n:'Line Clearance',lc:1},{n:'Infused Flower',secs:['Infused Flower']},{n:'Infused Joints',secs:['Infused Joints']},{n:'Infused Kiefed Joints',secs:['Infused Kiefed Preroll']},{n:'Final Packaging',secs:['Final Packaging']}],
+  infused_flower:[{n:'Line Clearance',lc:1},{n:'Infused Flower',secs:['Infused Flower','System Check']},{n:'Final Packaging',secs:['Filling & Packaging']}],
+  cartridges:[{n:'Line Clearance',lc:1},{n:'Oil Primed',keys:['oil_source_batch','input_weight','terpene_added','primed_oil_total_weight','primed_oil_metrc']},{n:'Filled Hardware',keys:['primed_oil_used','primed_rd1','primed_rd2']},{n:'Final Packaging',secs:['Packaged']}],
+  gummies:[{n:'Preparation',prep:1},{n:'Line Clearance',lc:1},{n:'Gummy Mixture',secs:['Gummy Mixture Batch']},{n:'Gummy Produced',secs:['Gummies Production Batch (Eaches)']},{n:'Sugar Coated',secs:['Sugared Gummies']},{n:'Final Packaging',secs:['Final Packaging']}]};
+const LM_MO_TRUNK=['Testing','Passed / Failed','QC Release','Labels','Completed'];
+let lmMo=false;   // set by the Line Map page: Missouri + a manufacturing license
+function isMoMfg(st,lic){return !!st&&!!lic&&(/missouri/i.test(st.name||'')||/^(mo|st-mo)$/i.test(String(st.abbr||st.code||st.id||'')))&&licOp(lic)!=='cultivation';}
+function lmMoLine(type){if(!lmMo||!LM_MO_LINES[type])return null;const secs={};lmSections(type).forEach(function(s){secs[s.name]=s.keys;});
+  return LM_MO_LINES[type].map(function(x){return {n:x.n,lc:x.lc,prep:x.prep,keys:(x.keys||[]).concat([].concat.apply([],(x.secs||[]).map(function(n){return secs[n]||[];})))};});}
+function lmTrunk(){return lmMo?LM_MO_TRUNK:LM_TRUNK;}
+function lmTX(){const T=lmTrunk();return T.length===4?LM_TX:T.map(function(_,i){return 790+i*(1112-790)/(T.length-1);});}
+// batch Status list: Missouri manufacturing uses the line's steps
+function btStatusList(def,mo){if(!mo||!LM_MO_LINES[def.id])return null;return LM_MO_LINES[def.id].map(function(x){return x.n;}).concat(['Testing','Passed','Failed','QC Release','Labels','Completed']);}
 
 /* turns the hx_line_map payload into trains on lines */
 function lmModel(d,now){
@@ -8209,15 +8226,24 @@ function lmModel(d,now){
     const atLab=tests.filter(function(t){return ['Pending','Submitted','Retest'].indexOf(t.status)>=0;});
     let lastSec=-1;secs.forEach(function(s,i){if(s.keys.some(function(k){return lmFilled((b.data||{})[k]);}))lastSec=i;});
     const lcs=b.clearances||[],lc=lcs.length?lcs[lcs.length-1]:null;
-    let where;
-    if(b.status==='Completed'||ships.length)where={trunk:3};else if(b.status==='Labels'||(b.labels&&+b.labels.count>0))where={trunk:2};
+    let where;const ml=lmMoLine(b.batch_type);
+    if(ml){const T=LM_MO_TRUNK,n=ml.length+1,D=b.data||{},st=b.status||'';let at=1;
+      ml.forEach(function(x,i){if(x.prep||(x.lc&&lc&&lc.result==='cleared')||x.keys.some(function(k){return lmFilled(D[k]);}))at=Math.max(at,i+1);});
+      const si=ml.findIndex(function(x){return x.n.toLowerCase()===st.toLowerCase();});if(si>=0)at=Math.max(at,si+1);
+      let tk=-1;if(tests.length)tk=atLab.length?0:1;
+      const ti=['testing','passed','failed','qc release','labels','completed'].indexOf(st.toLowerCase());if(ti>=0)tk=Math.max(tk,[0,1,1,2,3,4][ti]);
+      if(b.labels&&+b.labels.count>0)tk=Math.max(tk,3);if(ships.length)tk=4;
+      where=tk>=0?{trunk:tk}:{st:at};}
+    else if(b.status==='Completed'||ships.length)where={trunk:3};else if(b.status==='Labels'||(b.labels&&+b.labels.count>0))where={trunk:2};
     else if(passes.length&&!failedOpen&&!atLab.length)where={trunk:1};else if(tests.length)where={trunk:0};
     else if(lastSec>=0)where={st:2+lastSec};else if(lc&&lc.result==='cleared'&&secs.length)where={st:2};else where={st:1};
+    if(lmMo&&!ml&&where.trunk!==undefined)where={trunk:[0,2,3,4][where.trunk]};   // other lines on the Missouri trunk (Testing, Passed / Failed, QC Release, Labels, Completed)
     const inProd=where.st!==undefined,R=[];
     (b.holds||[]).filter(function(h){return h.status==='open';}).forEach(function(h){R.push({kind:'hold',text:'On hold: '+(h.reason||'no reason given'),source:'Hold '+(h.number||''),page:'holds',mod:'holds',since:h.created_at,owner:h.placed_by||'',clears:'Someone with Full access decides the hold in Hold and Release.'});});
     if(failedOpen)R.push({kind:'test',text:'Failed test'+(lastFail.tag?' on tag '+lastFail.tag:'')+'; no passing retest yet',source:'Testing'+(lastFail.lab_name?' · '+lastFail.lab_name:''),page:'testing',mod:'testing',since:lastFail.result_at||lastFail.updated_at,owner:'QA',clears:'A passing retest recorded in Testing.'});
     if(b.status==='QC Hold'||b.status==='Failed')R.push({kind:'status',text:b.status==='Failed'?'The batch record is marked Failed':'The batch record status is QC Hold',source:'Batch '+b.batch_number,page:'batches',mod:'batch',since:b.updated_at,owner:b.performed_by||'',clears:b.status==='Failed'?'A decision on the batch: hold, rework or destroy.':'Change the status in Batch Tracker when QC is done.'});
-    if(inProd){
+    const lcAt=ml?ml.findIndex(function(x){return x.lc;})+1:1;
+    if(inProd&&where.st>=lcAt){
       if(lc&&lc.result!=='cleared')R.push({kind:'lc',text:'Line clearance not cleared'+(lc.issues?': '+lc.issues:''),source:'Line clearance '+(lc.number||''),page:'lineclear',mod:'lineclear',since:lc.created_at,owner:lc.recorded_by||'',clears:'Fix the issues and record a line clearance that passes.'});
       else if(!lc)R.push({kind:'lc',text:'No line clearance recorded for this batch',source:'Line Clearance',page:'lineclear',mod:'lineclear',since:b.created_at,owner:b.performed_by||'',clears:'Record a line clearance before production continues.'});
       if(lc)(lc.equipment_ids||[]).forEach(function(id){const e=eqBad[id];if(e)R.push({kind:'equipment',text:e.number+' '+e.name+' is '+e.issue,source:'Equipment '+e.number,page:'equipment',mod:'equipment',since:e.status!=='in_service'?null:(e.cal_due?e.cal_due+'T00:00:00':null),owner:'Maintenance',clears:e.status!=='in_service'?'Return the equipment to service in Equipment.':'Record a passing calibration in Equipment.'});});
@@ -8227,11 +8253,12 @@ function lmModel(d,now){
     const last=new Date(b.last_activity||b.updated_at||b.created_at).getTime();
     if(inProd&&now-last>idleMs)R.push({kind:'idle',text:'No update for '+lmDur(now-last),source:'Batch '+b.batch_number,page:'batches',mod:'batch',since:new Date(last).toISOString(),owner:b.performed_by||'',clears:'Continue the batch record, or put the batch on hold.'});
     const born=b.created_at||'';R.forEach(function(r){if(r.since&&born&&r.since<born)r.since=born;});
-    let state=R.length?'stopped':(where.trunk===3?'done':(where.trunk===0&&atLab.length?'waiting':'moving'));
+    let state=R.length?'stopped':(where.trunk===lmTrunk(b.batch_type).length-1?'done':(where.trunk===0&&atLab.length?'waiting':'moving'));
     const info=state==='waiting'?{kind:'lab',text:'Samples at the lab'+(atLab[0].lab_name?' ('+atLab[0].lab_name+')':'')+'; waiting for the COA',source:'Testing',page:'testing',mod:'testing',since:atLab[0].submitted_at||atLab[0].created_at,owner:'QA',clears:'The result and COA are entered in Testing.'}:null;
     const since=R.length?R.map(function(r){return r.since;}).filter(Boolean).sort()[0]||null:(info?info.since:null);
-    const jt={};jt['Line clearance']=lc?lc.created_at:null;
-    if(tests.length)jt['Lab testing']=tests[0].submitted_at||tests[0].created_at;if(passes.length)jt['QC release']=passes[passes.length-1].result_at||passes[passes.length-1].updated_at;
+    const jt={};jt['Line clearance']=jt['Line Clearance']=lc?lc.created_at:null;if(ml&&tests.length)jt['Testing']=tests[0].submitted_at||tests[0].created_at;
+    if(ml&&tests.length&&!atLab.length){const lt=tests[tests.length-1];jt['Passed / Failed']=lt.result_at||lt.updated_at;}
+    if(tests.length)jt['Lab testing']=tests[0].submitted_at||tests[0].created_at;if(passes.length)jt['QC release']=passes[passes.length-1].result_at||passes[passes.length-1].updated_at;if(ml&&b.status==='QC Release')jt['QC Release']=b.updated_at;
     if(b.labels&&b.labels.last_at)jt['Labels']=b.labels.last_at;if(doneAt)jt['Completed']=doneAt;
     trains.push({key:'b:'+b.id,id:b.id,label:b.batch_number,type:b.batch_type,where:where,state:state,reasons:R,info:info,since:since,live:state==='moving'&&now-last<LM_LIVE_MIN*60000,yields:btYields(b.batch_type,b.data),
       product:[b.sku,b.flavor].filter(Boolean).join(' · ')||lmTypeName(b.batch_type),started:b.created_at,last:new Date(last).toISOString(),lastSec:lastSec,jt:jt,
@@ -8310,7 +8337,7 @@ function lmIcon(name){const n=String(name).toLowerCase();const p=
 function LineFlow(props){
   // one row per product line: every station as a ring, the number of batches there, moving connectors
   return el('div',{className:'lmx-panel'},props.types.map(function(type){
-    const c=LM_COLORS[type]||'#d4af37',st=lmStations(type).concat(LM_TRUNK),n0=lmStations(type).length;
+    const c=LM_COLORS[type]||'#d4af37',st=lmStations(type).concat(lmTrunk()),n0=lmStations(type).length;
     const at=st.map(function(){return [];});
     props.trains.forEach(function(t){if(t.type!==type||t.state==='planned'&&!t.where)return;const i=t.where.trunk!==undefined?n0+t.where.trunk:t.where.st;if(at[i]&&t.state!=='done')at[i].push(t);});
     const done=props.trains.filter(function(t){return t.type===type&&t.state==='done';}).length;at[st.length-1]=at[st.length-1].concat(props.trains.filter(function(t){return t.type===type&&t.state==='done';}));
@@ -8329,7 +8356,7 @@ function LineFlow(props){
   }));
 }
 function LineMapPage(props){
-  const lic=props.license,lid=lic?lic.id:'';
+  const lic=props.license,lid=lic?lic.id:'';lmMo=isMoMfg(props.state,lic);
   const[d,setD]=useState(null);const[err,setErr]=useState('');const[sel,setSel]=useState(null);const[stopsOnly,setStopsOnly]=useState(false);const[at,setAt]=useState(0);const boxRef=useRef(null);const[bw,setBw]=useState(LM_W);
   useEffect(function(){function m(){if(boxRef.current)setBw(boxRef.current.clientWidth||LM_W);}m();window.addEventListener('resize',m);document.addEventListener('fullscreenchange',m);return function(){window.removeEventListener('resize',m);document.removeEventListener('fullscreenchange',m);};},[d]);
   const load=useCallback(function(){if(!lid)return;sb('rpc/hx_line_map',{method:'POST',body:{p_lic:lid}}).then(function(r){setD(r||{});setErr('');setAt(Date.now());}).catch(function(e){setErr(lmErr(e));});},[lid]);
@@ -8367,15 +8394,15 @@ function LineMapPage(props){
     st.forEach(function(name,i){const x=sx(t,i);parts.push(el('div',{key:t+'s'+i,style:{position:'absolute',left:x-9,top:y-9,width:18,height:18,borderRadius:'50%',background:'#f2efe6',border:'4px solid '+c,boxSizing:'border-box'}}),
       el('div',{key:t+'n'+i,style:{position:'absolute',left:x-w/2,top:y+13,width:w,textAlign:'center',fontSize:10.5,lineHeight:'13px',color:'#c9c4b6'}},name));});
   });
-  if(L)LM_TRUNK.forEach(function(name,i){const x=LM_TX[i];parts.push(el('div',{key:'tk'+i,style:{position:'absolute',left:x-15,top:pillTop,width:30,height:pillH,borderRadius:15,background:'#f2efe6',border:'3px solid #0a0a0a',boxShadow:'0 0 0 2px #f2efe6',boxSizing:'border-box'}}),
+  if(L)lmTrunk().forEach(function(name,i){const x=lmTX()[i];parts.push(el('div',{key:'tk'+i,style:{position:'absolute',left:x-15,top:pillTop,width:30,height:pillH,borderRadius:15,background:'#f2efe6',border:'3px solid #0a0a0a',boxShadow:'0 0 0 2px #f2efe6',boxSizing:'border-box'}}),
     el('div',{key:'tn'+i,style:{position:'absolute',left:x-55,top:pillTop+pillH+8,width:110,textAlign:'center',fontSize:12,fontWeight:600,color:'#f2efe6'}},name));});
   Object.keys(groups).forEach(function(k){const g=groups[k],t0=g[0],trunk=t0.where.trunk!==undefined;
-    const x=trunk?LM_TX[t0.where.trunk]:sx(t0.type,t0.where.st),y=trunk?pillTop-50:lineY[t0.type]-52,w=trunk?104:Math.max(80,Math.min(112,sp(t0.type)-6));
+    const x=trunk?lmTX()[t0.where.trunk]:sx(t0.type,t0.where.st),y=trunk?pillTop-50:lineY[t0.type]-52,w=trunk?104:Math.max(80,Math.min(112,sp(t0.type)-6));
     const c=LM_COLORS[t0.type]||'#d4af37';const multi=g.length>1;const look=lmLook(t0.state,multi&&trunk?'#d4af37':c);
     const visible=!stopsOnly||g.some(function(t){return t.state==='stopped'||t.state==='waiting';});
     const key=multi?'G:'+k:t0.key,on=sel===key;
     const nStop=g.filter(function(t){return t.state==='stopped';}).length;
-    parts.push(el('button',{key:'tr'+k,type:'button','aria-label':multi?g.length+' batches at '+(trunk?LM_TRUNK[t0.where.trunk]:lmStations(t0.type)[t0.where.st]):t0.label+', '+t0.state+(t0.reasons.length?': '+t0.reasons[0].text:''),
+    parts.push(el('button',{key:'tr'+k,type:'button','aria-label':multi?g.length+' batches at '+(trunk?lmTrunk()[t0.where.trunk]:lmStations(t0.type)[t0.where.st]):t0.label+', '+t0.state+(t0.reasons.length?': '+t0.reasons[0].text:''),
       onClick:function(){setSel(key);},style:{position:'absolute',left:x-w/2,top:y,width:w,minHeight:38,padding:'3px 5px',borderRadius:9,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:1,cursor:'pointer',
       fontFamily:'inherit',background:look.bg,color:look.fg,border:look.bd,boxShadow:on?'0 0 0 3px #0a0a0a,0 0 0 5px #f2efe6':'none',zIndex:on?3:1,opacity:visible?1:.2}},
       el('span',{style:{display:'flex',alignItems:'center',gap:5,fontWeight:700,fontSize:11,whiteSpace:'nowrap',maxWidth:'100%',overflow:'hidden',textOverflow:'ellipsis'}},
@@ -8385,7 +8412,7 @@ function LineMapPage(props){
   });
   /* detail */
   function jumpBtn(r){return can(r.mod,1)&&props.go?el('button',{key:'j'+r.kind+r.source,className:'btn ghost sm',onClick:function(){props.go(r.page);}},'Open '+(HX_PAGE_LABEL[r.page]||r.page)):null;}
-  function detail(t){const c=LM_COLORS[t.type]||'#d4af37',st=lmStations(t.type).concat(LM_TRUNK),cur=t.where.trunk!==undefined?lmStations(t.type).length+t.where.trunk:t.where.st;
+  function detail(t){const c=LM_COLORS[t.type]||'#d4af37',st=lmStations(t.type).concat(lmTrunk()),cur=t.where.trunk!==undefined?lmStations(t.type).length+t.where.trunk:t.where.st;
     const stationName=st[cur],badgeC={stopped:'#e5645a',waiting:'#c8c2b0',moving:'#5fbf8a',planned:'#d4af37',done:'#9a968a'}[t.state];
     const head=t.state==='stopped'?'Stopped'+(t.since?' for '+lmDur(now-new Date(t.since).getTime()):'')+' at '+stationName:t.state==='waiting'?'Waiting'+(t.since?' '+lmDur(now-new Date(t.since).getTime()):'')+' at '+stationName:
       t.state==='planned'?'Planned'+(t.planned_for?' for '+fmtDay(t.planned_for):'')+(t.units?' · '+t.units+' units per flavor':''):t.state==='done'?'Completed'+(t.ship?' · shipped '+fmtDay(t.ship.ship_date)+' to '+t.ship.customer+' ('+t.ship.number+')':''):
@@ -8415,7 +8442,7 @@ function LineMapPage(props){
         t.plan&&can('planner',1)&&props.go&&el('button',{className:'btn sm',onClick:function(){props.go('planner');}},'Open Production Planner')));
   }
   const stopRows=trains.filter(function(t){return t.state==='stopped'||t.state==='waiting';}).sort(function(a,b){return LM_RANK[a.state]-LM_RANK[b.state]||String(a.since||'z').localeCompare(String(b.since||'z'));});
-  const where=function(t){return t.where.trunk!==undefined?LM_TRUNK[t.where.trunk]:lmStations(t.type)[t.where.st];};
+  const where=function(t){return t.where.trunk!==undefined?lmTrunk()[t.where.trunk]:lmStations(t.type)[t.where.st];};
   return el('div',{id:'lm-wall',style:{background:'var(--bg)'}},
     el('style',null,LM_CSS),
     el('style',null,'@keyframes lmpulse{0%{box-shadow:0 0 0 0 rgba(95,191,138,.75)}70%{box-shadow:0 0 0 9px rgba(95,191,138,0)}100%{box-shadow:0 0 0 0 rgba(95,191,138,0)}}.lm-live{animation:lmpulse 1.8s infinite}#lm-wall:fullscreen{padding:24px;overflow:auto}'),

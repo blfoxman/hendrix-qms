@@ -45,14 +45,15 @@ with sync_playwright() as pw:
     check(kp('Completed').split('\n')[1] == '1' and '1 planned' in kp('Completed') and kp('On the floor').split('\n')[1] == '1', 'KPIs: 1 completed, 1 planned, 1 on the floor')
     lines = [t for t in ['Cartridges', 'Gummies', 'Pre-Rolls'] if pg.locator('div', has_text=re.compile('^' + t + '$')).count()]
     check(lines == ['Cartridges', 'Gummies', 'Pre-Rolls'] and pg.locator('text=Ethanol Extraction').count() == 0, 'one subway line per product type in use: ' + str(lines))
-    check(pg.locator('text=Primed Oil').count() >= 1 and pg.locator('text=Infused Joints').count() >= 1 and pg.locator('text=Lab testing').count() >= 1, 'stations come from the batch record sections + shared trunk')
+    check(pg.locator('text=Oil Primed').count() >= 1 and pg.locator('text=Filled Hardware').count() >= 1 and pg.locator('text=Infused Kiefed Joints').count() >= 1 and pg.locator('text=Sugar Coated').count() >= 1 and pg.locator('text=Passed / Failed').count() >= 1 and pg.locator('text=QC Release').count() >= 1, 'Missouri manufacturing: each line has its own steps + Testing, Passed / Failed, QC Release, Labels, Completed')
     # stop reasons from every bridge
     check(train(pg, 'CT-2026-118').locator('text=EQUIPMENT').count() == 0 and 'deviation' in train(pg, 'CT-2026-118').get_attribute('aria-label').lower(), 'CT-118: stopped by its open deviation (equipment of its clearance is fine)')
     check('Line clearance not cleared' in train(pg, 'CT-2026-119').get_attribute('aria-label'), 'CT-119: line clearance not cleared')
     check('EQ-014 Cone filler is past its calibration date' in train(pg, 'PR-2026-207').get_attribute('aria-label'), 'PR-207: equipment of its line clearance past calibration')
     check('CCP Cooking temperature out of limits' in train(pg, 'GM-2026-045').get_attribute('aria-label'), 'GM-045: CCP out of limits waiting for verification')
-    check(pg.locator('button[aria-label^="2 batches at Lab testing"]').count() == 1, 'two batches at Lab testing grouped into one marker')
-    check(train(pg, 'CT-2026-112').locator('text=MOVING').count() == 1 and train(pg, 'GM-2026-038').locator('text=COMPLETED').count() == 1 and train(pg, 'PP-2026-019').locator('text=PLANNED').count() == 1, 'released batch moving at QC release; shipped batch; plan on the Planned station')
+    check(any('GM-2026-041' in (x.get_attribute('title') or '') for x in pg.locator('.lmx-st', has=pg.locator('.lmx-sl', has_text=re.compile('^Passed / Failed$'))).all()), 'failed test result: batch at Passed / Failed')
+    check(any('CT-2026-112' in (x.get_attribute('title') or '') for x in pg.locator('.lmx-st', has=pg.locator('.lmx-sl', has_text=re.compile('^QC Release$'))).all()) and train(pg, 'CT-2026-112').locator('text=MOVING').count() == 1, 'status QC Release: batch moving at QC Release')
+    check(train(pg, 'CT-2026-115').count() == 1 and 'waiting' in train(pg, 'CT-2026-115').get_attribute('aria-label') and train(pg, 'GM-2026-038').locator('text=COMPLETED').count() == 1 and train(pg, 'PP-2026-019').locator('text=PLANNED').count() == 1, 'samples at the lab = Testing (waiting); shipped batch; plan on the Planned station')
     check(pg.locator('text=GM-2025-001').count() == 0 and pg.locator('text=MI-1').count() == 0, 'old batches and other licenses are not on the map')
     # live line flow: one row per product line, a ring per station with the batch count, moving connectors
     flow = pg.locator('.lmx-panel')
@@ -69,8 +70,7 @@ with sync_playwright() as pw:
     check(det.locator('text=Fix the issues and record a line clearance that passes.').count() == 1 and det.locator('text=Journey').count() == 1, 'detail: what clears it + journey')
     pg.screenshot(path=SP + 'linemap_detail.png', full_page=True)
     # group -> pick the held batch
-    pg.locator('button[aria-label^="2 batches at Lab testing"]').click(); pg.wait_for_selector('text=2 batches at Lab testing')
-    pg.locator('.card button', has_text='GM-2026-041').first.click(); pg.wait_for_selector('text=On hold: Potency 8% over the label claim; retest ordered')
+    train(pg, 'GM-2026-041').first.click(); pg.wait_for_selector('text=On hold: Potency 8% over the label claim; retest ordered')
     det = pg.locator('.card', has=pg.locator('text=WHY IT IS STOPPED')).first
     check(det.locator('text=Hold HOLD-2026-012').count() == 1 and det.locator('text=Failed test on tag 1A4-GM41; no passing retest yet').count() == 1, 'held batch: hold + failed test, longest first')
     # stops list order (longest first) and the waiting batch
@@ -108,7 +108,7 @@ with sync_playwright() as pw:
     pg.get_by_role('button', name='Refresh').click(); pg.wait_for_timeout(600)
     check(any('CT-2026-112' in (x.get_attribute('title') or '') for x in st_of('Completed').all()) and pg.locator('button[aria-label^="2 batches at Completed"]').count() == 1, 'batch status Completed ends it at Completed (not Shipped)')
     check(st_of('Shipped').count() == 0, 'no Shipped station')
-    subprocess.run(pgcmd('-c', "set session_replication_role=replica; update hx_batches set status='Passed', updated_at=now()-interval '2 days' where id='lm-g'"))
+    subprocess.run(pgcmd('-c', "set session_replication_role=replica; update hx_batches set status='QC Release', updated_at=now()-interval '2 days' where id='lm-g'"))
     pg.get_by_role('button', name='Refresh').click(); pg.wait_for_timeout(600)
     # yield on the Line Map
     subprocess.run(pgcmd('-c', "set session_replication_role=replica; delete from hx_batches where id='lm-y'; insert into hx_batches(id,state_id,license_id,batch_type,batch_number,status,data,performed_by,created_at,updated_at) values ('lm-y','st-mo','lic-mo','solventless','SL-2026-007','In Progress','{\"biomass_tags\":[{\"tag\":\"1A40\",\"weight\":\"10000\"}],\"total_biomass_used\":10000,\"hash_metrc\":\"1A41\",\"total_hash_produced\":\"250\",\"hash_yield_pct\":2.5}','Sam',now()-interval '1 day',now()-interval '20 minutes')"))
