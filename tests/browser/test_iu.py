@@ -105,7 +105,7 @@ with sync_playwright() as pw:
     up.append(['', 'Lids', 'Packaging', 300, 'each', 'Greenway Packaging', '', '', '', '', '', '', 'Yes', '', ''])
     p = make_xlsx(pg, up, 'count_nov16.xlsx')
     pg.get_by_role('button', name='Upload inventory').click(); md = pg.locator('.md')
-    md.locator('input[aria-label="Inventory file"]').set_input_files(p); md.locator('.msg').first.wait_for()
+    md.locator('input[aria-label="Inventory file"]').set_input_files(p); pg.wait_for_selector('.md .msg >> text=/lots updated|need fixing/')
     t = md.inner_text()
     check('1 new lot (1 Accepted, 0 Quarantine), 2 lots updated' in t and '2 lots unchanged' in t, 'preview: new lot, updated lots, unchanged lots: ' + t[t.find('new lot')-10:t.find('new lot')+90])
     check('On hand 1000 → 950 each' in t and 'Location → Rack 2' in t and 'On hand 5808 → 5790 g' in t and 'METRC tag added' in t, 'preview shows each change')
@@ -117,7 +117,7 @@ with sync_playwright() as pw:
     bad2 = [hd] + [[x if i != 6 else ('1A40C03000060E1000009999' if r[0] == 'RCV-2026-004' else x) for i, x in enumerate(r)] for r in rows[1:]]
     p2 = make_xlsx(pg, bad2, 'count_bad.xlsx')
     pg.get_by_role('button', name='Upload inventory').click(); md = pg.locator('.md')
-    md.locator('input[aria-label="Inventory file"]').set_input_files(p2); md.locator('.msg').first.wait_for()
+    md.locator('input[aria-label="Inventory file"]').set_input_files(p2); pg.wait_for_selector('.md .msg >> text=/need fixing|lots updated|Nothing to change/')
     check('METRC Tag differs from Hendrix (1A40C03000060E1000001450)' in md.inner_text(), 'a different METRC tag on a lot is refused in the preview')
     b.close()
 print('\nJS/assert errors:', errors if errors else 'none')
