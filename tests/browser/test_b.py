@@ -27,6 +27,7 @@ def handle(route, request):
 T['hx_states'][0]['tracking_system'] = 'METRC'; T['hx_states'][1]['tracking_system'] = 'BioTrack'
 T['hx_skus'] += [
  {'id':'pr1','state_id':'st-mo','product_type':'pre_rolls','name':'Mates THCA 5 x 0.6g','spec':{'grams_filled':0.55,'grams_kiefed':0.6,'units_per_package':5,'ingredients':['THCA','Terpene'],'coating':'Kief'},'license_ids':[],'active':True,'sort':0},
+ {'id':'pr3','state_id':'st-mo','product_type':'pre_rolls','name':'Bodega Boyz 1g','spec':{'grams_filled':1,'grams_kiefed':1.1,'units_per_package':1,'ingredients':['THCA','Terpene','THCA (internal)'],'coating':'Diamond'},'license_ids':[],'active':True,'sort':2},
  {'id':'pr2','state_id':'st-mo','product_type':'pre_rolls','name':'Off SKU','spec':{},'license_ids':[],'active':False,'sort':1},
  {'id':'bh1','state_id':'st-mo','product_type':'butane_extraction','name':'THCA/HTE','spec':{'dual':'Yes'},'license_ids':[],'active':True,'sort':0},
  {'id':'ca1','state_id':'st-mo','product_type':'cartridges','name':'2G AIO','spec':{'oil_per_unit':2},'license_ids':[],'active':True,'sort':0},
@@ -84,6 +85,11 @@ with sync_playwright() as pw:
     check(md.locator('text=Not in Receiving inventory - nothing will be deducted.').count() == 1, 'tag not in inventory: says nothing will be deducted')
     field(md, 'Flower METRC #').fill('411'); pg.wait_for_timeout(200)
     check(md.locator('.lotfound').count() == 0, 'fewer than 4 digits: not linked yet')
+    for lab in ('Infused Flower #', 'Infused Pre Roll METRC Tag', 'Kiefed Infused Preroll METRC #'):
+        fx = field(md, lab); fx.fill('3275'); pg.wait_for_timeout(150)
+        check('last digits' not in (fx.get_attribute('placeholder') or '') and md.locator('.lotfound').count() == 0, lab + ': made in this batch, not pulled from inventory')
+        fx.fill('')
+    check('last digits' in (field(md, 'THCA #').get_attribute('placeholder') or '') and 'last digits' in (field(md, 'Kief METRC #').get_attribute('placeholder') or ''), 'ingredients (THCA, kief) are pulled from inventory')
     field(md, 'Flower METRC #').fill('4411'); field(md, 'Flower Used').fill('500 g')
     md.get_by_role('button', name='Submit & Sign').click(); pg.wait_for_selector('.card >> text=PR-002')
     u = T['hx_lot_uses'][n_uses:]
@@ -94,6 +100,12 @@ with sync_playwright() as pw:
     field(md, 'Flower METRC #').fill('3275'); field(md, 'Flower Used').fill('2000')
     md.get_by_role('button', name='Submit & Sign').click(); pg.wait_for_timeout(500)
     check(md.locator('.msg.err', has_text='Only 1240 g left in 1A40C03000060E1000003275').count() == 1 and len(T['hx_lot_uses']) == n_uses + 1, 'more than is left is refused before saving')
+    md.get_by_role('button', name='Cancel').click()
+    # diamond coating SKU (Bodega Boyz): the diamond coating tag is the THCA, so no second THCA
+    pg.get_by_role('button', name='+ New Batch').click(); md = pg.locator('.md')
+    field(md, 'SKU').select_option(label='Bodega Boyz 1g')
+    check(md.locator('span', has_text=re.compile('^THCA #')).count() == 1 and md.locator('span', has_text=re.compile('^THCA METRC #')).count() == 0, 'diamond coating SKU: first THCA shown, second THCA hidden')
+    check(md.locator('span', has_text=re.compile('^Diamond Coating METRC #')).count() == 1, 'diamond coating METRC tag shown')
     md.get_by_role('button', name='Cancel').click()
     T['hx_batches'][:] = [b for b in T['hx_batches'] if b['batch_number'] not in ('PR-002', 'PR-003', 'PR-004')]
     pg.reload(); pg.get_by_role('button', name='Batch Tracker').click(); pg.wait_for_selector('.card >> text=PR-001')

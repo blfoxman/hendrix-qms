@@ -2949,6 +2949,7 @@ function btRdPassed(f){return f.rd1_result==='Passed'||f.rd2_result==='Passed';}
 function btVisible(type,fd,f,sku,initial){
   const spec=btSpec(sku);
   if(fd.ing&&type==='pre_rolls'&&(spec.ingredients||[]).indexOf(prIng(fd.k))<0)return false;
+  if(fd.ing&&type==='pre_rolls'&&spec.coating==='Diamond'&&prIng(fd.k)==='THCA (internal)')return false;   // diamond coating tag is the THCA (Bodega Boyz)
   if(fd.kief&&!prKief(spec))return false;
   if(type==='butane_extraction'&&fd.single&&spec.dual==='Yes')return false;
   if(type==='butane_extraction'&&fd.dual&&spec.dual!=='Yes')return false;
@@ -2982,9 +2983,10 @@ function openAttachment(a){const x=document.createElement('a');x.href=a.data;x.d
 
 // ---- Batch Tracker <-> Receiving: a tag picked from inventory deducts what the batch used (step 47) ----
 // tag field -> its "used" field (inputs only; output / packaged tags are not deducted)
+// ingredients only: tags of things made inside the batch (infused flower, infused / kiefed pre-rolls, primed oil, crude, gummy mixture ...) are not pulled from inventory (Sam, Nov 17 2026)
 const BT_LOT_PAIRS={flower_metrc:'flower_qty',thca_metrc:'thca_qty',live_resin_metrc:'live_resin_qty',hte_metrc:'hte_qty',decarbed_resin_metrc:'decarbed_resin_qty',
-  distillate_metrc:'distillate_qty',trim_metrc:'trim_qty',thca_internal_metrc:'thca_internal_qty',kief_metrc:'kief_qty_used',infused_flower_number:'infused_flower_used',
-  infused_preroll_metrc:'total_infused_preroll_used',kiefed_infused_preroll_metrc:'kiefed_infused_joints_used',primed_oil_metrc:'primed_oil_used',ethanol_crude_metrc:'ethanol_crude_weight',decarbed_crude_tag:'total_decarbed_crude_used'};
+  distillate_metrc:'distillate_qty',trim_metrc:'trim_qty',thca_internal_metrc:'thca_internal_qty',kief_metrc:'kief_qty_used',oil_source_batch:'input_weight'};
+function btLotPair(def,k){const q=BT_LOT_PAIRS[k];return q&&def.fields.some(function(x){return x.k===q;})?q:null;}   // only when this batch type has the "used" field
 const BT_QTY_OF={};Object.keys(BT_LOT_PAIRS).forEach(function(k){BT_QTY_OF[BT_LOT_PAIRS[k]]=k;});
 async function btLoadLots(lid){
   try{return (await sb('rpc/hx_batch_lots',{method:'POST',body:{p_lic:lid}}))||[];}
@@ -3031,7 +3033,7 @@ function btLotUses(def,fd,orig,mode,lots,ts,sku){
   for(const f of def.fields){
     if(f.t==='tags'){const rows=Array.isArray(fd[f.k])?fd[f.k]:[],kept=mode==='fill'&&orig?((orig[f.k]||[]).length):0;
       for(let j=kept;j<rows.length;j++){const r=rows[j]||{};const e=add(f.k+'#'+j,'Biomass '+(r.tag||''),r.lot_id,r.weight);if(e)return {err:e};}continue;}
-    const qk=BT_LOT_PAIRS[f.k];if(!qk||!fd['_lot_'+f.k])continue;
+    const qk=btLotPair(def,f.k);if(!qk||!fd['_lot_'+f.k])continue;
     if(mode==='fill'&&orig&&String(orig[qk]||'').trim())continue; // already recorded when it was first entered
     const qf=def.fields.find(function(x){return x.k===qk;});if(!qf)continue;
     const e=add(qk,btLabel(def.id,qf,ts,sku),fd['_lot_'+f.k],fd[qk]);if(e)return {err:e};
@@ -3147,8 +3149,8 @@ function BatchForm(props){
     if(f.t==='date')input=el('input',{type:'date',value:fd[f.k]||'',disabled:lk,onChange:function(e){setF(f.k,e.target.value);}});
     else if(f.t==='select')input=el('select',{style:{width:'100%'},value:fd[f.k]||f.o[0],onChange:function(e){setF(f.k,e.target.value);}},(fd[f.k]&&f.o.indexOf(fd[f.k])<0?[fd[f.k]].concat(f.o):f.o).map(function(o){return el('option',{key:o,value:o},o);}));
     else if(f.t==='textarea')input=el('textarea',{value:fd[f.k]||'',disabled:lk,placeholder:f.ph,style:{minHeight:60},onChange:function(e){setF(f.k,e.target.value);}});
-    else if(BT_LOT_PAIRS[f.k]&&mode!=='edit')input=el(LotTagInput,{value:fd[f.k]||'',lotId:fd['_lot_'+f.k],lots:lots,disabled:lk,placeholder:(f.ph||'').replace(/METRC/g,ts||'METRC')+(lots.length?' (type the last digits)':''),
-      useNote:'the '+((def.fields.find(function(x){return x.k===BT_LOT_PAIRS[f.k];})||{}).l||'amount used').toLowerCase()+' is deducted when you submit',onChange:function(t,id){setD(function(p){return {...p,[f.k]:t,['_lot_'+f.k]:id||''};});}});
+    else if(btLotPair(def,f.k)&&mode!=='edit')input=el(LotTagInput,{value:fd[f.k]||'',lotId:fd['_lot_'+f.k],lots:lots,disabled:lk,placeholder:(f.ph||'').replace(/METRC/g,ts||'METRC')+(lots.length?' (type the last digits)':''),
+      useNote:'the '+((def.fields.find(function(x){return x.k===btLotPair(def,f.k);})||{}).l||'amount used').toLowerCase()+' is deducted when you submit',onChange:function(t,id){setD(function(p){return {...p,[f.k]:t,['_lot_'+f.k]:id||''};});}});
     else input=el('input',{value:fd[f.k]||'',disabled:lk,placeholder:(f.ph||'').replace(/METRC/g,ts||'METRC'),onChange:function(e){setF(f.k,e.target.value);}});
     return el(React.Fragment,{key:key},el(Field,{label:lab},input,lk&&lockNote,
         f.sug&&el('div',{style:{fontSize:12,color:'var(--gold-hi)',marginTop:4}},'Average weight for a good to very good yield is usually: '+(fd[f.sug[0]]||'0')+' ('+f.sug[1]+' of '+(f.sugOf||'Total Biomass Used')+')')),
