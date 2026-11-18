@@ -228,10 +228,10 @@ async function sb(path,opt){
   if(!r.ok){
     const m=(j&&(j.message||j.hint||j.details))||txt||('Error '+r.status);
     if(/schema cache|Could not find the table|relation .* does not exist/i.test(m)&&!/Could not find the '[A-Za-z0-9_]+' column/.test(m)){
-      const step=/hx_rooms/.test(m)?'hendrix_step57.sql':/hx_inventory_upload|hx_lot_counts/.test(m)?'hendrix_step56.sql':/hx_lot_set_tag|hx_lot_tag/.test(m)?'hendrix_step55.sql':/hx_site_maps|hx_map_zones|hx_zone_readings|hx_map_pins/.test(m)?'hendrix_step54.sql':/hx_lots_import/.test(m)?'hendrix_step53.sql':/hx_notify_row/.test(m)?'hendrix_step48.sql':/hx_batch_lots/.test(m)?'hendrix_step47.sql':/hx_fl_types|hx_fl_private_guard/.test(m)?'hendrix_step46.sql':/hx_set_own_password/.test(m)?'hendrix_step45.sql':/hx_course_cert_only|This course is an outside certification\. Record it/.test(m)?'hendrix_step44.sql':/hx_kiosk_log_add_user|hx_kiosk_login_free|maintenance_request|purchase_request|logs_maintenance|logs_purchase/.test(m)?'hendrix_step43.sql':/hx_admin_set_password|hx_password_changed|must_change_password/.test(m)?'hendrix_step42.sql':/hx_metrc/.test(m)?'hendrix_step41.sql':/hx_my_tasks|hx_notify|task_email/.test(m)?'hendrix_step39.sql':/hx_esignatures|mfa_required|esig_password|idle_signout/.test(m)?'hendrix_step38.sql':/hx_system_health/.test(m)?'hendrix_step37.sql':/hx_line_map|linemap_idle/.test(m)?'hendrix_step36.sql':/hx_license_settings/.test(m)?'hendrix_step34.sql':/hx_production_plans|hx_planner_recipes/.test(m)?'hendrix_step33.sql':/hx_time_clock|hx_badge|hx_kiosk_clock|hx_clock_fix/.test(m)?'hendrix_step32.sql':/hx_mgmt_reviews|hx_verification_/.test(m)?'hendrix_step31.sql':/hx_org_positions|hx_objective|hx_qms_settings/.test(m)?'hendrix_step30.sql':/hx_risk|hx_changes/.test(m)?'hendrix_step29.sql':/hx_haccp/.test(m)?'hendrix_step28.sql':/hx_grow_|hx_plant_batches/.test(m)?'hendrix_step27.sql':/hx_env_/.test(m)?'hendrix_step26.sql':/hx_line_clearances|hx_rework/.test(m)?'hendrix_step25.sql':/hx_equipment|hx_chemicals/.test(m)?'hendrix_step24.sql':/share_key|hx_training_shared/.test(m)?'hendrix_step23.sql':/hx_rule_sources/.test(m)?'hendrix_step22.sql':/hx_training_keys|hx_training_attempts|hx_course_submit|content_status/.test(m)?'hendrix_step20.sql':/hx_complaints|hx_audits|hx_audit_findings/.test(m)?'hendrix_step19.sql':/hx_recall|hx_trace_data/.test(m)?'hendrix_step18.sql':/hx_lots|hx_lot_uses|hx_holds|hx_shipments/.test(m)?'hendrix_step17.sql':/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
+      const step=/hx_complaint_qr|qr_photos/.test(m)?'hendrix_step58.sql':/hx_rooms/.test(m)?'hendrix_step57.sql':/hx_inventory_upload|hx_lot_counts/.test(m)?'hendrix_step56.sql':/hx_lot_set_tag|hx_lot_tag/.test(m)?'hendrix_step55.sql':/hx_site_maps|hx_map_zones|hx_zone_readings|hx_map_pins/.test(m)?'hendrix_step54.sql':/hx_lots_import/.test(m)?'hendrix_step53.sql':/hx_notify_row/.test(m)?'hendrix_step48.sql':/hx_batch_lots/.test(m)?'hendrix_step47.sql':/hx_fl_types|hx_fl_private_guard/.test(m)?'hendrix_step46.sql':/hx_set_own_password/.test(m)?'hendrix_step45.sql':/hx_course_cert_only|This course is an outside certification\. Record it/.test(m)?'hendrix_step44.sql':/hx_kiosk_log_add_user|hx_kiosk_login_free|maintenance_request|purchase_request|logs_maintenance|logs_purchase/.test(m)?'hendrix_step43.sql':/hx_admin_set_password|hx_password_changed|must_change_password/.test(m)?'hendrix_step42.sql':/hx_metrc/.test(m)?'hendrix_step41.sql':/hx_my_tasks|hx_notify|task_email/.test(m)?'hendrix_step39.sql':/hx_esignatures|mfa_required|esig_password|idle_signout/.test(m)?'hendrix_step38.sql':/hx_system_health/.test(m)?'hendrix_step37.sql':/hx_line_map|linemap_idle/.test(m)?'hendrix_step36.sql':/hx_license_settings/.test(m)?'hendrix_step34.sql':/hx_production_plans|hx_planner_recipes/.test(m)?'hendrix_step33.sql':/hx_time_clock|hx_badge|hx_kiosk_clock|hx_clock_fix/.test(m)?'hendrix_step32.sql':/hx_mgmt_reviews|hx_verification_/.test(m)?'hendrix_step31.sql':/hx_org_positions|hx_objective|hx_qms_settings/.test(m)?'hendrix_step30.sql':/hx_risk|hx_changes/.test(m)?'hendrix_step29.sql':/hx_haccp/.test(m)?'hendrix_step28.sql':/hx_grow_|hx_plant_batches/.test(m)?'hendrix_step27.sql':/hx_env_/.test(m)?'hendrix_step26.sql':/hx_line_clearances|hx_rework/.test(m)?'hendrix_step25.sql':/hx_equipment|hx_chemicals/.test(m)?'hendrix_step24.sql':/share_key|hx_training_shared/.test(m)?'hendrix_step23.sql':/hx_rule_sources/.test(m)?'hendrix_step22.sql':/hx_training_keys|hx_training_attempts|hx_course_submit|content_status/.test(m)?'hendrix_step20.sql':/hx_complaints|hx_audits|hx_audit_findings/.test(m)?'hendrix_step19.sql':/hx_recall|hx_trace_data/.test(m)?'hendrix_step18.sql':/hx_lots|hx_lot_uses|hx_holds|hx_shipments/.test(m)?'hendrix_step17.sql':/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
       throw new Error('Database tables are missing - run '+step+' in the Hendrix Supabase project.');
     }
-    if(/has no field "priority"/.test(m))throw new Error('The database needs a fix before this can be saved - an admin must run hendrix_step48.sql (or hendrix_install_13_to_57.sql) in the Hendrix Supabase project.');
+    if(/has no field "priority"/.test(m))throw new Error('The database needs a fix before this can be saved - an admin must run hendrix_step48.sql (or hendrix_install_13_to_58.sql) in the Hendrix Supabase project.');
     if(/hx_facility_log_log_type_check/.test(m))throw new Error('This log is not set up in the database yet - run hendrix_step46.sql in the Hendrix Supabase project.');
     if(/row-level security|permission denied/i.test(m))throw new Error('Not allowed - your access level does not allow this here. Ask a system admin.');
     throw new Error(m);
@@ -2089,6 +2089,57 @@ function KioskLog(){
     }})));
 }
 
+
+/* ---------- store complaint QR form (no login): ?kiosk=complaint&state=..&lic=.. ---------- */
+function cmpQrLink(st,lic){return window.location.origin+window.location.pathname+'?kiosk=complaint&state='+encodeURIComponent(st.id)+'&lic='+encodeURIComponent(lic.id);}
+function cmpShrink(file){return new Promise(function(res,rej){
+  if(!/^image\//i.test(file.type||''))return rej(new Error('Attach a photo (JPG or PNG).'));
+  const url=URL.createObjectURL(file),img=new Image();
+  img.onload=function(){let w=img.naturalWidth,hh=img.naturalHeight;const k=Math.min(1,1280/Math.max(w,hh));w=Math.round(w*k);hh=Math.round(hh*k);
+    const c=document.createElement('canvas');c.width=w;c.height=hh;c.getContext('2d').drawImage(img,0,0,w,hh);URL.revokeObjectURL(url);
+    let q=0.8,d=c.toDataURL('image/jpeg',q);while(d.length>850000&&q>0.3){q-=0.15;d=c.toDataURL('image/jpeg',q);}
+    if(d.length>850000)return rej(new Error('That photo is too large.'));res(d);};
+  img.onerror=function(){URL.revokeObjectURL(url);rej(new Error('Could not read that photo.'));};img.src=url;});}
+function KioskComplaint(){
+  const q=new URLSearchParams(window.location.search),stId=q.get('state')||'',licId=q.get('lic')||'';
+  const[lic,setLic]=useState(null);const[bad,setBad]=useState('');const[done,setDone]=useState('');const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  const blank={store:'',name:'',contact:'',product:'',tag:'',lot:'',purchased:'',category:'',description:'',health:false,photos:[]};
+  const[f,setF]=useState(blank);function set(k,v){setF(function(p){return {...p,[k]:v};});}
+  useEffect(function(){if(!cfg().ok){setBad('This form is not connected to a database.');return;}
+    if(!stId||!licId){setBad('This QR code is missing its license. Please contact us by phone or email.');return;}
+    rpc('hx_kiosk_check',{p_state:stId,p_lic:licId}).then(function(r){if(r&&r.id===licId)setLic(r);else setBad('This QR code is not linked to an active license. Please contact us by phone or email.');})
+      .catch(function(e){setBad(String(e.message||e));});},[]);
+  if(bad)return el('div',{className:'auth'},el('div',{className:'box'},el(Brand),el('div',{className:'msg err',style:{marginTop:18}},bad)));
+  if(!lic)return el('div',{className:'auth'},el(Brand));
+  const head=el('div',{style:{textAlign:'center',marginBottom:16}},el(Brand),el('div',{style:{fontSize:20,fontWeight:700,marginTop:14}},lic.name),
+    el('div',{className:'muted'},lic.state+' · License '+(lic.license_number||'-')),el('div',{style:{marginTop:10,fontSize:17,color:'var(--gold-hi)',fontWeight:700}},'Product complaint'));
+  if(done)return el('div',{className:'auth'},el('div',{className:'box'},head,el('div',{className:'msg',style:{fontSize:15}},'Thank you. We received your complaint',el('b',null,' '+done),'. Our quality team will contact you.'),
+    el('button',{className:'btn',style:{width:'100%'},onClick:function(){setF({...blank,store:f.store,name:f.name,contact:f.contact});setDone('');}},'File another complaint')));
+  async function addPhoto(file){if(!file)return;setErr('');try{const d=await cmpShrink(file);setF(function(p){return {...p,photos:p.photos.concat([d]).slice(0,3)};});}catch(e){setErr(String(e.message||e));}}
+  async function send(){setErr('');
+    const miss=[['store','the store name'],['name','your name'],['contact','a phone number or email'],['product','the product']].filter(function(x){return !f[x[0]].trim();});
+    if(miss.length){setErr('Enter '+miss.map(function(x){return x[1];}).join(', ')+'.');return;}
+    if(f.description.trim().length<10){setErr('Describe the problem (at least a sentence).');return;}
+    setBusy(true);try{const n=await rpc('hx_complaint_qr',{p_state:stId,p_lic:licId,p:f});setDone(String(n||''));window.scrollTo(0,0);}
+    catch(e){const m=String(e.message||e);setErr(/hx_complaint_qr/.test(m)&&/not find|does not exist|schema cache/i.test(m)?'This form is not switched on yet. Please contact us by phone or email.':m);}setBusy(false);}
+  const inp=function(k,l,ph,type){return el(Field,{label:l},el('input',{type:type||'text',value:f[k],placeholder:ph||'',onChange:function(e){set(k,e.target.value);}}));};
+  return el('div',{className:'auth',style:{alignItems:'flex-start'}},el('div',{className:'box',style:{width:'min(640px,100%)'}},head,
+    el('div',{className:'muted',style:{fontSize:13,marginBottom:12}},'For dispensaries: tell us about a problem with one of our products. No account needed. Fields with * are required.'),
+    inp('store','Store (dispensary) *','e.g. Green Leaf - Kansas City'),
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr',gap:10}},inp('name','Your name *'),inp('contact','Phone or email *')),
+    inp('product','Product *','Product name, strain / flavor, size'),
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr',gap:10}},inp('tag','METRC package tag','1A4...'),inp('lot','Lot / batch number','From the label')),
+    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr',gap:10}},el(Field,{label:'What is wrong?'},el('select',{value:f.category,onChange:function(e){set('category',e.target.value);if(e.target.value==='Adverse health effect')set('health',true);}},el('option',{value:''},'(choose)'),CMP_CATS.map(function(c){return el('option',{key:c,value:c},c);}))),
+      inp('purchased','Date sold / noticed','','date')),
+    el(Field,{label:'Describe the problem *'},el('textarea',{rows:4,value:f.description,placeholder:'What happened, how many units, what the customer said',onChange:function(e){set('description',e.target.value);}})),
+    el('label',{className:'ck',style:{margin:'4px 0 10px'}},el('input',{type:'checkbox',checked:f.health,onChange:function(e){set('health',e.target.checked);}}),el('span',null,'Someone got sick or hurt using this product')),
+    el('div',{className:'k',style:{marginBottom:6}},'Photos (up to 3)'),
+    el('div',{className:'row',style:{gap:8,marginBottom:12}},f.photos.map(function(d,i){return el('div',{key:i,style:{position:'relative'}},el('img',{src:d,alt:'Photo '+(i+1),style:{width:84,height:84,objectFit:'cover',borderRadius:8,border:'1px solid var(--line)'}}),
+        el('button',{className:'btn ghost sm',style:{position:'absolute',top:2,right:2,padding:'0 6px'},onClick:function(){setF(function(p){return {...p,photos:p.photos.filter(function(_,j){return j!==i;})};});}},'×'));}),
+      f.photos.length<3&&el('label',{className:'btn ghost'},'+ Photo',el('input',{type:'file',accept:'image/*',style:{display:'none'},onChange:function(e){addPhoto(e.target.files[0]);e.target.value='';}}))),
+    err&&el('div',{className:'msg err'},err),
+    el('button',{className:'btn',style:{width:'100%'},disabled:busy,onClick:send},busy?'Sending...':'Send complaint')));
+}
 
 /* QR form that needs the person's own sign-in (all facility forms except the open ones) */
 function KioskSignedLog(props){
@@ -4008,7 +4059,7 @@ function InventoryUpload(props){
         props.onDone('Saved from '+file+': '+[out.added?out.added+' new lot'+(out.added===1?'':'s'):'',out.counted?out.counted+' count'+(out.counted===1?'':'s')+' recorded':'',out.moved?out.moved+' location'+(out.moved===1?'':'s'):'',out.tagged?out.tagged+' METRC tag'+(out.tagged===1?'':'s')+' added':''].filter(Boolean).join(', ')+(same?' ('+same+' lots unchanged)':'')+'.');}
       else{const out=await sb('rpc/hx_lots_import',{method:'POST',body:{p_lic:lic.id,p_file:file,p_rows:rows.map(function(x){return x.r;})}});
         props.onDone('Uploaded '+out.count+' lot'+(out.count===1?'':'s')+' from '+file+(out.first?' ('+out.first+(out.last&&out.last!==out.first?' to '+out.last:'')+')':'')+'.');}}
-    catch(e){const m=String((e&&e.message)||e);setErr(/hx_inventory_upload|hx_lots_import/.test(m)&&/does not exist|schema cache|Could not find/i.test(m)?'Updating inventory from Excel needs hendrix_step56.sql (or hendrix_install_13_to_57.sql) in the Hendrix Supabase project.':m);}setBusy('');}
+    catch(e){const m=String((e&&e.message)||e);setErr(/hx_inventory_upload|hx_lots_import/.test(m)&&/does not exist|schema cache|Could not find/i.test(m)?'Updating inventory from Excel needs hendrix_step56.sql (or hendrix_install_13_to_58.sql) in the Hendrix Supabase project.':m);}setBusy('');}
   const bad=rows?rows.filter(function(x){return x.err.length;}):[],acc=newR.filter(function(x){return x.r.status==='accepted';}).length,shown=rows?(only?bad:rows):[],nCh=newR.length+updR.length;
   return el(Modal,{title:'Upload inventory · '+lic.name,wide:true,onClose:props.onClose},
     el('div',{className:'muted',style:{fontSize:13,marginBottom:10}},'To update stock: Download current inventory, change On hand (what you counted), Location or a missing METRC tag, add new lots as rows with no Hendrix Lot #, and upload it here. Nothing is saved until every row is right.'),
@@ -4743,6 +4794,7 @@ function ComplaintDetail(props){
        ['Deviation',c.deviation_number],['Closed',c.closed_by?c.closed_by+' \u00b7 '+String(c.closed_at).slice(0,10):'']].filter(function(p){return p[1];}).map(function(p){return el('div',{key:p[0]},el('div',{className:'k'},p[0]),el('div',{style:{fontSize:13}},p[1]));})),
     c.description&&el('div',{style:{fontSize:13,marginBottom:10,whiteSpace:'pre-wrap'}},c.description),
     (c.attachments||[]).length>0&&el(FileList,{files:c.attachments}),
+    (c.qr_photos||[]).length>0&&el('div',{className:'row',style:{gap:8,margin:'0 0 10px'}},el('span',{className:'k'},'Photos from the store'),c.qr_photos.map(function(d,i){return el('a',{key:i,href:'#',onClick:function(e){e.preventDefault();const w=window.open('','_blank');if(w)w.document.write('<img src="'+d+'" style="max-width:100%">');}},el('img',{src:d,alt:'Store photo '+(i+1),style:{width:96,height:96,objectFit:'cover',borderRadius:8,border:'1px solid var(--line)'}}));})),
     !fb&&el('div',null,
       el('div',{className:'k',style:{margin:'10px 0 6px'}},'Investigation (CSQ 1.7)'),
       el('div',{className:'grid',style:{gridTemplateColumns:'2fr 1fr',gap:10}},inp('investigator','Investigator (responsible) *'),inp('due_date','Due date','date')),
@@ -4769,7 +4821,7 @@ function ComplaintDetail(props){
 function ComplaintsPage(props){
   const st=props.state,lic=props.license,lid=lic?lic.id:'';
   const[rows,setRows]=useState(null);const[batches,setBatches]=useState([]);const[msg,setMsg]=useState('');const[tab,setTab]=useState('list');
-  const[q,setQ]=useState('');const[sf,setSf]=useState('OPEN');const[tf,setTf]=useState('ALL');const[selId,setSelId]=useState(null);const[modal,setModal]=useState(null);
+  const[q,setQ]=useState('');const[sf,setSf]=useState('OPEN');const[tf,setTf]=useState('ALL');const[selId,setSelId]=useState(null);const[modal,setModal]=useState(null);const[qr,setQr]=useState(false);
   const load=useCallback(function(){if(!lid){setRows([]);return;}const enc=encodeURIComponent;
     db.get('hx_complaints','license_id=eq.'+enc(lid)+'&select=*&order=received_on.desc,number.desc&limit=5000').then(function(r){setRows((r||[]).filter(function(x){return x.license_id===lid;}));}).catch(function(e){setMsg(cmpErr(e));setRows([]);});
     db.get('hx_batches','license_id=eq.'+enc(lid)+'&voided=eq.false&select=id,batch_number,batch_type,sku,flavor,license_id,voided&order=created_at.desc&limit=1000').then(function(r){setBatches((r||[]).filter(function(b){return b.license_id===lid&&!b.voided;}));}).catch(function(){setBatches([]);});},[lid]);
@@ -4792,8 +4844,9 @@ function ComplaintsPage(props){
   return el('div',null,
     el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
       el('div',null,el('h1',null,el('span',{className:'g'},'Complaints')),el('div',{className:'sub'},lic.name+' \u00b7 complaints, returns, adverse events and customer feedback (CSQ 1.7, 5.3)')),
-      el('div',{className:'row'},el('button',{className:'btn ghost',onClick:printLog},'Complaint log'),el('button',{className:'btn ghost',onClick:function(){setModal({t:'form',type:'feedback'});}},'+ Feedback'),el('button',{className:'btn',onClick:function(){setModal({t:'form'});}},'+ Log complaint'))),
+      el('div',{className:'row'},can('complaints',2)&&el('button',{className:'btn ghost',onClick:function(){setQr(!qr);}},qr?'Hide store QR':'Store QR code'),el('button',{className:'btn ghost',onClick:printLog},'Complaint log'),el('button',{className:'btn ghost',onClick:function(){setModal({t:'form',type:'feedback'});}},'+ Feedback'),el('button',{className:'btn',onClick:function(){setModal({t:'form'});}},'+ Log complaint'))),
     msg&&el('div',{className:/^(Logged|Saved|Closed|Reopened|Cancelled|Put on hold)/.test(msg)?'msg':'msg err'},msg),
+    qr&&el(CmpQrCard,{state:st,license:lic}),
     el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',marginBottom:14}},
       stat('Open',C.filter(cmpOpen).length,C.some(cmpOpen)?'var(--gold-hi)':'var(--green)'),stat('Overdue',C.filter(cmpLate).length,C.some(cmpLate)?'var(--red)':'var(--green)'),
       stat('Complaints (12 months)',C12.length,null,C12.filter(function(c){return c.type==='adverse_event';}).length+' adverse events'),stat('Average days to close',avgDays==null?'-':avgDays),
@@ -4820,6 +4873,19 @@ function ComplaintsPage(props){
       onHold:function(){setModal({t:'hold',prefill:{kind:'batch',batch_id:sel.batch_id,tag:sel.tag,source:'Complaint',reason:'Complaint '+sel.number+': '+sel.title}});}}),
     modal&&modal.t==='form'&&el(ComplaintForm,{rec:modal.rec,type:modal.type,state:st,license:lic,batches:batches,onClose:function(){setModal(null);},onDone:function(r){if(r&&!modal.rec)setSelId(r.id);done(modal.rec?'Saved.':'Logged '+(r?r.number:''));}}),
     modal&&modal.t==='hold'&&el(HoldForm,{state:st,license:lic,lots:[],batches:batches,prefill:modal.prefill,onClose:function(){setModal(null);},onDone:function(r){if(r&&sel)db.update('hx_complaints',sel.id,{hold_id:r.id}).catch(function(){});done('Put on hold: '+(r?r.number:''));}}));
+}
+function CmpQrCard(props){
+  const st=props.state,lic=props.license,link=cmpQrLink(st,lic);const[copied,setCopied]=useState(false);
+  return el('div',{className:'card gold'},el('div',{className:'row',style:{alignItems:'flex-start',gap:20}},
+    el('div',null,el(QrBox,{text:link,size:140})),
+    el('div',{style:{flex:1,minWidth:240}},el('div',{className:'k'},'Store complaint QR \u00b7 '+lic.name),
+      el('div',{style:{margin:'4px 0 8px',fontSize:13}},'Dispensaries scan this (or open the link) to file a complaint ',el('b',null,'without a Hendrix account'),': store, contact, product, METRC tag / lot, what is wrong, photos. It arrives here as an open Dispensary complaint (Adverse event if someone got sick or hurt), received by "QR form", and alerts like any complaint. Put it on invoices, delivery manifests or email it to stores.'),
+      el('input',{readOnly:true,value:link,onFocus:function(e){e.target.select();}}),
+      el('div',{className:'row',style:{marginTop:8}},
+        el('button',{className:'btn sm',onClick:function(){try{navigator.clipboard.writeText(link);setCopied(true);setTimeout(function(){setCopied(false);},1500);}catch(e){}}},copied?'Copied':'Copy link'),
+        el('a',{className:'btn ghost sm',href:link,target:'_blank',rel:'noopener'},'Open form'),
+        el('button',{className:'btn ghost sm',onClick:function(){printSignSheet({link:link,lic:lic,stName:st.name,eyebrow:lic.name+'  \u00b7  For dispensaries',title:'Product complaint',cta:'Scan to file a complaint',ctaSub:'Use your phone camera. No account needed.',
+          steps:[['Scan','Point your phone camera at the code'],['Tell us','Product, METRC tag or lot, what is wrong, photos'],['Send','You get a complaint number; our quality team contacts you']]});}},'Print QR sign')))));
 }
 function CmpDashCard(props){
   const lid=props.license?props.license.id:'';const[d,setD]=useState(null);
@@ -8537,8 +8603,8 @@ function LineMapDashCard(props){
 }
 
 /* ---------- System Health (step 37): checks the installation like an IQ, admins only ---------- */
-const HX_RELEASE='Release 57 · November 2026';
-const SH_STEPS_EXPECTED=[4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57];
+const HX_RELEASE='Release 58 · November 2026';
+const SH_STEPS_EXPECTED=[4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58];
 function shErr(e){const m=String((e&&e.message)||e);return /hx_system_health/.test(m)&&/missing|does not exist|schema cache|Could not find/i.test(m)?'NOT_INSTALLED':m;}
 function SystemHealthPage(props){
   const[h,setH]=useState(null);const[x38,setX38]=useState(null);const[err,setErr]=useState('');const[ai,setAi]=useState(null);const[busy,setBusy]=useState(false);const[at,setAt]=useState(0);
@@ -8557,7 +8623,7 @@ function SystemHealthPage(props){
   function add(group,label,state,detail,fix){checks.push({group:group,label:label,state:state,detail:detail||'',fix:fix||''});}
   if(h){
     const steps=h.steps||[],missing=steps.filter(function(s){return !s.ok;});
-    add('Database','Database steps installed',missing.length?'bad':'ok',missing.length?'Missing: '+missing.map(function(s){return s.step+' '+s.name;}).join(', '):'All '+steps.length+' steps (4 to '+(steps.length?steps[steps.length-1].step:'')+') are installed.',missing.length?'Run hendrix_install_13_to_57.sql (or the missing step files) in the Supabase SQL editor.':'');
+    add('Database','Database steps installed',missing.length?'bad':'ok',missing.length?'Missing: '+missing.map(function(s){return s.step+' '+s.name;}).join(', '):'All '+steps.length+' steps (4 to '+(steps.length?steps[steps.length-1].step:'')+') are installed.',missing.length?'Run hendrix_install_13_to_58.sql (or the missing step files) in the Supabase SQL editor.':'');
     const drift=at?Math.abs(new Date(h.checked_at).getTime()-at)/1000:0;
     add('Database','Clock',drift>120?'warn':'ok','Database time zone '+h.db_time_zone+'; this device is '+Math.round(drift)+' s '+(drift>120?'off':'in step')+'.',drift>120?'Set this device to the correct time (automatic time).':'');
     add('Security','Row level security on every table',(h.rls_off||[]).length?'bad':'ok',(h.rls_off||[]).length?'Off on: '+h.rls_off.join(', '):'On for all '+h.tables+' Hendrix tables.',(h.rls_off||[]).length?'Run the step file that creates those tables again, or turn on RLS for them in Supabase > Table editor.':'');
@@ -8592,7 +8658,7 @@ function SystemHealthPage(props){
       el('div',{className:'row',style:{gap:8}},el('button',{className:'btn ghost',disabled:busy,onClick:run},busy?'Checking...':'Run checks again'),
         el('button',{className:'btn ghost',disabled:ai&&ai.busy,onClick:testAi},ai&&ai.busy?'Testing...':'Test the AI connection'),
         h&&el('button',{className:'btn',onClick:print},'Print IQ evidence'))),
-    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'System Health is not set up yet - run hendrix_step37.sql (or hendrix_install_13_to_57.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
+    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'System Health is not set up yet - run hendrix_step37.sql (or hendrix_install_13_to_58.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
     h&&el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',gap:10,marginBottom:14}},
       el('div',{className:'card',style:{marginBottom:0,borderTop:'2px solid '+(nBad?'var(--red)':(nWarn?'var(--gold)':'#5fbf8a'))}},el('div',{className:'k'},'Overall'),el('div',{style:{fontSize:22,fontWeight:700,marginTop:4,color:nBad?'var(--red)':(nWarn?'var(--gold-hi)':'#5fbf8a')}},nBad?nBad+' to fix':(nWarn?nWarn+' to check':'Ready')),el('div',{className:'muted',style:{fontSize:12}},nOk+' of '+checks.length+' checks pass')),
       el('div',{className:'card',style:{marginBottom:0}},el('div',{className:'k'},'Steps installed'),el('div',{style:{fontSize:22,fontWeight:700,marginTop:4}},(h.steps||[]).filter(function(s){return s.ok;}).length+' / '+(h.steps||[]).length),el('div',{className:'muted',style:{fontSize:12}},'database steps 4 to '+((h.steps||[]).slice(-1)[0]||{}).step)),
@@ -8774,7 +8840,7 @@ function MyTasksPage(props){
       el('div',null,el('h1',null,el('span',{className:'g'},'My Tasks')),el('div',{className:'sub'},(lic?lic.name+' · ':'')+'everything waiting for you, kept up to date by Hendrix from the records')),
       el('div',{className:'row',style:{gap:8}},el('button',{className:'btn ghost',onClick:load},'Refresh'),lic&&el('button',{className:'btn ghost',disabled:busy,onClick:emailMe},busy?'Sending...':'Email me this list'))),
     msg&&el('div',{className:'msg'},msg),
-    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'My Tasks is not set up yet - run hendrix_step39.sql (or hendrix_install_13_to_57.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
+    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'My Tasks is not set up yet - run hendrix_step39.sql (or hendrix_install_13_to_58.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
     list===null?el('div',{className:'muted'},'Loading...'):el('div',null,
       el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',gap:10,marginBottom:14}},
         stat('All',L.length,'open tasks',undefined,'all'),stat('Waiting for you',mine.length,'assigned to you',undefined,'mine'),
@@ -8929,7 +8995,7 @@ function MetrcPage(props){
     el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-end',gap:12,flexWrap:'wrap',marginBottom:16}},
       el('div',null,el('h1',null,el('span',{className:'g'},'METRC Check')),el('div',{className:'sub'},lic.name+(lic.license_number?' · '+lic.license_number:'')+' · what METRC says compared with Hendrix; read only, nothing is changed in METRC')),
       el('div',{className:'row',style:{gap:8}},res&&el('button',{className:'btn ghost',onClick:print},'Print report'))),
-    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'METRC Check is not set up yet - run hendrix_step41.sql (or hendrix_install_13_to_57.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
+    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'METRC Check is not set up yet - run hendrix_step41.sql (or hendrix_install_13_to_58.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
     busy&&el('div',{className:'msg'},busy),
     canE&&el('div',{className:'card'},el('div',{className:'k',style:{marginBottom:8}},'Get what METRC says'),
       el('div',{className:'row',style:{gap:10,alignItems:'center',flexWrap:'wrap'}},
@@ -12881,7 +12947,7 @@ function RoomsPage(props){
   const st=props.state,lic=props.license,canF=can('rooms',3);
   const[rows,setRows]=useState(null);const[err,setErr]=useState('');const[msg,setMsg]=useState('');const[ed,setEd]=useState(null);const[off,setOff]=useState(false);
   const load=useCallback(function(){if(!lic)return;db.get('hx_rooms','license_id=eq.'+encodeURIComponent(lic.id)+'&select=*&order=sort,name').then(function(r){setRows((r||[]).filter(function(x){return x.license_id===lic.id;}));setErr('');})
-    .catch(function(e){const m=String(e.message||e);setErr(/hx_rooms/.test(m)&&/does not exist|schema cache/i.test(m)?'Rooms are not set up yet - run hendrix_step57.sql (or hendrix_install_13_to_57.sql) in the Hendrix Supabase project.':m);setRows([]);});},[lic&&lic.id]);
+    .catch(function(e){const m=String(e.message||e);setErr(/hx_rooms/.test(m)&&/does not exist|schema cache/i.test(m)?'Rooms are not set up yet - run hendrix_step57.sql (or hendrix_install_13_to_58.sql) in the Hendrix Supabase project.':m);setRows([]);});},[lic&&lic.id]);
   useEffect(function(){load();},[load]);
   if(!st||!lic)return el('div',null,el('h1',null,el('span',{className:'g'},'Rooms')),el('div',{className:'empty'},'Pick a state and a license at the top first.'));
   const list=(rows||[]).filter(function(r){return off||r.active!==false;}),nOff=(rows||[]).filter(function(r){return r.active===false;}).length;
@@ -13120,7 +13186,7 @@ function App(){
       const page=location.origin+location.pathname;fetch(page,{cache:'no-cache'}).then(function(r){if(r.ok)c.put(page,r);}).catch(function(){});
       Array.prototype.forEach.call(document.querySelectorAll('script[src]'),function(x){c.match(x.src).then(function(m){if(!m)fetch(x.src,{mode:'no-cors'}).then(function(r){c.put(x.src,r);}).catch(function(){});});});
     }).catch(function(){});}
-  ReactDOM.createRoot(document.getElementById('root')).render(el(kq==='visitor'?KioskVisitor:kq==='log'?KioskLog:kq==='clock'?KioskClock:qp.get('badge')?BadgeCheck:App));
+  ReactDOM.createRoot(document.getElementById('root')).render(el(kq==='visitor'?KioskVisitor:kq==='log'?KioskLog:kq==='complaint'?KioskComplaint:kq==='clock'?KioskClock:qp.get('badge')?BadgeCheck:App));
 }
 })();
 </script>
