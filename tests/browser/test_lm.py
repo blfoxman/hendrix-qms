@@ -110,6 +110,12 @@ with sync_playwright() as pw:
     check(st_of('Shipped').count() == 0, 'no Shipped station')
     subprocess.run(pgcmd('-c', "set session_replication_role=replica; update hx_batches set status='QC Release', updated_at=now()-interval '2 days' where id='lm-g'"))
     pg.get_by_role('button', name='Refresh').click(); pg.wait_for_timeout(600)
+    # a dropdown still on its first choice (Mandatory Testing: Not Submitted) does not move the batch
+    subprocess.run(pgcmd('-c', "set session_replication_role=replica; delete from hx_batches where id='lm-pr'; insert into hx_batches(id,state_id,license_id,batch_type,batch_number,status,data,performed_by,created_at,updated_at) values ('lm-pr','st-mo','lic-mo','pre_rolls','PR-2026-300','Infused Flower','{\"flower_metrc\":\"1A40\",\"flower_qty\":\"500\",\"mandatory_testing\":\"Not Submitted\"}','Sam',now()-interval '1 hour',now()-interval '10 minutes')"))
+    pg.get_by_role('button', name='Refresh').click(); pg.wait_for_timeout(700)
+    stn = lambda t: [x.locator('.lmx-sl').inner_text() for x in pg.locator('.lmx-st').all() if t in (x.get_attribute('title') or '')]
+    check([x.upper() for x in stn('PR-2026-300')] == ['INFUSED FLOWER'], 'status Infused Flower + Mandatory Testing left on "Not Submitted": batch at Infused Flower, not Final Packaging: ' + str(stn('PR-2026-300')))
+    subprocess.run(pgcmd('-c', "set session_replication_role=replica; delete from hx_batches where id='lm-pr'"))
     # yield on the Line Map
     subprocess.run(pgcmd('-c', "set session_replication_role=replica; delete from hx_batches where id='lm-y'; insert into hx_batches(id,state_id,license_id,batch_type,batch_number,status,data,performed_by,created_at,updated_at) values ('lm-y','st-mo','lic-mo','solventless','SL-2026-007','In Progress','{\"biomass_tags\":[{\"tag\":\"1A40\",\"weight\":\"10000\"}],\"total_biomass_used\":10000,\"hash_metrc\":\"1A41\",\"total_hash_produced\":\"250\",\"hash_yield_pct\":2.5}','Sam',now()-interval '1 day',now()-interval '20 minutes')"))
     pg.get_by_role('button', name='Refresh').click(); pg.wait_for_timeout(700)

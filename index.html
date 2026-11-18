@@ -8186,6 +8186,9 @@ const LM_TAG={hold:'ON HOLD',test:'FAILED TEST',status:'QC HOLD',lc:'LINE CLEARA
 function lmErr(e){const m=String((e&&e.message)||e);return /hx_line_map|linemap/.test(m)&&/missing|does not exist|schema cache|Could not find/i.test(m)?'The Line Map is not set up yet - run hendrix_step36.sql in the Hendrix Supabase project.':m;}
 function lmFilled(v){if(v===null||v===undefined)return false;if(typeof v==='boolean')return v;if(typeof v==='number')return true;if(typeof v==='string')return v.trim()!=='';
   if(Array.isArray(v))return v.some(lmFilled);if(typeof v==='object')return Object.keys(v).some(function(k){return lmFilled(v[k]);});return false;}
+// a field counts as done only when someone entered it: a dropdown still on its first choice (e.g. Mandatory Testing "Not Submitted") does not move the batch
+function lmDone(type,k,v){if(!lmFilled(v))return false;const def=BATCH_TYPES.find(function(t){return t.id===type;}),f=def&&def.fields.find(function(x){return x.k===k;});
+  return !(f&&f.t==='select'&&f.o&&v===f.o[0]);}
 function lmSections(type){const def=BATCH_TYPES.find(function(t){return t.id===type;});if(!def)return [];const out=[],seen={};let cur=null;
   def.fields.forEach(function(f){if(f.t==='section'){let n=f.l;seen[n]=(seen[n]||0)+1;if(seen[n]>1)n=n+' ('+seen[n]+')';cur={name:n,keys:[]};out.push(cur);}
     else if(cur&&f.k&&f.t!=='auto'&&f.t!=='display'&&f.t!=='testinfo'&&!f.nolm&&f.k!=='status'&&f.k!=='notes')cur.keys.push(f.k);});
@@ -8224,11 +8227,11 @@ function lmModel(d,now){
     const tests=b.tests||[],passes=tests.filter(function(t){return t.status==='Passed';}),fails=tests.filter(function(t){return t.status==='Failed';});
     const lastFail=fails.length?fails[fails.length-1]:null,failedOpen=!!lastFail&&!passes.some(function(p){return p.created_at>lastFail.created_at;});
     const atLab=tests.filter(function(t){return ['Pending','Submitted','Retest'].indexOf(t.status)>=0;});
-    let lastSec=-1;secs.forEach(function(s,i){if(s.keys.some(function(k){return lmFilled((b.data||{})[k]);}))lastSec=i;});
+    let lastSec=-1;secs.forEach(function(s,i){if(s.keys.some(function(k){return lmDone(b.batch_type,k,(b.data||{})[k]);}))lastSec=i;});
     const lcs=b.clearances||[],lc=lcs.length?lcs[lcs.length-1]:null;
     let where;const ml=lmMoLine(b.batch_type);
     if(ml){const T=LM_MO_TRUNK,n=ml.length+1,D=b.data||{},st=b.status||'';let at=1;
-      ml.forEach(function(x,i){if(x.prep||(x.lc&&lc&&lc.result==='cleared')||x.keys.some(function(k){return lmFilled(D[k]);}))at=Math.max(at,i+1);});
+      ml.forEach(function(x,i){if(x.prep||(x.lc&&lc&&lc.result==='cleared')||x.keys.some(function(k){return lmDone(b.batch_type,k,D[k]);}))at=Math.max(at,i+1);});
       const si=ml.findIndex(function(x){return x.n.toLowerCase()===st.toLowerCase();});if(si>=0)at=Math.max(at,si+1);
       let tk=-1;if(tests.length)tk=atLab.length?0:1;
       const ti=['testing','passed','failed','qc release','labels','completed'].indexOf(st.toLowerCase());if(ti>=0)tk=Math.max(tk,[0,1,1,2,3,4][ti]);
