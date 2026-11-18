@@ -4048,7 +4048,7 @@ function CheckBoxes(props){
 function FileList(props){
   const[busy,setBusy]=useState(false);const files=props.files||[];
   async function up(file){if(!file)return;setBusy(true);try{const ext=(file.name.split('.').pop()||'pdf').toLowerCase().replace(/[^a-z0-9]/g,'');
-    const path=await storagePut(file,props.folder+'/'+Date.now()+'-'+Math.random().toString(36).slice(2,6)+'.'+ext);props.onChange(files.concat([{path:path,name:file.name}]));}catch(e){if(props.onErr)props.onErr(String(e.message||e));}setBusy(false);}
+    const path=await storagePut(file,props.folder+'/'+Date.now()+'-'+Math.random().toString(36).slice(2,6)+'.'+ext);props.onChange(files.concat([{path:path,name:file.name}]));if(props.onFile)props.onFile(file,file.name);}catch(e){if(props.onErr)props.onErr(String(e.message||e));}setBusy(false);}
   return el('div',{className:'row',style:{gap:6,margin:'4px 0 10px'}},files.map(function(f,i){return el('span',{key:i,className:'badge off',style:{textTransform:'none',letterSpacing:0}},
       el('a',{href:'#',style:{color:'var(--gold-hi)'},onClick:function(e){e.preventDefault();openStored(f.path,f.name).catch(function(){});}},'\ud83d\udcce '+f.name),
       props.onChange&&!props.fixed&&el('button',{className:'btn ghost sm',style:{padding:'0 6px',marginLeft:4},onClick:function(){props.onChange(files.filter(function(_,j){return j!==i;}));}},'\u00d7'));}),
@@ -5272,7 +5272,23 @@ function ChemForm(props){
   const x=props.chem||{},lic=props.license,st=props.state,canF=can('chemicals',3);
   const[f,setF]=useState({name:x.name||'',manufacturer:x.manufacturer||'',product_code:x.product_code||'',purpose:x.purpose||'Cleaner',grade:x.grade||'non_food',sds_files:(x.sds_files||[]).slice(),sds_date:x.sds_date||'',
     hazards:x.hazards||'',ppe:x.ppe||'',first_aid:x.first_aid||'',spill:x.spill||'',storage_area:x.storage_area||'',restricted:!!x.restricted,disposal:x.disposal||'',epa_reg:x.epa_reg||'',supplier_id:x.supplier_id||'',notes:x.notes||''});
-  const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  const[err,setErr]=useState('');const[busy,setBusy]=useState(false);const[ai,setAi]=useState(null);
+  const fRef=useRef(f);fRef.current=f;
+  // the AI reads the SDS (PDF or photo): empty fields are filled, fields already filled are offered for replacement, Undo puts the form back
+  async function sdsFill(file,name){
+    setErr('');setAi({busy:true,name:name});
+    try{const got=sdsToForm(await readSds(file,name),props.suppliers),cur=fRef.current,next={...cur},filled=[],diff={};
+      const dflt=function(k){return !x.id&&((k==='purpose'&&cur.purpose==='Cleaner')||(k==='grade'&&cur.grade==='non_food'));};
+      Object.keys(got).forEach(function(k){const v=got[k];if(!v||k==='grade')return;const c=String(cur[k]||'').trim();
+        if(!c||dflt(k)){next[k]=v;filled.push(k);}else if(c.toLowerCase()!==String(v).toLowerCase()&&k!=='notes'&&k!=='supplier_id')diff[k]=v;});
+      if(got.grade&&(dflt('grade')||filled.indexOf('purpose')>=0||!cur.grade)){next.grade=got.grade;if(got.grade!==cur.grade)filled.push('grade');}
+      else if(got.grade&&got.grade!==cur.grade)diff.grade=got.grade;
+      setF(next);setAi({name:name,filled:filled,diff:diff,prev:cur});}
+    catch(e){setAi(null);setErr(e.message==='AI_NOT_SETUP'?'The AI is not set up (hendrix-ai), so the SDS was attached but not read. Fill the fields from the SDS by hand.':'The AI could not read the SDS: '+String(e.message||e));}
+  }
+  async function sdsFillStored(){const sf=f.sds_files[f.sds_files.length-1];if(!sf)return;setAi({busy:true,name:sf.name});
+    try{const b=await storageGet(sf.path);await sdsFill(b,sf.name);}catch(e){setAi(null);setErr('Could not open the attached SDS: '+String(e.message||e));}}
+  function sdsUseDiff(){setF(function(p){return {...p,...ai.diff};});setAi({...ai,filled:ai.filled.concat(Object.keys(ai.diff)),diff:{}});}
   function set(k,v){setF(function(p){const n={...p,[k]:v};if(k==='purpose'&&v==='Food-contact sanitizer')n.grade='food_contact_sanitizer';if(k==='purpose'&&v==='Lubricant (food grade H1)')n.grade='food_grade';if(k==='purpose'&&v==='Terpenes')n.grade='food_grade';return n;});}
   async function save(approve){
     setErr('');if(!f.name.trim()){setErr('Enter the chemical name.');return;}
@@ -5291,10 +5307,17 @@ function ChemForm(props){
     el('div',{style:g2},el(Field,{label:'Used for'},el('select',{value:f.purpose,onChange:function(e){set('purpose',e.target.value);}},CHEM_PURPOSES.map(function(c){return el('option',{key:c,value:c},c);}))),
       el(Field,{label:'Grade'},el('select',{value:f.grade,onChange:function(e){set('grade',e.target.value);}},Object.keys(CHEM_GRADES).map(function(k){return el('option',{key:k,value:k},CHEM_GRADES[k]);}))),
       el(Field,{label:'Supplier'},el('select',{value:f.supplier_id,onChange:function(e){set('supplier_id',e.target.value);}},el('option',{value:''},'(not linked)'),(props.suppliers||[]).map(function(s){return el('option',{key:s.id,value:s.id},s.name);}))),
-      f.purpose==='Pesticide / crop protection'&&el(Field,{label:'EPA registration # *'},el('input',{value:f.epa_reg,onChange:function(e){set('epa_reg',e.target.value);}}))),
+      (f.purpose==='Pesticide / crop protection'||f.epa_reg)&&el(Field,{label:f.purpose==='Pesticide / crop protection'?'EPA registration # *':'EPA registration #'},el('input',{value:f.epa_reg,onChange:function(e){set('epa_reg',e.target.value);}}))),
     el('h3',{style:{margin:'12px 0 6px'}},'Safety Data Sheet'),
-    el('div',{style:{display:'grid',gridTemplateColumns:'1fr 180px',gap:10}},el(Field,{label:'SDS file *',plain:true},el(FileList,{files:f.sds_files,folder:'chemicals/'+lic.id,label:'+ SDS',onChange:function(v){set('sds_files',v);},onErr:setErr})),
+    el('div',{style:{display:'grid',gridTemplateColumns:'1fr 180px',gap:10}},el(Field,{label:'SDS file *',plain:true},el(FileList,{files:f.sds_files,folder:'chemicals/'+lic.id,label:'+ SDS',onChange:function(v){set('sds_files',v);},onFile:sdsFill,onErr:setErr})),
       el(Field,{label:'SDS revision date'},el('input',{type:'date',value:f.sds_date,onChange:function(e){set('sds_date',e.target.value);}}))),
+    el('div',{className:'card',style:{padding:'8px 12px',margin:'0 0 10px',borderColor:'var(--gold)'}},
+      ai&&ai.busy?el('div',{className:'muted'},'\u2728 The AI is reading '+(ai.name||'the SDS')+' and filling the form...'):
+      ai?el('div',null,el('div',null,'\u2728 ',el('b',null,ai.filled.length?'Filled '+ai.filled.length+' field'+(ai.filled.length===1?'':'s')+' from '+ai.name+': ':'Nothing new to fill from '+ai.name+'. '),ai.filled.map(function(k){return SDS_LBL[k];}).join(', '),ai.filled.length?'. Check them against the SDS before saving.':''),
+          el('div',{className:'row',style:{gap:6,marginTop:6}},Object.keys(ai.diff).length>0&&el('button',{className:'btn sm',onClick:sdsUseDiff},'Use the SDS text for '+Object.keys(ai.diff).map(function(k){return SDS_LBL[k];}).join(', ')),
+            el('button',{className:'btn ghost sm',onClick:function(){setF(ai.prev);setAi(null);}},'Undo'))):
+      el('div',{className:'row',style:{gap:8,alignItems:'center'}},el('span',{className:'muted',style:{fontSize:13}},'\u2728 Attach the SDS (PDF or photo) and the AI reads it and fills the form: name, manufacturer, hazards, PPE, first aid, spill, disposal, EPA #, date.'),
+        f.sds_files.length>0&&el('button',{className:'btn ghost sm',onClick:sdsFillStored},'Read attached SDS with AI'))),
     el('div',{style:g2},el(Field,{label:'Hazards (SDS section 2)'},el('textarea',{rows:2,value:f.hazards,placeholder:'e.g. Corrosive, eye damage',onChange:function(e){set('hazards',e.target.value);}})),
       el(Field,{label:'PPE (SDS section 8) *'},el('textarea',{rows:2,value:f.ppe,placeholder:'e.g. Nitrile gloves, safety goggles',onChange:function(e){set('ppe',e.target.value);}})),
       el(Field,{label:'First aid (SDS section 4)'},el('textarea',{rows:2,value:f.first_aid,onChange:function(e){set('first_aid',e.target.value);}})),
@@ -11596,6 +11619,33 @@ async function aiDiagnose(url,hdr,ms){
     if(!navigator.onLine)return 'No internet connection. Reconnect and try again.';
     return 'Hendrix cannot reach the AI. The hendrix-ai function is not deployed in Supabase (Edge Functions > Deploy a new function > Via Editor, name it exactly hendrix-ai, paste hendrix-ai.ts, turn Verify JWT off in its Settings, and add the ANTHROPIC_API_KEY secret), or a browser extension / firewall is blocking supabase.co.';
   }
+}
+const SDS_LBL={name:'Product name',manufacturer:'Manufacturer',product_code:'Product code',purpose:'Used for',grade:'Grade',supplier_id:'Supplier',epa_reg:'EPA #',sds_date:'SDS date',hazards:'Hazards',ppe:'PPE',first_aid:'First aid',spill:'Spill response',disposal:'Disposal',notes:'Notes (storage)'};
+const SDS_PROMPT='You are reading a Safety Data Sheet (SDS, GHS 16-section format) for a chemical used at a licensed cannabis manufacturing facility. Copy what the SDS states; do not invent anything. If something is not on the SDS, use "". Write short plain text for a printed chemical list (no markdown, no section numbers, each text value at most about 300 characters). Respond with ONLY valid JSON with exactly these keys:\n'+
+  JSON.stringify({product_name:'Section 1 product name',manufacturer:'Section 1 manufacturer company name',product_code:'product / item code or number in Section 1, else ""',revision_date:'the SDS revision date (or issue date if there is no revision date) as YYYY-MM-DD',
+    purpose:'the best match for the recommended use in Section 1, copied exactly from this list: '+CHEM_PURPOSES.join(' | '),grade:'food_contact_sanitizer if the SDS says it is a food-contact surface sanitizer; food_grade if it says food grade, NSF H1 or it is a food ingredient / flavor / terpene; otherwise non_food',
+    epa_reg:'EPA Reg. No. if stated, else ""',hazards:'Section 2: signal word, then the hazard statements in short words, e.g. "Danger. Causes severe skin burns and eye damage. Harmful if swallowed."',ppe:'Section 8 protective equipment: eyes, hands (glove type), body, breathing',
+    first_aid:'Section 4 by route, e.g. "Eyes: rinse 15 min... Skin: ... Inhaled: ... Swallowed: ..."',spill:'Section 6: how to contain and clean up a spill',disposal:'Section 13 in one line',storage:'Section 7 storage conditions and incompatible materials in one line'});
+async function readSds(file,name){
+  const nm=name||file.name||'',ty=file.type||'',pdf=/pdf/i.test(ty)||/\.pdf$/i.test(nm),img=!pdf&&(/^image\//i.test(ty)||/\.(png|jpe?g|webp|gif)$/i.test(nm));
+  if(!pdf&&!img)throw new Error('the AI reads an SDS that is a PDF or a photo (PNG / JPG). Fill the fields by hand for this file.');
+  if(file.size>20*1024*1024)throw new Error('the file is larger than 20 MB.');
+  const mt=/^image\/(png|jpeg|webp|gif)$/i.test(ty)?ty:/\.png$/i.test(nm)?'image/png':/\.webp$/i.test(nm)?'image/webp':/\.gif$/i.test(nm)?'image/gif':'image/jpeg';
+  const data=await fileB64(file),block=pdf?{type:'document',source:{type:'base64',media_type:'application/pdf',data:data}}:{type:'image',source:{type:'base64',media_type:mt,data:data}};
+  const j=await aiCall({module:'import',target:'chemicals',max_tokens:3000,system:'You output ONLY valid, parseable JSON. Never include prose, explanation, or markdown fences.',messages:[{role:'user',content:[block,{type:'text',text:SDS_PROMPT}]}]});
+  return aiJsonParse((j.content&&j.content[0]&&j.content[0].text)||'','SDS reading');
+}
+function sdsToForm(r,sups){
+  r=r&&typeof r==='object'?r:{};const s=function(v){return v==null?'':String(v).replace(/\s+/g,' ').trim();};
+  const o={name:s(r.product_name),manufacturer:s(r.manufacturer),product_code:s(r.product_code),epa_reg:s(r.epa_reg),hazards:s(r.hazards),ppe:s(r.ppe),first_aid:s(r.first_aid),spill:s(r.spill),disposal:s(r.disposal)};
+  const d=s(r.revision_date);o.sds_date=/^\d{4}-\d{2}-\d{2}$/.test(d)?d:'';
+  o.purpose=CHEM_PURPOSES.indexOf(s(r.purpose))>=0?s(r.purpose):'';
+  o.grade=CHEM_GRADES[s(r.grade)]?s(r.grade):'';
+  if(o.purpose==='Food-contact sanitizer')o.grade='food_contact_sanitizer';else if(o.purpose==='Lubricant (food grade H1)'||o.purpose==='Terpenes')o.grade='food_grade';
+  o.notes=s(r.storage)?'Storage (SDS): '+s(r.storage):'';
+  const key=function(t){return String(t||'').toLowerCase().replace(/\b(inc|llc|co|corp|corporation|company|ltd)\b/g,'').replace(/[^a-z0-9]/g,'');},mf=key(o.manufacturer);
+  const sp=mf.length>=3?(sups||[]).find(function(x){const n=key(x.name);return n.length>=3&&(n.indexOf(mf)>=0||mf.indexOf(n)>=0);}):null;
+  o.supplier_id=sp?sp.id:'';return o;
 }
 async function readCoa(file){
   const data=await fileB64(file),pdf=/pdf/i.test(file.type)||/\.pdf$/i.test(file.name||'');

@@ -19,9 +19,15 @@ def eq_apply(eid):
     e['cal_last'] = cal[-1]['done_on'] if cal else None; e['cal_due'] = cal[-1]['next_due'] if cal else None
     pq = [v['done_on'] for v in ev if v['kind'] == 'validation' and v['result'] == 'pass' and v['stage'] in ('PQ', 'Revalidation')]
     e['pq_on'] = max(pq) if pq else None; e['reval_due'] = addm(max(pq), 12) if pq else None
+AIQ = []; SDS = {'on': False}
+SDSJ = {'product_name': 'Bacti-Free Third Sink Sanitizer', 'manufacturer': 'Noble Chemical', 'product_code': 'BAC-128', 'revision_date': '2025-08-14', 'purpose': 'Food-contact sanitizer', 'grade': 'food_contact_sanitizer',
+        'epa_reg': '1677-129', 'hazards': 'Danger. Causes serious eye damage.', 'ppe': 'Goggles, nitrile gloves', 'first_aid': 'Eyes: rinse 15 min. Skin: wash with water.', 'spill': 'Absorb with inert material.', 'disposal': 'Per local rules.', 'storage': 'Keep closed. Away from bleach.'}
+T['hx_suppliers'] = [{'id': 'sup-n', 'name': 'Noble Chemical Co.', 'status': 'approved', 'license_ids': ['lic-mo']}]
 _h = handle
 def handle(route, request):
     u = request.url; m = request.method
+    if '/functions/v1/hendrix-ai' in u and SDS['on']:
+        AIQ.append(json.loads(request.post_data)); return jr(route, {'content': [{'type': 'text', 'text': json.dumps(SDSJ)}]})
     tbl = urllib.parse.urlparse(u).path.split('/')[-1]
     if tbl == 'hx_equipment' and m == 'POST':
         rows = json.loads(request.post_data); rows = rows if isinstance(rows, list) else [rows]
@@ -153,6 +159,29 @@ with sync_playwright() as pw:
     pg.locator('tr', has_text='Quat sanitizer 200').get_by_role('button', name='Remove').click(); md = pg.locator('.md')
     md.locator('textarea').fill('Switched brands'); md.get_by_role('button', name='Remove from use').click(); pg.wait_for_selector('.msg >> text=Removed Quat sanitizer 200 from use.')
     check(T['hx_chemicals'][0]['status'] == 'removed' and T['hx_chemicals'][0]['removed_reason'] == 'Switched brands', 'removed from use with a reason')
+    # AI reads the SDS and fills the form
+    SDS['on'] = True
+    pg.get_by_role('button', name='+ Chemical').click(); md = pg.locator('.md')
+    md.locator('label', has_text='+ SDS').locator('input[type=file]').set_input_files({'name': 'notes.docx', 'mimeType': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'buffer': b'PK'})
+    pg.wait_for_selector('.md .msg.err >> text=PDF or a photo'); check(len(AIQ) == 0 and md.locator('text=notes.docx').count() == 1, 'a Word file is attached but not sent to the AI (PDF or photo only)')
+    md.locator('label', has_text='+ SDS').locator('input[type=file]').set_input_files({'name': 'bacti_sds.pdf', 'mimeType': 'application/pdf', 'buffer': b'%PDF-1.4 bacti'})
+    pg.wait_for_selector('.md >> text=/Filled \\d+ fields from bacti_sds.pdf/')
+    q = AIQ[-1]; blk = q['messages'][0]['content'][0]
+    check(q['module'] == 'import' and q['target'] == 'chemicals' and blk['type'] == 'document' and blk['source']['media_type'] == 'application/pdf', 'uploading the SDS sends the PDF to the AI (Chemicals edit access checked)')
+    check(field(md, 'Product name *').input_value() == 'Bacti-Free Third Sink Sanitizer' and field(md, 'Manufacturer').input_value() == 'Noble Chemical' and field(md, 'Product code').input_value() == 'BAC-128'
+          and field(md, 'Used for').input_value() == 'Food-contact sanitizer' and field(md, 'Grade').input_value() == 'food_contact_sanitizer' and field(md, 'SDS revision date').input_value() == '2025-08-14', 'name, manufacturer, code, use, grade and SDS date filled')
+    check(field(md, 'Hazards (SDS section 2)').input_value().startswith('Danger') and field(md, 'PPE (SDS section 8) *').input_value() == 'Goggles, nitrile gloves' and 'rinse 15 min' in field(md, 'First aid (SDS section 4)').input_value()
+          and field(md, 'Spill response (SDS section 6)').input_value() == 'Absorb with inert material.' and field(md, 'Disposal (SDS section 13)').input_value() == 'Per local rules.', 'hazards, PPE, first aid, spill and disposal filled')
+    check(field(md, 'Supplier').input_value() == 'sup-n' and 'Away from bleach' in field(md, 'Notes (secondary container labels, dilution...)').input_value(), 'supplier matched by manufacturer name; storage conditions in notes')
+    md.screenshot(path=OUT + 'sds_ai.png'); md.get_by_role('button', name='Undo').click(); check(field(md, 'Product name *').input_value() == '' and field(md, 'PPE (SDS section 8) *').input_value() == '', 'Undo empties what the AI filled')
+    field(md, 'PPE (SDS section 8) *').fill('Face shield')
+    md.get_by_role('button', name='Read attached SDS with AI').click(); pg.wait_for_selector('.md >> text=/Filled \\d+ fields from bacti_sds.pdf/')
+    check(field(md, 'PPE (SDS section 8) *').input_value() == 'Face shield' and md.get_by_role('button', name='Use the SDS text for PPE').count() == 1, 'a field already filled is kept; the SDS text is offered instead')
+    md.get_by_role('button', name='Use the SDS text for PPE').click(); check(field(md, 'PPE (SDS section 8) *').input_value() == 'Goggles, nitrile gloves', 'one click uses the SDS text')
+    field(md, 'Storage area *').fill('Janitor closet'); md.get_by_role('button', name='Save and approve').click(); pg.wait_for_selector('.msg >> text=Approved Bacti-Free Third Sink Sanitizer.')
+    c = T['hx_chemicals'][-1]
+    check(c['manufacturer'] == 'Noble Chemical' and c['sds_date'] == '2025-08-14' and c['epa_reg'] == '1677-129' and c['supplier_id'] == 'sup-n' and c['hazards'].startswith('Danger') and len(c['sds_files']) == 2, 'approved chemical saved with the SDS fields')
+    SDS['on'] = False
     pg.get_by_role('button', name='Dashboard').click(); pg.wait_for_selector('.card.gold >> text=Open equipment')
     check(pg.locator('.card.gold', has_text='Open equipment').locator('text=/maintenance overdue/').count() == 1, 'dashboard equipment card shows maintenance status')
     b.close()

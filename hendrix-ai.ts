@@ -3,7 +3,8 @@
 // drafts online training courses from the state Rulebook (Training), organizes an
 // uploaded rules PDF into the state Rulebook (Rulebook), estimates ingredients for
 // flavors with no saved formulation (Production Planner) and matches spreadsheet
-// columns for the Excel / Google Sheets import (Import). Settings > System Health uses
+// columns for the Excel / Google Sheets import (Import) and reads Safety Data Sheets into the
+// chemical form (Chemicals and SDS, sent as module "import" / target "chemicals", so no redeploy was needed). Settings > System Health uses
 // module "health" (admins only) to test the key, the credit and the model with a tiny request.
 //
 // Security: only a signed-in, approved Hendrix user with at least Edit access to the
