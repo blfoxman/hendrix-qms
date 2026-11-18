@@ -2091,6 +2091,7 @@ function KioskLog(){
 
 
 /* ---------- store complaint QR form (no login): ?kiosk=complaint&state=..&lic=.. ---------- */
+const CMP_TAG_RE=/^1A[0-9A-Z]{22}$/;
 function cmpQrLink(st,lic){return window.location.origin+window.location.pathname+'?kiosk=complaint&state='+encodeURIComponent(st.id)+'&lic='+encodeURIComponent(lic.id);}
 function cmpShrink(file){return new Promise(function(res,rej){
   if(!/^image\//i.test(file.type||''))return rej(new Error('Attach a photo (JPG or PNG).'));
@@ -2103,8 +2104,14 @@ function cmpShrink(file){return new Promise(function(res,rej){
 function KioskComplaint(){
   const q=new URLSearchParams(window.location.search),stId=q.get('state')||'',licId=q.get('lic')||'';
   const[lic,setLic]=useState(null);const[bad,setBad]=useState('');const[done,setDone]=useState('');const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
-  const blank={store:'',name:'',contact:'',product:'',tag:'',lot:'',purchased:'',category:'',description:'',health:false,photos:[]};
+  const blank={store:'',name:'',contact:'',product:'',tag:'',tag_confirmed:false,lot:'',purchased:'',category:'',description:'',health:false,photos:[]};
   const[f,setF]=useState(blank);function set(k,v){setF(function(p){return {...p,[k]:v};});}
+  const[tagInfo,setTagInfo]=useState(null);const tagRef=useRef('');
+  // the METRC tag is checked against our shipments / tests / batches while it is typed
+  function setTag(v){const t=v.toUpperCase().replace(/\s+/g,'');setF(function(p){return {...p,tag:v,tag_confirmed:false};});tagRef.current=t;setTagInfo(null);
+    if(!CMP_TAG_RE.test(t))return;setTagInfo({busy:true});
+    rpc('hx_complaint_tag_check',{p_state:stId,p_lic:licId,p_tag:t}).then(function(r){if(tagRef.current!==t)return;setTagInfo(r||{found:false});
+      if(r&&r.found&&r.product)setF(function(p){return p.product.trim()?p:{...p,product:r.product};});}).catch(function(){if(tagRef.current===t)setTagInfo(null);});}
   useEffect(function(){if(!cfg().ok){setBad('This form is not connected to a database.');return;}
     if(!stId||!licId){setBad('This QR code is missing its license. Please contact us by phone or email.');return;}
     rpc('hx_kiosk_check',{p_state:stId,p_lic:licId}).then(function(r){if(r&&r.id===licId)setLic(r);else setBad('This QR code is not linked to an active license. Please contact us by phone or email.');})
@@ -2114,11 +2121,13 @@ function KioskComplaint(){
   const head=el('div',{style:{textAlign:'center',marginBottom:16}},el(Brand),el('div',{style:{fontSize:20,fontWeight:700,marginTop:14}},lic.name),
     el('div',{className:'muted'},lic.state+' · License '+(lic.license_number||'-')),el('div',{style:{marginTop:10,fontSize:17,color:'var(--gold-hi)',fontWeight:700}},'Product complaint'));
   if(done)return el('div',{className:'auth'},el('div',{className:'box'},head,el('div',{className:'msg',style:{fontSize:15}},'Thank you. We received your complaint',el('b',null,' '+done),'. Our quality team will contact you.'),
-    el('button',{className:'btn',style:{width:'100%'},onClick:function(){setF({...blank,store:f.store,name:f.name,contact:f.contact});setDone('');}},'File another complaint')));
+    el('button',{className:'btn',style:{width:'100%'},onClick:function(){setF({...blank,store:f.store,name:f.name,contact:f.contact});setTagInfo(null);tagRef.current='';setDone('');}},'File another complaint')));
   async function addPhoto(file){if(!file)return;setErr('');try{const d=await cmpShrink(file);setF(function(p){return {...p,photos:p.photos.concat([d]).slice(0,3)};});}catch(e){setErr(String(e.message||e));}}
   async function send(){setErr('');
-    const miss=[['store','the store name'],['name','your name'],['contact','a phone number or email'],['product','the product']].filter(function(x){return !f[x[0]].trim();});
+    const miss=[['store','the store name'],['name','your name'],['contact','a phone number or email'],['tag','the METRC package tag'],['product','the product']].filter(function(x){return !f[x[0]].trim();});
     if(miss.length){setErr('Enter '+miss.map(function(x){return x[1];}).join(', ')+'.');return;}
+    if(!CMP_TAG_RE.test(f.tag.toUpperCase().replace(/\s+/g,''))){setErr('The METRC package tag is 24 characters and starts with 1A - copy it from the package label.');return;}
+    if(tagInfo&&tagInfo.found===false&&!f.tag_confirmed){setErr('We cannot find this METRC tag in our records. Check the tag on the package label, or tick "The tag is correct" to send anyway.');return;}
     if(f.description.trim().length<10){setErr('Describe the problem (at least a sentence).');return;}
     setBusy(true);try{const n=await rpc('hx_complaint_qr',{p_state:stId,p_lic:licId,p:f});setDone(String(n||''));window.scrollTo(0,0);}
     catch(e){const m=String(e.message||e);setErr(/hx_complaint_qr/.test(m)&&/not find|does not exist|schema cache/i.test(m)?'This form is not switched on yet. Please contact us by phone or email.':m);}setBusy(false);}
@@ -2127,12 +2136,17 @@ function KioskComplaint(){
     el('div',{className:'muted',style:{fontSize:13,marginBottom:12}},'For dispensaries: tell us about a problem with one of our products. No account needed. Fields with * are required.'),
     inp('store','Store (dispensary) *','e.g. Green Leaf - Kansas City'),
     el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr',gap:10}},inp('name','Your name *'),inp('contact','Phone or email *')),
+    el(Field,{label:'METRC package tag *'},el('input',{value:f.tag,placeholder:'1A4... (24 characters, on the package label)',autoCapitalize:'characters',spellCheck:false,onChange:function(e){setTag(e.target.value);}})),
+    tagInfo&&tagInfo.busy&&el('div',{className:'muted',style:{fontSize:13,margin:'-4px 0 8px'}},'Checking the tag...'),
+    tagInfo&&tagInfo.found===true&&el('div',{className:'msg',style:{margin:'-4px 0 10px'}},'\u2713 This is our product'+(tagInfo.product?': '+tagInfo.product:'')+(tagInfo.batch_number?' (batch '+tagInfo.batch_number+')':'')+'.'),
+    tagInfo&&tagInfo.found===false&&el('div',{className:'msg err',style:{margin:'-4px 0 10px'}},'We cannot find this tag in our records. Check it against the package label.',
+      el('label',{className:'ck',style:{marginTop:6}},el('input',{type:'checkbox',checked:f.tag_confirmed,onChange:function(e){set('tag_confirmed',e.target.checked);}}),el('span',null,'The tag is correct (copied from the package label)'))),
     inp('product','Product *','Product name, strain / flavor, size'),
-    el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr',gap:10}},inp('tag','METRC package tag','1A4...'),inp('lot','Lot / batch number','From the label')),
+    inp('lot','Lot / batch number','From the label (if shown)'),
     el('div',{className:'grid',style:{gridTemplateColumns:'1fr 1fr',gap:10}},el(Field,{label:'What is wrong?'},el('select',{value:f.category,onChange:function(e){set('category',e.target.value);if(e.target.value==='Adverse health effect')set('health',true);}},el('option',{value:''},'(choose)'),CMP_CATS.map(function(c){return el('option',{key:c,value:c},c);}))),
       inp('purchased','Date sold / noticed','','date')),
     el(Field,{label:'Describe the problem *'},el('textarea',{rows:4,value:f.description,placeholder:'What happened, how many units, what the customer said',onChange:function(e){set('description',e.target.value);}})),
-    el('label',{className:'ck',style:{margin:'4px 0 10px'}},el('input',{type:'checkbox',checked:f.health,onChange:function(e){set('health',e.target.checked);}}),el('span',null,'Someone got sick or hurt using this product')),
+    el('label',{className:'ck',style:{margin:'4px 0 10px'}},el('input',{type:'checkbox','aria-label':'sick or hurt',checked:f.health,onChange:function(e){set('health',e.target.checked);}}),el('span',null,'Someone got sick or hurt using this product')),
     el('div',{className:'k',style:{marginBottom:6}},'Photos (up to 3)'),
     el('div',{className:'row',style:{gap:8,marginBottom:12}},f.photos.map(function(d,i){return el('div',{key:i,style:{position:'relative'}},el('img',{src:d,alt:'Photo '+(i+1),style:{width:84,height:84,objectFit:'cover',borderRadius:8,border:'1px solid var(--line)'}}),
         el('button',{className:'btn ghost sm',style:{position:'absolute',top:2,right:2,padding:'0 6px'},onClick:function(){setF(function(p){return {...p,photos:p.photos.filter(function(_,j){return j!==i;})};});}},'×'));}),
@@ -4773,7 +4787,7 @@ function ComplaintForm(props){
 function cmpHtml(c,lic){const e=esc3;
   return '<div class="hxrec"><h2>'+e(c.number)+' \u00b7 '+e(c.title)+'</h2><div class="m">'+e(lic.name)+' \u00b7 CSQ 1.7 \u00b7 printed '+e(new Date().toLocaleString())+'</div><table>'+
     [['Type',CMP_TYPES[c.type]],['Priority',QMS_PRIORITIES[c.priority]],['Status',CMP_STATUS[c.status]+(c.closed_by?' by '+c.closed_by+' '+String(c.closed_at||'').slice(0,10):'')],['Received',c.received_on+' \u00b7 '+c.channel+' \u00b7 logged by '+c.created_by],
-     ['Complainant',[c.complainant,c.complainant_contact].filter(Boolean).join(' \u00b7 ')],['Customer',c.customer],['Category',c.category],['Rating',c.rating?c.rating+' / 5':''],['Product / batch / tag',[c.product,c.lot_number,c.tag].filter(Boolean).join(' \u00b7 ')],
+     ['Complainant',[c.complainant,c.complainant_contact].filter(Boolean).join(' \u00b7 ')],['Customer',c.customer],['Category',c.category],['Rating',c.rating?c.rating+' / 5':''],['Product / batch / tag',[c.product,c.lot_number,c.tag].filter(Boolean).join(' \u00b7 ')],['METRC tag check',c.tag_check?(c.tag_check==='verified'?'Verified: ':'NOT found: ')+(c.tag_check_note||''):''],
      ['Description',c.description],['Investigator',c.investigator+(c.due_date?' \u00b7 due '+c.due_date:'')],['Investigation',c.investigation],['Root cause',c.root_cause],['Resolution',c.resolution],['Corrective action',c.corrective_action],
      ['Deviation / CAPA',c.deviation_number],['Response to complainant',(c.responded_on?c.responded_on+': ':'')+c.response],['Reported to regulator',c.regulator_reported_on],['Cancelled',c.cancel_reason]]
     .filter(function(r){return r[1];}).map(function(r){return '<tr><th>'+e(r[0])+'</th><td>'+e(r[1])+'</td></tr>';}).join('')+'</table></div>';}
@@ -4792,6 +4806,7 @@ function ComplaintDetail(props){
     el('div',{className:'card gold',style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:10,padding:'10px 14px'}},
       [['Received',c.received_on+' \u00b7 '+c.channel],['Complainant',[c.complainant,c.complainant_contact].filter(Boolean).join(' \u00b7 ')],['Customer',c.customer],['Category',c.category],['Product',c.product],['Lot / batch',c.lot_number],['Package tag',c.tag],['Logged by',c.created_by],
        ['Deviation',c.deviation_number],['Closed',c.closed_by?c.closed_by+' \u00b7 '+String(c.closed_at).slice(0,10):'']].filter(function(p){return p[1];}).map(function(p){return el('div',{key:p[0]},el('div',{className:'k'},p[0]),el('div',{style:{fontSize:13}},p[1]));})),
+    c.tag_check&&el('div',{className:c.tag_check==='verified'&&!/NOTE:/.test(c.tag_check_note||'')?'msg':'msg err',style:{marginBottom:10}},el('b',null,c.tag_check==='verified'?'\u2713 METRC tag verified: ':'METRC tag NOT found: '),c.tag+' \u00b7 '+(c.tag_check_note||'')),
     c.description&&el('div',{style:{fontSize:13,marginBottom:10,whiteSpace:'pre-wrap'}},c.description),
     (c.attachments||[]).length>0&&el(FileList,{files:c.attachments}),
     (c.qr_photos||[]).length>0&&el('div',{className:'row',style:{gap:8,margin:'0 0 10px'}},el('span',{className:'k'},'Photos from the store'),c.qr_photos.map(function(d,i){return el('a',{key:i,href:'#',onClick:function(e){e.preventDefault();const w=window.open('','_blank');if(w)w.document.write('<img src="'+d+'" style="max-width:100%">');}},el('img',{src:d,alt:'Store photo '+(i+1),style:{width:96,height:96,objectFit:'cover',borderRadius:8,border:'1px solid var(--line)'}}));})),
@@ -4866,7 +4881,8 @@ function ComplaintsPage(props){
       shown.map(function(c){return el('div',{key:c.id,className:'card',style:{cursor:'pointer',padding:'12px 16px',borderLeft:'3px solid '+(c.type==='adverse_event'?'var(--red)':cmpOpen(c)?'var(--gold)':'var(--green)')},onClick:function(){setSelId(c.id);}},
         el('div',{className:'row',style:{justifyContent:'space-between',flexWrap:'nowrap'}},
           el('div',{style:{minWidth:0}},el('div',{className:'row',style:{gap:6,marginBottom:4}},el('b',null,c.number),el('span',{className:'badge '+(cmpOpen(c)?'warn':c.status==='closed'?'ok':'off')},CMP_STATUS[c.status]),
-              el('span',{className:'badge '+(c.type==='adverse_event'?'bad':'off')},CMP_TYPES[c.type]),c.type!=='feedback'&&el('span',{className:'badge '+(c.priority==='critical'?'bad':'off')},QMS_PRIORITIES[c.priority]),cmpLate(c)&&el('span',{className:'badge bad'},'Overdue'),c.rating&&el('span',{className:'badge ok'},c.rating+' / 5')),
+              el('span',{className:'badge '+(c.type==='adverse_event'?'bad':'off')},CMP_TYPES[c.type]),c.type!=='feedback'&&el('span',{className:'badge '+(c.priority==='critical'?'bad':'off')},QMS_PRIORITIES[c.priority]),cmpLate(c)&&el('span',{className:'badge bad'},'Overdue'),c.rating&&el('span',{className:'badge ok'},c.rating+' / 5'),
+              c.tag_check==='verified'&&el('span',{className:'badge ok'},'Tag verified'),c.tag_check==='not_found'&&el('span',{className:'badge bad'},'Tag not found')),
             el('div',{style:{fontWeight:700}},c.title),el('div',{className:'muted',style:{fontSize:12}},[c.product&&'Product: '+c.product,c.lot_number&&'Lot '+c.lot_number,c.customer,c.investigator&&'Investigator: '+c.investigator].filter(Boolean).join(' \u00b7 '))),
           el('div',{className:'muted',style:{fontSize:11,textAlign:'right',flex:'0 0 auto'}},c.received_on,c.due_date&&cmpOpen(c)&&el('div',{style:{color:cmpLate(c)?'var(--red)':''}},'Due '+c.due_date))));})),
     sel&&!modal&&el(ComplaintDetail,{key:sel.id+sel.status,rec:sel,state:st,license:lic,onClose:function(){setSelId(null);},onDone:function(t){done(t);},onEdit:function(){setModal({t:'form',rec:sel});},
