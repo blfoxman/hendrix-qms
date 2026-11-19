@@ -13100,7 +13100,8 @@ function FacilityMapInner(props){
   const svgRef=useRef(null),drag=useRef(null),ptrs=useRef({});
   useEffect(function(){lmFonts();},[]);
   const loadMaps=useCallback(function(pick){db.get('hx_site_maps','state_id=eq.'+encodeURIComponent(st.id)+'&select=*&order=sort,name').then(function(r){
-      const all=(r||[]).filter(function(m){return m.state_id===st.id&&(m.active!==false||canF);});setMaps(all);setErr('');
+      // only the maps of the license chosen at the top
+      const all=(r||[]).filter(function(m){return m.state_id===st.id&&(m.active!==false||canF)&&(m.license_ids&&m.license_ids.length?m.license_ids:[m.license_id]).indexOf(lic.id)>=0;});setMaps(all);setErr('');
       setMapId(function(cur){const want=pick||cur;if(want&&all.some(function(m){return m.id===want;}))return want;const mine=all.find(function(m){return m.active!==false&&(m.license_ids||[m.license_id]).indexOf(lic.id)>=0;})||all.find(function(m){return m.active!==false;})||all[0];return mine?mine.id:'';});})
     .catch(function(e){setErr(fmErr(e));setMaps([]);});},[st.id,lic.id,canF]);
   useEffect(function(){loadMaps();},[loadMaps]);
@@ -13121,9 +13122,9 @@ function FacilityMapInner(props){
       canC?db.get('hx_harvests',L+'&select=id,name,strain,license_id,harvest_date,plants,wet_g,area_id,plant_batch_id,active,fresh_frozen,finished,shipped_on,packaged_on,test_result,trim_done,test_sent,cure_done,dry_done,dry_start,dry_room_g,drying_location,metrc_stage&order=harvest_date.desc&limit=5000').catch(function(){return [];}):Promise.resolve([])])
     .then(function(r){setErr('');const R=(r[1]||[]).filter(function(x){return x.map_id===map.id&&!x.voided;}).sort(function(a,b){return a.read_at<b.read_at?-1:a.read_at>b.read_at?1:0;});
       const num=function(o,ks){const c={...o};ks.forEach(function(k){c[k]=Number(o[k]);});return c;};
-      setD({map:map.id,Z:(r[0]||[]).filter(function(z){return z.map_id===map.id;}).map(function(z){return num(z,['x','y','w','h']);}),R:R,P:(r[2]||[]).filter(function(p){return p.map_id===map.id;}).map(function(p){return num(p,['x','y']);}),B:r[3]&&r[3].filter(inL),E:(r[4]||[]).filter(inL),S:r[5]||[],L:r[6]&&r[6].filter(inL),A:(r[7]||[]).filter(inL),EQ:(r[8]||[]).filter(inL),H:(r[9]||[]).filter(inL),at:new Date()});})
+      setD({map:map.id,Z:(r[0]||[]).filter(function(z){return z.map_id===map.id&&(z.license_id===lic.id||licIds.length<2);}).map(function(z){return num(z,['x','y','w','h']);}),R:R,P:(r[2]||[]).filter(function(p){return p.map_id===map.id;}).map(function(p){return num(p,['x','y']);}),B:r[3]&&r[3].filter(inL),E:(r[4]||[]).filter(inL),S:r[5]||[],L:r[6]&&r[6].filter(inL),A:(r[7]||[]).filter(inL),EQ:(r[8]||[]).filter(inL),H:(r[9]||[]).filter(inL),at:new Date()});})
     .catch(function(e){setErr(fmErr(e));setD({map:map.id,Z:[],R:[],P:[],B:null,E:[],S:[],L:null,A:[],EQ:[],H:[],at:new Date()});});
-  },[map&&map.id,map&&map.updated_at,licIds.join(','),canC]);
+  },[map&&map.id,map&&map.updated_at,licIds.join(','),canC,lic.id]);
   useEffect(function(){setD(null);setSel(null);setVb(null);setDraft(null);load();const t=setInterval(function(){if(document.visibilityState==='visible'&&!drag.current)load();},60000);return function(){clearInterval(t);};},[load]);
   useEffect(function(){setImg(null);if(!map||!map.drawing_path)return;let dead=false,u=null;storageGet(map.drawing_path).then(function(b){if(dead)return;u=URL.createObjectURL(b);setImg(u);}).catch(function(){});return function(){dead=true;if(u)URL.revokeObjectURL(u);};},[map&&map.drawing_path]);
   function setOv(v){setOvS(v);lsSet('hx_fm_ov',v);setTool('');setDraft(null);}
@@ -13220,7 +13221,7 @@ function FacilityMapInner(props){
     if(g.kind==='pin'){if(!canE){setSel(g.pin.zone_id||null);return;}if(g.moved&&d&&d.pin){const z=fmHit(D.Z,d.x,d.y);patchPin(d.pin,{x:fmR(d.x),y:fmR(d.y),zone_id:z?z.id:null});}else setModal({k:'pin',pin:g.pin});}}
   function onDbl(e){if(edit||tool||!ready)return;const p=toSvg(e);zoomAt(1.6,p.x,p.y);}
 
-  const head=el('div',null,el('div',{className:'lmx-eyebrow'},(map?mapLics.map(fmShortLic).join(' · '):lic.name)+' · every room on one drawing'),el('h2',{className:'lmx-title'},'Facility Map'),
+  const head=el('div',null,el('div',{className:'lmx-eyebrow'},lic.name+' · every room on one drawing'),el('h2',{className:'lmx-title'},'Facility Map'),
     el('div',{className:'lmx-sub'},'The building traced from its blueprint. Overlays recolour the same drawing: what stage each bed is in, how full it is, temperature against target, connected power and where the equipment is.'));
   if(!maps)return el('div',{id:'fm-wall'},el('style',null,FM_CSS+LM_CSS.replace(/#lm-wall/g,'#fm-wall')),head,err&&el('div',{className:'msg err'},err),el('div',{className:'muted',style:{marginTop:16}},'Loading the map…'));
   const mod=modal&&(modal.k==='map'?el(FmMapForm,{state:st,license:lic,licenses:lics,map:modal.map,count:maps.length,zoneCount:modal.map&&D?D.Z.length:0,onClose:function(){setModal(null);},onDone:function(id,m){setModal(null);setMsg(m);loadMaps(id);lsSet('hx_fm_map',id);}}):
