@@ -36,7 +36,7 @@ h = _j.loads(q('select hx_system_health()::text').split('\n')[-1])
 def chk(cond, msg):
     print(('PASS ' if cond else 'FAIL ') + msg)
     if not cond: fails.append(msg)
-chk(len(h['steps']) == 55 and all(x['ok'] for x in h['steps']), 'health: all 55 database steps (4-59) detected')
+chk(len(h['steps']) == 56 and all(x['ok'] for x in h['steps']), 'health: all 56 database steps (4-60) detected')
 chk(set(h['rls_off']) <= {'hx_licenses', 'hx_profiles', 'hx_states'}, 'health: row level security on every table created by steps 4-37')
 chk(h['not_audited'] == [] and h['audit_locked'], 'health: every record table audited and the audit trail locked')
 chk(h['bucket'] == {'exists': True, 'public': False}, 'health: private file bucket')
@@ -178,6 +178,22 @@ e45(r'^Q2 hash\|t$', 'stored as a bcrypt hash')
 e45(r'^Q3 flag\|f$', 'reset flag cleared')
 e45(r'^Q4 audit\|t$', 'in the audit trail')
 e45(r'No temporary password to replace', 'cannot be used again without a new admin reset')
+# ---- step 60: METRC inventory sync
+r60 = subprocess.run(['psql', '-X', '-q', '-At', '-d', DB, '-f', os.path.join(HERE, 't60.sql')], capture_output=True, text=True)
+o60 = r60.stdout + r60.stderr
+def e60(pattern, msg):
+    chk(re.search(pattern, o60, re.M) is not None, msg)
+e60(r'^S1 sync\|\{"moved": 1, "zeroed": 1, "counted": 4, "matched": 4, "skipped": \[\], "packages": 5, "tagged_lots": 5, "not_in_hendrix": 1\}$', 'METRC sync: matched by tag, counted, location, gone from METRC -> 0, new packages counted')
+e60(r'^L1 lots\|RCV-T60A=750\.0000 g@Production Floor, RCV-T60B=1\.5000 kg@Vault, RCV-T60C=0 g@Vault, RCV-T60D=80 each@Vault, RCV-T60E=226\.7962 g@Vault$', 'METRC sync: units converted (g -> kg, lb -> g, ea -> each), tags matched without spaces')
+e60(r'^C1 counts\|5\|1$', 'METRC sync: every change is a lot count')
+e60(r'^S2 again\|0$', 'METRC sync: nothing changes when METRC is the same')
+e60(r'^K2 one snapshot an hour\|1$', 'METRC sync: METRC Check snapshot at most once an hour')
+e60(r'^S3 partial\|0$', 'METRC sync: a partial read never empties the inventory')
+e60(r'^L2 kept\|1\.5000$', 'METRC sync: lots kept when most tags were not found')
+e60(r'METRC counts in ea, the lot in g', 'METRC sync: units that do not convert are skipped and listed')
+e60(r'more than the 2 kg received', 'METRC sync: more than received is skipped and listed')
+e60(r'^Y1 syncs\|4$', 'METRC sync: each run logged')
+e60(r'needs Full access to Receiving', 'METRC sync: Full access to Receiving only')
 # ---- step 59: cultivation takeover
 r59 = subprocess.run(['psql', '-X', '-q', '-At', '-d', DB, '-f', os.path.join(HERE, 't59.sql')], capture_output=True, text=True, cwd=os.path.join(HERE, '..', '..'))
 o59 = r59.stdout + r59.stderr
