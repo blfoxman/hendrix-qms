@@ -228,10 +228,10 @@ async function sb(path,opt){
   if(!r.ok){
     const m=(j&&(j.message||j.hint||j.details))||txt||('Error '+r.status);
     if(/schema cache|Could not find the table|relation .* does not exist/i.test(m)&&!/Could not find the '[A-Za-z0-9_]+' column/.test(m)){
-      const step=/hx_complaint_qr|qr_photos/.test(m)?'hendrix_step58.sql':/hx_rooms/.test(m)?'hendrix_step57.sql':/hx_inventory_upload|hx_lot_counts/.test(m)?'hendrix_step56.sql':/hx_lot_set_tag|hx_lot_tag/.test(m)?'hendrix_step55.sql':/hx_site_maps|hx_map_zones|hx_zone_readings|hx_map_pins/.test(m)?'hendrix_step54.sql':/hx_lots_import/.test(m)?'hendrix_step53.sql':/hx_notify_row/.test(m)?'hendrix_step48.sql':/hx_batch_lots/.test(m)?'hendrix_step47.sql':/hx_fl_types|hx_fl_private_guard/.test(m)?'hendrix_step46.sql':/hx_set_own_password/.test(m)?'hendrix_step45.sql':/hx_course_cert_only|This course is an outside certification\. Record it/.test(m)?'hendrix_step44.sql':/hx_kiosk_log_add_user|hx_kiosk_login_free|maintenance_request|purchase_request|logs_maintenance|logs_purchase/.test(m)?'hendrix_step43.sql':/hx_admin_set_password|hx_password_changed|must_change_password/.test(m)?'hendrix_step42.sql':/hx_metrc/.test(m)?'hendrix_step41.sql':/hx_my_tasks|hx_notify|task_email/.test(m)?'hendrix_step39.sql':/hx_esignatures|mfa_required|esig_password|idle_signout/.test(m)?'hendrix_step38.sql':/hx_system_health/.test(m)?'hendrix_step37.sql':/hx_line_map|linemap_idle/.test(m)?'hendrix_step36.sql':/hx_license_settings/.test(m)?'hendrix_step34.sql':/hx_production_plans|hx_planner_recipes/.test(m)?'hendrix_step33.sql':/hx_time_clock|hx_badge|hx_kiosk_clock|hx_clock_fix/.test(m)?'hendrix_step32.sql':/hx_mgmt_reviews|hx_verification_/.test(m)?'hendrix_step31.sql':/hx_org_positions|hx_objective|hx_qms_settings/.test(m)?'hendrix_step30.sql':/hx_risk|hx_changes/.test(m)?'hendrix_step29.sql':/hx_haccp/.test(m)?'hendrix_step28.sql':/hx_grow_|hx_plant_batches/.test(m)?'hendrix_step27.sql':/hx_env_/.test(m)?'hendrix_step26.sql':/hx_line_clearances|hx_rework/.test(m)?'hendrix_step25.sql':/hx_equipment|hx_chemicals/.test(m)?'hendrix_step24.sql':/share_key|hx_training_shared/.test(m)?'hendrix_step23.sql':/hx_rule_sources/.test(m)?'hendrix_step22.sql':/hx_training_keys|hx_training_attempts|hx_course_submit|content_status/.test(m)?'hendrix_step20.sql':/hx_complaints|hx_audits|hx_audit_findings/.test(m)?'hendrix_step19.sql':/hx_recall|hx_trace_data/.test(m)?'hendrix_step18.sql':/hx_lots|hx_lot_uses|hx_holds|hx_shipments/.test(m)?'hendrix_step17.sql':/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
+      const step=/hx_harvests|hx_cul_packages|hx_cul_import|plant_cap|next_area_id|reset_days|overplant_pct/.test(m)?'hendrix_step59.sql':/hx_complaint_qr|qr_photos/.test(m)?'hendrix_step58.sql':/hx_rooms/.test(m)?'hendrix_step57.sql':/hx_inventory_upload|hx_lot_counts/.test(m)?'hendrix_step56.sql':/hx_lot_set_tag|hx_lot_tag/.test(m)?'hendrix_step55.sql':/hx_site_maps|hx_map_zones|hx_zone_readings|hx_map_pins/.test(m)?'hendrix_step54.sql':/hx_lots_import/.test(m)?'hendrix_step53.sql':/hx_notify_row/.test(m)?'hendrix_step48.sql':/hx_batch_lots/.test(m)?'hendrix_step47.sql':/hx_fl_types|hx_fl_private_guard/.test(m)?'hendrix_step46.sql':/hx_set_own_password/.test(m)?'hendrix_step45.sql':/hx_course_cert_only|This course is an outside certification\. Record it/.test(m)?'hendrix_step44.sql':/hx_kiosk_log_add_user|hx_kiosk_login_free|maintenance_request|purchase_request|logs_maintenance|logs_purchase/.test(m)?'hendrix_step43.sql':/hx_admin_set_password|hx_password_changed|must_change_password/.test(m)?'hendrix_step42.sql':/hx_metrc/.test(m)?'hendrix_step41.sql':/hx_my_tasks|hx_notify|task_email/.test(m)?'hendrix_step39.sql':/hx_esignatures|mfa_required|esig_password|idle_signout/.test(m)?'hendrix_step38.sql':/hx_system_health/.test(m)?'hendrix_step37.sql':/hx_line_map|linemap_idle/.test(m)?'hendrix_step36.sql':/hx_license_settings/.test(m)?'hendrix_step34.sql':/hx_production_plans|hx_planner_recipes/.test(m)?'hendrix_step33.sql':/hx_time_clock|hx_badge|hx_kiosk_clock|hx_clock_fix/.test(m)?'hendrix_step32.sql':/hx_mgmt_reviews|hx_verification_/.test(m)?'hendrix_step31.sql':/hx_org_positions|hx_objective|hx_qms_settings/.test(m)?'hendrix_step30.sql':/hx_risk|hx_changes/.test(m)?'hendrix_step29.sql':/hx_haccp/.test(m)?'hendrix_step28.sql':/hx_grow_|hx_plant_batches/.test(m)?'hendrix_step27.sql':/hx_env_/.test(m)?'hendrix_step26.sql':/hx_line_clearances|hx_rework/.test(m)?'hendrix_step25.sql':/hx_equipment|hx_chemicals/.test(m)?'hendrix_step24.sql':/share_key|hx_training_shared/.test(m)?'hendrix_step23.sql':/hx_rule_sources/.test(m)?'hendrix_step22.sql':/hx_training_keys|hx_training_attempts|hx_course_submit|content_status/.test(m)?'hendrix_step20.sql':/hx_complaints|hx_audits|hx_audit_findings/.test(m)?'hendrix_step19.sql':/hx_recall|hx_trace_data/.test(m)?'hendrix_step18.sql':/hx_lots|hx_lot_uses|hx_holds|hx_shipments/.test(m)?'hendrix_step17.sql':/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
       throw new Error('Database tables are missing - run '+step+' in the Hendrix Supabase project.');
     }
-    if(/has no field "priority"/.test(m))throw new Error('The database needs a fix before this can be saved - an admin must run hendrix_step48.sql (or hendrix_install_13_to_58.sql) in the Hendrix Supabase project.');
+    if(/has no field "priority"/.test(m))throw new Error('The database needs a fix before this can be saved - an admin must run hendrix_step48.sql (or hendrix_install_13_to_59.sql) in the Hendrix Supabase project.');
     if(/hx_facility_log_log_type_check/.test(m))throw new Error('This log is not set up in the database yet - run hendrix_step46.sql in the Hendrix Supabase project.');
     if(/row-level security|permission denied/i.test(m))throw new Error('Not allowed - your access level does not allow this here. Ask a system admin.');
     throw new Error(m);
@@ -4073,7 +4073,7 @@ function InventoryUpload(props){
         props.onDone('Saved from '+file+': '+[out.added?out.added+' new lot'+(out.added===1?'':'s'):'',out.counted?out.counted+' count'+(out.counted===1?'':'s')+' recorded':'',out.moved?out.moved+' location'+(out.moved===1?'':'s'):'',out.tagged?out.tagged+' METRC tag'+(out.tagged===1?'':'s')+' added':''].filter(Boolean).join(', ')+(same?' ('+same+' lots unchanged)':'')+'.');}
       else{const out=await sb('rpc/hx_lots_import',{method:'POST',body:{p_lic:lic.id,p_file:file,p_rows:rows.map(function(x){return x.r;})}});
         props.onDone('Uploaded '+out.count+' lot'+(out.count===1?'':'s')+' from '+file+(out.first?' ('+out.first+(out.last&&out.last!==out.first?' to '+out.last:'')+')':'')+'.');}}
-    catch(e){const m=String((e&&e.message)||e);setErr(/hx_inventory_upload|hx_lots_import/.test(m)&&/does not exist|schema cache|Could not find/i.test(m)?'Updating inventory from Excel needs hendrix_step56.sql (or hendrix_install_13_to_58.sql) in the Hendrix Supabase project.':m);}setBusy('');}
+    catch(e){const m=String((e&&e.message)||e);setErr(/hx_inventory_upload|hx_lots_import/.test(m)&&/does not exist|schema cache|Could not find/i.test(m)?'Updating inventory from Excel needs hendrix_step56.sql (or hendrix_install_13_to_59.sql) in the Hendrix Supabase project.':m);}setBusy('');}
   const bad=rows?rows.filter(function(x){return x.err.length;}):[],acc=newR.filter(function(x){return x.r.status==='accepted';}).length,shown=rows?(only?bad:rows):[],nCh=newR.length+updR.length;
   return el(Modal,{title:'Upload inventory · '+lic.name,wide:true,onClose:props.onClose},
     el('div',{className:'muted',style:{fontSize:13,marginBottom:10}},'To update stock: Download current inventory, change On hand (what you counted), Location or a missing METRC tag, add new lots as rows with no Hendrix Lot #, and upload it here. Nothing is saved until every row is right.'),
@@ -5810,7 +5810,7 @@ function EnvDashCard(props){
 }
 
 /* ---------- Cultivation records (CUL licenses; CSQ Standard for Cultivation, Module 3A) ---------- */
-const CUL_AREA_KINDS={indoor:'Indoor grow room',greenhouse:'Greenhouse',outdoor:'Outdoor field',mother:'Mother room',propagation:'Clone / propagation',dry:'Dry room',cure:'Cure room',trim:'Trim room'};
+const CUL_AREA_KINDS={house:'House',table:'Table',bay:'Bay',indoor:'Indoor grow room',greenhouse:'Greenhouse',outdoor:'Outdoor field',mother:'Mother room',propagation:'Clone / propagation',dry:'Dry room',cure:'Cure room',trim:'Trim room'};
 const CUL_STAGES={propagation:'Propagation',vegetative:'Vegetative',flowering:'Flowering',drying:'Drying',curing:'Curing',trim:'Test + trim',package:'Package',ship:'Ship',done:'Done',destroyed:'Destroyed'};
 const GE_KINDS={input:'Nutrients / amendment',crop_protection:'Crop protection',scouting:'Scouting',stage:'Stage / move',harvest:'Harvest',dry:'Drying',cure:'Cured (dry weight)',lab:'Sent to the lab',tested:'Test passed (COA)',packaged:'Packaged',shipped:'Shipped / transferred',destroy:'Destroyed',note:'Note'};
 function culErr(e){const m=String((e&&e.message)||e);return /hx_grow_|hx_plant_batches/.test(m)&&/missing|does not exist|schema cache/i.test(m)?'Cultivation records are not set up yet - run hendrix_step27.sql in the Hendrix Supabase project.':m;}
@@ -5820,18 +5820,28 @@ function culPhiHold(b){return b.harvest_after&&b.harvest_after>todayStr();}
 function culLabelHtml(b,lic,src){const e=esc3;return '<div class="hxrec" style="font-size:20px;border:3px solid #000"><div style="font-size:30px;font-weight:800">'+e(b.cultivar)+'</div><div>'+e(b.number)+' \u00b7 '+e(b.plant_count)+' plants</div><div>Source: '+e(src)+'</div><div>Planted: '+e(b.planted_on)+'</div>'+(b.metrc_tag?'<div>METRC: '+e(b.metrc_tag)+'</div>':'')+'<div style="font-size:12px;color:#555;margin-top:6px">'+e(lic.name)+'</div></div>';}
 function GrowAreaForm(props){
   const x=props.area||{},lic=props.license,st=props.state;
-  const[f,setF]=useState({name:x.name||'',kind:x.kind||'indoor',canopy_sqft:x.canopy_sqft!=null?String(x.canopy_sqft):'',irrigation:x.irrigation||'',water_source:x.water_source||'',limits:x.limits||'',land_use:x.land_use||'',risk_assessed_on:x.risk_assessed_on||'',risk_notes:x.risk_notes||'',active:x.active!==false});
+  const[f,setF]=useState({name:x.name||'',kind:x.kind||(props.parent?((props.areas||[]).some(function(a){return a.parent_id===props.parent&&a.kind==='bay';})?'bay':'table'):'indoor'),canopy_sqft:x.canopy_sqft!=null?String(x.canopy_sqft):'',irrigation:x.irrigation||'',water_source:x.water_source||'',limits:x.limits||'',land_use:x.land_use||'',risk_assessed_on:x.risk_assessed_on||'',risk_notes:x.risk_notes||'',active:x.active!==false,parent_id:x.parent_id||props.parent||'',code:x.code||'',alias:x.alias||'',plant_cap:x.plant_cap!=null?String(x.plant_cap):'',veg:!!x.veg,delay_days:x.delay_days?String(x.delay_days):''});
   const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
   function set(k,v){setF(function(p){return {...p,[k]:v};});}
   async function save(){setErr('');if(!f.name.trim()){setErr('Name the area.');return;}if(f.risk_assessed_on&&!f.risk_notes.trim()){setErr('Describe the site risk assessment.');return;}
-    const rec={name:f.name.trim(),kind:f.kind,canopy_sqft:f.canopy_sqft?parseFloat(f.canopy_sqft):null,irrigation:f.irrigation.trim(),water_source:f.water_source.trim(),limits:f.limits.trim(),land_use:f.land_use.trim(),risk_assessed_on:f.risk_assessed_on||null,risk_notes:f.risk_notes.trim(),active:f.active};
+    const bed=f.kind==='table'||f.kind==='bay';if(bed&&!f.parent_id){setErr('Choose the house this '+CUL_AREA_KINDS[f.kind].toLowerCase()+' is in.');return;}
+    const lay=f.kind==='house'||bed?{parent_id:bed?f.parent_id:null,code:f.code.trim(),alias:f.alias.trim(),plant_cap:f.plant_cap===''?null:parseInt(f.plant_cap,10),veg:f.kind==='house'?f.veg:false,delay_days:f.delay_days===''?0:parseInt(f.delay_days,10)}:{};
+    if(lay.plant_cap!=null&&!(lay.plant_cap>=0)){setErr('Plant capacity is a whole number.');return;}if(lay.delay_days!=null&&isNaN(lay.delay_days)){setErr('The delay is a number of days.');return;}
+    const rec={...lay,name:f.name.trim(),kind:f.kind,canopy_sqft:f.canopy_sqft?parseFloat(f.canopy_sqft):null,irrigation:f.irrigation.trim(),water_source:f.water_source.trim(),limits:f.limits.trim(),land_use:f.land_use.trim(),risk_assessed_on:f.risk_assessed_on||null,risk_notes:f.risk_notes.trim(),active:f.active};
     setBusy(true);try{if(x.id)await db.update('hx_grow_areas',x.id,rec);else await db.insert('hx_grow_areas',{...rec,id:newId('ga'),state_id:st.id,license_id:lic.id,sort:props.count||0});props.onDone('Saved '+rec.name+'.');}catch(e){setErr(culErr(e));}setBusy(false);}
-  const grow=['indoor','greenhouse','outdoor','mother','propagation'].indexOf(f.kind)>=0;
+  const grow=['indoor','greenhouse','outdoor','mother','propagation','house'].indexOf(f.kind)>=0,bed=f.kind==='table'||f.kind==='bay',houses=(props.areas||[]).filter(function(a){return a.kind==='house'&&a.id!==x.id;});
   return el(Modal,{title:(x.id?'Edit area':'New grow area')+' \u00b7 '+lic.name,wide:true,onClose:props.onClose},
     el('div',{style:{display:'grid',gridTemplateColumns:'2fr 1fr 1fr',gap:10}},el(Field,{label:'Name *'},el('input',{value:f.name,placeholder:'e.g. Flower room 2, Field A',onChange:function(e){set('name',e.target.value);}})),
       el(Field,{label:'Type'},el('select',{value:f.kind,onChange:function(e){set('kind',e.target.value);}},Object.keys(CUL_AREA_KINDS).map(function(k){return el('option',{key:k,value:k},CUL_AREA_KINDS[k]);}))),
       el(Field,{label:'Canopy (sq ft)'},el('input',{type:'number',value:f.canopy_sqft,onChange:function(e){set('canopy_sqft',e.target.value);}}))),
-    el(Field,{label:'Temperature / humidity / airflow limits'},el('input',{value:f.limits,placeholder:'e.g. 68-80 \u00b0F, 40-60% RH; record in the Temp / Humidity Log',onChange:function(e){set('limits',e.target.value);}})),
+    (bed||f.kind==='house')&&el('div',{style:{display:'grid',gridTemplateColumns:bed?'1.4fr 1fr 1fr 0.8fr':'1fr 1fr 0.8fr 0.8fr',gap:10}},
+      bed&&el(Field,{label:'In house *'},el('select',{value:f.parent_id,onChange:function(e){set('parent_id',e.target.value);}},el('option',{value:''},houses.length?'Choose...':'Add the house first'),houses.map(function(a){return el('option',{key:a.id,value:a.id},a.name);}))),
+      el(Field,{label:'Code (map zone)'},el('input',{value:f.code,placeholder:bed?'e.g. 60-H8-T4':'e.g. 60-H8',onChange:function(e){set('code',e.target.value);}})),
+      bed&&el(Field,{label:'METRC location'},el('input',{value:f.alias,placeholder:'e.g. H8T4',onChange:function(e){set('alias',e.target.value);}})),
+      el(Field,{label:'Plant capacity'},el('input',{type:'number',min:0,value:f.plant_cap,onChange:function(e){set('plant_cap',e.target.value);}})),
+      f.kind==='house'&&el(Field,{label:'Runs longer by (days)'},el('input',{type:'number',value:f.delay_days,placeholder:'0',title:'e.g. 14 for a house without supplemental light',onChange:function(e){set('delay_days',e.target.value);}}))),
+    f.kind==='house'&&el('label',{className:'ck',style:{marginBottom:8}},el('input',{type:'checkbox',checked:f.veg,onChange:function(e){set('veg',e.target.checked);}}),el('span',null,'Veg house (plants start here and move to a flower table / bay)')),
+    !bed&&el(Field,{label:'Temperature / humidity / airflow limits'},el('input',{value:f.limits,placeholder:'e.g. 68-80 \u00b0F, 40-60% RH; record in the Temp / Humidity Log',onChange:function(e){set('limits',e.target.value);}})),
     grow&&el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}},el(Field,{label:'Irrigation / fertigation system'},el('input',{value:f.irrigation,placeholder:'e.g. Drip fertigation, no lead fittings',onChange:function(e){set('irrigation',e.target.value);}})),
       el(Field,{label:'Water source'},el('input',{value:f.water_source,placeholder:'e.g. City water through RO',onChange:function(e){set('water_source',e.target.value);}}))),
     (f.kind==='outdoor'||f.kind==='greenhouse')&&el('div',null,el(Field,{label:'Land use history and neighboring land'},el('textarea',{rows:2,value:f.land_use,onChange:function(e){set('land_use',e.target.value);}})),
@@ -5844,7 +5854,7 @@ function GrowAreaForm(props){
 function PlantBatchForm(props){
   const x=props.batch||{},lic=props.license,st=props.state;
   const[f,setF]=useState({cultivar:x.cultivar||'',source_kind:x.source_kind||'lot',source_lot_id:x.source_lot_id||'',mother_batch_id:x.mother_batch_id||'',source_note:x.source_note||'',planted_on:x.planted_on||todayStr(),plant_count:x.plant_count?String(x.plant_count):'',
-    media_lot_id:x.media_lot_id||'',media:x.media||'',metrc_tag:x.metrc_tag||'',area_id:x.area_id||'',notes:x.notes||'',harvest_start:x.harvest_start||''});
+    media_lot_id:x.media_lot_id||'',media:x.media||'',metrc_tag:x.metrc_tag||'',area_id:x.area_id||'',notes:x.notes||'',harvest_start:x.harvest_start||'',next_area_id:x.next_area_id||''});
   const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
   function set(k,v){setF(function(p){return {...p,[k]:v};});}
   const lots=props.lots||[],prop=lots.filter(function(l){return /clone|seed|propagat/i.test((l.category||'')+' '+(l.item||''));}),media=lots.filter(function(l){return /media|soil|coco|peat|rockwool/i.test((l.category||'')+' '+(l.item||''));});
@@ -5853,6 +5863,7 @@ function PlantBatchForm(props){
     if(f.source_kind==='lot'&&!f.source_lot_id){setErr('Choose the received clone / seed lot.');return;}if(f.source_kind==='mother'&&!f.mother_batch_id){setErr('Choose the mother plant batch.');return;}
     const rec={cultivar:f.cultivar.trim(),plant_count:n,source_note:f.source_note.trim(),media_lot_id:f.media_lot_id||null,media:f.media.trim(),metrc_tag:f.metrc_tag.trim(),notes:f.notes.trim()};
     if(f.harvest_start!==(x.harvest_start||''))rec.harvest_start=f.harvest_start||null;
+    if(f.next_area_id!==(x.next_area_id||''))rec.next_area_id=f.next_area_id||null;
     if(!x.id)Object.assign(rec,{source_kind:f.source_kind,source_lot_id:f.source_kind==='lot'?f.source_lot_id:null,mother_batch_id:f.source_kind==='mother'?f.mother_batch_id:null,planted_on:f.planted_on,area_id:f.area_id||null});
     setBusy(true);try{if(x.id)await db.update('hx_plant_batches',x.id,rec);else await db.insert('hx_plant_batches',{...rec,id:newId('pb'),state_id:st.id,license_id:lic.id});props.onDone('Saved '+rec.cultivar+'.');}catch(e){setErr(culErr(e));}setBusy(false);}
   return el(Modal,{title:(x.id?'Edit '+x.number:'New plant batch')+' \u00b7 '+lic.name,wide:true,onClose:props.onClose},
@@ -5867,6 +5878,8 @@ function PlantBatchForm(props){
       el(Field,{label:'Media (treated / reused?)'},el('input',{value:f.media,placeholder:'e.g. New coco, pre-washed',onChange:function(e){set('media',e.target.value);}})),
       el(Field,{label:'METRC plant batch tag'},el('input',{value:f.metrc_tag,onChange:function(e){set('metrc_tag',e.target.value);}}))),
     !x.id&&el(Field,{label:'Starts in area'},el('select',{value:f.area_id,onChange:function(e){set('area_id',e.target.value);}},el('option',{value:''},'Choose...'),(props.areas||[]).filter(function(a){return a.active;}).map(function(a){return el('option',{key:a.id,value:a.id},a.name+' \u00b7 '+CUL_AREA_KINDS[a.kind]);}))),
+    (!x.id||culGrowing(x))&&(props.areas||[]).some(culBed)&&el(Field,{label:'Lined up for (the flower table / bay it moves to)'},el('select',{value:f.next_area_id,onChange:function(e){set('next_area_id',e.target.value);}},el('option',{value:''},'(not planned)'),
+      (props.areas||[]).filter(function(a){return a.active&&culBed(a)&&!culVegArea(props.areas,a.id);}).map(function(a){return el('option',{key:a.id,value:a.id},a.name+(a.plant_cap?' \u00b7 '+a.plant_cap+' plants':''));}))),
     (!x.id||culGrowing(x))&&el(Field,{label:'Planned harvest start (leave empty to use the license target)'},el('input',{type:'date',value:f.harvest_start,onChange:function(e){set('harvest_start',e.target.value);}})),
     el(Field,{label:'Notes'},el('textarea',{rows:2,value:f.notes,onChange:function(e){set('notes',e.target.value);}})),
     err&&el('div',{className:'msg err'},err),
@@ -5937,10 +5950,73 @@ function GrowEventForm(props){
 }
 function geSummary(v){return [v.product&&(v.product+(v.epa_reg?' (EPA '+v.epa_reg+')':'')),v.amount,v.method,v.rei_hours!=null&&'REI '+v.rei_hours+' h',v.phi_days!=null&&'PHI '+v.phi_days+' d',v.stage&&CUL_STAGES[v.stage],
   v.wet_weight!=null&&'wet '+v.wet_weight+' g',v.dry_weight!=null&&'dry '+v.dry_weight+' g',v.waste_weight!=null&&'waste '+v.waste_weight+' g',v.tag&&'tag '+v.tag,v.conditions,v.observations].filter(Boolean).join(' \u00b7 ');}
+/* ---------- Cultivation takeover (Release 59): layout, harvest batches, yields, capacity ---------- */
+const HV_BUCKETS=['Fresh frozen','Bulk flower','Smalls','Shake / trim','Biomass','Packaged flower','Prerolls'];
+const HV_STEPS=[['harvest','Harvested'],['dry','Dry'],['cure','Cure'],['tagged','Tagged · test + trim'],['package','Package'],['ship','Ship']];
+function culBed(a){return a&&(a.kind==='table'||a.kind==='bay');}
+function culArea(areas,id){return (areas||[]).find(function(a){return a.id===id;})||null;}
+function culDelay(areas,id){const a=culArea(areas,id);if(!a)return 0;const p=a.parent_id?culArea(areas,a.parent_id):null;return (a.delay_days||0)+(p?p.delay_days||0:0);}
+function culVegArea(areas,id){const a=culArea(areas,id);if(!a)return false;if(a.veg)return true;const p=a.parent_id?culArea(areas,a.parent_id):null;return !!(p&&p.veg);}
+function culAreaLabel(areas,id){const a=culArea(areas,id);return a?a.name:'';}
+// METRC category / item -> product bucket
+function hvBucket(cat,item){const t=((cat||'')+' '+(item||'')).toLowerCase();
+  if(/fresh\s*frozen|frozen/.test(t))return 'Fresh frozen';if(/pre-?roll|preroll|joint/.test(t))return 'Prerolls';if(/biomass/.test(t))return 'Biomass';if(/shake|trim/.test(t))return 'Shake / trim';if(/smalls|small bud|popcorn/.test(t))return 'Smalls';
+  if(/\d(\.\d+)?\s*g\b|1\/8|eighth|jar|premium flower|packaged/.test(t))return 'Packaged flower';if(/flower|bud/.test(t))return 'Bulk flower';return 'Other';}
+function hvPkIndex(P){const by={};(P||[]).forEach(function(p){(p.source_harvests||[]).forEach(function(n){(by[n]=by[n]||[]).push(p);});});return by;}
+// stage of a harvest batch: what the team entered in Hendrix first, then what METRC shows
+function hvStage(h,pk){
+  if(h.fresh_frozen)return 'ff';if(h.shipped_on||(!h.active&&h.finished))return 'done';
+  // the furthest step shown by what the team entered or by the METRC packages
+  const O=['dry','cure','trim','package','ship'],best=function(a,b){return O.indexOf(a)>=O.indexOf(b)?a:b;};
+  const own=h.packaged_on?'ship':h.test_result==='passed'?'package':(h.trim_done||h.test_sent||h.cure_done)?'trim':h.dry_done?'cure':'dry';
+  const ps=pk||[],act=ps.filter(function(p){return p.status==='active';});
+  const met=act.some(function(p){return p.bucket==='Packaged flower'||p.bucket==='Prerolls';})?'ship':ps.some(function(p){return /pass/i.test(p.lab_status||'');})?'package':
+    act.some(function(p){return p.bucket==='Bulk flower'||p.bucket==='Smalls';})?'trim':({'Dry':'dry','Cure':'cure','Test + Trim':'trim','Package':'package','Ship':'ship'}[h.metrc_stage]||(/cure/i.test(h.drying_location||'')?'cure':'dry'));
+  return best(own,met);
+}
+function hvYield(h,pk){
+  const ps=pk||[],g=function(xs){return xs.reduce(function(a,p){return a+(Number(p.created_g)||0);},0);};
+  const gen1=ps.filter(function(p){return !(p.source_packages||[]).length;}),byB={};gen1.forEach(function(p){byB[p.bucket]=(byB[p.bucket]||0)+(Number(p.created_g)||0);});
+  const tagged=g(gen1.filter(function(p){return p.bucket!=='Fresh frozen';})),packed=g(ps.filter(function(p){return p.bucket==='Packaged flower'||p.bucket==='Prerolls';}));
+  const shipped=g(ps.filter(function(p){return p.status==='transferred'&&p.bucket!=='Fresh frozen';})),wet=Number(h.wet_g)||0,dr=h.dry_room_g!=null?Number(h.dry_room_g):null,cu=h.cure_out_g!=null?Number(h.cure_out_g):null;
+  const div=function(a,b){return a!=null&&b?a/b:null;};
+  return {wet:wet,dry:dr,cure:cu,tagged:tagged,byB:byB,pack:packed,ship:shipped,ff:byB['Fresh frozen']||0,n:ps.length,
+    y:{dry:div(dr,wet),cure:div(cu,dr),tagged:tagged?div(tagged,cu!=null?cu:wet):null,package:packed?div(packed,tagged):null,ship:shipped?div(shipped,packed):null}};
+}
+// low yield = more than 20% below the average of that step (same license)
+function hvAvgs(list){const s={},n={};list.forEach(function(Y){Object.keys(Y.y).forEach(function(k){const v=Y.y[k];if(v!=null&&isFinite(v)&&v>0){s[k]=(s[k]||0)+v;n[k]=(n[k]||0)+1;}});});const o={};Object.keys(s).forEach(function(k){o[k]=s[k]/n[k];});return o;}
+function hvLow(Y,avg){return Object.keys(Y.y).filter(function(k){const v=Y.y[k];return v!=null&&avg[k]&&v<avg[k]*0.8;});}
+function hvPct(v){return v==null||!isFinite(v)?'':(v*100<1?(v*100).toFixed(1):v*100<10?(v*100).toFixed(1):Math.round(v*100))+'%';}
+// capacity: where every bed stands in the perpetual cycle
+function culBedStatus(a,S,live,lastHv,nextUp,today,delay){
+  const vegD=S.veg_days,flowerDays=S.cycle_days-vegD,o={a:a,cap:a.plant_cap||0,plants:0,strain:'',status:'ok',why:'',due:'',harvest:'',seedBy:''};
+  const flower=live.filter(culGrowing);
+  o.plants=flower.reduce(function(x,b){return x+(b.plant_count||0);},0);
+  const sm={};flower.forEach(function(b){sm[b.cultivar]=(sm[b.cultivar]||0)+(b.plant_count||0);});const sk=Object.keys(sm).sort(function(x,y){return sm[y]-sm[x];});o.strain=sk.length?sk[0]+(sk.length>1?' +'+(sk.length-1):''):'';
+  const nextSeeded=nextUp.filter(culGrowing).reduce(function(x,b){return x+(b.plant_count||0);},0);o.nextPlants=nextSeeded;
+  if(flower.length){const pl=flower.map(function(b){return b.planted_on;}).sort()[0],b0=flower.find(function(b){return b.planted_on===pl;});
+    const hs=b0.harvest_start||eqAddDays(pl,S.cycle_days+(delay||0)),he=eqAddDays(hs,S.window_days),reset=eqAddDays(he,S.reset_days),seedBy=eqAddDays(reset,-vegD);
+    o.planted=pl;o.harvest=hs;o.harvestEnd=he;o.refill=reset;o.seedBy=seedBy;o.day=btDays(pl,today)+1;
+    if(today>he){o.status='late';o.why='Harvest '+btDays(he,today)+' day'+(btDays(he,today)===1?'':'s')+' past the window ('+btFmt(hs)+' – '+btFmt(he)+')';}
+    else if(vegD>0&&today>seedBy&&!nextSeeded){o.status='behind';o.why='Next seeds not started, '+btDays(seedBy,today)+' days past the seed-by date ('+btFmt(seedBy)+')';}
+    else if(vegD>0&&!nextSeeded&&btDays(today,seedBy)<=7){o.status='due';o.why='Seed by '+btFmt(seedBy)+' ('+btIn(btDays(today,seedBy))+')';}
+    else if(btDays(today,hs)<=7&&today<=he){o.status='due';o.why=(today>=hs?'Harvest now':'Harvest window opens '+btFmt(hs))+' (window '+btFmt(hs)+' – '+btFmt(he)+')';}
+    else{o.status='ok';o.why='Growing · day '+o.day+' · harvest '+btFmt(hs);}
+  } else {
+    const lh=lastHv,reset=lh?eqAddDays(lh,S.reset_days):'';o.lastHarvest=lh||'';o.refill=reset||today;o.seedBy=eqAddDays(o.refill,-vegD);
+    if(nextSeeded&&vegD>0){o.status=today>o.refill?'late':'ok';o.why=today>o.refill?'Empty '+btDays(o.refill,today)+' days past the reset; '+nextSeeded+' plants waiting in veg':'Resetting; '+nextSeeded+' plants in veg for this bed';}
+    else if(!lh){o.status='late';o.why='Empty, no harvest on record';}
+    else if(today>reset){o.status='late';o.why='Empty '+btDays(lh,today)+' days since the last harvest, '+btDays(reset,today)+' past the '+S.reset_days+'-day reset';}
+    else{o.status='ok';o.why='Resetting after the harvest of '+btFmt(lh)+' (reset ends '+btFmt(reset)+')';}
+  }
+  return o;
+}
+const CAP_ST={late:['Late','#C05B4E'],behind:['Behind','#C8932B'],due:['Due this week','#D4AF37'],ok:['On track','#46A96A']};
+
 /* ---------- Cultivation Batch Tracker (Release 52): every running plant batch on an 8-step lifecycle ---------- */
 const BT_STEPS=[['veg','Veg','#8FCB7A'],['flower','Flower','#46A96A'],['harvest','Harvest','#D4AF37'],['dry','Dry','#C8932B'],['cure','Cure','#B07CC6'],['trim','Test + Trim','#6FB7D4'],['package','Package','#7F9BB0'],['ship','Ship','#C8A951']];
-const CUL_DEF={cycle_days:80,veg_days:20,window_days:4,dry_days:7,cure_days:14,trim_days:7,package_days:7,ship_days:7};
-const CUL_TGT=[['cycle_days','Seed / clone to harvest start (days)'],['veg_days','Veg days before flower (0 = straight to flower)'],['window_days','Harvest window (days)'],['dry_days','Dry (days)'],['cure_days','Cure (days)'],['trim_days','Test + trim (days)'],['package_days','Package (days)'],['ship_days','Ship (days)']];
+const CUL_DEF={cycle_days:80,veg_days:20,window_days:4,dry_days:7,cure_days:14,trim_days:7,package_days:7,ship_days:7,reset_days:7,overplant_pct:10};
+const CUL_TGT=[['cycle_days','Seed / clone to harvest start (days)'],['veg_days','Veg days before flower (0 = straight to flower)'],['window_days','Harvest window (days)'],['dry_days','Dry (days)'],['cure_days','Cure (days)'],['trim_days','Test + trim (days)'],['package_days','Package (days)'],['ship_days','Ship (days)'],['reset_days','Clean and reset after harvest (days)'],['overplant_pct','Overplant (%)']];
 const BT_LIVE=['propagation','vegetative','flowering','drying','curing','trim','package','ship'];
 function btDays(a,b){return Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/864e5);}
 function btFmt(d){return d?new Date(d+'T12:00:00').toLocaleDateString([],{month:'short',day:'numeric'}):'';}
@@ -5954,7 +6030,7 @@ function btRow(b,ev,S,today){
   if(b.stage==='propagation'||b.stage==='vegetative'){const due=eqAddDays(b.planted_on,S.veg_days),over=btDays(due,today);
     r.step='veg';r.now='Day '+day;r.prog=S.veg_days?clamp(day/S.veg_days):1;r.next='Move to flower + METRC tag';
     if(over>1){r.late=true;r.sub=over+' days past day '+S.veg_days+' — still in veg';}else r.sub='due '+btFmt(due)+' ('+btIn(-over)+')';}
-  else if(b.stage==='flowering'){const hs=b.harvest_start||eqAddDays(b.planted_on,S.cycle_days),he=eqAddDays(hs,S.window_days),flip=last('stage',function(v){return v.stage==='flowering';});
+  else if(b.stage==='flowering'){const hs=b.harvest_start||eqAddDays(b.planted_on,S.cycle_days+(b._delay||0)),he=eqAddDays(hs,S.window_days),flip=last('stage',function(v){return v.stage==='flowering';});
     r.hs=hs;r.he=he;
     if(today<hs){const fd=flip?btDays(flip,today)+1:Math.max(1,day-S.veg_days);
       r.step='flower';r.now='Day '+day+' · flower day '+fd;r.prog=flip?clamp(btDays(flip,today)/Math.max(1,btDays(flip,hs))):clamp((day-S.veg_days)/Math.max(1,S.cycle_days-S.veg_days));
@@ -6010,6 +6086,7 @@ function CulTargetsForm(props){
   const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
   async function save(){setErr('');const rec={};for(const k of Object.keys(CUL_DEF)){const n=parseInt(f[k],10);if(isNaN(n)||n<0){setErr('Enter whole numbers of days.');return;}rec[k]=n;}
     if(rec.veg_days>=rec.cycle_days){setErr('Veg days must be shorter than seed to harvest days.');return;}
+    if(rec.overplant_pct>100){setErr('Overplant is a percentage (0 - 100).');return;}
     setBusy(true);try{if(S.saved)await sb('hx_cul_settings?license_id=eq.'+encodeURIComponent(lic.id),{method:'PATCH',body:rec,prefer:'return=representation'});else await db.insert('hx_cul_settings',{...rec,license_id:lic.id,state_id:lic.state_id});props.onDone('Saved the targets for '+lic.name+'.');}
     catch(e){const m=String((e&&e.message)||e);setErr(/hx_cul_settings/.test(m)&&/does not exist|schema cache/i.test(m)?'The tracker targets are not set up yet - run hendrix_step52.sql in the Hendrix Supabase project.':m);}setBusy(false);}
   return el(Modal,{title:'Batch tracker targets · '+lic.name,onClose:props.onClose},
@@ -6021,17 +6098,19 @@ function CulTargetsForm(props){
 function CulBatchTracker(props){
   const st=props.state,lic=props.license,lid=lic.id,cul=(props.licenses||[]).filter(function(l){return l.state_id===st.id&&l.active!==false&&licOp(l)==='cultivation';});
   const[scope,setScope]=useState(function(){const s=lsGet('hx_bt_scope');return s==='all'&&cul.length>1?'all':lid;});
-  const[d,setD]=useState(null);const[err,setErr]=useState('');const[stepF,setStepF]=useState(null);const[seedOpen,setSeedOpen]=useState(false);const[modal,setModal]=useState(false);const[msg,setMsg]=useState('');
+  const[d,setD]=useState(null);const[err,setErr]=useState('');const[stepF,setStepF]=useState(null);const[seedOpen,setSeedOpen]=useState(false);const[modal,setModal]=useState(false);const[msg,setMsg]=useState('');const[hvOpen,setHvOpen]=useState(null);
   const load=useCallback(function(){const F=scope==='all'?'state_id=eq.'+encodeURIComponent(st.id):'license_id=eq.'+encodeURIComponent(scope);
     const mine=function(x){return scope==='all'?x.state_id===st.id:x.license_id===scope;};
     Promise.all([db.get('hx_plant_batches',F+'&stage=in.('+BT_LIVE.join(',')+')&select=*&order=planted_on&limit=3000'),
       db.get('hx_grow_events',F+'&voided=eq.false&kind=in.(stage,harvest,dry,cure,lab,tested,packaged,shipped)&select=batch_id,kind,done_on,stage,state_id,license_id&limit=20000').catch(function(){return [];}),
-      db.get('hx_grow_areas',F+'&select=id,name,state_id,license_id').catch(function(){return [];}),
+      db.get('hx_grow_areas',F+'&select=*').catch(function(){return [];}),
       db.get('hx_cul_settings',F+'&select=*').catch(function(){return null;}),
       can('receiving',1)?db.get('hx_lots',F+'&status=eq.accepted&select=id,number,item,category,quantity,qty_used,unit,state_id,license_id&limit=2000').catch(function(){return null;}):Promise.resolve(null),
-      db.get('hx_plant_batches',F+'&source_lot_id=not.is.null&select=source_lot_id,plant_count,state_id,license_id&limit=5000').catch(function(){return [];})])
-    .then(function(r){setErr('');setD({B:(r[0]||[]).filter(mine),E:(r[1]||[]).filter(mine),A:(r[2]||[]).filter(mine),S:r[3],L:r[4]&&r[4].filter(mine),P:(r[5]||[]).filter(mine),at:new Date()});})
-    .catch(function(e){setErr(culErr(e));setD({B:[],E:[],A:[],S:[],L:null,P:[],at:new Date()});});},[scope,st.id]);
+      db.get('hx_plant_batches',F+'&source_lot_id=not.is.null&select=source_lot_id,plant_count,state_id,license_id&limit=5000').catch(function(){return [];}),
+      db.get('hx_harvests',F+'&active=eq.true&fresh_frozen=eq.false&select=*&limit=3000').catch(function(){return [];}),
+      db.get('hx_cul_packages',F+'&select=license_id,state_id,tag,bucket,item,strain,created_g,current_g,packaged_on,status,transferred_to,lab_status,source_harvests,source_packages&limit=20000').catch(function(){return [];})])
+    .then(function(r){setErr('');setD({B:(r[0]||[]).filter(mine),E:(r[1]||[]).filter(mine),A:(r[2]||[]).filter(mine),S:r[3],L:r[4]&&r[4].filter(mine),P:(r[5]||[]).filter(mine),H:(r[6]||[]).filter(mine),K:(r[7]||[]).filter(mine),at:new Date()});})
+    .catch(function(e){setErr(culErr(e));setD({B:[],E:[],A:[],S:[],L:null,P:[],H:[],K:[],at:new Date()});});},[scope,st.id]);
   useEffect(function(){load();const t=setInterval(function(){if(document.visibilityState==='visible')load();},60000);
     const v=function(){if(document.visibilityState==='visible')load();};document.addEventListener('visibilitychange',v);return function(){clearInterval(t);document.removeEventListener('visibilitychange',v);};},[load]);
   useEffect(function(){lmFonts();},[]);
@@ -6039,7 +6118,20 @@ function CulBatchTracker(props){
   function pick(s){setScope(s);lsSet('hx_bt_scope',s==='all'?'all':'one');setStepF(null);}
   const today=todayStr(),lname=function(id){const l=cul.find(function(x){return x.id===id;})||(id===lid?lic:null);return l?l.name:'';};
   const shortL=function(id){const n=lname(id),m=n.match(/\d+\s*$/);return m&&cul.length>1?'Cul '+m[0].trim():n;};
-  const rows=d?d.B.map(function(b){return btRow(b,d.E.filter(function(v){return v.batch_id===b.id;}),btSet(d.S,b.license_id),today);}).filter(Boolean):[];
+  // growing: plant batches; after harvest: the harvest batches (METRC + what the team enters), else the plant batch's own records
+  const HK=useMemo(function(){if(!d)return null;const by={};(d.K||[]).forEach(function(p){(p.source_harvests||[]).forEach(function(n){const k=p.license_id+'|'+n;(by[k]=by[k]||[]).push(p);});});
+    const rows=(d.H||[]).map(function(h){const pk=by[h.license_id+'|'+h.name]||[];return {h:h,pk:pk,Y:hvYield(h,pk)};});const avg={};
+    rows.forEach(function(r){(avg[r.h.license_id]=avg[r.h.license_id]||[]).push(r.Y);});Object.keys(avg).forEach(function(k){avg[k]=hvAvgs(avg[k]);});return {rows:rows,avg:avg};},[d]);
+  const hvTrk=function(x,S){const h=x.h,stg=hvStage(h,x.pk);if(['dry','cure','trim','package','ship'].indexOf(stg)<0)return null;
+    const P={dry:[h.dry_start||h.harvest_date,S.dry_days,'Dry done → cure'],cure:[h.dry_done||h.harvest_date,S.cure_days,'Cure done → test + trim'],trim:[h.cure_done||h.dry_done||h.harvest_date,S.trim_days,h.test_sent?'Waiting on COA':'Send to test + trim'],
+      package:[h.trim_done||h.cure_done||h.harvest_date,S.package_days,'Package'],ship:[h.packaged_on||h.harvest_date,S.ship_days,'Ship']}[stg];
+    const st0=P[0]||today,dn=Math.max(0,btDays(st0,today)),due=eqAddDays(st0,P[1]),r={b:{id:'hv-'+h.id,cultivar:h.strain||h.name,number:h.name,plant_count:h.plants||0,planted_on:h.planted_on||h.harvest_date,license_id:h.license_id,area_id:h.area_id,wet_weight:h.wet_g,dry_weight:h.dry_room_g},hv:x,day:dn,late:false,prog:Math.max(0,Math.min(1,dn/P[1])),step:stg,now:dn+' of '+P[1]+' days',next:P[2]};
+    if(dn>P[1]){r.late=true;r.sub=(dn-P[1])+' days past the '+P[1]+'-day target';}else r.sub='target '+btFmt(due)+' ('+btIn(btDays(today,due))+')';
+    if(h.note)r.sub+=' · '+h.note;r.hd=h.harvest_date;r.idx=BT_STEPS.findIndex(function(s){return s[0]===stg;});return r;};
+  const linked={};(d&&d.H||[]).forEach(function(h){if(h.plant_batch_id)linked[h.plant_batch_id]=1;});
+  const rows=d?d.B.map(function(b){const S=btSet(d.S,b.license_id);if(linked[b.id]&&['propagation','vegetative','flowering'].indexOf(b.stage)<0)return null;
+      return btRow({...b,_delay:culDelay(d.A,b.area_id)},d.E.filter(function(v){return v.batch_id===b.id;}),S,today);}).filter(Boolean)
+    .concat(HK?HK.rows.map(function(x){return hvTrk(x,btSet(d.S,x.h.license_id));}).filter(Boolean):[]):[];
   rows.sort(function(a,b){return b.idx-a.idx||(b.late?1:0)-(a.late?1:0)||(a.b.planted_on<b.b.planted_on?-1:a.b.planted_on>b.b.planted_on?1:0);});
   const shown=stepF?rows.filter(function(r){return r.step===stepF;}):rows;
   const aName=function(id){const a=d&&d.A.find(function(x){return x.id===id;});return a?a.name:'';};
@@ -6074,17 +6166,298 @@ function CulBatchTracker(props){
       stepF&&el('div',{style:{margin:'6px 0 10px'}},el('button',{className:'btn ghost sm',onClick:function(){setStepF(null);}},'Show every stage')),
       !shown.length?el('div',{className:'empty'},stepF?'No batches in '+BT_STEPS.find(function(s){return s[0]===stepF;})[1]+'.':(props.noAreas?'Start by adding your grow areas (rooms, greenhouses, fields, dry and cure rooms).':'No plant batches running. Add one with + Plant batch.')):
       el('div',{className:'btx-list'},el('div',{className:'btx-row hd'},el('div',null,'Batch'),el('div',null,'Lifecycle'),el('div',null,'Now'),el('div',null,'Next step'),el('div',{style:{textAlign:'right'}},'Production')),
-        shown.map(function(r){const b=r.b,col=BT_STEPS[r.idx][2],go=b.license_id===lid;
-          return el('div',{key:b.id,className:'btx-row'+(r.late?' late':'')+(go?' go':''),title:go?'Open '+b.number:'Switch to '+lname(b.license_id)+' at the top to record on this batch',onClick:function(){if(go)props.onOpen(b.id);}},
+        shown.map(function(r){const b=r.b,col=BT_STEPS[r.idx][2],go=r.hv||b.license_id===lid;
+          return el('div',{key:b.id,className:'btx-row'+(r.late?' late':'')+(go?' go':''),title:r.hv?'Open the harvest batch '+b.number:go?'Open '+b.number:'Switch to '+lname(b.license_id)+' at the top to record on this batch',onClick:function(){if(r.hv)setHvOpen(r.hv.h.id);else if(go)props.onOpen(b.id);}},
             el('div',null,el('div',{className:'btx-strain'},b.cultivar),el('div',{className:'btx-meta'},cul.length>1&&el('span',{className:'btx-chip'},shortL(b.license_id)),el('span',null,b.number),aName(b.area_id)&&el('span',null,'· '+aName(b.area_id)),
-              el('span',null,'· '+(r.idx>=3&&b.wet_weight!=null?'harvested '+btFmt(d.E.filter(function(v){return v.batch_id===b.id&&v.kind==='harvest';}).map(function(v){return v.done_on;}).sort().pop()||b.planted_on):'planted '+btFmt(b.planted_on))))),
+              el('span',null,'· '+(r.hd?'harvested '+btFmt(r.hd):r.idx>=3&&b.wet_weight!=null?'harvested '+btFmt(d.E.filter(function(v){return v.batch_id===b.id&&v.kind==='harvest';}).map(function(v){return v.done_on;}).sort().pop()||b.planted_on):'planted '+btFmt(b.planted_on))))),
             el('div',{className:'btx-lifec'},el('div',{className:'btx-life'},BT_STEPS.map(function(s,i){return el('div',{key:s[0],className:'btx-seg'+(i===r.idx?' cur':''),style:{background:i<r.idx?s[2]+'66':i===r.idx?s[2]:'#2c2822','--sc':s[2]}});})),
               el('div',{className:'btx-lbl'},BT_STEPS.map(function(s,i){return el('span',{key:s[0],style:i===r.idx?{color:s[2]}:null},s[1]);}))),
             el('div',{className:'btx-now'},el('b',{style:{color:col}},BT_STEPS[r.idx][1],r.late&&el('span',{style:{color:'#e5645a'}},' · LATE')),el('div',null,r.now),el('div',{className:'btx-bar'},el('i',{style:{width:Math.round(r.prog*100)+'%',background:r.late?'#C05B4E':col}}))),
             el('div',{className:'btx-next'+(r.late?' late':'')},el('b',null,r.next),el('div',null,r.sub)),
             el('div',{className:'btx-prod'},el('div',null,el('b',null,b.plant_count),' plants'),b.wet_weight!=null&&el('div',null,'wet ',btG(b.wet_weight)),b.dry_weight!=null&&el('div',null,'dry ',btG(b.dry_weight))));})),
-      el('div',{className:'btx-foot'},'From the plant batches and grow records in Hendrix. Targets'+(scope==='all'?' (this license)':'')+': harvest starts '+S1.cycle_days+' days after planting (or the planned harvest start on the batch), '+S1.window_days+'-day window, veg '+S1.veg_days+' days, dry '+S1.dry_days+', cure '+S1.cure_days+', test + trim '+S1.trim_days+', package '+S1.package_days+', ship '+S1.ship_days+' days. Updated '+d.at.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+'; refreshes every minute.')),
-    modal&&el(CulTargetsForm,{license:lic,settings:S1,onClose:function(){setModal(false);},onDone:function(m){setModal(false);setMsg(m);load();}}));
+      el('div',{className:'btx-foot'},'Growing: the plant batches in Hendrix. After harvest: the harvest batches (METRC import plus the dry, cure, test, trim and packaging the team enters; open one for its yields and tags). Targets'+(scope==='all'?' (this license)':'')+': harvest starts '+S1.cycle_days+' days after planting (or the planned harvest start on the batch), '+S1.window_days+'-day window, veg '+S1.veg_days+' days, dry '+S1.dry_days+', cure '+S1.cure_days+', test + trim '+S1.trim_days+', package '+S1.package_days+', ship '+S1.ship_days+' days. Updated '+d.at.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+'; refreshes every minute.')),
+    modal&&el(CulTargetsForm,{license:lic,settings:S1,onClose:function(){setModal(false);},onDone:function(m){setModal(false);setMsg(m);load();}}),
+    hvOpen&&HK&&(function(){const x=HK.rows.find(function(r){return r.h.id===hvOpen;});if(!x)return null;
+      return el(HarvestModal,{harvest:x.h,packages:x.pk,avg:HK.avg[x.h.license_id],areas:d.A.filter(function(a){return a.license_id===x.h.license_id;}),licName:shortL(x.h.license_id)||lname(x.h.license_id),onClose:function(){setHvOpen(null);},onDone:function(m){setHvOpen(null);setMsg(m);load();}});})());
+}
+/* ---------- Release 59 screens: Capacity, Harvest batches, Import (takeover + METRC exports) ---------- */
+function culLics(st,lics){return (lics||[]).filter(function(l){return l.state_id===st.id&&l.active!==false&&licOp(l)==='cultivation';});}
+function culShort(l,n){if(!l)return '';const m=String(l.name||'').match(/(\d+)\s*$/);return m&&n>1?'Cul '+m[1]:l.name;}
+function CulScope(props){const cul=props.cul;if(cul.length<2)return null;
+  return el('div',{className:'btx-pills'},el('button',{className:props.scope==='all'?'on':'',onClick:function(){props.onPick('all');}},'All'),
+    cul.map(function(l){return el('button',{key:l.id,className:props.scope===l.id?'on':'',onClick:function(){props.onPick(l.id);}},culShort(l,cul.length));}));}
+function useCulData(st,scope,want,ver){
+  const[d,setD]=useState(null);const[err,setErr]=useState('');
+  const load=useCallback(function(){const enc=encodeURIComponent,F=scope==='all'?'state_id=eq.'+enc(st.id):'license_id=eq.'+enc(scope);
+    const mine=function(x){return scope==='all'?x.state_id===st.id:x.license_id===scope;},ok=function(r){return (r||[]).filter(mine);};
+    Promise.all([db.get('hx_grow_areas',F+'&select=*&order=sort,name'),db.get('hx_plant_batches',F+'&stage=in.(propagation,vegetative,flowering)&select=*&limit=5000'),
+      want.h?db.get('hx_harvests',F+'&select=*&order=harvest_date.desc&limit=5000'):Promise.resolve([]),
+      want.p?db.get('hx_cul_packages',F+'&select=license_id,state_id,tag,bucket,item,strain,created_g,current_g,packaged_on,status,transferred_to,lab_status,source_harvests,source_packages&limit=20000'):Promise.resolve([]),
+      db.get('hx_cul_settings',F+'&select=*').catch(function(){return [];})])
+    .then(function(r){setErr('');setD({A:ok(r[0]),B:ok(r[1]),H:ok(r[2]),P:ok(r[3]),S:r[4]||[],at:new Date()});})
+    .catch(function(e){const m=String((e&&e.message)||e);setErr(/hx_harvests|hx_cul_packages|plant_cap|parent_id/.test(m)&&/does not exist|schema cache/i.test(m)?'The cultivation takeover is not set up yet - run hendrix_step59.sql in the Hendrix Supabase project.':culErr(e));setD({A:[],B:[],H:[],P:[],S:[],at:new Date()});});},[scope,st.id]);
+  useEffect(function(){load();},[load,ver]);
+  return [d,err,load];
+}
+const CUL_CSS='.cul-house{background:linear-gradient(180deg,#1c1a16,#161513);border:1px solid #3a342a;border-radius:14px;padding:12px 14px}'+
+ '.cul-bar{height:8px;background:#2c2822;border-radius:4px;overflow:hidden;position:relative;margin:8px 0 6px}.cul-bar i{display:block;height:100%;background:linear-gradient(90deg,#46A96A,#8FCB7A)}.cul-bar b{position:absolute;top:-2px;width:2px;height:12px;background:#f1d57a}'+
+ '.cul-st{display:inline-flex;align-items:center;gap:6px;font-size:12.5px}.cul-st i{width:8px;height:8px;border-radius:50%;display:inline-block}'+
+ '.hv-box{background:linear-gradient(180deg,#1c1a16,#161513);border:1px solid #3a342a;border-top:3px solid var(--kc,#c8a951);border-radius:12px;padding:10px 12px;position:relative;min-height:84px}'+
+ '.hv-box .c{font:600 10.5px Oswald,"Arial Narrow",sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#a29b8c}.hv-box .v{font:22px Anton,Impact,sans-serif;margin-top:6px;color:var(--kc,#fff)}'+
+ '.hv-box .y{position:absolute;top:9px;right:10px;font:600 12px Oswald,"Arial Narrow",sans-serif;color:#c8a951}.hv-box .y.low{color:#e5645a}.hv-box .s{font-size:11.5px;color:#9a9384;margin-top:3px}'+
+ '.hv-flow{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}@media (max-width:900px){.hv-flow{grid-template-columns:repeat(2,minmax(0,1fr))}}';
+const HV_STAGE_LBL={dry:['Dry','#C8932B'],cure:['Cure','#B07CC6'],trim:['Test + Trim','#6FB7D4'],package:['Package','#7F9BB0'],ship:['Ship','#C8A951'],done:['Done','#6e685c'],ff:['Fresh frozen','#6FB7D4']};
+const HV_ORDER=['ship','package','trim','cure','dry','done','ff'];
+
+function CulCapacity(props){
+  const st=props.state,lic=props.license,cul=culLics(st,props.licenses);
+  const[scope,setScope]=useState(function(){return lsGet('hx_cap_scope')==='all'&&cul.length>1?'all':lic.id;});
+  const[d,err]=useCulData(st,scope,{h:true},props.ver);const[flt,setFlt]=useState('attn');const[openB,setOpenB]=useState(null);
+  function pick(s){setScope(s);lsSet('hx_cap_scope',s==='all'?'all':'one');}
+  if(!d)return el('div',{className:'muted'},'Loading...');
+  const today=todayStr(),A=d.A.filter(function(a){return a.active!==false;}),lid=function(x){return x.license_id;};
+  const beds=A.filter(function(a){return culBed(a)&&!culVegArea(A,a.id);}),vegHouses=A.filter(function(a){return a.kind==='house'&&a.veg;});
+  const lastHv={};d.H.forEach(function(h){if(h.area_id&&h.harvest_date&&(!lastHv[h.area_id]||h.harvest_date>lastHv[h.area_id]))lastHv[h.area_id]=h.harvest_date;});
+  const rows=beds.map(function(a){const S=btSet(d.S,a.license_id);const live=d.B.filter(function(b){return b.area_id===a.id;}),next=d.B.filter(function(b){return b.next_area_id===a.id&&b.area_id!==a.id;});
+    return culBedStatus(a,S,live,lastHv[a.id]||'',next,today,culDelay(A,a.id));});
+  const licIds=Object.keys(rows.reduce(function(o,r){o[r.a.license_id]=1;return o;},{})).concat(scope!=='all'?[scope]:[]).filter(function(v,i,s){return s.indexOf(v)===i;});
+  const lname=function(id){return culShort(cul.find(function(l){return l.id===id;})||(id===lic.id?lic:null),cul.length);};
+  const turn=function(S){return (S.cycle_days-S.veg_days)+S.window_days+S.reset_days;};
+  const card=function(id){const S=btSet(d.S,id),rs=rows.filter(function(r){return r.a.license_id===id;}),cap=rs.reduce(function(a,r){return a+r.cap;},0),pl=rs.reduce(function(a,r){return a+r.plants;},0);
+    const tgt=(S.cycle_days-S.veg_days+S.window_days)/turn(S),late=rs.filter(function(r){return r.status==='late';}).length,ok=rs.filter(function(r){return r.status==='ok';}).length;
+    return el('div',{key:id,className:'cul-house',style:{borderColor:'#c8a951'}},el('div',{className:'row',style:{justifyContent:'space-between'}},el('b',{style:{fontSize:16}},lname(id)),el('span',{className:'muted',style:{fontSize:11}},rs.length+' beds')),
+      el('div',{style:{fontSize:26,fontFamily:'Anton,Impact,sans-serif',marginTop:4}},cap?Math.round(pl/cap*100)+'%':'-',el('span',{className:'muted',style:{fontSize:12,fontFamily:'inherit',marginLeft:8}},'full · target '+Math.round(tgt*100)+'%')),
+      el('div',{className:'cul-bar'},el('i',{style:{width:(cap?Math.min(100,pl/cap*100):0)+'%'}}),el('b',{style:{left:Math.round(tgt*100)+'%'}})),
+      el('div',{className:'row',style:{gap:12,fontSize:12}},el('span',{className:'cul-st'},el('i',{style:{background:'#C05B4E'}}),late+' late'),el('span',{className:'cul-st'},el('i',{style:{background:'#46A96A'}}),ok+' on track')),
+      el('div',{className:'muted',style:{fontSize:11,marginTop:6}},pl.toLocaleString()+' / '+cap.toLocaleString()+' plants · bed turn '+turn(S)+' days · '+(365/turn(S)).toFixed(1)+' turns a year possible'));};
+  const houses=A.filter(function(a){return a.kind==='house'&&!a.veg;});
+  const hcard=function(hs){const rs=rows.filter(function(r){return r.a.parent_id===hs.id;});if(!rs.length)return null;const cap=rs.reduce(function(a,r){return a+r.cap;},0),pl=rs.reduce(function(a,r){return a+r.plants;},0);
+    const n=function(s){return rs.filter(function(r){return r.status===s;}).length;};
+    return el('div',{key:hs.id,className:'cul-house'},el('div',{className:'row',style:{justifyContent:'space-between'}},el('b',null,hs.name+(scope==='all'&&cul.length>1?' · '+lname(hs.license_id):'')),el('span',null,(cap?Math.round(pl/cap*100):0)+'%',el('span',{className:'muted',style:{fontSize:11,marginLeft:6}},pl.toLocaleString()+' / '+cap.toLocaleString()))),
+      el('div',{className:'cul-bar'},el('i',{style:{width:(cap?Math.min(100,pl/cap*100):0)+'%'}})),
+      el('div',{className:'row',style:{gap:10,fontSize:12}},['late','behind','due','ok'].filter(function(s){return n(s);}).map(function(s){return el('span',{key:s,className:'cul-st'},el('i',{style:{background:CAP_ST[s][1]}}),n(s)+' '+CAP_ST[s][0].toLowerCase());})));};
+  const vcard=function(vh){const vb=d.B.filter(function(b){const a=culArea(A,b.area_id);return a&&(a.id===vh.id||a.parent_id===vh.id);}),pl=vb.reduce(function(a,b){return a+(b.plant_count||0);},0),up=vb.filter(function(b){return b.next_area_id;}).length;
+    return el('div',{key:vh.id,className:'cul-house'},el('div',{className:'row',style:{justifyContent:'space-between'}},el('b',null,vh.name+(scope==='all'&&cul.length>1?' · '+lname(vh.license_id):'')),el('span',null,pl.toLocaleString()+(vh.plant_cap?' / '+vh.plant_cap.toLocaleString():''))),
+      el('div',{className:'cul-bar'},el('i',{style:{width:(vh.plant_cap?Math.min(100,pl/vh.plant_cap*100):0)+'%',background:'linear-gradient(90deg,#2FB5C4,#6FB7D4)'}})),
+      el('div',{className:'muted',style:{fontSize:12}},vb.length+' veg batch'+(vb.length===1?'':'es')+' · '+up+' lined up for a flower table'));};
+  const order={late:0,behind:1,due:2,ok:3};rows.sort(function(x,y){return order[x.status]-order[y.status]||String(x.a.name).localeCompare(String(y.a.name),undefined,{numeric:true});});
+  const shown=rows.filter(function(r){return flt==='all'?true:flt==='attn'?r.status!=='ok':r.status===flt;});
+  // seeding plan: seeds to start each week so every bed refills the day its reset ends
+  const weeks=[];for(let i=0;i<12;i++)weeks.push({from:eqAddDays(today,i*7),to:eqAddDays(today,i*7+6),n:0,beds:[]});
+  rows.forEach(function(r){if(r.nextPlants)return;const S=btSet(d.S,r.a.license_id),sb=r.seedBy&&r.seedBy<today?today:r.seedBy;if(!sb||!r.cap)return;const w=weeks.find(function(w){return sb>=w.from&&sb<=w.to;});if(!w)return;
+    w.n+=Math.ceil(r.cap*(1+S.overplant_pct/100));w.beds.push(r.a.alias||r.a.name);});
+  const chip=function(k,l){const n=k==='all'?rows.length:k==='attn'?rows.filter(function(r){return r.status!=='ok';}).length:rows.filter(function(r){return r.status===k;}).length;
+    return el('button',{key:k,className:flt===k?'on':'',onClick:function(){setFlt(k);}},l+' '+n);};
+  return el('div',{id:'bt-wall'},el('style',null,BT_CSS+LM_CSS.replace(/#lm-wall/g,'#bt-wall')+CUL_CSS),
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-end',gap:12,flexWrap:'wrap'}},
+      el('div',null,el('div',{className:'lmx-eyebrow'},'Houses · fill & refill'),el('h2',{className:'lmx-title'},'Capacity'),
+        el('div',{className:'lmx-sub'},'How full each license and house is, whether every bed is on schedule for the perpetual cycle (harvest, clean and reset, refill), and when to start seeds so beds refill the day their reset ends.')),
+      el(CulScope,{cul:cul,scope:scope,onPick:pick})),
+    err&&el('div',{className:'msg err'},err),
+    !beds.length?el('div',{className:'empty',style:{marginTop:14}},'No tables or bays yet. Load the layout under Import (Perryville takeover file), or add houses and tables under Grow areas.'):
+    el('div',null,
+      el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))',gap:10,margin:'14px 0'}},licIds.filter(function(id){return rows.some(function(r){return r.a.license_id===id;});}).map(card)),
+      el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:10,marginBottom:14}},houses.map(hcard).filter(Boolean).concat(vegHouses.map(vcard))),
+      el('div',{className:'lmx-h'},'Planting schedule tracker'),
+      el('div',{className:'muted',style:{fontSize:12,marginBottom:8}},'Late = harvest past its window, or empty past the clean / reset target. Behind = the next seeds were not started by the seed-by date (harvest end + reset - veg days). Due this week = harvest or seed-by in the next 7 days.'),
+      el('div',{className:'btx-pills',style:{marginBottom:10}},chip('attn','Needs attention'),chip('late','Late'),chip('behind','Behind'),chip('due','Due this week'),chip('ok','On track'),chip('all','All beds')),
+      el('div',{className:'card',style:{overflowX:'auto',padding:0}},el('table',null,el('thead',null,el('tr',null,['Bed','Status','Now','Harvest','Refill','Next batch'].map(function(x,i){return el('th',{key:i},x);}))),
+        el('tbody',null,shown.map(function(r){const S=btSet(d.S,r.a.license_id),need=Math.ceil(r.cap*(1+S.overplant_pct/100)),st2=CAP_ST[r.status];
+          return el('tr',{key:r.a.id,style:r.status==='late'?{boxShadow:'3px 0 0 #C05B4E inset'}:null},
+            el('td',null,el('b',null,r.a.name),scope==='all'&&cul.length>1&&el('div',{className:'muted',style:{fontSize:11}},lname(r.a.license_id))),
+            el('td',null,el('span',{className:'cul-st'},el('i',{style:{background:st2[1]}}),el('b',null,st2[0])),el('div',{className:'muted',style:{fontSize:11.5,maxWidth:300}},r.why)),
+            el('td',{style:{fontSize:13}},r.plants?(r.strain+' · '+r.plants.toLocaleString()+' / '+r.cap.toLocaleString()):'Empty'+(r.lastHarvest?' · harvested '+btFmt(r.lastHarvest):'')),
+            el('td',{style:{fontSize:13,whiteSpace:'nowrap'}},r.harvest?btFmt(r.harvest)+' – '+btFmt(r.harvestEnd):'-'),
+            el('td',{style:{fontSize:13,whiteSpace:'nowrap'}},btFmt(r.refill)),
+            el('td',{style:{fontSize:13}},r.nextPlants?r.nextPlants.toLocaleString()+' plants lined up in veg':el('span',null,(S.veg_days?'Seed ':'Direct seed ')+need.toLocaleString()+' by ',el('b',{style:{color:r.seedBy<today?'#e5645a':'inherit'}},btFmt(r.seedBy)),r.seedBy<today?el('span',{style:{color:'#e5645a'}},' · '+btDays(r.seedBy,today)+' days late'):null)));})))),
+      el('div',{className:'lmx-h',style:{marginTop:16}},'Seeding plan · next 12 weeks'),
+      el('div',{className:'muted',style:{fontSize:12,marginBottom:8}},'Seeds to start each week so every bed refills the day its reset ends (capacity + overplant). Beds that already have plants lined up in veg are counted as covered. Overdue beds fall in this week.'),
+      el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:8}},weeks.map(function(w,i){return el('div',{key:i,className:'cul-house',style:i===0?{borderColor:'#c8a951'}:null},
+        el('div',{className:'muted',style:{fontSize:10.5,letterSpacing:'.12em',textTransform:'uppercase'}},i===0?'This week':btFmt(w.from)),el('div',{style:{fontSize:22,fontFamily:'Anton,Impact,sans-serif',marginTop:4}},w.n.toLocaleString(),el('span',{className:'muted',style:{fontSize:11,fontFamily:'inherit',marginLeft:6}},'seeds')),
+        el('div',{className:'muted',style:{fontSize:11,marginTop:2}},w.beds.length?w.beds.length+' bed'+(w.beds.length===1?'':'s')+': '+w.beds.slice(0,6).join(', ')+(w.beds.length>6?' +'+(w.beds.length-6):''):'nothing to seed'));}))));
+}
+
+function HarvestModal(props){
+  const h=props.harvest,pk=props.packages||[],Y=hvYield(h,pk),low=hvLow(Y,props.avg||{}),stg=hvStage(h,pk),canE=can('cultivation',2),A=props.areas||[];
+  const[f,setF]=useState({dry_start:h.dry_start||'',dry_done:h.dry_done||'',dry_room_g:h.dry_room_g!=null?String(h.dry_room_g):'',cure_done:h.cure_done||'',cure_out_g:h.cure_out_g!=null?String(h.cure_out_g):'',test_sent:h.test_sent||'',test_result:h.test_result||'',
+    trim_done:h.trim_done||'',trimmed_g:h.trimmed_g!=null?String(h.trimmed_g):'',smalls_g:h.smalls_g!=null?String(h.smalls_g):'',shake_g:h.shake_g!=null?String(h.shake_g):'',packaged_on:h.packaged_on||'',shipped_on:h.shipped_on||'',note:h.note||'',area_id:h.area_id||''});
+  const[edit,setEdit]=useState(false);const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  function set(k,v){setF(function(p){return {...p,[k]:v};});}
+  async function save(){setErr('');const num=function(v){if(String(v).trim()==='')return null;const n=parseFloat(String(v).replace(/,/g,''));return isNaN(n)?NaN:n;};
+    const rec={};['dry_start','dry_done','cure_done','test_sent','trim_done','packaged_on','shipped_on'].forEach(function(k){rec[k]=f[k]||null;});
+    for(const k of ['dry_room_g','cure_out_g','trimmed_g','smalls_g','shake_g']){const n=num(f[k]);if(n!==null&&!(n>=0)){setErr('Weights are grams (numbers).');return;}rec[k]=n;}
+    if(rec.dry_done&&rec.dry_room_g==null){setErr('Enter the weight out of the dry room when the drying is done.');return;}
+    if(rec.cure_done&&rec.cure_out_g==null){setErr('Enter the weight out of cure when the cure is done.');return;}
+    rec.test_result=f.test_result;rec.note=f.note.trim();rec.area_id=f.area_id||null;
+    setBusy(true);try{await db.update('hx_harvests',h.id,rec);props.onDone('Saved '+h.name+'.');}catch(e){setErr(String((e&&e.message)||e));}setBusy(false);}
+  const box=function(k,label,v,sub,y,col){return el('div',{key:k,className:'hv-box',style:{'--kc':col}},el('div',{className:'c'},label),y!=null&&el('div',{className:'y'+(low.indexOf(k)>=0?' low':'')},(low.indexOf(k)>=0?'▼ ':'')+hvPct(y)),
+    el('div',{className:'v'},v),el('div',{className:'s'},sub));};
+  const byB={};pk.forEach(function(p){(byB[p.bucket||'Other']=byB[p.bucket||'Other']||[]).push(p);});
+  const dt=function(k,l){return el(Field,{label:l},el('input',{type:'date',value:f[k],max:todayStr(),onChange:function(e){set(k,e.target.value);}}));},gr=function(k,l){return el(Field,{label:l},el('input',{value:f[k],inputMode:'decimal',onChange:function(e){set(k,e.target.value);}}));};
+  return el(Modal,{title:h.strain+' · '+h.name,wide:true,onClose:props.onClose},el('style',null,CUL_CSS),
+    el('div',{className:'row',style:{gap:8,marginBottom:10,flexWrap:'wrap'}},el('span',{className:'badge',style:{borderColor:HV_STAGE_LBL[stg][1],color:HV_STAGE_LBL[stg][1]}},HV_STAGE_LBL[stg][0]),
+      el('span',{className:'muted',style:{fontSize:13}},[props.licName,culAreaLabel(A,h.area_id)||h.zone,'harvested '+(h.harvest_date||'-'),h.plants?h.plants+' plants':'',h.drying_location,h.planted_on?'planted '+h.planted_on:'',h.flip_on?'flip '+h.flip_on:''].filter(Boolean).join(' · ')),
+      low.length>0&&el('span',{className:'badge bad'},'Low yield: '+low.map(function(k){return {dry:'dry',cure:'cure',tagged:'tagged',package:'package',ship:'ship'}[k];}).join(', '))),
+    el('div',{className:'hv-flow'},
+      box('harvest','Harvested',btG(Y.wet),(h.plants?h.plants+' plants · '+Math.round(Y.wet/Math.max(1,h.plants))+' g / plant':'')+(h.waste_g?' · waste '+btG(h.waste_g):''),null,'#46A96A'),
+      box('dry','Dry',Y.dry!=null?btG(Y.dry):'–',Y.dry!=null?'out of the dry room'+(h.dry_done?' · '+btFmt(h.dry_done):''):'dry room weight not entered',Y.y.dry,'#C8932B'),
+      box('cure','Cure',Y.cure!=null?btG(Y.cure):'–',Y.cure!=null?'out of cure'+(h.cure_done?' · '+btFmt(h.cure_done):''):'cure weight not entered',Y.y.cure,'#B07CC6'),
+      box('tagged','Tagged',Y.tagged?btG(Y.tagged):'–',Object.keys(Y.byB).filter(function(b){return b!=='Fresh frozen';}).map(function(b){return b+' '+btG(Y.byB[b]);}).join(' · ')||(Y.ff?'fresh frozen '+btG(Y.ff):'no tags yet'),Y.y.tagged,'#6FB7D4'),
+      box('package','Package',Y.pack?btG(Y.pack):'–',Y.pack?'jars + prerolls'+(h.test_result?' · test '+h.test_result:''):'nothing packaged yet',Y.y.package,'#7F9BB0'),
+      box('ship','Ship',Y.ship?btG(Y.ship):'–',Y.ship?pk.filter(function(p){return p.status==='transferred';}).length+' tags shipped':(h.shipped_on?'shipped '+btFmt(h.shipped_on):'nothing shipped yet'),Y.y.ship,'#C8A951')),
+    el('div',{className:'muted',style:{fontSize:11.5,margin:'6px 0 12px'}},'Corner % = yield from the step before: dry room ÷ wet, out of cure ÷ dry room, tagged ÷ out of cure (÷ wet until the weights are entered), packaged ÷ tagged, shipped ÷ packaged. ▼ = more than 20% below the average for that step. '+(h.current_g!=null?btG(h.current_g)+' still in the harvest batch in METRC.':'')),
+    h.note&&!edit&&el('div',{className:'msg',style:{marginBottom:10}},h.note),
+    !edit&&canE&&el('div',{className:'row',style:{marginBottom:12}},el('button',{className:'btn sm',onClick:function(){setEdit(true);}},'Enter weights and dates')),
+    edit&&el('div',{className:'lmx-panel',style:{marginBottom:12}},
+      el('div',{className:'muted',style:{fontSize:12,marginBottom:8}},'The team records the post-harvest steps here (the METRC numbers come from the METRC import). Weights in grams.'),
+      el('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:10}},dt('dry_start','Dry start'),dt('dry_done','Dry done'),gr('dry_room_g','Weight out of the dry room (g)'),
+        el(Field,{label:'Bed it came from'},el('select',{value:f.area_id,onChange:function(e){set('area_id',e.target.value);}},el('option',{value:''},'(not set)'),A.filter(culBed).map(function(a){return el('option',{key:a.id,value:a.id},a.name);}))),
+        dt('cure_done','Cure done'),gr('cure_out_g','Weight out of cure (g)'),dt('test_sent','Sample sent to the lab'),el(Field,{label:'Test result'},el('select',{value:f.test_result,onChange:function(e){set('test_result',e.target.value);}},el('option',{value:''},'(none yet)'),el('option',{value:'passed'},'Passed'),el('option',{value:'failed'},'Failed'),el('option',{value:'retest'},'Retest'))),
+        dt('trim_done','Trim done'),gr('trimmed_g','Trimmed flower (g)'),gr('smalls_g','Smalls (g)'),gr('shake_g','Shake / trim (g)'),dt('packaged_on','Packaged'),dt('shipped_on','Shipped')),
+      el(Field,{label:'Note'},el('input',{value:f.note,onChange:function(e){set('note',e.target.value);}})),
+      err&&el('div',{className:'msg err'},err),
+      el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:function(){setEdit(false);}},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:save},busy?'Saving...':'Save'))),
+    el('div',{className:'lmx-h'},'Tags from this batch · '+pk.length),
+    !pk.length?el('div',{className:'muted'},'No METRC packages from this harvest batch yet.'):
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(320px,1fr))',gap:12}},Object.keys(byB).sort(function(a,b){return HV_BUCKETS.indexOf(a)-HV_BUCKETS.indexOf(b);}).map(function(b){const xs=byB[b];
+      return el('div',{key:b},el('div',{style:{fontSize:11,letterSpacing:'.12em',textTransform:'uppercase',color:'#c8a951',margin:'4px 0'}},b+' · '+xs.length+' tag'+(xs.length===1?'':'s')+' · '+btG(xs.reduce(function(a,p){return a+(Number(p.created_g)||0);},0))),
+        xs.slice(0,40).map(function(p){return el('div',{key:p.tag,style:{fontSize:12,fontFamily:'ui-monospace,monospace'}},p.tag.slice(0,-4),el('b',{style:{color:'#f1d57a'}},p.tag.slice(-4)),
+          el('span',{style:{fontFamily:'inherit',color:'#9a9384'}},' '+btG(p.created_g)+' · '+(p.status==='transferred'?'→ '+(p.transferred_to||'transferred'):p.status==='active'?btG(p.current_g)+' on hand':'used up')+((p.source_packages||[]).length?' · from '+p.source_packages.map(function(s){return s.slice(-4);}).join(', '):'')));}),
+        xs.length>40&&el('div',{className:'muted',style:{fontSize:11}},'+'+(xs.length-40)+' more'));})),
+    el('div',{className:'row',style:{justifyContent:'flex-end',marginTop:12}},el('button',{className:'btn ghost',onClick:props.onClose},'Close')));
+}
+
+function CulHarvests(props){
+  const st=props.state,lic=props.license,cul=culLics(st,props.licenses);
+  const[scope,setScope]=useState(function(){return lsGet('hx_hv_scope')==='all'&&cul.length>1?'all':lic.id;});
+  const[ver,setVer]=useState(0);const[d,err]=useCulData(st,scope,{h:true,p:true},(props.ver||0)+ver);const[view,setView]=useState('proc');const[openId,setOpenId]=useState(null);const[q,setQ]=useState('');const[lowOnly,setLowOnly]=useState(false);const[msg,setMsg]=useState('');
+  function pick(s){setScope(s);lsSet('hx_hv_scope',s==='all'?'all':'one');}
+  const M=useMemo(function(){if(!d)return null;const pkBy={};d.P.forEach(function(p){(p.source_harvests||[]).forEach(function(n){const k=p.license_id+'|'+n;(pkBy[k]=pkBy[k]||[]).push(p);});});
+    const rows=d.H.map(function(h){const pk=pkBy[h.license_id+'|'+h.name]||[];return {h:h,pk:pk,Y:hvYield(h,pk),stg:hvStage(h,pk)};});
+    const avg={};Object.keys(rows.reduce(function(o,r){o[r.h.license_id]=1;return o;},{})).forEach(function(l){avg[l]=hvAvgs(rows.filter(function(r){return r.h.license_id===l&&r.stg!=='ff';}).map(function(r){return r.Y;}));});
+    rows.forEach(function(r){r.low=hvLow(r.Y,avg[r.h.license_id]||{});});return {rows:rows,avg:avg};},[d]);
+  if(!d||!M)return el('div',{className:'muted'},'Loading...');
+  const lname=function(id){return culShort(cul.find(function(l){return l.id===id;})||(id===lic.id?lic:null),cul.length);};
+  const proc=M.rows.filter(function(r){return r.h.active&&r.stg!=='ff'&&r.stg!=='done';});
+  proc.sort(function(a,b){return HV_ORDER.indexOf(a.stg)-HV_ORDER.indexOf(b.stg)||String(a.h.harvest_date).localeCompare(String(b.h.harvest_date));});
+  const ql=q.trim().toLowerCase(),match=function(r){return (!ql||(r.h.strain+' '+r.h.name+' '+r.h.zone).toLowerCase().indexOf(ql)>=0)&&(!lowOnly||r.low.length);};
+  const op=openId&&M.rows.find(function(r){return r.h.id===openId;});
+  const steps=['dry','cure','trim','package','ship'],cnt=function(s){return proc.filter(function(r){return r.stg===s;});};
+  const strains={};M.rows.filter(function(r){return r.stg!=='ff';}).forEach(function(r){const s=strains[r.h.strain]||(strains[r.h.strain]={n:0,wet:0,tag:0,low:0,rows:[]});s.n++;s.wet+=r.Y.wet;s.tag+=r.Y.tagged;s.low+=r.low.length?1:0;s.rows.push(r.Y);});
+  const row=function(r){return el('div',{key:r.h.id,className:'btx-row go'+(r.low.length?' late':''),style:{gridTemplateColumns:'minmax(170px,1.3fr) minmax(250px,2fr) minmax(120px,1fr) 120px'},onClick:function(){setOpenId(r.h.id);}},
+    el('div',null,el('div',{className:'btx-strain'},r.h.strain||r.h.name),el('div',{className:'btx-meta'},el('span',{className:'btx-chip'},lname(r.h.license_id)),r.h.zone||culAreaLabel(d.A,r.h.area_id),'harvested '+btFmt(r.h.harvest_date))),
+    el('div',{className:'btx-lifec'},el('div',{className:'btx-life',style:{gridTemplateColumns:'repeat(6,1fr)'}},['harvest','dry','cure','trim','package','ship'].map(function(s,i){const cur=['harvest','dry','cure','trim','package','ship'].indexOf(r.stg),c=(HV_STAGE_LBL[s]||['','#D4AF37'])[1];
+      return el('div',{key:s,className:'btx-seg'+(i===cur?' cur':''),style:{background:i<cur?c+'99':i===cur?c:'#2c2822','--sc':c}});})),
+      el('div',{className:'btx-lbl',style:{gridTemplateColumns:'repeat(6,1fr)'}},['Harvest','Dry','Cure','Test+Trim','Package','Ship'].map(function(s){return el('span',{key:s},s);}))),
+    el('div',{className:'btx-now'},el('b',{style:{color:HV_STAGE_LBL[r.stg][1]}},HV_STAGE_LBL[r.stg][0]),el('div',null,r.Y.tagged?hvPct(r.Y.tagged/(r.Y.wet||1))+' of wet tagged':'nothing tagged yet'),r.low.length>0&&el('div',{style:{color:'#e5645a'}},'▼ low '+r.low.join(', '))),
+    el('div',{className:'btx-prod'},el('b',null,btG(r.Y.wet)),' wet',el('br'),r.h.plants?r.h.plants+' plants':'',r.Y.dry!=null&&el('div',null,btG(r.Y.dry)+' dry')));};
+  return el('div',{id:'bt-wall'},el('style',null,BT_CSS+LM_CSS.replace(/#lm-wall/g,'#bt-wall')+CUL_CSS),
+    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-end',gap:12,flexWrap:'wrap'}},
+      el('div',null,el('div',{className:'lmx-eyebrow'},'Cultivation · tracked by METRC tag'),el('h2',{className:'lmx-title'},'Production & lifecycle'),
+        el('div',{className:'lmx-sub'},'Every harvest batch followed tag by tag to its yield: harvested → dry → cure → test + trim → package → ship.')),
+      el('div',{className:'row',style:{gap:8}},el('div',{className:'btx-pills'},el('button',{className:view==='proc'?'on':'',onClick:function(){setView('proc');}},'In process'),el('button',{className:view==='all'?'on':'',onClick:function(){setView('all');}},'All · by strain')),
+        el(CulScope,{cul:cul,scope:scope,onPick:pick}))),
+    err&&el('div',{className:'msg err'},err),msg&&el('div',{className:'msg'},msg),
+    el('div',{className:'btx-cards',style:{gridTemplateColumns:'repeat(5,minmax(0,1fr))'}},steps.map(function(s){const xs=cnt(s);return el('div',{key:s,className:'btx-card',style:{'--kc':HV_STAGE_LBL[s][1]}},el('div',{className:'c'},HV_STAGE_LBL[s][0]),el('div',{className:'b'},xs.length),
+      el('div',{className:'f'},xs.reduce(function(a,r){return a+(r.h.plants||0);},0).toLocaleString()+' plants · '+btG(xs.reduce(function(a,r){return a+r.Y.wet;},0))+' wet'));})),
+    el('div',{className:'row',style:{gap:8,margin:'8px 0'}},el('input',{value:q,placeholder:'Search strain, harvest batch, bed',style:{maxWidth:280},onChange:function(e){setQ(e.target.value);}}),
+      el('label',{className:'ck'},el('input',{type:'checkbox',checked:lowOnly,onChange:function(e){setLowOnly(e.target.checked);}}),el('span',null,'Low yield only ('+M.rows.filter(function(r){return r.low.length;}).length+')'))),
+    view==='proc'?(!proc.filter(match).length?el('div',{className:'empty'},d.H.length?'No harvest batch in process here.':'No harvest batches yet. Load them under Import (takeover file or METRC Harvests export), or record a harvest on a plant batch.'):
+      el('div',{className:'btx-list'},proc.filter(match).map(row))):
+    el('div',null,el('div',{className:'card',style:{overflowX:'auto',padding:0,marginBottom:12}},el('table',null,el('thead',null,el('tr',null,['Strain','Harvest batches','Wet','Tagged','Dry yield','Cure yield','Tagged yield','Low'].map(function(x,i){return el('th',{key:i},x);}))),
+        el('tbody',null,Object.keys(strains).sort(function(a,b){return strains[b].wet-strains[a].wet;}).filter(function(s){return !ql||s.toLowerCase().indexOf(ql)>=0;}).map(function(s){const x=strains[s],a=hvAvgs(x.rows);
+          return el('tr',{key:s},el('td',null,el('b',null,s)),el('td',null,x.n),el('td',null,btG(x.wet)),el('td',null,btG(x.tag)),el('td',null,hvPct(a.dry)||'-'),el('td',null,hvPct(a.cure)||'-'),el('td',null,hvPct(a.tagged)||'-'),el('td',null,x.low?el('span',{className:'badge bad'},x.low):'-'));})))),
+      el('div',{className:'btx-list'},M.rows.filter(match).sort(function(a,b){return String(b.h.harvest_date).localeCompare(String(a.h.harvest_date));}).slice(0,300).map(row))),
+    el('div',{className:'btx-foot'},'Harvest batches and tags come from METRC (Import). Dry room and cure weights, trim, test and packaging dates are entered here by the team. Fresh-frozen-only harvests finish in manufacturing and are not in process here.'),
+    op&&el(HarvestModal,{harvest:op.h,packages:op.pk,avg:M.avg[op.h.license_id],areas:d.A.filter(function(a){return a.license_id===op.h.license_id;}),licName:lname(op.h.license_id),onClose:function(){setOpenId(null);},onDone:function(m){setOpenId(null);setMsg(m);setVer(ver+1);}}));
+}
+
+/* import: Perryville takeover file + METRC exports (Harvests, Packages, Plants) */
+function culNorm(s){return String(s==null?'':s).toLowerCase().replace(/[^a-z0-9]/g,'');}
+function culCol(hdr,names){const H=hdr.map(culNorm);for(const n of names){const i=H.indexOf(culNorm(n));if(i>=0)return i;}return -1;}
+function culDate(v){if(v==null||v==='')return '';if(v instanceof Date&&!isNaN(v))return v.getFullYear()+'-'+String(v.getMonth()+1).padStart(2,'0')+'-'+String(v.getDate()).padStart(2,'0');
+  const s=String(v).trim();let m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return m[1]+'-'+m[2]+'-'+m[3];m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);if(m){const y=m[3].length===2?'20'+m[3]:m[3];return y+'-'+m[1].padStart(2,'0')+'-'+m[2].padStart(2,'0');}return '';}
+function culGrams(q,u){const n=parseFloat(String(q==null?'':q).replace(/,/g,''));if(isNaN(n))return null;const x=String(u||'g').toLowerCase();return /^(lb|lbs|pound)/.test(x)?n*453.592:/^(kg|kilo)/.test(x)?n*1000:/^(oz|ounce)/.test(x)?n*28.3495:/^(mg)/.test(x)?n/1000:n;}
+async function culSheetRows(file){if(/\.(csv|txt)$/i.test(file.name)){const t=await file.text();return t.split(/\r?\n/).filter(function(l){return l.trim();}).map(function(l){const o=[];let cur='',qq=false;for(let i=0;i<l.length;i++){const c=l[i];if(qq){if(c==='"'&&l[i+1]==='"'){cur+='"';i++;}else if(c==='"')qq=false;else cur+=c;}else if(c==='"')qq=true;else if(c===','){o.push(cur);cur='';}else cur+=c;}o.push(cur);return o;});}
+  await loadXlsx();const wb=window.XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true});const out=[];wb.SheetNames.forEach(function(n){out.push.apply(out,window.XLSX.utils.sheet_to_json(xlsxFixRef(wb.Sheets[n]),{header:1,raw:true,defval:''}));});return out;}
+// reads a METRC Harvests, Packages or Plants / Plant Batches export into the import shape
+function culParseExport(rows){
+  for(let i=0;i<Math.min(rows.length,40);i++){const hd=rows[i].map(String),body=rows.slice(i+1).filter(function(r){return r.some(function(c){return String(c).trim()!=='';});});
+    const tag=culCol(hd,['Tag','Package Tag','Label']),srcH=culCol(hd,['Source Harvest(s)','Source Harvests','Source Harvest']),item=culCol(hd,['Item','Item Name']);
+    if(tag>=0&&item>=0){const c={srcP:culCol(hd,['Source Package(s)','Source Packages']),cat:culCol(hd,['Category','Item Category']),strain:culCol(hd,['Item Strain','Strain']),q:culCol(hd,['Quantity','Qty']),u:culCol(hd,['Unit Of Measure','UoM','Unit']),
+        lab:culCol(hd,['Lab Test Status','Lab Testing State','Lab Status']),pd:culCol(hd,['Packaged Date','Packaged']),stt:culCol(hd,['Status'])};
+      const ps=body.filter(function(r){return /^[0-9A-Z]{10,30}$/.test(String(r[tag]).trim());}).map(function(r){const it=String(r[item]).replace(/^M\d+:\s*/,'').trim(),g=culGrams(c.q>=0?r[c.q]:'',c.u>=0?r[c.u]:'g'),sp=function(i){return i<0?[]:String(r[i]).split(',').map(function(s){return s.trim();}).filter(Boolean);};
+        return {tag:String(r[tag]).trim(),item:it,bucket:hvBucket(c.cat>=0?r[c.cat]:'',it),strain:c.strain>=0?String(r[c.strain]).trim():'',created_g:g,current_g:g,packaged_on:c.pd>=0?culDate(r[c.pd]):'',status:c.stt>=0&&String(r[c.stt]).trim()?String(r[c.stt]).trim().toLowerCase():'active',lab:c.lab>=0?String(r[c.lab]).trim():'',harvests:sp(srcH),sources:sp(c.srcP)};});
+      if(ps.length)return {kind:'packages',packages:ps};}
+    const hn=culCol(hd,['Harvest Batch','Harvest Name','Harvest','Name']),wet=culCol(hd,['Total Wet Weight','Wet Weight','Wet']);
+    if(hn>=0&&wet>=0){const c={date:culCol(hd,['Harvest Start Date','Harvested','Harvest Date','Date']),strain:culCol(hd,['Strain(s)','Strains','Strain']),pl:culCol(hd,['Plant Count','Plants','Total Plants']),waste:culCol(hd,['Total Waste Weight','Waste Weight','Waste']),
+        pk:culCol(hd,['Total Packaged Weight','Packaged Weight','Packaged']),cur:culCol(hd,['Current Weight','Current']),loc:culCol(hd,['Drying Location','Drying Room','Location']),fin:culCol(hd,['Finished Date','Finished']),typ:culCol(hd,['Harvest Type','Type']),u:culCol(hd,['Unit Of Weight','Unit Of Measure','Unit'])};
+      const hs=body.filter(function(r){return String(r[hn]).trim();}).map(function(r){const u=c.u>=0?r[c.u]:'g',g=function(i){return i<0?null:culGrams(r[i],u);},fd=c.fin>=0?culDate(r[c.fin]):'';
+        return {name:String(r[hn]).trim(),strain:c.strain>=0?String(r[c.strain]).trim():'',date:c.date>=0?culDate(r[c.date]):'',plants:c.pl>=0?parseInt(r[c.pl],10)||null:null,wet:g(wet),waste:g(c.waste),packaged:g(c.pk),current:g(c.cur),
+          location:c.loc>=0?String(r[c.loc]).trim():'',type:c.typ>=0?String(r[c.typ]).trim():'',finished:!!fd,finished_on:fd,active:!fd};});
+      if(hs.length)return {kind:'harvests',harvests:hs};}
+    const loc=culCol(hd,['Location','Room']),strain=culCol(hd,['Strain','Strain Name']),pb=culCol(hd,['Plant Batch','Batch','Group','Name']),pdt=culCol(hd,['Planted Date','Planted','Date Planted']);
+    if(loc>=0&&strain>=0&&pb>=0&&pdt>=0){const cnt=culCol(hd,['Count','Plants','Plant Count','Untracked Count']),ph=culCol(hd,['Growth Phase','Phase','State','Type']),agg={};
+      body.forEach(function(r){const b=String(r[pb]).trim(),l=String(r[loc]).trim();if(!b)return;const k=b+'|'+l,o=agg[k]||(agg[k]={batch:b,strain:String(r[strain]).trim(),count:0,planted:'',stage:'',area:l});
+        o.count+=cnt>=0?(parseInt(r[cnt],10)||0):1;const d=culDate(r[pdt]);if(d&&(!o.planted||d<o.planted))o.planted=d;const p=ph>=0?String(r[ph]):'';if(/flower/i.test(p))o.stage='Flowering';else if(/veg/i.test(p)&&o.stage!=='Flowering')o.stage='Vegetative';else if(!o.stage)o.stage='Immature';});
+      const ps=Object.keys(agg).map(function(k){const o=agg[k];o.batch=o.batch+(Object.keys(agg).filter(function(x){return x.split('|')[0]===o.batch;}).length>1?' · '+o.area:'');return o;});
+      if(ps.length)return {kind:'plants',plants:ps};}
+  }
+  return null;
+}
+function culLicFor(name,pool){const m=String(name).match(/(\d+)\s*$/);if(!m)return null;const n=m[1];return pool.find(function(l){const t=(l.name||'')+' '+(l.license_number||'');return new RegExp('(^|\\D)0*'+n+'(\\D|$)').test(t);})||null;}
+function CulImport(props){
+  const st=props.state,lic=props.license,cul=culLics(st,props.licenses),canFm=can('facmap',3);
+  const[B,setB]=useState(null);const[lm,setLm]=useState({});const[dates,setDates]=useState({});const[maps,setMaps]=useState(true);const[err,setErr]=useState('');const[busy,setBusy]=useState('');const[res,setRes]=useState(null);
+  const[X,setX]=useState(null);const[xfull,setXfull]=useState(false);const[xres,setXres]=useState('');
+  function pickTake(fl){setErr('');setRes(null);if(!fl)return;const r=new FileReader();r.onload=function(){try{const j=JSON.parse(String(r.result||''));if(!j||j.kind!=='hendrix-cultivation-takeover'||!j.licenses)throw new Error('This is not a Hendrix cultivation takeover file.');
+      const o={};Object.keys(j.licenses).forEach(function(k){const l=culLicFor(k,cul);o[k]=l?l.id:'';});setLm(o);setDates({});setB(j);}catch(e){setB(null);setErr(String(e.message||e));}};r.readAsText(fl);}
+  const undated=B?Object.keys(B.licenses).reduce(function(a,k){B.licenses[k].plants.forEach(function(p,i){if(!p.planted)a.push({k:k,i:i,p:p});});return a;},[]):[];
+  async function runTake(){setErr('');const miss=Object.keys(B.licenses).filter(function(k){return !lm[k];});if(miss.length){setErr('Choose the Hendrix license for '+miss.join(', ')+'.');return;}
+    const used=Object.keys(lm).map(function(k){return lm[k];});if(used.some(function(v,i){return used.indexOf(v)!==i;})){setErr('Each license in the file needs its own Hendrix license.');return;}
+    const out={};
+    try{for(const k of Object.keys(B.licenses)){setBusy('Loading '+k+'...');const p=JSON.parse(JSON.stringify(B.licenses[k]));p.source='Perryville takeover file';p.source_kind='board';
+        p.plants=p.plants.map(function(x,i){const d=dates[k+'|'+i];return d?{...x,planted:d}:x;});out[k]=await rpc('hx_cul_import',{p_lic:lm[k],p:p});}
+      let mapMsg='';
+      if(maps&&canFm&&B.maps&&B.maps.length){const have=(await db.get('hx_site_maps','state_id=eq.'+encodeURIComponent(st.id)+'&select=id,name,license_ids,license_id,state_id').catch(function(){return [];})||[]).filter(function(m){return m.state_id===st.id;});
+        let n=0;for(const m of B.maps){setBusy('Loading the map '+m.name+'...');const P=fmParse(JSON.stringify(m)),lmap={};P.lics.forEach(function(c){lmap[c]=lm[c]||'';});
+          const ids=P.lics.map(function(c){return lmap[c];}).filter(Boolean).filter(function(v,i,s){return s.indexOf(v)===i;});if(!ids.length)ids.push(lm[Object.keys(lm)[0]]);
+          P.lics.forEach(function(c){if(!lmap[c])lmap[c]=ids[0];});const ex=have.find(function(x){return x.name===m.name;});
+          const zs=ex?((await db.get('hx_map_zones','map_id=eq.'+encodeURIComponent(ex.id)+'&select=*'))||[]).filter(function(z){return z.map_id===ex.id;}):[];
+          await fmImportRun({map:ex||null,state:st,P:P,name:m.name,lm:lmap,mapLics:ex?(ex.license_ids||[ex.license_id]):ids,useSize:true,zones:zs,count:have.length+n,onBusy:setBusy});n++;}
+        mapMsg=n+' map'+(n===1?'':'s')+' loaded in the Facility Map.';}
+      setRes({out:out,maps:mapMsg});props.onDone&&props.onDone();}
+    catch(e){const m=String((e&&e.message)||e);setErr(/hx_cul_import/.test(m)&&/not find|does not exist|schema cache/i.test(m)?'Run hendrix_step59.sql in the Hendrix Supabase project first.':m);}setBusy('');}
+  async function pickX(fl){setErr('');setXres('');setX(null);if(!fl)return;try{const rows=await culSheetRows(fl);const p=culParseExport(rows);if(!p)throw new Error('Not recognized. Use a METRC export of Harvests, Packages, Plants or Plant Batches (the header row must have its column names).');p.file=fl.name;setX(p);setXfull(p.kind==='harvests');}catch(e){setErr(String(e.message||e));}}
+  async function runX(){setErr('');const p={source:'METRC export '+X.file};p[X.kind]=X[X.kind];if(X.kind==='harvests')p.harvests_full=xfull;
+    setBusy('Importing...');try{const r=await rpc('hx_cul_import',{p_lic:lic.id,p:p});setXres('Imported into '+lic.name+': '+(X.kind==='harvests'?r.harvests+' harvest batches ('+r.harvests_new+' new'+(r.harvests_closed?', '+r.harvests_closed+' no longer active':'')+')':X.kind==='packages'?r.packages+' packages':r.plant_batches_new+' new plant batches, '+r.plant_batches_updated+' updated')+'.');setX(null);props.onDone&&props.onDone();}
+    catch(e){setErr(String((e&&e.message)||e));}setBusy('');}
+  const xs=X?X[X.kind]:[];
+  return el('div',null,
+    el('div',{className:'card gold'},el('div',{className:'k'},'1 · Take over from the Perryville board'),
+      el('div',{className:'muted',style:{fontSize:13,margin:'4px 0 10px'}},'Load the takeover file (perryville_takeover_*.json): houses, tables and bays with capacities and METRC locations, harvest batches with their METRC numbers and post-harvest dates, METRC packages with their source harvests, plants in the ground, the cycle targets, and the maps. Running it again updates; nothing is duplicated, and weights the team entered in Hendrix are kept. Nothing is written to METRC.'),
+      el('input',{type:'file',accept:'.json,application/json',onChange:function(e){pickTake(e.target.files[0]);}}),
+      B&&el('div',{style:{marginTop:10}},el('div',{className:'muted',style:{fontSize:12,marginBottom:6}},B.source),
+        el('table',null,el('thead',null,el('tr',null,['In the file','Hendrix license','Areas','Harvest batches','Packages','Plants in the ground'].map(function(x,i){return el('th',{key:i},x);}))),
+          el('tbody',null,Object.keys(B.licenses).map(function(k){const L=B.licenses[k];return el('tr',{key:k},el('td',null,el('b',null,k)),
+            el('td',null,el('select',{value:lm[k]||'',onChange:function(e){const v=e.target.value;setLm(function(o){return {...o,[k]:v};});}},el('option',{value:''},cul.length?'- choose -':'No cultivation license in '+st.name),cul.map(function(l){return el('option',{key:l.id,value:l.id},l.name+(l.license_number?' ('+l.license_number+')':''));}))),
+            el('td',null,L.areas.length),el('td',null,L.harvests.length+' ('+L.harvests.filter(function(h){return h.active;}).length+' active)'),el('td',null,L.packages.length),el('td',null,L.plants.reduce(function(a,p){return a+p.count;},0).toLocaleString()+' in '+L.plants.length+' batches'));}))),
+        undated.length>0&&el('div',{className:'lmx-panel',style:{margin:'10px 0'}},el('div',{style:{fontSize:13,marginBottom:6}},el('b',null,undated.length+' beds have plants but no planting date in the file.'),' Enter the date each was planted (Airtable Planting Log or METRC), or leave it empty and load a fresh METRC Plants export below. Hendrix never makes up a date.'),
+          el('div',{style:{maxHeight:260,overflowY:'auto'}},el('table',null,el('tbody',null,undated.map(function(u){return el('tr',{key:u.k+u.i},el('td',null,u.k),el('td',null,el('b',null,u.p.area)),el('td',null,u.p.strain),el('td',null,u.p.count+' plants'),el('td',null,u.p.stage),
+            el('td',null,el('input',{type:'date',value:dates[u.k+'|'+u.i]||'',max:todayStr(),onChange:function(e){const v=e.target.value;setDates(function(o){return {...o,[u.k+'|'+u.i]:v};});}})));}))))),
+        B.maps&&B.maps.length>0&&el('label',{className:'ck',style:{margin:'8px 0'}},el('input',{type:'checkbox',checked:maps&&canFm,disabled:!canFm,onChange:function(e){setMaps(e.target.checked);}}),el('span',null,'Also load the '+B.maps.length+' maps ('+B.maps.map(function(m){return m.name;}).join(', ')+') into the Facility Map'+(canFm?'':' - needs Full access to the Facility Map'))),
+        el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn',disabled:!!busy,onClick:runTake},busy||'Import'))),
+      res&&el('div',{className:'msg',style:{marginTop:10}},Object.keys(res.out).map(function(k){const r=res.out[k];return el('div',{key:k},el('b',null,k+': '),r.areas+' areas, '+r.harvests+' harvest batches ('+r.harvests_new+' new), '+r.packages+' packages, '+r.plant_batches_new+' new plant batches'+(r.plant_batches_updated?' ('+r.plant_batches_updated+' updated)':'')+'.');}),res.maps&&el('div',null,res.maps))),
+    el('div',{className:'card'},el('div',{className:'k'},'2 · METRC exports (keep Hendrix current) · '+lic.name),
+      el('div',{className:'muted',style:{fontSize:13,margin:'4px 0 10px'}},'Export from METRC and upload here, for this license: Harvested (harvest batches), Packages, or Plants / Plant Batches (Excel or CSV). Hendrix reads the file; it never writes to METRC. Upload the Harvests export with every active harvest batch to close the ones METRC finished.'),
+      el('input',{type:'file',accept:'.xlsx,.xls,.csv',onChange:function(e){pickX(e.target.files[0]);e.target.value='';}}),
+      X&&el('div',{style:{marginTop:10}},el('div',null,el('b',null,X.file),' · '+xs.length+' '+{harvests:'harvest batches',packages:'packages',plants:'plant batches (by location)'}[X.kind]),
+        X.kind==='harvests'&&el('label',{className:'ck',style:{margin:'6px 0'}},el('input',{type:'checkbox',checked:xfull,onChange:function(e){setXfull(e.target.checked);}}),el('span',null,'This export lists every active harvest batch (others are marked no longer active)')),
+        el('div',{style:{maxHeight:220,overflowY:'auto',fontSize:12,margin:'6px 0'}},el('table',null,el('tbody',null,xs.slice(0,30).map(function(r,i){return el('tr',{key:i},X.kind==='harvests'?[el('td',{key:1},r.name),el('td',{key:2},r.strain),el('td',{key:3},r.date),el('td',{key:4},btG(r.wet)),el('td',{key:5},r.location)]:
+          X.kind==='packages'?[el('td',{key:1},r.tag),el('td',{key:2},r.bucket),el('td',{key:3},r.item),el('td',{key:4},btG(r.current_g)),el('td',{key:5},r.harvests.join(', '))]:[el('td',{key:1},r.batch),el('td',{key:2},r.strain),el('td',{key:3},r.area),el('td',{key:4},r.count),el('td',{key:5},r.planted)]);})))),
+        el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:function(){setX(null);}},'Cancel'),el('button',{className:'btn',disabled:!!busy,onClick:runX},busy||'Import'))),
+      xres&&el('div',{className:'msg',style:{marginTop:10}},xres)),
+    err&&el('div',{className:'msg err'},err));
 }
 function CultivationPage(props){
   const st=props.state,lic=props.license,lid=lic?lic.id:'',canE=can('cultivation',2),canF=can('cultivation',3);
@@ -6109,7 +6482,7 @@ function CultivationPage(props){
   const ob=open&&B.find(function(x){return x.id===open;});
   function printApps(){const e=esc3;printRecords('Nutrient and crop protection applications - '+lic.name,['<div class="hxrec"><h2>Nutrient and crop protection applications \u2014 '+e(lic.name)+'</h2><div class="m">'+e(st.name)+' \u00b7 CSQ 3A.1.5, 3A.1.7, 3A.1.14 \u00b7 printed '+e(new Date().toLocaleString())+'</div><table><tr><th>Date</th><th>Plant batch</th><th>Type</th><th>Product</th><th>Rate</th><th>REI / PHI</th><th>By</th></tr>'+
     apps.map(function(v){const b=B.find(function(x){return x.id===v.batch_id;});return '<tr><td>'+e(v.done_on)+'</td><td>'+e(b?b.number+' '+b.cultivar:'')+'</td><td>'+e(GE_KINDS[v.kind])+'</td><td>'+e(v.product+(v.epa_reg?' (EPA '+v.epa_reg+')':''))+'</td><td>'+e(v.amount+(v.method?' \u00b7 '+v.method:''))+'</td><td>'+(v.kind==='crop_protection'?e(v.rei_hours+' h / '+v.phi_days+' d'):'-')+'</td><td>'+e(v.done_by)+'</td></tr>';}).join('')+'</table></div>']);}
-  const tabs=[['tracker','Batch tracker'],['batches','Plant batches'],['areas','Grow areas ('+areas.filter(function(a){return a.active;}).length+')'],['apps','Applications'],['inputs','Approved inputs']];
+  const tabs=[['tracker','Batch tracker'],['capacity','Capacity'],['harvests','Harvest batches'],['batches','Plant batches'],['areas','Grow areas ('+areas.filter(function(a){return a.active;}).length+')'],['apps','Applications'],['inputs','Approved inputs']].concat(canF?[['import','Import']]:[]);
   const shownB=B.filter(function(b){return show==='all'||(show==='active'?culActive(b):!culActive(b));});
   return el('div',null,
     el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
@@ -6125,6 +6498,9 @@ function CultivationPage(props){
     el('div',{className:'tabs'},tabs.map(function(t){return el('button',{key:t[0],className:tab===t[0]?'on':'',onClick:function(){go(t[0]);}},t[1]);})),
     batches===null?el('div',{className:'muted'},'Loading...'):
     tab==='tracker'?el(CulBatchTracker,{state:st,license:lic,licenses:props.licenses,noAreas:!areas.length,ver:ver>1?ver:0,onOpen:setOpen}):
+    tab==='capacity'?el(CulCapacity,{state:st,license:lic,licenses:props.licenses,ver:ver}):
+    tab==='harvests'?el(CulHarvests,{state:st,license:lic,licenses:props.licenses,ver:ver}):
+    tab==='import'&&canF?el(CulImport,{state:st,license:lic,licenses:props.licenses,onDone:load}):
     tab==='batches'?el('div',null,el('div',{className:'row',style:{marginBottom:10}},el('select',{value:show,onChange:function(e){setShow(e.target.value);}},el('option',{value:'active'},'Active batches'),el('option',{value:'closed'},'Done and destroyed'),el('option',{value:'all'},'All'))),
       !areas.length?el('div',{className:'empty'},'Start by adding your grow areas (rooms, greenhouses, fields, dry and cure rooms).'):!shownB.length?el('div',{className:'empty'},'No plant batches '+(show==='active'?'growing.':'here.')):
       el('div',{className:'card',style:{overflowX:'auto',padding:0}},el('table',null,el('thead',null,el('tr',null,['Batch','Cultivar','Plants','Stage','Area','Planted','Harvest',''].map(function(h,i){return el('th',{key:i},h);}))),
@@ -6132,11 +6508,17 @@ function CultivationPage(props){
           el('td',null,b.plant_count),el('td',null,el('span',{className:'badge '+(b.stage==='done'?'ok':b.stage==='destroyed'?'off':'')},CUL_STAGES[b.stage])),el('td',{style:{fontSize:13}},aName(b.area_id)),el('td',{style:{whiteSpace:'nowrap'}},b.planted_on),
           el('td',{style:{fontSize:12}},culPhiHold(b)?el('span',{className:'badge warn'},'Not before '+b.harvest_after):b.wet_weight!=null?'wet '+b.wet_weight+' g'+(b.dry_weight!=null?' \u00b7 dry '+b.dry_weight+' g':''):'-'),
           el('td',null,el('button',{className:'btn ghost sm',onClick:function(){setOpen(b.id);}},'Open')));}))))):
-    tab==='areas'?(!areas.length?el('div',{className:'empty'},'No grow areas yet.'):el('div',{className:'card',style:{overflowX:'auto',padding:0}},el('table',null,el('thead',null,el('tr',null,['Area','Type','Canopy','Limits','Irrigation / water','Site risk assessment',''].map(function(h,i){return el('th',{key:i},h);}))),
-      el('tbody',null,areas.map(function(a){const due=(a.kind==='outdoor'||a.kind==='greenhouse')&&(!a.risk_assessed_on||a.risk_assessed_on<eqAddDays(todayStr(),-365));return el('tr',{key:a.id,className:a.active?'':'voidrow'},el('td',null,el('b',null,a.name)),el('td',null,CUL_AREA_KINDS[a.kind]),el('td',null,a.canopy_sqft!=null?a.canopy_sqft+' sq ft':'-'),
-        el('td',{style:{fontSize:12}},a.limits||'-'),el('td',{style:{fontSize:12}},[a.irrigation,a.water_source].filter(Boolean).join(' \u00b7 ')||'-'),
-        el('td',null,a.kind==='outdoor'||a.kind==='greenhouse'?el('span',{className:'badge '+(due?'bad':'ok'),title:a.risk_notes},a.risk_assessed_on?(due?'Due \u00b7 last ':'')+a.risk_assessed_on:'Not done'):el('span',{className:'muted'},'-')),
-        el('td',null,canE&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'area',a:a});}},'Edit')));}))))):
+    tab==='areas'?(!areas.length?el('div',{className:'empty'},'No grow areas yet. Load the Perryville layout under Import, or add a house and its tables.'):(function(){
+      const top=areas.filter(function(a){return !a.parent_id;}),kids=function(id){return areas.filter(function(a){return a.parent_id===id;});};
+      const line=function(a,sub){const due=(a.kind==='outdoor'||a.kind==='greenhouse')&&(!a.risk_assessed_on||a.risk_assessed_on<eqAddDays(todayStr(),-365));const ks=kids(a.id);
+        return el('tr',{key:a.id,className:a.active?'':'voidrow'},el('td',{style:sub?{paddingLeft:28}:null},el('b',null,a.name),a.kind==='house'&&a.veg&&el('span',{className:'badge',style:{marginLeft:6}},'Veg'),a.delay_days?el('span',{className:'badge warn',style:{marginLeft:6}},'+'+a.delay_days+' days'):null),
+          el('td',null,CUL_AREA_KINDS[a.kind]||a.kind),el('td',{style:{fontSize:12}},[a.code,a.alias&&'METRC '+a.alias].filter(Boolean).join(' · ')||'-'),
+          el('td',null,a.kind==='house'&&ks.length?ks.reduce(function(s,k){return s+(k.plant_cap||0);},0).toLocaleString()+' ('+ks.length+' '+(ks.some(function(k){return k.kind==='bay';})?'bays':'tables')+')':a.plant_cap!=null?a.plant_cap.toLocaleString():'-'),
+          el('td',{style:{fontSize:12}},a.limits||'-'),
+          el('td',null,a.kind==='outdoor'||a.kind==='greenhouse'?el('span',{className:'badge '+(due?'bad':'ok'),title:a.risk_notes},a.risk_assessed_on?(due?'Due \u00b7 last ':'')+a.risk_assessed_on:'Not done'):el('span',{className:'muted'},'-')),
+          el('td',{style:{whiteSpace:'nowrap'}},canE&&el('button',{className:'btn ghost sm',onClick:function(){setModal({t:'area',a:a});}},'Edit'),canE&&a.kind==='house'&&el('button',{className:'btn ghost sm',style:{marginLeft:4},onClick:function(){setModal({t:'area',parent:a.id});}},'+ Table / bay')));};
+      return el('div',{className:'card',style:{overflowX:'auto',padding:0}},el('table',null,el('thead',null,el('tr',null,['Area','Type','Code / METRC location','Plant capacity','Limits','Site risk assessment',''].map(function(h,i){return el('th',{key:i},h);}))),
+        el('tbody',null,top.reduce(function(acc,a){acc.push(line(a,false));kids(a.id).forEach(function(k){acc.push(line(k,true));});return acc;},[]))));})()):
     tab==='apps'?el('div',null,el('div',{className:'row',style:{justifyContent:'flex-end',marginBottom:8}},el('button',{className:'btn ghost sm',disabled:!apps.length,onClick:printApps},'Print application records')),
       !apps.length?el('div',{className:'empty'},'No nutrient or crop protection applications yet.'):el('div',{className:'card',style:{overflowX:'auto',padding:0}},el('table',null,el('thead',null,el('tr',null,['Date','Plant batch','Type','Product','Rate','REI / PHI','By'].map(function(h,i){return el('th',{key:i},h);}))),
         el('tbody',null,apps.map(function(v){const b=B.find(function(x){return x.id===v.batch_id;});return el('tr',{key:v.id},el('td',{style:{whiteSpace:'nowrap'}},v.done_on),el('td',null,b?b.number+' '+b.cultivar:''),el('td',null,el('span',{className:'badge '+(v.kind==='crop_protection'?'warn':'')},GE_KINDS[v.kind])),
@@ -6158,7 +6540,7 @@ function CultivationPage(props){
         !ev.length?el('div',{className:'muted'},'No records yet.'):el('table',null,el('tbody',null,ev.map(function(v){return el('tr',{key:v.id,className:v.voided?'voidrow':''},el('td',{style:{whiteSpace:'nowrap'}},v.done_on),
           el('td',null,el('b',null,GE_KINDS[v.kind]),v.voided&&el('span',{className:'badge bad',style:{marginLeft:6},title:v.void_reason},'Void')),el('td',{style:{fontSize:12}},geSummary(v),(v.files||[]).length>0&&el(FileList,{files:v.files})),el('td',{style:{fontSize:12}},v.done_by+(v.area_id?' \u00b7 '+aName(v.area_id):'')),
           el('td',null,!v.voided&&canF&&['input','crop_protection','scouting','note'].indexOf(v.kind)>=0&&el('button',{className:'btn danger sm',onClick:function(){setModal({t:'void',v:v});}},'Void')));}))));})(),
-    modal&&modal.t==='area'&&el(GrowAreaForm,{area:modal.a,state:st,license:lic,count:areas.length,onClose:function(){setModal(null);},onDone:function(m){setModal(null);setMsg(m);load();}}),
+    modal&&modal.t==='area'&&el(GrowAreaForm,{area:modal.a,parent:modal.parent,areas:areas,state:st,license:lic,count:areas.length,onClose:function(){setModal(null);},onDone:function(m){setModal(null);setMsg(m);load();}}),
     modal&&modal.t==='batch'&&el(PlantBatchForm,{batch:modal.b,state:st,license:lic,lots:lots,areas:areas,batches:B,onClose:function(){setModal(null);},onDone:function(m){setModal(null);setMsg(m);load();}}),
     modal&&modal.t==='ev'&&el(GrowEventForm,{batch:modal.b,kind:modal.kind,state:st,license:lic,profile:props.profile,areas:areas,lots:lots,chemicals:chems,onClose:function(){setModal(null);},onDone:function(m){setModal(null);setMsg(m);load();}}),
     modal&&modal.t==='void'&&el(VoidModal,{what:GE_KINDS[modal.v.kind].toLowerCase()+' record',onClose:function(){setModal(null);},onVoid:function(why){return db.update('hx_grow_events',modal.v.id,{voided:true,void_reason:why}).then(function(){setModal(null);setMsg('Voided.');load();});}}));
@@ -8619,8 +9001,8 @@ function LineMapDashCard(props){
 }
 
 /* ---------- System Health (step 37): checks the installation like an IQ, admins only ---------- */
-const HX_RELEASE='Release 58 · November 2026';
-const SH_STEPS_EXPECTED=[4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58];
+const HX_RELEASE='Release 59 · November 2026';
+const SH_STEPS_EXPECTED=[4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59];
 function shErr(e){const m=String((e&&e.message)||e);return /hx_system_health/.test(m)&&/missing|does not exist|schema cache|Could not find/i.test(m)?'NOT_INSTALLED':m;}
 function SystemHealthPage(props){
   const[h,setH]=useState(null);const[x38,setX38]=useState(null);const[err,setErr]=useState('');const[ai,setAi]=useState(null);const[busy,setBusy]=useState(false);const[at,setAt]=useState(0);
@@ -8639,7 +9021,7 @@ function SystemHealthPage(props){
   function add(group,label,state,detail,fix){checks.push({group:group,label:label,state:state,detail:detail||'',fix:fix||''});}
   if(h){
     const steps=h.steps||[],missing=steps.filter(function(s){return !s.ok;});
-    add('Database','Database steps installed',missing.length?'bad':'ok',missing.length?'Missing: '+missing.map(function(s){return s.step+' '+s.name;}).join(', '):'All '+steps.length+' steps (4 to '+(steps.length?steps[steps.length-1].step:'')+') are installed.',missing.length?'Run hendrix_install_13_to_58.sql (or the missing step files) in the Supabase SQL editor.':'');
+    add('Database','Database steps installed',missing.length?'bad':'ok',missing.length?'Missing: '+missing.map(function(s){return s.step+' '+s.name;}).join(', '):'All '+steps.length+' steps (4 to '+(steps.length?steps[steps.length-1].step:'')+') are installed.',missing.length?'Run hendrix_install_13_to_59.sql (or the missing step files) in the Supabase SQL editor.':'');
     const drift=at?Math.abs(new Date(h.checked_at).getTime()-at)/1000:0;
     add('Database','Clock',drift>120?'warn':'ok','Database time zone '+h.db_time_zone+'; this device is '+Math.round(drift)+' s '+(drift>120?'off':'in step')+'.',drift>120?'Set this device to the correct time (automatic time).':'');
     add('Security','Row level security on every table',(h.rls_off||[]).length?'bad':'ok',(h.rls_off||[]).length?'Off on: '+h.rls_off.join(', '):'On for all '+h.tables+' Hendrix tables.',(h.rls_off||[]).length?'Run the step file that creates those tables again, or turn on RLS for them in Supabase > Table editor.':'');
@@ -8674,7 +9056,7 @@ function SystemHealthPage(props){
       el('div',{className:'row',style:{gap:8}},el('button',{className:'btn ghost',disabled:busy,onClick:run},busy?'Checking...':'Run checks again'),
         el('button',{className:'btn ghost',disabled:ai&&ai.busy,onClick:testAi},ai&&ai.busy?'Testing...':'Test the AI connection'),
         h&&el('button',{className:'btn',onClick:print},'Print IQ evidence'))),
-    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'System Health is not set up yet - run hendrix_step37.sql (or hendrix_install_13_to_58.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
+    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'System Health is not set up yet - run hendrix_step37.sql (or hendrix_install_13_to_59.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
     h&&el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',gap:10,marginBottom:14}},
       el('div',{className:'card',style:{marginBottom:0,borderTop:'2px solid '+(nBad?'var(--red)':(nWarn?'var(--gold)':'#5fbf8a'))}},el('div',{className:'k'},'Overall'),el('div',{style:{fontSize:22,fontWeight:700,marginTop:4,color:nBad?'var(--red)':(nWarn?'var(--gold-hi)':'#5fbf8a')}},nBad?nBad+' to fix':(nWarn?nWarn+' to check':'Ready')),el('div',{className:'muted',style:{fontSize:12}},nOk+' of '+checks.length+' checks pass')),
       el('div',{className:'card',style:{marginBottom:0}},el('div',{className:'k'},'Steps installed'),el('div',{style:{fontSize:22,fontWeight:700,marginTop:4}},(h.steps||[]).filter(function(s){return s.ok;}).length+' / '+(h.steps||[]).length),el('div',{className:'muted',style:{fontSize:12}},'database steps 4 to '+((h.steps||[]).slice(-1)[0]||{}).step)),
@@ -8856,7 +9238,7 @@ function MyTasksPage(props){
       el('div',null,el('h1',null,el('span',{className:'g'},'My Tasks')),el('div',{className:'sub'},(lic?lic.name+' · ':'')+'everything waiting for you, kept up to date by Hendrix from the records')),
       el('div',{className:'row',style:{gap:8}},el('button',{className:'btn ghost',onClick:load},'Refresh'),lic&&el('button',{className:'btn ghost',disabled:busy,onClick:emailMe},busy?'Sending...':'Email me this list'))),
     msg&&el('div',{className:'msg'},msg),
-    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'My Tasks is not set up yet - run hendrix_step39.sql (or hendrix_install_13_to_58.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
+    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'My Tasks is not set up yet - run hendrix_step39.sql (or hendrix_install_13_to_59.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
     list===null?el('div',{className:'muted'},'Loading...'):el('div',null,
       el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',gap:10,marginBottom:14}},
         stat('All',L.length,'open tasks',undefined,'all'),stat('Waiting for you',mine.length,'assigned to you',undefined,'mine'),
@@ -9011,7 +9393,7 @@ function MetrcPage(props){
     el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-end',gap:12,flexWrap:'wrap',marginBottom:16}},
       el('div',null,el('h1',null,el('span',{className:'g'},'METRC Check')),el('div',{className:'sub'},lic.name+(lic.license_number?' · '+lic.license_number:'')+' · what METRC says compared with Hendrix; read only, nothing is changed in METRC')),
       el('div',{className:'row',style:{gap:8}},res&&el('button',{className:'btn ghost',onClick:print},'Print report'))),
-    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'METRC Check is not set up yet - run hendrix_step41.sql (or hendrix_install_13_to_58.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
+    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'METRC Check is not set up yet - run hendrix_step41.sql (or hendrix_install_13_to_59.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
     busy&&el('div',{className:'msg'},busy),
     canE&&el('div',{className:'card'},el('div',{className:'k',style:{marginBottom:8}},'Get what METRC says'),
       el('div',{className:'row',style:{gap:10,alignItems:'center',flexWrap:'wrap'}},
@@ -12426,7 +12808,7 @@ function StickersPage(props){
 /* ---------- sidebar groups: modules by the job they serve ---------- */
 // modules for manufacturing only: hidden on cultivation (CUL) licenses
 /* ---------- Facility Map (from the Perryville Cultivation board): zones traced from a blueprint, five overlays ---------- */
-const FM_STAGE=[['Seedling','#8A857A'],['Vegetative','#C8932B'],['Flowering','#46A96A'],['Late Flower','#C8A951'],['Harvest Ready','#D4AF37'],['Harvested','#7F9BB0'],['Empty','#2C2822']];
+const FM_STAGE=[['Seedling','#2FB5C4'],['Vegetative','#46A96A'],['Flowering','#B07CC6'],['Late Flower','#E0703A'],['Harvest Ready','#F2C230'],['Harvested','#8E97A6'],['Empty','#2C2822']];
 const FM_SC={};FM_STAGE.forEach(function(s){FM_SC[s[0]]=s[1];});
 const FM_TEMP=[['Cold','more than 5° under','#4e93ad'],['Cool','2-5° under','#6FB7D4'],['On target','within 2°','#46A96A'],['Warm','2-5° over','#C8932B'],['Hot','more than 5° over','#C05B4E']];
 const FM_OV=[['stage','Stage'],['plants','Plants'],['temp','Temperature'],['power','Power'],['equip','Equipment']];
@@ -12442,11 +12824,18 @@ function fmErr(e){const m=String((e&&e.message)||e);return /hx_site_maps|hx_map_
 function fmW(w){return w>=1000?(w/1000).toFixed(w>=10000?0:1)+' kW':Math.round(w)+' W';}
 function fmBand(d){return d<-5?0:d<-2?1:d<=2?2:d<=5?3:4;}
 function fmR(v){return Math.round(v*10)/10;}
+// stage from the seed day (autoflowers): <=20 Seedling, <=35 Vegetative, <=60 Flowering, else Late Flower; in or past the harvest window = Harvest Ready
 function fmStage(b,S,today){
-  if(b.stage==='propagation')return 'Seedling';if(b.stage==='vegetative')return 'Vegetative';
-  if(b.stage==='flowering'){const hs=b.harvest_start||eqAddDays(b.planted_on,S.cycle_days);return today>=hs?'Harvest Ready':today>=eqAddDays(hs,-14)?'Late Flower':'Flowering';}
-  return 'Harvested';
+  if(!culGrowing(b))return 'Harvested';
+  const hs=b.harvest_start||eqAddDays(b.planted_on,S.cycle_days+(b._delay||0));if(today>=hs)return 'Harvest Ready';
+  const d=btDays(b.planted_on,today)+1,k=S.cycle_days/80;return d<=20*k?'Seedling':d<=35*k?'Vegetative':d<=60*k?'Flowering':'Late Flower';
 }
+const FM_ARROW_COL=['#e5645a','#4ea3e0','#F2C230','#B07CC6','#7fe0b4','#E0703A','#c8a951','#8E97A6'];
+function fmArrows(list,fs,stroke,sel){const from={};list.forEach(function(a){if(from[a.f.id]==null)from[a.f.id]=Object.keys(from).length;});
+  return el('g',{style:{pointerEvents:'none'}},el('defs',null,FM_ARROW_COL.map(function(c,i){return el('marker',{key:i,id:'fm-ah'+i,viewBox:'0 0 10 10',refX:8,refY:5,markerWidth:5,markerHeight:5,orient:'auto-start-reverse'},el('path',{d:'M0 0L10 5L0 10z',fill:c}));})),
+    list.map(function(a,k){const i=from[a.f.id]%FM_ARROW_COL.length,c=FM_ARROW_COL[i],f=a.f,t=a.t,on=!sel||sel===f.id||sel===t.id||sel===t.parent_id;
+      const x1=Number(f.x)+Number(f.w)*(0.15+0.7*(k%5)/4),y1=Number(f.y),x2=Number(t.x)+Number(t.w)/2,y2=Number(t.y)+Number(t.h),my=Math.min(y1,y2+fs*2)-fs*1.2;
+      return el('path',{key:k,d:'M'+x1+' '+y1+' C'+x1+' '+my+' '+x2+' '+(y2+fs*2.5)+' '+x2+' '+y2,fill:'none',stroke:c,strokeWidth:stroke*2.4,strokeOpacity:on?0.9:0.12,markerEnd:'url(#fm-ah'+i+')'});}));}
 function fmMode(list){const m={};list.forEach(function(x){m[x[0]]=(m[x[0]]||0)+x[1];});let best=null,bv=-1;Object.keys(m).forEach(function(k){if(m[k]>bv){bv=m[k];best=k;}});return best;}
 function fmHit(zones,x,y,pred){let best=null;zones.forEach(function(z){if((!pred||pred(z))&&x>=z.x&&x<=z.x+z.w&&y>=z.y&&y<=z.y+z.h&&(!best||z.w*z.h<best.w*best.h))best=z;});return best;}
 function fmShortLic(l){if(!l)return '';const m=String(l.name||'').match(/(\d+)\s*$/)||String(l.license_number||'').match(/0*(\d+)$/);return m&&/cul/i.test((l.name||'')+(l.license_number||'')+(l.license_type||''))?'Cul '+m[1]:l.name;}
@@ -12651,6 +13040,26 @@ function FmPinForm(props){
       el('div',{className:'row'},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),el('button',{className:'btn',disabled:busy,onClick:save},busy?'Saving...':'Save'))));
 }
 
+// saves a parsed map (fmParse) as a new map or into an existing one; zones link to grow areas by code or name
+async function fmImportRun(o){
+  const P=o.P,lm=o.lm,mapLics=o.mapLics,zones=o.zones||[],st=o.state,setBusy=o.onBusy||function(){};let m=o.map;
+  if(!m){const r=await db.insert('hx_site_maps',{id:newId('sm'),state_id:st.id,license_id:mapLics[0],license_ids:mapLics,name:o.name.trim(),width:P.W,height:P.H,font_size:P.fs,decor:P.decor,sort:o.count||0,active:true,drawing_note:''});m=(r&&r[0])||null;if(!m)throw new Error('The map was not saved.');}
+  else if(o.useSize)await db.update('hx_site_maps',m.id,{width:P.W,height:P.H,font_size:P.fs!=null?P.fs:m.font_size,decor:P.decor.length?P.decor:(m.decor||[])});
+  const have={};zones.forEach(function(z){have[z.code.toLowerCase()]=z;});const idOf={};zones.forEach(function(z){idOf[z.code]=z.id;});
+  const areas=(await db.get('hx_grow_areas','license_id=in.('+mapLics.map(encodeURIComponent).join(',')+')&select=id,name,code,license_id').catch(function(){return db.get('hx_grow_areas','license_id=in.('+mapLics.map(encodeURIComponent).join(',')+')&select=id,name,license_id').catch(function(){return [];});})||[]).filter(function(a){return mapLics.indexOf(a.license_id)>=0;});
+  const recOf=function(z){const lid=z.lic?lm[z.lic]:mapLics[0];const a=areas.find(function(a){return a.license_id===lid&&a.code&&a.code===z.code;})||areas.find(function(a){return a.license_id===lid&&[z.name,z.label,z.code].some(function(n){return n&&a.name.trim().toLowerCase()===n.trim().toLowerCase();});});
+    return {code:z.code,label:z.label,name:z.name,kind:z.kind,license_id:lid,x:z.x,y:z.y,w:z.w,h:z.h,cap:z.cap,info:z.info,vert:z.vert,_area:a?a.id:null};};
+  const by={};P.zones.forEach(function(q){by[q.code]=q;});
+  const depth=function(z){let d=0,p=z.parent;while(p&&by[p]&&d<8){d++;p=by[p].parent;}return d;};
+  const levels=[];P.zones.forEach(function(z){const d=depth(z);(levels[d]=levels[d]||[]).push(z);});
+  let added=0,updated=0,n=zones.length;
+  for(const lv of levels){if(!lv)continue;const ins=[];
+    for(const z of lv){const r=recOf(z),a=r._area;delete r._area;r.parent_id=z.parent?(idOf[z.parent]||null):null;const ex=have[z.code.toLowerCase()];
+      if(ex){setBusy('Updating '+z.code+'...');const patch={...r};if(ex.area_id||!a)delete patch.area_id;else patch.area_id=a;await db.update('hx_map_zones',ex.id,patch);idOf[z.code]=ex.id;updated++;}
+      else{const id=newId('mz');idOf[z.code]=id;ins.push({...r,area_id:a,id:id,map_id:m.id,state_id:m.state_id,sort:n++});}}
+    for(let i=0;i<ins.length;i+=200){setBusy('Adding zones '+(added+1)+'-'+(added+Math.min(200,ins.length-i))+'...');await db.insert('hx_map_zones',ins.slice(i,i+200));added+=Math.min(200,ins.length-i);}}
+  return {map:m,added:added,updated:updated};
+}
 function FmImportForm(props){
   const map=props.map,st=props.state,lics=props.licenses,zones=props.zones||[];
   const[text,setText]=useState('');const[P,setP]=useState(null);const[perr,setPerr]=useState('');const[name,setName]=useState('');const[lm,setLm]=useState({});const[ids,setIds]=useState(map?(map.license_ids||[map.license_id]):[props.license.id]);
@@ -12664,22 +13073,8 @@ function FmImportForm(props){
   async function run(){setErr('');if(!P)return;
     if(!map&&!name.trim()){setErr('Name the new map.');return;}
     const missing=P.lics.filter(function(c){return !lm[c]||mapLics.indexOf(lm[c])<0;});if(missing.length){setErr('Choose the license for "'+missing.join('", "')+'" (it must be one of the map’s licenses).');return;}
-    try{let m=map;setBusy('Saving the map...');
-      if(!m){const r=await db.insert('hx_site_maps',{id:newId('sm'),state_id:st.id,license_id:mapLics[0],license_ids:mapLics,name:name.trim(),width:P.W,height:P.H,font_size:P.fs,decor:P.decor,sort:props.count||0,active:true,drawing_note:''});m=(r&&r[0])||null;if(!m)throw new Error('The map was not saved.');}
-      else if(useSize)await db.update('hx_site_maps',m.id,{width:P.W,height:P.H,font_size:P.fs!=null?P.fs:m.font_size,decor:P.decor.length?P.decor:(m.decor||[])});
-      const have={};zones.forEach(function(z){have[z.code.toLowerCase()]=z;});const idOf={};zones.forEach(function(z){idOf[z.code]=z.id;});
-      const areas=(await db.get('hx_grow_areas','license_id=in.('+mapLics.map(encodeURIComponent).join(',')+')&select=id,name,license_id').catch(function(){return [];})||[]).filter(function(a){return mapLics.indexOf(a.license_id)>=0;});
-      const recOf=function(z){const lid=z.lic?lm[z.lic]:mapLics[0];const a=areas.find(function(a){return a.license_id===lid&&[z.name,z.label,z.code].some(function(n){return n&&a.name.trim().toLowerCase()===n.trim().toLowerCase();});});
-        return {code:z.code,label:z.label,name:z.name,kind:z.kind,license_id:lid,x:z.x,y:z.y,w:z.w,h:z.h,cap:z.cap,info:z.info,vert:z.vert,_area:a?a.id:null};};
-      const depth=function(z){let d=0,p=z.parent;const by={};P.zones.forEach(function(o){by[o.code]=o;});while(p&&by[p]&&d<8){d++;p=by[p].parent;}return d;};
-      const levels=[];P.zones.forEach(function(z){const d=depth(z);(levels[d]=levels[d]||[]).push(z);});
-      let added=0,updated=0,n=zones.length;
-      for(const lv of levels){if(!lv)continue;const ins=[];
-        for(const z of lv){const r=recOf(z),a=r._area;delete r._area;r.parent_id=z.parent?(idOf[z.parent]||null):null;const ex=have[z.code.toLowerCase()];
-          if(ex){setBusy('Updating '+z.code+'...');const patch={...r};if(ex.area_id||!a)delete patch.area_id;else patch.area_id=a;await db.update('hx_map_zones',ex.id,patch);idOf[z.code]=ex.id;updated++;}
-          else{const id=newId('mz');idOf[z.code]=id;ins.push({...r,area_id:a,id:id,map_id:m.id,state_id:m.state_id,sort:n++});}}
-        for(let i=0;i<ins.length;i+=200){setBusy('Adding zones '+(added+1)+'-'+(added+Math.min(200,ins.length-i))+'...');await db.insert('hx_map_zones',ins.slice(i,i+200));added+=Math.min(200,ins.length-i);}}
-      props.onDone(m.id,'Imported '+P.zones.length+' zones: '+added+' added, '+updated+' updated.');}
+    try{setBusy('Saving the map...');const r=await fmImportRun({map:map,state:st,P:P,name:name,lm:lm,mapLics:mapLics,useSize:useSize,zones:zones,count:props.count,onBusy:setBusy});
+      props.onDone(r.map.id,'Imported '+P.zones.length+' zones: '+r.added+' added, '+r.updated+' updated.');}
     catch(e){setErr(fmErr(e));}setBusy('');}
   const cnt=P?P.zones.reduce(function(a,z){a[z.kind]=(a[z.kind]||0)+1;return a;},{}):{};
   return el(Modal,{title:map?'Import zones into '+map.name:'Import a map (JSON)',wide:true,onClose:props.onClose},
@@ -12727,12 +13122,13 @@ function FacilityMapInner(props){
       canC?db.get('hx_grow_events',L+'&voided=eq.false&kind=in.(harvest,dry)&select=batch_id,kind,done_on,license_id&limit=20000').catch(function(){return [];}):Promise.resolve([]),
       canC?db.get('hx_cul_settings',L+'&select=*').catch(function(){return [];}):Promise.resolve([]),
       can('receiving',1)?db.get('hx_lots',L+'&status=eq.accepted&select=id,number,item,category,quantity,qty_used,unit,license_id&limit=5000').catch(function(){return null;}):Promise.resolve(null),
-      canC?db.get('hx_grow_areas',L+'&select=id,name,kind,license_id&order=sort,name').catch(function(){return [];}):Promise.resolve([]),
-      can('equipment',1)?db.get('hx_equipment',L+'&status=neq.retired&select=id,number,name,license_id&limit=3000').catch(function(){return [];}):Promise.resolve([])])
+      canC?db.get('hx_grow_areas',L+'&select=*&order=sort,name').catch(function(){return [];}):Promise.resolve([]),
+      can('equipment',1)?db.get('hx_equipment',L+'&status=neq.retired&select=id,number,name,license_id&limit=3000').catch(function(){return [];}):Promise.resolve([]),
+      canC?db.get('hx_harvests',L+'&select=id,name,strain,license_id,harvest_date,plants,wet_g,area_id,plant_batch_id,active,fresh_frozen,finished,shipped_on,packaged_on,test_result,trim_done,test_sent,cure_done,dry_done,dry_start,dry_room_g,drying_location,metrc_stage&order=harvest_date.desc&limit=5000').catch(function(){return [];}):Promise.resolve([])])
     .then(function(r){setErr('');const R=(r[1]||[]).filter(function(x){return x.map_id===map.id&&!x.voided;}).sort(function(a,b){return a.read_at<b.read_at?-1:a.read_at>b.read_at?1:0;});
       const num=function(o,ks){const c={...o};ks.forEach(function(k){c[k]=Number(o[k]);});return c;};
-      setD({map:map.id,Z:(r[0]||[]).filter(function(z){return z.map_id===map.id;}).map(function(z){return num(z,['x','y','w','h']);}),R:R,P:(r[2]||[]).filter(function(p){return p.map_id===map.id;}).map(function(p){return num(p,['x','y']);}),B:r[3]&&r[3].filter(inL),E:(r[4]||[]).filter(inL),S:r[5]||[],L:r[6]&&r[6].filter(inL),A:(r[7]||[]).filter(inL),EQ:(r[8]||[]).filter(inL),at:new Date()});})
-    .catch(function(e){setErr(fmErr(e));setD({map:map.id,Z:[],R:[],P:[],B:null,E:[],S:[],L:null,A:[],EQ:[],at:new Date()});});
+      setD({map:map.id,Z:(r[0]||[]).filter(function(z){return z.map_id===map.id;}).map(function(z){return num(z,['x','y','w','h']);}),R:R,P:(r[2]||[]).filter(function(p){return p.map_id===map.id;}).map(function(p){return num(p,['x','y']);}),B:r[3]&&r[3].filter(inL),E:(r[4]||[]).filter(inL),S:r[5]||[],L:r[6]&&r[6].filter(inL),A:(r[7]||[]).filter(inL),EQ:(r[8]||[]).filter(inL),H:(r[9]||[]).filter(inL),at:new Date()});})
+    .catch(function(e){setErr(fmErr(e));setD({map:map.id,Z:[],R:[],P:[],B:null,E:[],S:[],L:null,A:[],EQ:[],H:[],at:new Date()});});
   },[map&&map.id,map&&map.updated_at,licIds.join(','),canC]);
   useEffect(function(){setD(null);setSel(null);setVb(null);setDraft(null);load();const t=setInterval(function(){if(document.visibilityState==='visible'&&!drag.current)load();},60000);return function(){clearInterval(t);};},[load]);
   useEffect(function(){setImg(null);if(!map||!map.drawing_path)return;let dead=false,u=null;storageGet(map.drawing_path).then(function(b){if(dead)return;u=URL.createObjectURL(b);setImg(u);}).catch(function(){});return function(){dead=true;if(u)URL.revokeObjectURL(u);};},[map&&map.drawing_path]);
@@ -12744,7 +13140,14 @@ function FacilityMapInner(props){
   const Mx=useMemo(function(){if(!ready)return null;
     const Z=D.Z,byId={},kids={},info={};Z.forEach(function(z){byId[z.id]=z;kids[z.id]=[];});
     Z.forEach(function(z){if(z.parent_id&&byId[z.parent_id])kids[z.parent_id].push(z);});
-    const byArea={};(D.B||[]).forEach(function(b){if(b.area_id)(byArea[b.area_id]=byArea[b.area_id]||[]).push(b);});
+    const byArea={};(D.B||[]).forEach(function(b){b._delay=culDelay(D.A,b.area_id);if(b.area_id)(byArea[b.area_id]=byArea[b.area_id]||[]).push(b);});
+    // capacity status per bed (late / behind flags) and the veg -> flower table lines
+    const lastHv={};(D.H||[]).forEach(function(h){if(h.area_id&&h.harvest_date&&(!lastHv[h.area_id]||h.harvest_date>lastHv[h.area_id]))lastHv[h.area_id]=h.harvest_date;});
+    const bedSt={},arrows=[];Z.forEach(function(z){const a=z.area_id&&culArea(D.A,z.area_id);if(!a||!culBed(a)||culVegArea(D.A,a.id)||!D.B)return;
+      bedSt[z.id]=culBedStatus(a,btSet(D.S,a.license_id),D.B.filter(function(b){return b.area_id===a.id;}),lastHv[a.id]||'',D.B.filter(function(b){return b.next_area_id===a.id&&b.area_id!==a.id;}),today,culDelay(D.A,a.id));});
+    const zOfArea={};Z.forEach(function(z){if(z.area_id&&!zOfArea[z.area_id])zOfArea[z.area_id]=z;});
+    (D.B||[]).filter(function(b){return b.next_area_id&&b.area_id&&culGrowing(b)&&culVegArea(D.A,b.area_id);}).forEach(function(b){const f=zOfArea[b.area_id],t=zOfArea[b.next_area_id];
+      if(f&&t&&!arrows.some(function(x){return x.f===f&&x.t===t;}))arrows.push({f:f,t:t});});
     const set=function(lid){return btSet(D.S,lid);};
     const last={},hist={};D.R.forEach(function(r){(hist[r.zone_id]=hist[r.zone_id]||[]).push(r);if(r.temp_f!=null||r.rh!=null)last[r.zone_id]=r;});
     const pw={};D.P.forEach(function(p){if(p.zone_id&&p.type!=='generator')pw[p.zone_id]=(pw[p.zone_id]||0)+(Number(p.watts)||0)*(p.qty||1);});
@@ -12774,9 +13177,12 @@ function FacilityMapInner(props){
       fresh:Z.filter(function(z){return info[z.id].read&&!info[z.id].inh&&!info[z.id].stale;}).length,
       load:D.P.reduce(function(a,p){return a+(p.type==='generator'?0:(Number(p.watts)||0)*(p.qty||1));},0),kwh:D.P.reduce(function(a,p){return a+(p.type==='generator'?0:(Number(p.watts)||0)*(p.qty||1)*(Number(p.hrs)||0)/1000);},0),
       noWatts:D.P.filter(function(p){return p.type!=='generator'&&p.type!=='camera'&&p.watts==null;}).length,
-      dryOf:function(lid,kind){const stg=kind==='dry'?'drying':'curing',ev=kind==='dry'?'harvest':'dry',S=set(lid),T=kind==='dry'?S.dry_days:S.cure_days;
-        return (D.B||[]).filter(function(b){return b.license_id===lid&&b.stage===stg;}).map(function(b){const s=D.E.filter(function(v){return v.batch_id===b.id&&v.kind===ev;}).map(function(v){return v.done_on;}).sort().pop()||(kind==='cure'?D.E.filter(function(v){return v.batch_id===b.id&&v.kind==='harvest';}).map(function(v){return v.done_on;}).sort().pop():null)||b.planted_on;
-          return {b:b,start:s,days:Math.max(0,btDays(s,today)),target:T};}).sort(function(a,b){return b.days-a.days;});},
+      bedSt:bedSt,arrows:arrows,
+      dryOf:function(lid,kind){const stg=kind==='dry'?'drying':'curing',ev=kind==='dry'?'harvest':'dry',S=set(lid),T=kind==='dry'?S.dry_days:S.cure_days,linked={};
+        const hv=(D.H||[]).filter(function(h){if(h.plant_batch_id)linked[h.plant_batch_id]=1;return h.license_id===lid&&h.active&&!h.fresh_frozen&&hvStage(h,[])===kind;}).map(function(h){const s=kind==='dry'?(h.dry_start||h.harvest_date):(h.dry_done||h.harvest_date);
+          return {b:{id:'hv-'+h.id,cultivar:h.strain||h.name,number:h.name,plant_count:h.plants||0,wet_weight:h.wet_g},start:s,days:Math.max(0,btDays(s,today)),target:T};});
+        return hv.concat((D.B||[]).filter(function(b){return b.license_id===lid&&b.stage===stg&&!linked[b.id];}).map(function(b){const s=D.E.filter(function(v){return v.batch_id===b.id&&v.kind===ev;}).map(function(v){return v.done_on;}).sort().pop()||(kind==='cure'?D.E.filter(function(v){return v.batch_id===b.id&&v.kind==='harvest';}).map(function(v){return v.done_on;}).sort().pop():null)||b.planted_on;
+          return {b:b,start:s,days:Math.max(0,btDays(s,today)),target:T};})).sort(function(a,b){return b.days-a.days;});},
       lotsOf:function(lid){if(!D.L)return null;const by={};D.L.filter(function(l){return l.license_id===lid&&onHand(l)>0;}).forEach(function(l){const c=l.category||'Other';const o=by[c]||(by[c]={cat:c,n:0,q:{}});o.n++;o.q[l.unit||'']=(o.q[l.unit||'']||0)+onHand(l);});
         return Object.keys(by).map(function(k){return by[k];}).sort(function(a,b){return b.n-a.n;});}};
   },[D,ready,today]);
@@ -12844,7 +13250,8 @@ function FacilityMapInner(props){
   function ztext(z){const i=I(z);if(!i)return '';
     if(z.info==='dry'||z.info==='cure'){if(ov==='stage'||ov==='plants'){const n=Mx.dryOf(z.license_id,z.info).length;return n+(z.info==='dry'?' drying':' curing');}}
     if((z.info==='vault'||z.info==='mfg')&&(ov==='stage'||ov==='plants')){const L=Mx.lotsOf(z.license_id);if(!L)return '';const n=L.reduce(function(a,c){return a+c.n;},0);return n+' lot'+(n===1?'':'s');}
-    if(ov==='stage'){if(!i.strains.length)return z.kind==='bed'&&i.stage==='Empty'?'empty':'';return i.strains[0][0]+(i.strains.length>1?' +'+(i.strains.length-1):'')+' · '+i.plants;}
+    if(ov==='stage'){const a=z.area_id&&D&&culArea(D.A,z.area_id),cap=z.kind==='bed'?(z.cap!=null?z.cap:a&&a.plant_cap):null;
+      if(!i.strains.length)return cap?'No strain · 0 / '+cap:z.kind==='bed'&&i.stage==='Empty'?'empty':'';return i.strains[0][0]+(i.strains.length>1?' +'+(i.strains.length-1):'')+' · '+i.plants+(cap?' / '+cap:'');}
     if(ov==='plants')return i.plants?i.plants+(i.strains[0]?' · '+i.strains[0][0]:''):'';
     if(ov==='temp')return i.read&&i.read.temp_f!=null?Math.round(i.read.temp_f)+'°'+(i.inh?'*':''):'';
     if(ov==='power')return i.w?fmW(i.w):'';
@@ -12875,9 +13282,15 @@ function FacilityMapInner(props){
     showImg&&img&&el('image',{href:img,x:0,y:0,width:W,height:H,opacity:0.9,preserveAspectRatio:'none',style:{pointerEvents:'none'}}),
     (map.decor||[]).map(function(d,i){return fmDecor(d,i,fs);}),
     zs.map(drawZone),
+    ov==='stage'&&Mx&&fmArrows(Mx.arrows,fs,stroke,sel),
+    ov==='stage'&&Mx&&zs.map(function(z){const b=Mx.bedSt[z.id];if(!b||(b.status!=='late'&&b.status!=='behind'))return null;const c=b.status==='late'?'#C05B4E':'#C8932B',x=Number(z.x),y=Number(z.y),w=Number(z.w),s=Math.min(fs*0.9,w*0.45);
+      return el('g',{key:'fl'+z.id,style:{pointerEvents:'none'}},el('title',null,CAP_ST[b.status][0]+': '+b.why),el('line',{x1:x+w/2-s*0.35,y1:y+s*0.15,x2:x+w/2-s*0.35,y2:y+s*1.25,stroke:'#e8e2d2',strokeWidth:s*0.08}),
+        el('path',{d:'M'+(x+w/2-s*0.35)+' '+(y+s*0.15)+'l'+s*0.8+' '+s*0.22+'l'+(-s*0.8)+' '+s*0.22+'z',fill:c,stroke:'#0a0a0a',strokeWidth:s*0.04}));}),
     ov==='equip'&&D&&D.P.map(drawPin),
     draft&&draft.w!=null&&!draft.id&&el('rect',{x:draft.x,y:draft.y,width:draft.w,height:draft.h,fill:'rgba(212,175,55,.15)',stroke:'#f1d57a',strokeWidth:stroke*2,strokeDasharray:stroke*8}));
-  const leg=ov==='stage'?el('div',{className:'fmx-leg'},FM_STAGE.map(function(s){return el('span',{key:s[0]},el('i',{style:{background:s[1]}}),s[0]);}),el('span',null,el('i',{style:{background:'repeating-linear-gradient(45deg,#17150f 0 3px,#3a342a 3px 5px)'}}),'Not linked to a grow area'),!canC&&el('span',{className:'late'},'Stage and plants need View access to Cultivation.')):
+  const leg=ov==='stage'?el('div',{className:'fmx-leg'},FM_STAGE.map(function(s){return el('span',{key:s[0]},el('i',{style:{background:s[1]}}),s[0]);}),
+      Mx&&Object.keys(Mx.bedSt).length>0&&el('span',null,el('i',{style:{background:'#C05B4E'}}),'flag = late, ',el('i',{style:{background:'#C8932B',marginLeft:4}}),'behind (Capacity)'),
+      Mx&&Mx.arrows.length>0&&el('span',null,'Lines: veg table → the flower table it is lined up for'),el('span',null,el('i',{style:{background:'repeating-linear-gradient(45deg,#17150f 0 3px,#3a342a 3px 5px)'}}),'Not linked to a grow area'),!canC&&el('span',{className:'late'},'Stage and plants need View access to Cultivation.')):
     ov==='plants'?el('div',{className:'fmx-leg'},el('span',null,'Fewer',el('span',{className:'fmx-ramp'}),'more plants (busiest bed: '+(Mx?Mx.maxP:0)+')')):
     ov==='temp'?el('div',{className:'fmx-leg'},FM_TEMP.map(function(t){return el('span',{key:t[0]},el('i',{style:{background:t[2]}}),t[0]+' ('+t[1]+')');}),el('span',null,'* = the house’s reading'),el('span',null,'faded = older than 24 h'),el('span',null,'Target: day 06:00-20:00, night otherwise')):
     ov==='power'?el('div',{className:'fmx-leg'},el('span',null,'Less',el('span',{className:'fmx-ramp'}),'more connected load (watts x quantity of the pins in each zone)')):
@@ -12893,6 +13306,7 @@ function FacilityMapInner(props){
       el('h3',null,z.name||z.label||z.code),el('div',{className:'muted',style:{fontSize:12}},z.code+(z.parent_id&&Mx.byId[z.parent_id]?' · in '+(Mx.byId[z.parent_id].name||Mx.byId[z.parent_id].code):'')),
       (z.area_id||zi.kids.length||z.kind!=='room')&&el('div',null,el('div',{className:'lmx-h'},'Plants and stage'),
         el('div',{className:'fmx-kv'},el('span',null,'Stage'),el('span',null,zi.stage?el('span',null,el('span',{className:'fmx-dot',style:{background:FM_SC[zi.stage]}}),zi.stage):'Not linked to a grow area')),
+        Mx.bedSt[z.id]&&el('div',{className:'fmx-kv'},el('span',null,'Schedule'),el('span',null,el('span',{className:'fmx-dot',style:{background:CAP_ST[Mx.bedSt[z.id].status][1]}}),CAP_ST[Mx.bedSt[z.id].status][0],el('div',{className:'muted',style:{fontSize:11.5}},Mx.bedSt[z.id].why))),
         el('div',{className:'fmx-kv'},el('span',null,'Plants'),el('span',null,zi.plants+(z.cap?' / '+z.cap+' capacity':''))),
         z.area_id&&el('div',{className:'fmx-kv'},el('span',null,'Grow area'),el('span',null,(D.A.find(function(a){return a.id===z.area_id;})||{}).name||'-')),
         zi.all.map(function(b){return el('div',{key:b.id,className:'fmx-li'},el('b',null,b.cultivar),' · '+b.plant_count+' plants',el('div',{className:'m'},b.number+' · '+CUL_STAGES[b.stage]+' · planted '+btFmt(b.planted_on)+(b.metrc_tag?' · '+b.metrc_tag:'')));})),
@@ -12963,7 +13377,7 @@ function RoomsPage(props){
   const st=props.state,lic=props.license,canF=can('rooms',3);
   const[rows,setRows]=useState(null);const[err,setErr]=useState('');const[msg,setMsg]=useState('');const[ed,setEd]=useState(null);const[off,setOff]=useState(false);
   const load=useCallback(function(){if(!lic)return;db.get('hx_rooms','license_id=eq.'+encodeURIComponent(lic.id)+'&select=*&order=sort,name').then(function(r){setRows((r||[]).filter(function(x){return x.license_id===lic.id;}));setErr('');})
-    .catch(function(e){const m=String(e.message||e);setErr(/hx_rooms/.test(m)&&/does not exist|schema cache/i.test(m)?'Rooms are not set up yet - run hendrix_step57.sql (or hendrix_install_13_to_58.sql) in the Hendrix Supabase project.':m);setRows([]);});},[lic&&lic.id]);
+    .catch(function(e){const m=String(e.message||e);setErr(/hx_rooms/.test(m)&&/does not exist|schema cache/i.test(m)?'Rooms are not set up yet - run hendrix_step57.sql (or hendrix_install_13_to_59.sql) in the Hendrix Supabase project.':m);setRows([]);});},[lic&&lic.id]);
   useEffect(function(){load();},[load]);
   if(!st||!lic)return el('div',null,el('h1',null,el('span',{className:'g'},'Rooms')),el('div',{className:'empty'},'Pick a state and a license at the top first.'));
   const list=(rows||[]).filter(function(r){return off||r.active!==false;}),nOff=(rows||[]).filter(function(r){return r.active===false;}).length;

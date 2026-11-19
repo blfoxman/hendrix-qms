@@ -1,0 +1,197 @@
+{
+ "kind": "hendrix-cultivation-takeover",
+ "version": 1,
+ "source": "test fixture",
+ "licenses": {
+  "Cul 60": {
+   "settings": {
+    "cycle_days": 80,
+    "veg_days": 20,
+    "window_days": 4,
+    "reset_days": 7,
+    "overplant_pct": 10
+   },
+   "areas": [
+    {
+     "code": "60-H8",
+     "name": "H8",
+     "kind": "house",
+     "cap": 884,
+     "veg": false,
+     "sort": 1
+    },
+    {
+     "code": "60-H8-T4",
+     "name": "H8 T4",
+     "kind": "table",
+     "parent": "60-H8",
+     "cap": 442,
+     "alias": "H8T4",
+     "sort": 2
+    },
+    {
+     "code": "60-H8-T1",
+     "name": "H8 T1",
+     "kind": "table",
+     "parent": "60-H8",
+     "cap": 442,
+     "alias": "H8T1",
+     "sort": 3
+    },
+    {
+     "code": "60-H1",
+     "name": "H1 \u00b7 VEG",
+     "kind": "house",
+     "cap": 992,
+     "veg": true,
+     "sort": 4
+    },
+    {
+     "code": "60-H1-B1",
+     "name": "H1 T1",
+     "kind": "table",
+     "parent": "60-H1",
+     "cap": 992,
+     "alias": "H1T1",
+     "veg": true,
+     "sort": 5
+    },
+    {
+     "code": "hh-dry",
+     "name": "Drying room",
+     "kind": "dry",
+     "sort": 6
+    },
+    {
+     "code": "hh-cure",
+     "name": "Cure room",
+     "kind": "cure",
+     "sort": 7
+    }
+   ],
+   "harvests": [
+    {
+     "name": "Test41-11-14-26",
+     "strain": "Test 41",
+     "date": "2026-11-14",
+     "plants": 437,
+     "wet": 193234,
+     "waste": 27650,
+     "packaged": 0,
+     "current": 165584,
+     "finished": false,
+     "fresh_frozen": false,
+     "location": "Dry Room - Large",
+     "metrc_id": "1410101",
+     "type": "WholePlant",
+     "active": true,
+     "stage": "Dry",
+     "dry_start": "2026-11-14",
+     "zone": "H8T4",
+     "planted": "2026-08-13",
+     "flip": "2026-09-18"
+    },
+    {
+     "name": "TestSauce-07-02-26",
+     "strain": "Test Sauce",
+     "date": "2026-07-02",
+     "plants": 391,
+     "wet": 157061,
+     "active": true,
+     "stage": "Ship",
+     "cure_done": "2026-08-27",
+     "trim_done": "2026-09-01",
+     "packaged_on": "2026-08-27",
+     "test_result": "passed",
+     "note": "10 tags shipped"
+    },
+    {
+     "name": "TestFrozen-10-01-26",
+     "strain": "Test Frozen",
+     "date": "2026-10-01",
+     "plants": 300,
+     "wet": 120000,
+     "finished": true,
+     "fresh_frozen": true,
+     "active": false,
+     "zone": "H8T1"
+    }
+   ],
+   "harvests_full": true,
+   "packages": [
+    {
+     "tag": "1A4TEST00000000000000001",
+     "bucket": "Bulk flower",
+     "item": "Test Sauce - Bulk",
+     "strain": "Test Sauce",
+     "created_g": 599,
+     "current_g": 0,
+     "packaged_on": "2026-08-27",
+     "status": "inactive",
+     "harvests": [
+      "TestSauce-07-02-26"
+     ],
+     "sources": []
+    },
+    {
+     "tag": "1A4TEST00000000000000002",
+     "bucket": "Packaged flower",
+     "item": "Test Sauce 3.5g",
+     "strain": "Test Sauce",
+     "created_g": 56,
+     "current_g": 0,
+     "packaged_on": "2026-08-28",
+     "status": "transferred",
+     "to": "DIS000095",
+     "harvests": [
+      "TestSauce-07-02-26"
+     ],
+     "sources": [
+      "1A4TEST00000000000000001"
+     ]
+    },
+    {
+     "tag": "1A4TEST00000000000000003",
+     "bucket": "Fresh frozen",
+     "item": "Test Frozen - FF",
+     "strain": "Test Frozen",
+     "created_g": 120000,
+     "current_g": 120000,
+     "packaged_on": "2026-10-01",
+     "status": "transferred",
+     "to": "MAN000085",
+     "harvests": [
+      "TestFrozen-10-01-26"
+     ],
+     "sources": []
+    }
+   ],
+   "plants": [
+    {
+     "batch": "Test 45-H1T1NE-10.21.26",
+     "strain": "Test 45",
+     "count": 124,
+     "planted": "2026-10-21",
+     "stage": "Immature",
+     "area": "60-H1-B1"
+    },
+    {
+     "batch": "Test 45-H1T1SE-10.23.26",
+     "strain": "Test 45",
+     "count": 62,
+     "planted": "2026-10-23",
+     "stage": "Immature",
+     "area": "60-H1-B1"
+    },
+    {
+     "batch": "Test Cake \u00b7 H8T1",
+     "strain": "Test Cake",
+     "count": 243,
+     "planted": "",
+     "stage": "Flowering",
+     "area": "60-H8-T1"
+    }
+   ]
+  }
+ }
+}
