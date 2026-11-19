@@ -53,6 +53,9 @@ with sync_playwright() as pw:
     pg.locator('.nav button', has_text='METRC Check').click(); pg.wait_for_selector('h1 >> text=METRC Check')
     pg.locator('label.ck', has_text='Also update the Hendrix inventory').locator('input').uncheck()
     pg.locator('input[aria-label="METRC export file"]').set_input_files({'name': 'Packages.csv', 'mimeType': 'text/csv', 'buffer': CSV.encode()})
+    for _ in range(100):
+        if ST['saves']: break
+        pg.wait_for_timeout(100)
     pg.wait_for_selector('.mcrow')
     rows = ST['saves'][-1]['p_rows']; r1 = next(r for r in rows if r['tag'] == '1A40-MHOLD')
     check(len(rows) == 7 and r1['quantity'] == '1200' and r1['unit'] == 'Grams' and r1['on_hold'] is True and r1['packaged_date'] == '2026-10-18' and r1['lab_state'] == 'TestPassed' and r1['batch_no'] == '', 'METRC export read: title rows skipped, quantity and unit split, dates, on hold')
