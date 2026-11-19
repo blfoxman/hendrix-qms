@@ -88,11 +88,8 @@ with sync_playwright() as pw:
     sv.click(); pg.wait_for_selector('#bt-wall td >> text=Runtz')
     check(w.locator('tr', has_text='Runtz').locator('td', has_text='60 · low').count() == 1 and w.locator('tr', has_text='Gelato').locator('td').nth(1).inner_text() == '450', 'seed vault list: strain, on hand, low flag')
     sv.click()
-    # all licenses
-    w.locator('.btx-pills button', has_text='All').click(); pg.wait_for_function('document.querySelectorAll("#bt-wall .btx-row:not(.hd)").length==11')
-    check(row('Cherry Pie').locator('.btx-chip', has_text='Cul 22').count() == 1, 'All: both cultivation licenses, license chip on each row')
-    check(row('Cherry Pie').get_attribute('title').startswith('Switch to Heritage Cul 22'), 'batch of another license points to the license picker')
-    w.locator('.btx-pills button', has_text='Cul 60').click(); pg.wait_for_function('document.querySelectorAll("#bt-wall .btx-row:not(.hd)").length==10')
+    # one license at a time (Sam: keep them separated by license)
+    check(w.locator('.btx-pills button', has_text='All').count() == 0 and row('Cherry Pie').count() == 0 and w.locator('.btx-chip', has_text='Heritage Cul 60').count() == 1, 'only the license chosen at the top; no All view')
     pg.screenshot(path=OUT + 'batch_tracker.png', full_page=True)
     # open a batch
     row('Mimosa').click(); md = pg.locator('.md'); md.wait_for()

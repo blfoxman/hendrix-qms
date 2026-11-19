@@ -6097,7 +6097,7 @@ function CulTargetsForm(props){
 }
 function CulBatchTracker(props){
   const st=props.state,lic=props.license,lid=lic.id,cul=(props.licenses||[]).filter(function(l){return l.state_id===st.id&&l.active!==false&&licOp(l)==='cultivation';});
-  const[scope,setScope]=useState(function(){const s=lsGet('hx_bt_scope');return s==='all'&&cul.length>1?'all':lid;});
+  const scope=lid;
   const[d,setD]=useState(null);const[err,setErr]=useState('');const[stepF,setStepF]=useState(null);const[seedOpen,setSeedOpen]=useState(false);const[modal,setModal]=useState(false);const[msg,setMsg]=useState('');const[hvOpen,setHvOpen]=useState(null);
   const load=useCallback(function(){const F=scope==='all'?'state_id=eq.'+encodeURIComponent(st.id):'license_id=eq.'+encodeURIComponent(scope);
     const mine=function(x){return scope==='all'?x.state_id===st.id:x.license_id===scope;};
@@ -6115,7 +6115,6 @@ function CulBatchTracker(props){
     const v=function(){if(document.visibilityState==='visible')load();};document.addEventListener('visibilitychange',v);return function(){clearInterval(t);document.removeEventListener('visibilitychange',v);};},[load]);
   useEffect(function(){lmFonts();},[]);
   useEffect(function(){if(props.ver)load();},[props.ver]);
-  function pick(s){setScope(s);lsSet('hx_bt_scope',s==='all'?'all':'one');setStepF(null);}
   const today=todayStr(),lname=function(id){const l=cul.find(function(x){return x.id===id;})||(id===lid?lic:null);return l?l.name:'';};
   const shortL=function(id){const n=lname(id),m=n.match(/\d+\s*$/);return m&&cul.length>1?'Cul '+m[0].trim():n;};
   // growing: plant batches; after harvest: the harvest batches (METRC + what the team enters), else the plant batch's own records
@@ -6149,8 +6148,7 @@ function CulBatchTracker(props){
     el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-end',gap:12,flexWrap:'wrap'}},
       el('div',null,el('div',{className:'lmx-eyebrow'},'Cultivation · every batch in the building'),el('h2',{className:'lmx-title'},'Batch Tracker'),
         el('div',{className:'lmx-sub'},'Every running plant batch from veg to shipped: where it is, how long it has been there, what happens next and when, and whether it is late.')),
-      el('div',{className:'row',style:{gap:8}},cul.length>1&&el('div',{className:'btx-pills'},el('button',{className:scope==='all'?'on':'',onClick:function(){pick('all');}},'All'),
-          cul.map(function(l){return el('button',{key:l.id,className:scope===l.id?'on':'',onClick:function(){pick(l.id);}},shortL(l.id));})),
+      el('div',{className:'row',style:{gap:8}},el('div',{className:'btx-chip',style:{fontSize:12,padding:'4px 12px'}},lic.name),
         canF&&scope===lid&&el('button',{className:'btn ghost sm',onClick:function(){setModal(true);}},'Targets'))),
     msg&&el('div',{className:'msg',style:{marginTop:10}},msg),err&&el('div',{className:'msg err',style:{marginTop:10}},err),
     notSet&&el('div',{className:'msg err',style:{marginTop:10}},'Test + trim, Package and Ship need hendrix_step52.sql in the Hendrix Supabase project. Until then batches close at the cure and the default targets are used.'),
@@ -6183,9 +6181,6 @@ function CulBatchTracker(props){
 /* ---------- Release 59 screens: Capacity, Harvest batches, Import (takeover + METRC exports) ---------- */
 function culLics(st,lics){return (lics||[]).filter(function(l){return l.state_id===st.id&&l.active!==false&&licOp(l)==='cultivation';});}
 function culShort(l,n){if(!l)return '';const m=String(l.name||'').match(/(\d+)\s*$/);return m&&n>1?'Cul '+m[1]:l.name;}
-function CulScope(props){const cul=props.cul;if(cul.length<2)return null;
-  return el('div',{className:'btx-pills'},el('button',{className:props.scope==='all'?'on':'',onClick:function(){props.onPick('all');}},'All'),
-    cul.map(function(l){return el('button',{key:l.id,className:props.scope===l.id?'on':'',onClick:function(){props.onPick(l.id);}},culShort(l,cul.length));}));}
 function useCulData(st,scope,want,ver){
   const[d,setD]=useState(null);const[err,setErr]=useState('');
   const load=useCallback(function(){const enc=encodeURIComponent,F=scope==='all'?'state_id=eq.'+enc(st.id):'license_id=eq.'+enc(scope);
@@ -6211,9 +6206,8 @@ const HV_ORDER=['ship','package','trim','cure','dry','done','ff'];
 
 function CulCapacity(props){
   const st=props.state,lic=props.license,cul=culLics(st,props.licenses);
-  const[scope,setScope]=useState(function(){return lsGet('hx_cap_scope')==='all'&&cul.length>1?'all':lic.id;});
-  const[d,err]=useCulData(st,scope,{h:true},props.ver);const[flt,setFlt]=useState('attn');const[openB,setOpenB]=useState(null);
-  function pick(s){setScope(s);lsSet('hx_cap_scope',s==='all'?'all':'one');}
+  const scope=lic.id;
+  const[d,err]=useCulData(st,scope,{h:true},props.ver);const[flt,setFlt]=useState('attn');
   if(!d)return el('div',{className:'muted'},'Loading...');
   const today=todayStr(),A=d.A.filter(function(a){return a.active!==false;}),lid=function(x){return x.license_id;};
   const beds=A.filter(function(a){return culBed(a)&&!culVegArea(A,a.id);}),vegHouses=A.filter(function(a){return a.kind==='house'&&a.veg;});
@@ -6252,7 +6246,7 @@ function CulCapacity(props){
     el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-end',gap:12,flexWrap:'wrap'}},
       el('div',null,el('div',{className:'lmx-eyebrow'},'Houses · fill & refill'),el('h2',{className:'lmx-title'},'Capacity'),
         el('div',{className:'lmx-sub'},'How full each license and house is, whether every bed is on schedule for the perpetual cycle (harvest, clean and reset, refill), and when to start seeds so beds refill the day their reset ends.')),
-      el(CulScope,{cul:cul,scope:scope,onPick:pick})),
+      el('div',{className:'btx-chip',style:{fontSize:12,padding:'4px 12px'}},lic.name)),
     err&&el('div',{className:'msg err'},err),
     !beds.length?el('div',{className:'empty',style:{marginTop:14}},'No tables or bays yet. Load the layout under Import (Perryville takeover file), or add houses and tables under Grow areas.'):
     el('div',null,
@@ -6329,9 +6323,8 @@ function HarvestModal(props){
 
 function CulHarvests(props){
   const st=props.state,lic=props.license,cul=culLics(st,props.licenses);
-  const[scope,setScope]=useState(function(){return lsGet('hx_hv_scope')==='all'&&cul.length>1?'all':lic.id;});
+  const scope=lic.id;
   const[ver,setVer]=useState(0);const[d,err]=useCulData(st,scope,{h:true,p:true},(props.ver||0)+ver);const[view,setView]=useState('proc');const[openId,setOpenId]=useState(null);const[q,setQ]=useState('');const[lowOnly,setLowOnly]=useState(false);const[msg,setMsg]=useState('');
-  function pick(s){setScope(s);lsSet('hx_hv_scope',s==='all'?'all':'one');}
   const M=useMemo(function(){if(!d)return null;const pkBy={};d.P.forEach(function(p){(p.source_harvests||[]).forEach(function(n){const k=p.license_id+'|'+n;(pkBy[k]=pkBy[k]||[]).push(p);});});
     const rows=d.H.map(function(h){const pk=pkBy[h.license_id+'|'+h.name]||[];return {h:h,pk:pk,Y:hvYield(h,pk),stg:hvStage(h,pk)};});
     const avg={};Object.keys(rows.reduce(function(o,r){o[r.h.license_id]=1;return o;},{})).forEach(function(l){avg[l]=hvAvgs(rows.filter(function(r){return r.h.license_id===l&&r.stg!=='ff';}).map(function(r){return r.Y;}));});
@@ -6356,7 +6349,7 @@ function CulHarvests(props){
       el('div',null,el('div',{className:'lmx-eyebrow'},'Cultivation · tracked by METRC tag'),el('h2',{className:'lmx-title'},'Production & lifecycle'),
         el('div',{className:'lmx-sub'},'Every harvest batch followed tag by tag to its yield: harvested → dry → cure → test + trim → package → ship.')),
       el('div',{className:'row',style:{gap:8}},el('div',{className:'btx-pills'},el('button',{className:view==='proc'?'on':'',onClick:function(){setView('proc');}},'In process'),el('button',{className:view==='all'?'on':'',onClick:function(){setView('all');}},'All · by strain')),
-        el(CulScope,{cul:cul,scope:scope,onPick:pick}))),
+        el('div',{className:'btx-chip',style:{fontSize:12,padding:'4px 12px'}},lic.name))),
     err&&el('div',{className:'msg err'},err),msg&&el('div',{className:'msg'},msg),
     el('div',{className:'btx-cards',style:{gridTemplateColumns:'repeat(5,minmax(0,1fr))'}},steps.map(function(s){const xs=cnt(s);return el('div',{key:s,className:'btx-card',style:{'--kc':HV_STAGE_LBL[s][1]}},el('div',{className:'c'},HV_STAGE_LBL[s][0]),el('div',{className:'b'},xs.length),
       el('div',{className:'f'},xs.reduce(function(a,r){return a+(r.h.plants||0);},0).toLocaleString()+' plants · '+btG(xs.reduce(function(a,r){return a+r.Y.wet;},0))+' wet'));})),
@@ -6411,7 +6404,8 @@ function CulImport(props){
   const[B,setB]=useState(null);const[lm,setLm]=useState({});const[dates,setDates]=useState({});const[maps,setMaps]=useState(true);const[err,setErr]=useState('');const[busy,setBusy]=useState('');const[res,setRes]=useState(null);
   const[X,setX]=useState(null);const[xfull,setXfull]=useState(false);const[xres,setXres]=useState('');
   function pickTake(fl){setErr('');setRes(null);if(!fl)return;const r=new FileReader();r.onload=function(){try{const j=JSON.parse(String(r.result||''));if(!j||j.kind!=='hendrix-cultivation-takeover'||!j.licenses)throw new Error('This is not a Hendrix cultivation takeover file.');
-      const o={};Object.keys(j.licenses).forEach(function(k){const l=culLicFor(k,cul);o[k]=l?l.id:'';});setLm(o);setDates({});setB(j);}catch(e){setB(null);setErr(String(e.message||e));}};r.readAsText(fl);}
+      const o={},nn=function(x){return String(x||'').toUpperCase().replace(/[^A-Z0-9]/g,'');};Object.keys(j.licenses).forEach(function(k){const n=nn(j.licenses[k].license_number);
+        const l=(n&&cul.find(function(c){return nn(c.license_number)===n;}))||culLicFor(k,cul);o[k]=l?l.id:'';});setLm(o);setDates({});setB(j);}catch(e){setB(null);setErr(String(e.message||e));}};r.readAsText(fl);}
   const undated=B?Object.keys(B.licenses).reduce(function(a,k){B.licenses[k].plants.forEach(function(p,i){if(!p.planted)a.push({k:k,i:i,p:p});});return a;},[]):[];
   async function runTake(){setErr('');const miss=Object.keys(B.licenses).filter(function(k){return !lm[k];});if(miss.length){setErr('Choose the Hendrix license for '+miss.join(', ')+'.');return;}
     const used=Object.keys(lm).map(function(k){return lm[k];});if(used.some(function(v,i){return used.indexOf(v)!==i;})){setErr('Each license in the file needs its own Hendrix license.');return;}
@@ -6439,7 +6433,7 @@ function CulImport(props){
       el('input',{type:'file',accept:'.json,application/json',onChange:function(e){pickTake(e.target.files[0]);}}),
       B&&el('div',{style:{marginTop:10}},el('div',{className:'muted',style:{fontSize:12,marginBottom:6}},B.source),
         el('table',null,el('thead',null,el('tr',null,['In the file','Hendrix license','Areas','Harvest batches','Packages','Plants in the ground'].map(function(x,i){return el('th',{key:i},x);}))),
-          el('tbody',null,Object.keys(B.licenses).map(function(k){const L=B.licenses[k];return el('tr',{key:k},el('td',null,el('b',null,k)),
+          el('tbody',null,Object.keys(B.licenses).map(function(k){const L=B.licenses[k];return el('tr',{key:k},el('td',null,el('b',null,k),L.license_number&&el('div',{className:'muted',style:{fontSize:11}},L.license_number)),
             el('td',null,el('select',{value:lm[k]||'',onChange:function(e){const v=e.target.value;setLm(function(o){return {...o,[k]:v};});}},el('option',{value:''},cul.length?'- choose -':'No cultivation license in '+st.name),cul.map(function(l){return el('option',{key:l.id,value:l.id},l.name+(l.license_number?' ('+l.license_number+')':''));}))),
             el('td',null,L.areas.length),el('td',null,L.harvests.length+' ('+L.harvests.filter(function(h){return h.active;}).length+' active)'),el('td',null,L.packages.length),el('td',null,L.plants.reduce(function(a,p){return a+p.count;},0).toLocaleString()+' in '+L.plants.length+' batches'));}))),
         undated.length>0&&el('div',{className:'lmx-panel',style:{margin:'10px 0'}},el('div',{style:{fontSize:13,marginBottom:6}},el('b',null,undated.length+' beds have plants but no planting date in the file.'),' Enter the date each was planted (Airtable Planting Log or METRC), or leave it empty and load a fresh METRC Plants export below. Hendrix never makes up a date.'),
