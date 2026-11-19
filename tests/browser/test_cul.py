@@ -69,6 +69,7 @@ with sync_playwright() as pw:
     field(md, 'Lot (Receiving) *').select_option('lt-cl'); field(md, 'Grow media lot').select_option('lt-md'); field(md, 'METRC plant batch tag').fill('1A4-PB-01')
     field(md, 'Starts in area').select_option(label='Flower 1 · Indoor grow room'); md.get_by_role('button', name='Save').click(); pg.wait_for_selector('.msg >> text=Saved Gelato')
     check(pb()['source_lot_id'] == 'lt-cl' and pb()['media_lot_id'] == 'lt-md' and pb()['area_id'], 'plant batch traced to the clone lot and media lot')
+    pg.wait_for_selector('#bt-wall .btx-row >> text=Gelato', timeout=15000)
     check(pg.locator('#bt-wall .btx-row', has_text='Gelato').count() == 1, 'new plant batch on the Batch tracker (opens first)')
     pg.locator('.tabs button', has_text='Plant batches').click(); pg.wait_for_timeout(200)
     pg.locator('tr', has_text='PB-2026-001').get_by_role('button', name='Open').click(); md = pg.locator('.md')
