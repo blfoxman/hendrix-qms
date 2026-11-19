@@ -9406,14 +9406,18 @@ async function mcXlsxRows(file){await loadXlsx();const wb=window.XLSX.read(await
 function MetrcPage(props){
   const lic=props.license,lid=lic?lic.id:'',canE=can('metrc',2);
   const[snaps,setSnaps]=useState(null);const[sel,setSel]=useState('');const[res,setRes]=useState(null);const[err,setErr]=useState('');const[busy,setBusy]=useState('');const[f,setF]=useState('all');
+  const canInv=can('receiving',3);const[upInv,setUpInv]=useState(canInv);const[invMsg,setInvMsg]=useState('');
   const loadSnaps=useCallback(function(pick){if(!lid)return;db.get('hx_metrc_snapshots','license_id=eq.'+encodeURIComponent(lid)+'&select=*&order=created_at.desc&limit=30').then(function(r){r=r||[];setSnaps(r);const id=pick||(r[0]&&r[0].id)||'';setSel(id);}).catch(function(e){setErr(mcErr(e));setSnaps([]);});},[lid]);
   useEffect(function(){loadSnaps();},[loadSnaps]);
   useEffect(function(){if(!sel){setRes(null);return;}setRes(null);sb('rpc/hx_metrc_reconcile',{method:'POST',body:{p_snapshot:sel}}).then(setRes).catch(function(e){setErr(mcErr(e));});},[sel]);
   async function upload(file){setErr('');setBusy('Reading '+file.name+'...');
     try{const rows=/\.(xlsx|xls)$/i.test(file.name)?await mcXlsxRows(file):mcRows(imParseText(await file.text()));if(!rows.length)throw new Error('No METRC package tags found in '+file.name+'.');
       setBusy('Checking '+rows.length+' packages...');
-      const id=await sb('rpc/hx_metrc_save',{method:'POST',body:{p_lic:lid,p_source:'csv',p_file:file.name,p_rows:rows}});loadSnaps(id);}
-    catch(e){setErr(mcErr(e));}setBusy('');}
+      const id=await sb('rpc/hx_metrc_save',{method:'POST',body:{p_lic:lid,p_source:'csv',p_file:file.name,p_rows:rows}});loadSnaps(id);
+      setInvMsg('');if(upInv&&canInv){setBusy('Updating the Hendrix inventory from '+rows.length+' METRC packages...');
+        const r=await rpc('hx_metrc_inventory_sync',{p_lic:lid,p_rows:rows.map(function(x){return {tag:x.tag,qty:x.quantity,unit:x.unit,item:x.item,category:x.category,location:x.location,lab:x.lab_state,on_hold:x.on_hold,packaged:x.packaged_date};}),p_source:'METRC export '+file.name,p_complete:true});
+        setInvMsg('Inventory updated from '+file.name+': '+r.matched+' of '+r.tagged_lots+' tagged lots found in METRC · '+r.counted+' counts changed · '+r.zeroed+' set to 0 (no longer active in METRC) · '+r.moved+' locations · '+r.not_in_hendrix+' METRC packages not in Hendrix.'+((r.skipped||[]).length?' Skipped: '+r.skipped.map(function(s){return (s.lot?s.lot+': ':'')+s.why;}).join('; '):''));}}
+    catch(e){const m=String((e&&e.message)||e);setErr(/hx_metrc_inventory_sync/.test(m)&&/not find|schema cache/i.test(m)?'The inventory update needs hendrix_step60.sql in the Hendrix Supabase project.':mcErr(e));}setBusy('');}
   async function fromApi(){setErr('');setBusy('Reading the packages from METRC...');try{const j=await mcFetchApi(lic);loadSnaps(j.snapshot);}catch(e){setErr(String(e.message||e));}setBusy('');}
   const F=(res&&res.findings)||[],cnt=function(s){return F.filter(function(x){return x.severity===s;}).length;};
   const shown=f==='all'?F:F.filter(function(x){return f==='fix'?x.severity!=='info':x.severity==='info';});
@@ -9431,7 +9435,9 @@ function MetrcPage(props){
       el('div',{className:'row',style:{gap:10,alignItems:'center',flexWrap:'wrap'}},
         el('label',{className:'btn'},'Upload METRC export (CSV / Excel)',el('input',{type:'file',accept:'.csv,.txt,.xlsx,.xls',style:{display:'none'},'aria-label':'METRC export file',onChange:function(e){const x=e.target.files&&e.target.files[0];e.target.value='';if(x)upload(x);}})),
         el('button',{className:'btn ghost',disabled:!!busy,onClick:fromApi},'Read from METRC now'),
-        el('span',{className:'muted',style:{fontSize:12.5}},'METRC > Packages > Active > export to CSV. Reading from METRC directly needs the METRC keys (hendrix-metrc).'))),
+        el('span',{className:'muted',style:{fontSize:12.5}},'METRC > Packages > Active > export to Excel or CSV. Reading from METRC directly needs the METRC keys (hendrix-metrc).')),
+      canInv&&el('label',{className:'ck',style:{marginTop:8}},el('input',{type:'checkbox',checked:upInv,onChange:function(e){setUpInv(e.target.checked);}}),el('span',null,'Also update the Hendrix inventory (on hand and location by METRC tag; tagged lots no longer active in METRC go to 0)'))),
+    invMsg&&el('div',{className:'msg'},invMsg),
     snaps&&snaps.length>0&&el('div',{className:'row',style:{gap:10,alignItems:'center',margin:'4px 0 12px'}},el('span',{className:'muted',style:{fontSize:13}},'Check of'),
       el('select',{value:sel,'aria-label':'METRC check',onChange:function(e){setSel(e.target.value);}},snaps.map(function(s){return el('option',{key:s.id,value:s.id},fmtTs(s.created_at)+' · '+(s.source==='api'?'METRC API':s.file_name)+' · '+s.packages+' packages');}))),
     snaps&&!snaps.length&&!err&&el('div',{className:'empty'},'No METRC check yet. Upload the METRC export of active packages'+(canE?'':' (ask someone with Edit access)')+'.'),

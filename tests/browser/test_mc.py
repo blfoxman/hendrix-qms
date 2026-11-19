@@ -17,7 +17,7 @@ def jr(route, j, st=200): return route.fulfill(status=st, content_type='applicat
 _h = handle
 def handle(route, request):
     u = request.url; path = urllib.parse.urlparse(u).path
-    for fn in ('hx_metrc_save', 'hx_metrc_reconcile'):
+    for fn in ('hx_metrc_save', 'hx_metrc_reconcile', 'hx_metrc_inventory_sync'):
         if path.endswith('/rpc/' + fn):
             a = json.loads(request.post_data)
             if fn == 'hx_metrc_save': ST['saves'].append(a)
@@ -51,6 +51,7 @@ with sync_playwright() as pw:
     pg = ctx.new_page(); pg.on('pageerror', lambda e: errors.append('JS: ' + str(e))); pg.on('dialog', lambda d: d.accept())
     pg.goto(BASE); pg.wait_for_selector('.nav')
     pg.locator('.nav button', has_text='METRC Check').click(); pg.wait_for_selector('h1 >> text=METRC Check')
+    pg.locator('label.ck', has_text='Also update the Hendrix inventory').locator('input').uncheck()
     pg.locator('input[aria-label="METRC export file"]').set_input_files({'name': 'Packages.csv', 'mimeType': 'text/csv', 'buffer': CSV.encode()})
     pg.wait_for_selector('.mcrow')
     rows = ST['saves'][-1]['p_rows']; r1 = next(r for r in rows if r['tag'] == '1A40-MHOLD')
@@ -78,6 +79,11 @@ with sync_playwright() as pw:
     check(True, 'METRC keys missing: the reason is shown (CSV still works)')
     ST['api'] = 'none'; pg.get_by_role('button', name='Read from METRC now').click(); pg.wait_for_selector('text=deploy hendrix-metrc.ts')
     check(True, 'METRC function not deployed: clear message')
+    # the same export can also update the Hendrix inventory (step 60)
+    pg.locator('label.ck', has_text='Also update the Hendrix inventory').locator('input').check()
+    pg.locator('input[aria-label="METRC export file"]').set_input_files({'name': 'Packages.csv', 'mimeType': 'text/csv', 'buffer': CSV.encode()})
+    pg.wait_for_selector('.msg >> text=/Inventory updated from Packages.csv: \\d+ of \\d+ tagged lots found in METRC/', timeout=20000)
+    check(True, 'METRC export upload also updates the Hendrix inventory (step 60)')
     # a file that is not a METRC export
     pg.locator('input[aria-label="METRC export file"]').set_input_files({'name': 'other.csv', 'mimeType': 'text/csv', 'buffer': b'Name,Price\nA,1\n'})
     pg.wait_for_selector('text=No tag column found')
