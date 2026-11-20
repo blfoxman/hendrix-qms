@@ -29,7 +29,7 @@ seq = [0]
 
 def now():
     seq[0] += 1
-    return '2026-10-21T12:%02d:%02d.000Z' % (seq[0] // 60, seq[0] % 60)
+    return __import__('datetime').datetime.now(__import__('datetime').timezone.utc).strftime('%Y-%m-%d') + 'T12:%02d:%02d.000Z' % (seq[0] // 60, seq[0] % 60)  # today, so 'last 30 days' lists always include new rows
 
 def guard(tbl, row):
     lic = next((l for l in T['hx_licenses'] if l['id'] == row.get('license_id')), None)
