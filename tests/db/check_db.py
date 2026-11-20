@@ -502,5 +502,10 @@ e61(r'^V3 none sees\|0\|0$', 'no batch access sees no runs or items')
 e61(r'A reason is required to void an entry', 'voiding needs a reason')
 e61(r'^X1 voided\|t\|entered on the wrong license$', 'a run is voided with its reason')
 e61(r'This entry is void and cannot be changed', 'a void run cannot be changed')
+# ---- step 62: management / HR company
+r62 = subprocess.run(['psql', '-X', '-q', '-At', '-d', DB, '-f', os.path.join(HERE, 't62.sql')], capture_output=True, text=True)
+o62 = r62.stdout + r62.stderr
+chk(re.search(r'^H1 saved\|Black Fox Manufacturing LLC\|HMBF Management Inc\.$', o62, re.M) is not None, 'license keeps its owner (legal name) and its HR company')
+chk('hx_license_settings_hr_chk' in o62 and re.search(r'^H2 too long kept\|HMBF Management Inc\.$', o62, re.M) is not None, 'HR company limited to 120 characters')
 print('\nDB checks:', 'all passed' if not fails else '%d failed' % len(fails))
 sys.exit(1 if fails else 0)

@@ -35,6 +35,7 @@ def field(md, label):
     return md.locator('label.f, div.f', has=pgx.locator('span', has_text=re.compile('^' + re.escape(label)))).locator('input,select,textarea').first
 def row(pg, name): return pg.locator('tr', has=pg.locator('td', has_text=name)).first
 def cellcolors(pg, name): return row(pg, name).locator('.trcell').evaluate_all('els=>els.map(e=>getComputedStyle(e).backgroundColor)')
+T['hx_license_settings'] = [{'license_id': 'lic-mo', 'state_id': 'st-mo', 'legal_name': 'Black Fox Manufacturing LLC', 'hr_company': 'HMBF Management Inc.'}]
 with sync_playwright() as pw:
     b = pw.chromium.launch(**LAUNCH)
     ctx = b.new_context(viewport={'width': 1400, 'height': 950}, accept_downloads=True); ctx.route('**/*', handle)
@@ -86,9 +87,11 @@ with sync_playwright() as pw:
     with ctx.expect_page() as pi: pg.get_by_role('button', name='Print matrix').click()
     pp = pi.value; pp.wait_for_load_state(); html = pp.content(); pp.close()
     check('Training matrix' in html and 'Lee Worker' in html and 'EXPIRED' in html, 'printable matrix')
+    check('Employer: HMBF Management Inc.' in html, 'matrix shows the employer (management / HR company)')
     with pg.expect_download() as di: row(pg, 'Lee Worker').get_by_role('button', name='PDF').click()
     di.value.save_as(OUT + 'training_lee.pdf'); txt = subprocess.run(['pdftotext', OUT + 'training_lee.pdf', '-'], capture_output=True, text=True).stdout
     check('Employee Training Record' in txt and 'Lee Worker' in txt and 'EXPIRED' in txt and 'Cart Filling' in txt and 'signed 2026-10-01' in txt, 'employee training PDF with courses and SOP signatures')
+    check('Employer: HMBF Management Inc.' in txt, 'training record PDF shows the employer')
     # SOP signatures tab
     pg.locator('.tabs button', has_text='SOP signatures').click(); pg.wait_for_selector('td >> text=Lee Worker')
     check(row(pg, 'Lee Worker').locator('td', has_text='100%').count() == 1 and row(pg, 'Sam').locator('td', has_text='0%').count() == 1, 'SOP signature matrix (BF parity)')
