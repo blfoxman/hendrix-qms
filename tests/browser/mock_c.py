@@ -190,6 +190,9 @@ def handle0(route, request):
         if tbl in ('hx_log_lists', 'hx_facility_log'):
             g = guard(tbl, row)
             if g: return err(g)
+        if tbl == 'hx_mp_runs' and not row.get('number'):   # the database numbers runs PR-YYMMDD-NN
+            d = str(row.get('run_date') or now()[:10]).replace('-', '')[2:8]
+            row['number'] = 'PR-%s-%02d' % (d, 1 + sum(1 for x in rows if x.get('license_id') == row.get('license_id') and str(x.get('number', '')).startswith('PR-' + d)))
         rows.append(row); return ok([row], 201)
     if m == 'PATCH':
         for r in rows:

@@ -10,8 +10,8 @@ insert into hx_mp_items(id,state_id,license_id,name,unit,use_in) values ('t61-i1
 select 'I1 items', count(*) from hx_mp_items where license_id='lic-t61';
 insert into hx_mp_items(id,state_id,license_id,name) values ('t61-i3','st-mo','lic-t61',' hash ');
 select 'I2 dup name', 'x';
-insert into hx_mp_runs(id,state_id,license_id,run_date,materials,produced) values
- ('t61-r1','st-mo','lic-t61','2026-11-20','[{"tag":"1A4000000000000000006101","item":"Hash","weight":"500","unit":"g"}]','[{"rows":[{"tag":"1A4000000000000000006102","item":"Rosin","weight":"300","unit":"g"}],"waste":{"weight":"20","note":"press loss"}}]');
+insert into hx_mp_runs(id,state_id,license_id,run_date,materials,produced,status) values
+ ('t61-r1','st-mo','lic-t61','2026-11-20','[{"tag":"1A4000000000000000006101","item":"Hash","weight":"500","unit":"g"}]','[{"rows":[{"tag":"1A4000000000000000006102","item":"Rosin","weight":"300","unit":"g"}],"waste":{"weight":"20","note":"press loss"}}]','complete');
 insert into hx_mp_runs(id,state_id,license_id,run_date,materials,produced) values
  ('t61-r2','st-mo','lic-t61','2026-11-20','[{"tag":"","item":"Rosin","weight":"300"},{"tag":"","item":"Hash","weight":"10"}]','[{"rows":[{"item":"Rosin","weight":"250"}]},{"rows":[{"item":"Rosin 1g jar","weight":"240"}],"waste":{"weight":"","note":""}}]');
 select 'R1 numbers', string_agg(number, ',' order by number), count(*) from hx_mp_runs where license_id='lic-t61';
@@ -21,7 +21,7 @@ insert into hx_mp_runs(id,state_id,license_id,materials,produced) values ('t61-b
 insert into hx_mp_runs(id,state_id,license_id,materials,produced) values ('t61-bad3','st-mo','lic-t61','[{"item":"Hash","weight":"5"}]','[]');
 insert into hx_mp_runs(id,state_id,license_id,materials,produced) values ('t61-bad4','st-mo','lic-t61','[{"item":"","weight":"5"}]','[{"rows":[{"item":"Rosin","weight":"1"}]}]');
 select 'B1 rejected', count(*) from hx_mp_runs where id like 't61-bad%';
--- changing a run needs a reason; the number never changes
+-- changing a Complete run needs a reason; the number never changes
 update hx_mp_runs set note='no reason' where id='t61-r1';
 update hx_mp_runs set note='fixed typo', edit_reason='typo', number='HACK' where id='t61-r1';
 select 'E1 edit', note, number from hx_mp_runs where id='t61-r1';
