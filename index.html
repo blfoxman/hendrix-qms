@@ -10946,9 +10946,10 @@ function SopHistory(props){
     }));
 }
 
-async function exportSopPdfHx(s,licName,acks){
-  if(!window.jspdf){window.alert('The PDF library did not load.');return;}
-  const doc=pdfSafeDoc(new window.jspdf.jsPDF({unit:'pt',format:'letter'}));
+/* SOP PDF. opt.acks false = the SOP only (no acknowledgement section); true = with the signed acknowledgement records
+   (and who has not signed yet, when the roster is known). Several SOPs can go into one document (sopPdfInto per SOP). */
+function sopPdfInto(doc,s,licName,acks,opt,first){
+  opt=opt||{acks:true};if(!first)doc.addPage();
   const W=612,H=792,margin=48;let y=0;
   const INK=[10,10,10],GOLD=[190,150,40],TEXT=[15,15,15],SUB=[50,55,60],MUTED=[95,100,105],LIGHT=[248,245,236],BORDER=[210,205,190];
   const gen=sopGen(s);
@@ -10957,10 +10958,8 @@ async function exportSopPdfHx(s,licName,acks){
     doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(210,200,170);doc.text('Standard Operating Procedure \u00b7 Controlled Document',margin,50);
     doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(12);doc.text(s.sop_number||'SOP',W-margin,32,{align:'right'});
     doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(210,200,170);doc.text('Rev '+(s.version||'1.0')+' \u00b7 '+sopStatusLabel(s.status).toUpperCase(),W-margin,50,{align:'right'});y=100;}
-  function footer(n,tot){doc.setDrawColor(...BORDER);doc.setLineWidth(.5);doc.line(margin,H-46,W-margin,H-46);doc.setTextColor(...MUTED);doc.setFont('helvetica','normal');doc.setFontSize(8);
-    doc.text(licName+' \u2014 Printed copies are uncontrolled. The current version is kept in Hendrix QMS. Printed '+todayStr(),margin,H-30);doc.text('Page '+n+' of '+tot,W-margin,H-30,{align:'right'});}
   function brk(need){if(y+need>H-62){const tc=doc.getTextColor(),f=doc.getFont(),fs=doc.getFontSize();doc.addPage();header();doc.setTextColor(tc);doc.setFont(f.fontName,f.fontStyle);doc.setFontSize(fs);}}
-  function section(t){brk(42);y+=4;doc.setFillColor(...LIGHT);doc.rect(margin,y,W-margin*2,28,'F');doc.setFillColor(...GOLD);doc.rect(margin,y,4,28,'F');doc.setTextColor(...INK);doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text(t.toUpperCase(),margin+12,y+19);y+=36;}
+  function section(t){brk(42);y+=4;doc.setFillColor(...LIGHT);doc.rect(margin,y,W-margin*2,28,'F');doc.setFillColor(...GOLD);doc.rect(margin,y,4,28,'F');doc.setTextColor(...INK);doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text(t.toUpperCase(),margin+12,y+19);y+=44;}
   function body(t,o){o=o||{};if(!t||!String(t).trim())return;const sz=o.size||11,lh=sz*1.6,ind=o.indent||0;doc.setTextColor(...(o.color||TEXT));doc.setFont('helvetica',o.bold?'bold':'normal');doc.setFontSize(sz);
     const lines=doc.splitTextToSize(String(t),W-margin*2-ind-6);brk(lines.length*lh+10);lines.forEach(function(l){doc.text(l,margin+ind,y);y+=lh;});y+=o.after!==undefined?o.after:8;}
   function row(l,v){if(!v||!String(v).trim())return;brk(22);doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(...SUB);doc.text(l.toUpperCase(),margin,y);doc.setFont('helvetica','normal');doc.setFontSize(11);doc.setTextColor(...TEXT);
@@ -10997,16 +10996,68 @@ async function exportSopPdfHx(s,licName,acks){
   if(gen&&gen.deviation_procedure){section('Deviation Procedure');body(gen.deviation_procedure);}
   if(gen&&gen.training_requirements){section('Training Requirements');body(gen.training_requirements);}
   if(gen&&(gen.revision_history||[]).length){section('Revision History');const pp=sopPaperOn(s);gen.revision_history.forEach(function(r,i){body('Rev '+r.revision+' \u2014 '+(i===0&&pp&&String(r.date||'')>pp?pp+' (paper; in Hendrix '+r.date+')':r.date)+' \u2014 '+r.description+(r.approved_by?' (Approved: '+r.approved_by+')':''),{size:10,color:SUB,after:5});});}
-  if(acks&&acks.length){
-    section('Acknowledgement Records \u2014 Rev '+s.version);body('The following people have read, understood, and signed this revision:',{color:SUB});y+=6;
-    acks.forEach(function(a,i){brk(70);doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...TEXT);doc.text((i+1)+'. '+a.name,margin,y);doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...SUB);
-      doc.text((a.role_names||'')+(a.role_names?' \u00b7 ':'')+(a.paper_on?'S'+ackWhen(a,true).slice(1):ackWhen(a,true)),margin,y+14);y+=22;
-      if(a.signature){try{doc.addImage(a.signature,'PNG',margin,y,110,30);doc.setDrawColor(...BORDER);doc.line(margin,y+32,margin+120,y+32);y+=40;}catch(e){y+=4;}}
-      y+=8;});
-    doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(22,130,60);doc.text('Electronically signed in Hendrix QMS \u2014 signatures are permanent and every change is kept in the audit trail.',margin,y);y+=10;
-  }else{brk(70);section('Acknowledgement');body('I have read, understood, and agree to follow this Standard Operating Procedure in full.');y+=10;doc.setDrawColor(...BORDER);doc.line(margin,y,margin+210,y);doc.line(margin+270,y,margin+380,y);y+=12;doc.setFontSize(8);doc.setTextColor(...SUB);doc.text('Employee Signature',margin,y);doc.text('Date',margin+270,y);}
-  const n=doc.internal.getNumberOfPages();for(let i=1;i<=n;i++){doc.setPage(i);footer(i,n);}
-  doc.save(String(s.sop_number||s.title||'SOP').replace(/[^a-z0-9]/gi,'_')+'_v'+(s.version||'1.0')+'.pdf');
+  if(opt.acks){
+    if(acks&&acks.length){
+      section('Acknowledgement Records \u2014 Rev '+s.version);body('The following people have read, understood, and signed this revision:',{color:SUB});y+=6;
+      acks.forEach(function(a,i){brk(70);doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...TEXT);doc.text((i+1)+'. '+a.name,margin,y);doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...SUB);
+        doc.text((a.role_names||'')+(a.role_names?' \u00b7 ':'')+(a.paper_on?'S'+ackWhen(a,true).slice(1):ackWhen(a,true)),margin,y+14);y+=22;
+        if(a.signature){try{doc.addImage(a.signature,'PNG',margin,y,110,30);doc.setDrawColor(...BORDER);doc.line(margin,y+32,margin+120,y+32);y+=40;}catch(e){y+=4;}}
+        y+=8;});
+      doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(22,130,60);doc.text('Electronically signed in Hendrix QMS \u2014 signatures are permanent and every change is kept in the audit trail.',margin,y);y+=10;
+    }else{brk(70);section('Acknowledgement');body('I have read, understood, and agree to follow this Standard Operating Procedure in full.');y+=10;doc.setDrawColor(...BORDER);doc.line(margin,y,margin+210,y);doc.line(margin+270,y,margin+380,y);y+=12;doc.setFontSize(8);doc.setTextColor(...SUB);doc.text('Employee Signature',margin,y);doc.text('Date',margin+270,y);}
+    if(opt.pending&&opt.pending.length){section('Not signed yet \u2014 Rev '+s.version);body(opt.pending.length+' '+(opt.pending.length===1?'person has':'people have')+' not signed this revision yet: '+opt.pending.join(', ')+'.',{color:SUB});}
+  }
+}
+// footers: each SOP numbers its own pages; in a pack the pack page number is added
+function sopPdfFooters(doc,licName,ranges,pack){
+  const W=612,H=792,margin=48,BORDER=[210,205,190],MUTED=[95,100,105];
+  ranges.forEach(function(r){const tot=r.to-r.from+1;for(let p=r.from;p<=r.to;p++){doc.setPage(p);
+    doc.setDrawColor(...BORDER);doc.setLineWidth(.5);doc.line(margin,H-46,W-margin,H-46);doc.setTextColor(...MUTED);doc.setFont('helvetica','normal');doc.setFontSize(8);
+    const rt=(r.label||'Page '+(p-r.from+1)+' of '+tot)+(pack?' \u00b7 pack page '+p:''),rw=doc.getTextWidth(rt);
+    const lt=doc.splitTextToSize(licName+' \u2014 Printed copies are uncontrolled. The current version is kept in Hendrix QMS. Printed '+todayStr(),W-margin*2-rw-24);
+    lt.slice(0,2).forEach(function(l,i){doc.text(l,margin,H-30+(lt.length>1?i*10-5:0));});
+    doc.text(rt,W-margin,H-30,{align:'right'});}});
+}
+function sopPdfFile(s){return String(s.sop_number||s.title||'SOP').replace(/[^a-z0-9]/gi,'_')+'_v'+(s.version||'1.0');}
+async function exportSopPdfHx(s,licName,acks,opt){
+  if(!window.jspdf){window.alert('The PDF library did not load.');return;}
+  opt=opt||{acks:true};
+  const doc=pdfSafeDoc(new window.jspdf.jsPDF({unit:'pt',format:'letter'}));
+  sopPdfInto(doc,s,licName,acks,opt,true);
+  sopPdfFooters(doc,licName,[{from:1,to:doc.internal.getNumberOfPages()}],false);
+  doc.save(sopPdfFile(s)+(opt.acks?'_with_acknowledgements':'')+'.pdf');
+}
+// people who must sign this revision and have not (only known to editors, who load the roster)
+function sopPendingNames(s,roster,acks){const t=sopTargets(s,roster);if(!t||s.status!=='published')return null;const sg=sopAcksOf(s,acks);
+  return t.filter(function(u){return !sg.some(function(a){return a.user_id===u.id;});}).map(function(u){return u.name||u.email||'?';});}
+/* Several SOPs as one PDF: a contents page, then each SOP starting on a new page */
+async function exportSopsPackHx(list,lic,acks,withAcks,roster){
+  if(!window.jspdf){window.alert('The PDF library did not load.');return;}
+  const licName=lic.name+(lic.license_number?' ('+lic.license_number+')':'');
+  const doc=pdfSafeDoc(new window.jspdf.jsPDF({unit:'pt',format:'letter'}));
+  const W=612,margin=48,PER=26,cpages=Math.max(1,Math.ceil(list.length/PER));
+  for(let i=1;i<cpages;i++)doc.addPage();
+  const ranges=[{from:1,to:cpages,label:'Contents'}],starts=[];
+  list.forEach(function(s){const from=doc.internal.getNumberOfPages()+1;
+    sopPdfInto(doc,s,licName,withAcks?sopAcksOf(s,acks):[],{acks:withAcks,pending:withAcks?sopPendingNames(s,roster,acks):null},false);
+    const to=doc.internal.getNumberOfPages();ranges.push({from:from,to:to});starts.push(from);});
+  for(let c=0;c<cpages;c++){doc.setPage(c+1);
+    doc.setFillColor(10,10,10);doc.rect(0,0,W,78,'F');doc.setFillColor(190,150,40);doc.rect(0,76,W,3,'F');
+    doc.setTextColor(241,213,122);doc.setFont('helvetica','bold');doc.setFontSize(18);doc.text('HENDRIX QMS',margin,30);
+    doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(210,200,170);doc.text('Standard Operating Procedures · '+(withAcks?'with acknowledgement records':'without acknowledgements'),margin,50);
+    doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(12);doc.text(list.length+' SOP'+(list.length===1?'':'s'),W-margin,32,{align:'right'});
+    let y=108;doc.setTextColor(15,15,15);doc.setFontSize(16);doc.text('Contents'+(cpages>1?' ('+(c+1)+' of '+cpages+')':''),margin,y);y+=12;
+    doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(50,55,60);doc.text(licName+' · '+todayStr(),margin,y+8);y+=30;
+    doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(95,100,105);
+    doc.text('NUMBER',margin,y);doc.text('TITLE',margin+92,y);doc.text('REV',margin+380,y);doc.text('STATUS',margin+412,y);doc.text('PAGE',W-margin,y,{align:'right'});y+=6;
+    doc.setDrawColor(210,205,190);doc.setLineWidth(.5);doc.line(margin,y,W-margin,y);y+=16;
+    list.slice(c*PER,(c+1)*PER).forEach(function(s,k){const idx=c*PER+k;doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(15,15,15);
+      doc.text(String(s.sop_number||'-').slice(0,18),margin,y);
+      const t=doc.splitTextToSize(String(s.title||''),280)[0]+(doc.splitTextToSize(String(s.title||''),280).length>1?'...':'');doc.text(t,margin+92,y);
+      doc.text(String(s.version||''),margin+380,y);doc.text(sopStatusLabel(s.status),margin+412,y);
+      doc.text(String(starts[idx]),W-margin,y,{align:'right'});y+=21;});}
+  sopPdfFooters(doc,licName,ranges,true);
+  doc.save('SOPs_'+String(lic.license_number||lic.name||'license').replace(/[^a-z0-9]/gi,'_')+'_'+todayStr()+(withAcks?'_with_acknowledgements':'')+'.pdf');
 }
 function sopMasterHtml(lic,st,list,acks,roster){
   const e=esc3;
@@ -11080,10 +11131,10 @@ function SopsPage(props){
   function done(rec,text){setModal(null);if(rec&&rec.id)setSelId(rec.id);if(text)setMsg(text);load();}
   async function act(s,patch,text){setMsg('');try{await db.update('hx_sops',s.id,patch);setMsg(text);load();}catch(e){setMsg(sopErr(e));}}
   async function del(s){if(!window.confirm('Delete the draft "'+s.title+'"? Drafts can be deleted; published SOPs can only be archived.'))return;try{await db.remove('hx_sops',s.id);setSelId(null);load();}catch(e){setMsg(sopErr(e));}}
-  async function pdf(s){
+  async function pdf(s,withAcks){
     setMsg('');
-    try{let a=[];if(s.status!=='draft'){a=(await db.get('hx_sop_acks','sop_id=eq.'+encodeURIComponent(s.id)+'&version=eq.'+encodeURIComponent(s.version)+'&select=*&order=at'))||[];a=a.filter(function(x){return x.sop_id===s.id&&x.version===s.version;});}
-      await exportSopPdfHx(s,lic.name+(lic.license_number?' ('+lic.license_number+')':''),a);}catch(e){setMsg(sopErr(e));}
+    try{let a=[];if(withAcks&&s.status!=='draft'){a=(await db.get('hx_sop_acks','sop_id=eq.'+encodeURIComponent(s.id)+'&version=eq.'+encodeURIComponent(s.version)+'&select=*&order=at'))||[];a=a.filter(function(x){return x.sop_id===s.id&&x.version===s.version;});}
+      await exportSopPdfHx(s,lic.name+(lic.license_number?' ('+lic.license_number+')':''),a,{acks:!!withAcks,pending:withAcks?sopPendingNames(s,roster,acks):null});}catch(e){setMsg(sopErr(e));}
   }
   const tabs=['All'].concat(SOP_FOLDERS).concat(canF?['Archived']:[]);
   const stat=function(l,v,tone){return el('div',{key:l,className:'card gold',style:{marginBottom:0}},el('div',{className:'k'},l),el('div',{className:'v',style:{fontSize:26,color:tone||'var(--text)'}},v));};
@@ -11092,6 +11143,7 @@ function SopsPage(props){
       el('div',null,el('h1',null,el('span',{className:'g'},'SOPs')),el('div',{className:'sub'},'Standard Operating Procedures \u00b7 '+lic.name+'. Controlled documents: numbered, versioned, approved, signed. (CSQ 1.4, 2A.12.1)')),
       el('div',{className:'row'},
         el('input',{value:q,placeholder:'Search SOPs...',style:{width:200},onChange:function(e){setQ(e.target.value);}}),
+        el('button',{className:'btn ghost',onClick:function(){setModal({t:'download'});}},'\u2b07 Download SOPs'),
         el('button',{className:'btn ghost',onClick:function(){printRecords('SOP master list - '+lic.name,[sopMasterHtml(lic,st,visible.filter(function(s){return s.status!=='draft';}).concat(canE?visible.filter(function(s){return s.status==='draft';}):[]),acks,roster)]);}},'Master list'),
         canF&&el('button',{className:'btn ghost',onClick:function(){setModal({t:'paper'});}},'Paper records'),
         canE&&el('button',{className:'btn ghost',onClick:function(){setModal({t:'pack'});}},'Food safety SOP pack'),
@@ -11125,17 +11177,61 @@ function SopsPage(props){
             s.status==='published'&&pct!=null&&el('div',{style:{width:90,height:5,background:'#222',borderRadius:4,marginTop:3,overflow:'hidden'}},el('div',{style:{width:pct+'%',height:'100%',background:'var(--green)'}})),
             el('div',{style:{marginTop:4}},s.created_by))));}),
     sel&&!modal&&el(SopDetail,{sop:sel,state:st,license:lic,acks:acks,roster:roster,canE:canE,canF:canF,signed:mineSigned(sel),must:iMustSign(sel),onClose:function(){setSelId(null);},
-      onModal:setModal,onPdf:function(){pdf(sel);},onDelete:function(){del(sel);},
+      onModal:setModal,onPdf:function(w){pdf(sel,w);},onDelete:function(){del(sel);},
       onPublish:function(){act(sel,{status:'published'},'Published: '+sel.title+' v'+sel.version+' approved by you.');},
       onArchive:function(){if(window.confirm('Archive this SOP? It moves to Archived, visible only with Full access, and stays on file.'))act(sel,{status:'archived'},'Archived: '+sel.title);},
       onRestore:function(){act(sel,{status:'published'},'Restored: '+sel.title);}}),
     modal&&modal.t==='form'&&el(SopForm,{mode:modal.mode,sop:modal.mode==='new'?null:sel,state:st,license:lic,licenses:props.licenses,sops:all,roster:roster,onClose:function(){setModal(null);},onDone:function(r){done(r,modal.mode==='new'?'Created: '+(r?r.title:'SOP'):'Saved.');}}),
+    modal&&modal.t==='download'&&el(SopDownload,{license:lic,sops:visible.filter(function(s){return s.status!=='archived'&&(s.status!=='draft'||canE);}),folder:folder,acks:acks,roster:roster,onClose:function(){setModal(null);}}),
     modal&&modal.t==='paper'&&el(SopPaperRecords,{license:lic,sops:visible,roster:roster,onClose:function(){setModal(null);},onDone:function(m){done(null,m);}}),
     modal&&modal.t==='pack'&&el(SopPack,{state:st,license:lic,sops:all,onClose:function(){setModal(null);},onDone:function(k){done(null,'Added '+k+' food safety SOP'+(k===1?'':'s')+' as drafts. Review, adjust and publish each one.');}}),
     modal&&modal.t==='gen'&&el(SopGenerator,{state:st,license:lic,onClose:function(){setModal(null);},onDone:function(r){done(r,'Created: '+(r?r.title:'SOP')+' (draft)');}}),
     modal&&modal.t==='revise'&&sel&&el(SopRevise,{sop:sel,state:st,license:lic,onClose:function(){setModal(null);},onDone:function(r){done(r,'Revised: '+sel.title+' is now v'+(r?r.version:'')+'. Everyone must sign the new version.');}}),
     modal&&modal.t==='sign'&&sel&&el(SopSign,{sop:sel,license:lic,onClose:function(){setModal(null);},onDone:function(){done(null,'Signed: '+sel.title+' v'+sel.version);}}),
     modal&&modal.t==='history'&&sel&&el(SopHistory,{sop:sel,onClose:function(){setModal(null);}}));
+}
+/* Download several SOPs as one PDF, with or without the acknowledgement records */
+function SopDownload(props){
+  const lic=props.license,list=(props.sops||[]).slice().sort(function(a,b){return (a.folder+' '+(a.sop_number||'~')+' '+a.title).localeCompare(b.folder+' '+(b.sop_number||'~')+' '+b.title);});
+  const[pick,setPick]=useState(function(){const o={};list.forEach(function(s){if(s.status==='published'&&(props.folder==='All'||props.folder==='Archived'||s.folder===props.folder))o[s.id]=true;});return o;});
+  const[withA,setWithA]=useState(false);const[busy,setBusy]=useState('');const[err,setErr]=useState('');
+  const chosen=list.filter(function(s){return pick[s.id];});
+  const setAll=function(v){const o={};if(v)list.forEach(function(s){o[s.id]=true;});setPick(o);};
+  async function go(){
+    setErr('');if(!chosen.length){setErr('Tick at least one SOP.');return;}
+    setBusy('Preparing '+chosen.length+' SOP'+(chosen.length===1?'':'s')+'...');
+    try{
+      let a=[];
+      if(withA){const ids=chosen.filter(function(s){return s.status!=='draft';}).map(function(s){return s.id;});
+        for(let i=0;i<ids.length;i+=40){const part=ids.slice(i,i+40);
+          a=a.concat((await db.get('hx_sop_acks','sop_id=in.('+part.map(function(x){return encodeURIComponent(x);}).join(',')+')&select=*&order=at'))||[]);}}
+      await exportSopsPackHx(chosen,lic,a,withA,props.roster);
+      props.onClose();
+    }catch(e){setErr(sopErr(e));}
+    setBusy('');
+  }
+  const opt=function(v,t,d){return el('button',{type:'button',className:'btn'+(withA===v?'':' ghost'),style:{flex:'1 1 220px',textAlign:'left',padding:'10px 14px'},onClick:function(){setWithA(v);}},
+    el('div',{style:{fontWeight:700}},(withA===v?'\u2713 ':'')+t),el('div',{style:{fontSize:11,fontWeight:400,opacity:.85,marginTop:2}},d));};
+  let lastF='';
+  return el(Modal,{title:'Download SOPs \u00b7 '+lic.name,wide:true,onClose:props.onClose},
+    el('div',{className:'row',style:{gap:10,marginBottom:12}},
+      opt(false,'Without acknowledgements','The SOPs only - to read, train with or hand out.'),
+      opt(true,'With acknowledgements','Each SOP with everyone who signed its current revision'+(props.roster?' and who has not yet':'')+' - for inspections and audits.')),
+    el('div',{className:'row',style:{justifyContent:'space-between',marginBottom:6}},
+      el('span',{className:'muted',style:{fontSize:12}},chosen.length+' of '+list.length+' SOPs ticked \u00b7 one PDF with a contents page, each SOP on its own pages'),
+      el('span',null,el('button',{type:'button',className:'btn ghost sm',onClick:function(){setAll(true);}},'All'),' ',el('button',{type:'button',className:'btn ghost sm',onClick:function(){setAll(false);}},'None'))),
+    !list.length?el('div',{className:'empty'},'No SOPs to download yet.'):
+    el('div',{style:{maxHeight:'50vh',overflowY:'auto',border:'1px solid var(--line)',borderRadius:8,padding:'4px 10px'}},list.map(function(s){
+      const head=s.folder!==lastF;lastF=s.folder;const n=sopAcksOf(s,props.acks).length;
+      return el(React.Fragment,{key:s.id},head&&el('div',{className:'k',style:{marginTop:8}},s.folder),
+        el('label',{className:'row',style:{gap:10,padding:'5px 2px',flexWrap:'nowrap',cursor:'pointer',borderTop:'1px solid var(--line)'}},
+          el('input',{type:'checkbox',checked:!!pick[s.id],onChange:function(e){const v=e.target.checked;setPick(function(o){return {...o,[s.id]:v};});}}),
+          el('span',{style:{flex:1,minWidth:0}},s.sop_number&&el('b',null,s.sop_number+' '),s.title),
+          el('span',{className:'badge '+SOP_STATUS_TONE[s.status]},sopStatusLabel(s.status)+' v'+s.version),
+          s.status!=='draft'&&el('span',{className:'muted',style:{fontSize:11,width:62,textAlign:'right'}},n+' signed')));})),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end',marginTop:12}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),
+      el('button',{className:'btn',disabled:!!busy||!chosen.length,onClick:go},busy||('Download '+chosen.length+' SOP'+(chosen.length===1?'':'s')+' (PDF)'+(withA?' with acknowledgements':'')))));
 }
 function SopPaperRecords(props){
   const pub=(props.sops||[]).filter(function(s){return s.status==='published';}).sort(function(a,b){return String(a.sop_number||'').localeCompare(String(b.sop_number||''));});
@@ -11206,7 +11302,8 @@ function SopDetail(props){
     el('div',{className:'muted',style:{fontSize:11,margin:'8px 0'}},'Created by '+(s.created_by||'-')+' \u00b7 '+(s.created_at||'').slice(0,10)+(s.updated_by?' \u00b7 updated by '+s.updated_by+' '+(s.updated_at||'').slice(0,10):'')+(s.revision_note?' \u00b7 last revision: '+s.revision_note:'')),
     el('div',{className:'row',style:{justifyContent:'space-between'}},
       el('div',{className:'row',style:{gap:6}},
-        el('button',{className:'btn ghost sm',onClick:props.onPdf},'\ud83d\udcc4 Download PDF'),
+        el('button',{className:'btn ghost sm',title:'The SOP only, no acknowledgement section',onClick:function(){props.onPdf(false);}},'\ud83d\udcc4 Download PDF'),
+        s.status!=='draft'&&el('button',{className:'btn ghost sm',title:'The SOP with everyone who signed this revision (and who has not)',onClick:function(){props.onPdf(true);}},'\u270d Download PDF with acknowledgements'),
         el('button',{className:'btn ghost sm',onClick:function(){props.onModal({t:'history'});}},'Version history'),
         props.canE&&s.status==='draft'&&el('button',{className:'btn ghost sm',onClick:function(){props.onModal({t:'form',mode:'draft'});}},'Edit draft'),
         props.canF&&s.status!=='draft'&&el('button',{className:'btn ghost sm',onClick:function(){props.onModal({t:'form',mode:'settings'});}},'Settings'),

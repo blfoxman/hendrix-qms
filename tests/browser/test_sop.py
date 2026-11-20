@@ -129,6 +129,25 @@ with sync_playwright() as pw:
     with pg.expect_download() as di: pg.get_by_role('button', name='📄 Download PDF').click()
     di.value.save_as(OUT + 'sop.pdf'); txt = subprocess.run(['pdftotext', '-layout', OUT + 'sop.pdf', '-'], capture_output=True, text=True).stdout
     check('HENDRIX QMS' in txt and 'SOP-PRD-001' in txt and 'Rev 1.1' in txt and 'Approved By' in txt.replace('APPROVED BY', 'Approved By') and 'Sam' in txt and 'uncontrolled' in txt, 'controlled-document PDF with number, revision, approval, signer')
+    check('ACKNOWLEDGEMENT' not in txt.upper() and 'Employee Signature' not in txt and di.value.suggested_filename == 'SOP_PRD_001_v1.1.pdf', 'Download PDF: the SOP only, no acknowledgement section (%s)' % di.value.suggested_filename)
+    with pg.expect_download() as di: pg.get_by_role('button', name='\u270d Download PDF with acknowledgements').click()
+    di.value.save_as(OUT + 'sop_acks.pdf'); txt = subprocess.run(['pdftotext', '-layout', OUT + 'sop_acks.pdf', '-'], capture_output=True, text=True).stdout
+    check('ACKNOWLEDGEMENT RECORDS' in txt.upper() and '1. Sam' in txt and 'Lee Worker' in txt and 'NOT SIGNED YET' in txt.upper() and di.value.suggested_filename.endswith('_with_acknowledgements.pdf'),
+          'with acknowledgements: who signed (Sam) and who has not (Lee Worker)')
+    if pg.locator('.md').count(): pg.get_by_role('button', name='Close').click()
+    # several SOPs as one PDF
+    pg.get_by_role('button', name='\u2b07 Download SOPs').click(); md = pg.locator('.md')
+    n_pub = len([x for x in T['hx_sops'] if x['status'] == 'published' and x['license_id'] == 'lic-mo'])
+    check(md.get_by_role('button', name=re.compile(r'^Download %d SOPs? \(PDF\)$' % n_pub)).count() == 1, 'all published SOPs ticked by default (%d)' % n_pub)
+    with pg.expect_download() as di: md.get_by_role('button', name=re.compile(r'^Download \d+ SOPs? \(PDF\)$')).click()
+    di.value.save_as(OUT + 'sops_pack.pdf'); txt = subprocess.run(['pdftotext', '-layout', OUT + 'sops_pack.pdf', '-'], capture_output=True, text=True).stdout
+    check('Contents' in txt and 'without acknowledgements' in txt and 'SOP-PRD-001' in txt and 'ACKNOWLEDGEMENT' not in txt.upper().replace('WITHOUT ACKNOWLEDGEMENTS', '') and 'pack page 2' in txt, 'pack without acknowledgements: contents page, SOPs, no signatures')
+    pg.get_by_role('button', name='\u2b07 Download SOPs').click(); md = pg.locator('.md')
+    md.get_by_role('button', name=re.compile('^With acknowledgements')).click()
+    with pg.expect_download() as di: md.get_by_role('button', name=re.compile(r'with acknowledgements$')).click()
+    di.value.save_as(OUT + 'sops_pack_acks.pdf'); txt = subprocess.run(['pdftotext', '-layout', OUT + 'sops_pack_acks.pdf', '-'], capture_output=True, text=True).stdout
+    check('with acknowledgement records' in txt and 'ACKNOWLEDGEMENT RECORDS' in txt.upper() and '1. Sam' in txt and di.value.suggested_filename.endswith('_with_acknowledgements.pdf'), 'pack with acknowledgements: signature records included')
+    open_sop(pg, 'Cart Filling')
     if pg.locator('.md').count(): pg.get_by_role('button', name='Close').click()
     # master list
     with ctx.expect_page() as pi: pg.get_by_role('button', name='Master list').click()
