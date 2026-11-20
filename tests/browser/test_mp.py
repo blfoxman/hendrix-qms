@@ -47,7 +47,7 @@ with sync_playwright() as pw:
     sel = md.locator('select'); n = sel.count()
     sel.nth(n - 1).select_option('Rosin'); md.locator('input[type=number]').nth(md.locator('input[type=number]').count() - 2).fill('280')
     check(md.get_by_role('button', name='+ Another required additional process').count() == 1, 'another additional process can follow')
-    pg.screenshot(path='/home/claude/cx/mp_form.png')
+    pg.screenshot(path=OUT + 'mp_form.png')
     md.get_by_role('button', name='Save run').click(); pg.wait_for_selector('.msg >> text=Run saved.')
     r = T['hx_mp_runs'][-1]
     check(len(r['materials']) == 2 and r['materials'][0]['tag'] == '1A400000000000000006101' and r['materials'][0]['item'] == 'Hash' and r['materials'][0]['weight'] == '500', 'material rows saved (tag cleaned)')

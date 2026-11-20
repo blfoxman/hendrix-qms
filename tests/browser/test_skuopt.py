@@ -38,7 +38,7 @@ with sync_playwright() as pw:
     pg.wait_for_selector('.md label.ck:has-text("Live Rosin")')
     check(md.locator('label.ck', has_text='Live Rosin').locator('input').is_checked(), 'new ingredient added and ticked')
     md.locator('label.ck', has_text=re.compile('^THCA$')).locator('input').check()
-    field(md, 'SKU name').fill('Rosin Moon 1g'); field(md, 'Grams per joint, filled').fill('1'); field(md, 'Grams per joint after coating').fill('1.1'); pg.screenshot(path='/home/claude/cx/sku_form.png'); field(md, 'Grams per joint after coating').fill('')
+    field(md, 'SKU name').fill('Rosin Moon 1g'); field(md, 'Grams per joint, filled').fill('1'); field(md, 'Grams per joint after coating').fill('1.1'); pg.screenshot(path=OUT + 'sku_form.png'); field(md, 'Grams per joint after coating').fill('')
     md.get_by_role('button', name='Next: formulation').click()
     check(md.locator('.msg.err', has_text='Enter grams per joint after coating').count() == 1, 'coated needs grams after coating')
     field(md, 'Grams per joint after coating').fill('1.1'); md.get_by_role('button', name='Next: formulation').click()
