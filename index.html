@@ -2208,11 +2208,17 @@ const PRODUCT_TYPES=[
   {id:'infused_flower',name:'Infused Flower'},{id:'moon_rocks',name:'Moon Rocks'},{id:'snow_caps',name:'Snow Caps'}];
 function ptName(id){const t=PRODUCT_TYPES.find(function(x){return x.id===id;});return t?t.name:id;}
 const PRE_ROLL_INGREDIENTS=['Flower','THCA','Terpene','Live Resin','HTE','Decarbed Cured Resin','Distillate','Trim','THCA (internal)'];
+const PR_COATINGS=['Kief','Diamond'];   // built-in coatings; each state adds its own in hx_sku_options (step 61)
+const SKU_OPT_KINDS={infusion:{label:'Infused with',noun:'ingredient',builtin:PRE_ROLL_INGREDIENTS},coating:{label:'Coated with',noun:'coating',builtin:PR_COATINGS}};
 const SKU_SPECS={
-  pre_rolls:[{k:'grams_filled',l:'Grams per joint, filled / infused',ph:'e.g. 0.55',num:1},{k:'grams_kiefed',l:'Grams per joint after coating (blank = no coating step)',ph:'e.g. 0.60',num:1},
-    {k:'coating',l:'Coating step',t:'select',o:['Kief','Diamond']},{k:'flower_type',l:'Flower used',t:'select',o:['Infused','Ground']},
+  pre_rolls:[{k:'grams_filled',l:'Grams per joint, filled / infused',ph:'e.g. 0.55',num:1},
+    {k:'flower_type',l:'Infused?',t:'select',o:['Infused','Ground'],ol:{Infused:'Infused',Ground:'Not infused'}},
+    {k:'coated',l:'Coated?',t:'select',o:['No','Yes'],def:function(sp){return numOk(sp.grams_kiefed)?'Yes':'No';}},
+    {k:'coating',l:'Coated with',t:'select',list:'coating',o:PR_COATINGS,show:function(sp){return specV('pre_rolls','coated',sp)==='Yes';}},
+    {k:'grams_kiefed',l:'Grams per joint after coating',ph:'e.g. 0.60',num:1,req:1,show:function(sp){return specV('pre_rolls','coated',sp)==='Yes';}},
     {k:'package_name',l:'Package name',ph:'e.g. Jar or Mylar'},
-    {k:'units_per_package',l:'Joints per package (blank = no packaging check)',ph:'e.g. 1',num:1},{k:'ingredients',l:'Infusion ingredients used',t:'multi',o:PRE_ROLL_INGREDIENTS}],
+    {k:'units_per_package',l:'Joints per package (blank = no packaging check)',ph:'e.g. 1',num:1},
+    {k:'ingredients',l:'Infused with',t:'multi',list:'infusion',o:PRE_ROLL_INGREDIENTS,show:function(sp){return specV('pre_rolls','flower_type',sp)!=='Ground';}}],
   butane_extraction:[{k:'dual',l:'Makes two products (THCA + HTE)',t:'select',o:['No','Yes']}],
   cartridges:[{k:'oil_per_unit',l:'Oil per cartridge (g)',ph:'e.g. 1 or 2',num:1}],
   gummies:[{k:'grams_per_gummy',l:'Grams per gummy',ph:'e.g. 4.6',num:1},{k:'units_per_package',l:'Gummies per package',ph:'e.g. 10',num:1}],
@@ -2235,14 +2241,101 @@ function niceErr(e){
   if(/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)&&/schema cache|does not exist/.test(m))return 'Database tables are missing - run hendrix_step5.sql in the Hendrix Supabase project.';
   return m;
 }
+function specDef(t,k){return (SKU_SPECS[t]||[]).find(function(x){return x.k===k;});}
+// the value a setting has (or shows): saved value, else its default, else a drop-down's first choice
+function specV(t,k,spec){const sp=specDef(t,k),v=(spec||{})[k];if(v!==undefined&&v!==null&&v!=='')return v;if(!sp)return v;if(sp.def)return sp.def(spec||{});return sp.t==='select'?sp.o[0]:v;}
+function specShown(sp,spec){return !sp.show||sp.show(spec||{});}
+// the spec saved for a SKU: only settings that show (not infused = no "infused with", not coated = no coating), drop-downs saved with their shown value
+function specClean(t,raw){
+  raw=raw||{};const spec={};let bad='';
+  (SKU_SPECS[t]||[]).forEach(function(sp){
+    if(!specShown(sp,raw))return;
+    const v=sp.t==='select'?specV(t,sp.k,raw):raw[sp.k];
+    if(sp.t==='multi'){if(v&&v.length)spec[sp.k]=v.slice();return;}
+    if(v===undefined||v===null||String(v).trim()===''){if(sp.req&&!bad)bad='Enter '+sp.l.toLowerCase()+'.';return;}
+    if(sp.num&&!numOk(v)){if(!bad)bad=sp.l+' must be a number.';return;}
+    spec[sp.k]=sp.num?num(v):String(v).trim();});
+  if(raw.no_flavor)spec.no_flavor=true;
+  return {spec:spec,err:bad};
+}
 function specInput(sp,v,set){
-  if(sp.t==='select')return el('select',{style:{width:'100%'},value:v||sp.o[0],onChange:function(e){set(e.target.value);}},sp.o.map(function(o){return el('option',{key:o,value:o},o);}));
+  if(sp.t==='select')return el('select',{style:{width:'100%'},value:v||sp.o[0],onChange:function(e){set(e.target.value);}},sp.o.map(function(o){return el('option',{key:o,value:o},(sp.ol&&sp.ol[o])||o);}));
   return el('input',{inputMode:sp.num?'decimal':undefined,placeholder:sp.ph,value:v==null?'':v,onChange:function(e){set(e.target.value);}});
+}
+// choices for a list setting: built-in + this state's own (switched on) + anything the SKU already has
+function specOpts(sp,opts,cur){
+  const out=[],seen={};const add=function(n){n=String(n||'').trim();const k=n.toLowerCase();if(!n||seen[k])return;seen[k]=1;out.push(n);};
+  sp.o.forEach(add);(opts||[]).filter(function(o){return o.kind===sp.list&&o.active!==false;}).forEach(function(o){add(o.name);});
+  (Array.isArray(cur)?cur:cur?[cur]:[]).forEach(add);return out;
+}
+function skuOptErr(e){const m=String((e&&e.message)||e);
+  if(/hx_sku_options_name/.test(m))return 'That is already on the list.';
+  if(/hx_sku_options/.test(m)&&/schema cache|does not exist/.test(m))return 'Run hendrix_step61.sql in the Hendrix Supabase project to add your own choices.';
+  return niceErr(e);}
+/* Production settings on New SKU / Edit SKU. List settings (Infused with, Coated with) take new choices right here. */
+function SpecFields(props){
+  const t=props.type,spec=props.spec||{},set=function(k,v){props.setSpec({...spec,[k]:v});};
+  const[adding,setAdding]=useState('');const[nv,setNv]=useState('');const[aerr,setAerr]=useState('');const[busy,setBusy]=useState(false);
+  const specs=(SKU_SPECS[t]||[]).filter(function(sp){return specShown(sp,spec);});
+  if(!specs.length)return null;
+  async function addOpt(sp){
+    const n=nv.trim();setAerr('');if(!n)return;
+    const have=specOpts(sp,props.opts,null).find(function(x){return x.toLowerCase()===n.toLowerCase();});
+    setBusy(true);
+    try{
+      if(!have)await props.onAdd(sp.list,n);
+      const name=have||n;
+      if(sp.t==='multi'){const cur=spec[sp.k]||[];if(cur.indexOf(name)<0)set(sp.k,cur.concat([name]));}else set(sp.k,name);
+      setNv('');setAdding('');
+    }catch(e){setAerr(skuOptErr(e));}
+    setBusy(false);
+  }
+  function adder(sp){
+    const kd=SKU_OPT_KINDS[sp.list];
+    if(adding!==sp.k)return props.canAdd&&sp.t==='multi'?el('button',{type:'button',className:'btn ghost sm',style:{marginTop:8},onClick:function(){setAdding(sp.k);setNv('');setAerr('');}},'+ Add a new '+kd.noun):null;
+    return el('div',{style:{marginTop:8}},el('div',{className:'row',style:{gap:6}},
+      el('input',{autoFocus:true,value:nv,maxLength:60,placeholder:'New '+kd.noun+', e.g. '+(sp.list==='coating'?'Moon Dust':'Live Rosin'),style:{flex:'1 1 160px'},onChange:function(e){setNv(e.target.value);},
+        onKeyDown:function(e){if(e.key==='Enter'){e.preventDefault();addOpt(sp);}}}),
+      el('button',{type:'button',className:'btn sm',disabled:busy||!nv.trim(),onClick:function(){addOpt(sp);}},busy?'Adding...':'Add'),
+      el('button',{type:'button',className:'btn ghost sm',onClick:function(){setAdding('');setAerr('');}},'Cancel')),
+      aerr&&el('div',{className:'msg err',style:{marginTop:6}},aerr));
+  }
+  return el('div',null,
+    el('div',{className:'secth'},'Production settings'),
+    el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}},specs.map(function(sp){
+      if(sp.t==='multi'){const o=specOpts(sp,props.opts,spec[sp.k]);
+        return el('div',{key:sp.k,style:{gridColumn:'1/-1'}},el(Field,{label:sp.l,plain:true},el(Checks,{options:o.map(function(x){return {v:x,l:x};}),value:spec[sp.k]||[],onChange:function(v){set(sp.k,v);}}),adder(sp)));}
+      if(sp.list){const o=specOpts(sp,props.opts,spec[sp.k]),cur=specV(t,sp.k,spec);
+        return el(Field,{key:sp.k,label:sp.l},el('select',{style:{width:'100%'},value:cur,onChange:function(e){if(e.target.value==='__new'){setAdding(sp.k);setNv('');setAerr('');return;}set(sp.k,e.target.value);}},
+          o.map(function(x){return el('option',{key:x,value:x},x);}),props.canAdd&&el('option',{value:'__new'},'+ Add a new '+SKU_OPT_KINDS[sp.list].noun+'...')),adding===sp.k&&adder(sp));}
+      return el(Field,{key:sp.k,label:sp.l},specInput(sp,sp.t==='select'?specV(t,sp.k,spec):spec[sp.k],function(v){set(sp.k,v);}));})));
+}
+/* Products > Pre-Rolls: this state's own "Infused with" and "Coated with" choices */
+function SkuOptionsModal(props){
+  const st=props.state,opts=props.opts||[];
+  const[nv,setNv]=useState({infusion:'',coating:''});const[err,setErr]=useState('');const[busy,setBusy]=useState(false);
+  async function run(fn){setErr('');setBusy(true);try{await fn();await props.reload();}catch(e){setErr(skuOptErr(e));}setBusy(false);}
+  return el(Modal,{title:'Infused with / Coated with - '+st.name,onClose:props.onClose},
+    el('div',{className:'muted',style:{fontSize:12,marginBottom:10}},'These fill the Pre-Roll SKU settings for every license in '+st.name+'. A switched-off choice stays on SKUs that already use it. A new infusion ingredient gets its own METRC # and amount on the Pre-Roll batch form.'),
+    Object.keys(SKU_OPT_KINDS).map(function(kind){const kd=SKU_OPT_KINDS[kind],mine=opts.filter(function(o){return o.kind===kind;});
+      return el('div',{key:kind,style:{marginBottom:16}},el('div',{className:'secth'},kd.label),
+        el('div',{className:'muted',style:{fontSize:12,marginBottom:6}},'Built in: '+kd.builtin.join(', ')),
+        !mine.length?el('div',{className:'muted',style:{fontSize:12,marginBottom:6}},'None added yet.'):
+        el('table',null,el('tbody',null,mine.map(function(o){return el('tr',{key:o.id,style:o.active===false?{opacity:.55}:null},
+          el('td',null,o.name+(o.active===false?' (off)':'')),
+          el('td',{style:{textAlign:'right',whiteSpace:'nowrap'}},props.canEdit&&el('button',{className:'btn ghost sm',disabled:busy,onClick:function(){const n=window.prompt('Rename "'+o.name+'" (SKUs that already use the old name keep it):',o.name);if(n&&n.trim()&&n.trim()!==o.name)run(function(){return db.update('hx_sku_options',o.id,{name:n.trim()});});}},'Rename'),' ',
+            props.canEdit&&el('button',{className:'btn ghost sm',disabled:busy,onClick:function(){run(function(){return db.update('hx_sku_options',o.id,{active:o.active===false});});}},o.active===false?'Switch on':'Switch off')));}))),
+        props.canEdit&&el('div',{className:'row',style:{gap:6,marginTop:6}},el('input',{value:nv[kind],maxLength:60,placeholder:'Add a '+kd.noun+'...',style:{flex:'1 1 200px'},onChange:function(e){const v=e.target.value;setNv(function(x){return {...x,[kind]:v};});}}),
+          el('button',{className:'btn sm',disabled:busy||!nv[kind].trim(),onClick:function(){const n=nv[kind].trim();
+            if(kd.builtin.some(function(b){return b.toLowerCase()===n.toLowerCase();})){setErr('"'+n+'" is already built in.');return;}
+            run(async function(){await props.onAdd(kind,n);setNv(function(x){return {...x,[kind]:''};});});}},'Add '+kd.noun)));}),
+    err&&el('div',{className:'msg err'},err),
+    el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn',onClick:props.onClose},'Done')));
 }
 function specSummary(t,spec){
   spec=spec||{};
-  return (SKU_SPECS[t]||[]).filter(function(s){const v=spec[s.k];return v!==undefined&&v!==''&&!(Array.isArray(v)&&!v.length);})
-    .map(function(s){const v=spec[s.k];return s.l.replace(/ \(.*\)$/,'')+': '+(Array.isArray(v)?v.join(', '):v);}).join('  \u00b7  ');
+  return (SKU_SPECS[t]||[]).filter(function(s){if(!specShown(s,spec))return false;const v=s.t==='select'?specV(t,s.k,spec):spec[s.k];return v!==undefined&&v!==''&&!(Array.isArray(v)&&!v.length);})
+    .map(function(s){const v=s.t==='select'?specV(t,s.k,spec):spec[s.k];return s.l.replace(/ \(.*\)$/,'')+': '+(Array.isArray(v)?v.join(', '):((s.ol&&s.ol[v])||v));}).join('  \u00b7  ');
 }
 function Checks(props){
   const val=props.value||[];
@@ -2318,7 +2411,7 @@ function SkuWizard(props){
     if(!s.name.trim()){setErr('Enter the SKU name.');return;}
     const dup=props.skus.find(function(k){return k.product_type===s.product_type&&k.name.trim().toLowerCase()===s.name.trim().toLowerCase();});
     if(dup&&dup.id!==done.current.sku){setErr('A SKU with that name already exists for this product type in '+st.name+'.');return;}
-    for(const sp of (SKU_SPECS[s.product_type]||[])){const v=s.spec[sp.k];if(sp.num&&v!==undefined&&String(v).trim()!==''&&!numOk(v)){setErr(sp.l+' must be a number.');return;}}
+    const sc=specClean(s.product_type,s.spec);if(sc.err){setErr(sc.err);return;}
     setStep(2);
   }
   async function save(){
@@ -2326,7 +2419,7 @@ function SkuWizard(props){
     const p=formulaProblem(f);if(p){setErr(p);return;}
     setBusy(true);
     try{
-      const spec={};(SKU_SPECS[s.product_type]||[]).forEach(function(sp){const v=s.spec[sp.k];if(sp.t==='multi'){if(v&&v.length)spec[sp.k]=v;}else if(v!==undefined&&String(v).trim()!=='')spec[sp.k]=sp.num?num(v):String(v).trim();});
+      const spec=specClean(s.product_type,s.spec).spec;
       if(!s.has_flavors)spec.no_flavor=true;
       if(!done.current.sku){
         const id=newId('sku');
@@ -2349,7 +2442,6 @@ function SkuWizard(props){
     }catch(e){setErr(niceErr(e)+(done.current.sku?' (The SKU was saved but is not switched on yet. Fix this and press Save again.)':''));}
     setBusy(false);
   }
-  const specs=SKU_SPECS[s.product_type]||[];
   return el(Modal,{title:'New SKU - '+st.name+' (step '+step+' of 2)',wide:true,onClose:props.onClose},
     step===1?el('div',null,
       el('div',{className:'grid',style:{gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:10}},
@@ -2359,10 +2451,7 @@ function SkuWizard(props){
       el(Field,{label:'Made under',plain:true},
         el('label',{className:'ck'},el('input',{type:'checkbox',checked:!s.license_ids.length,onChange:function(e){setS({...s,license_ids:e.target.checked?[]:props.licenses.map(function(l){return l.id;}).slice(0,1)});}}),el('span',null,'Every license in '+st.name)),
         s.license_ids.length>0&&el(Checks,{options:props.licenses.map(function(l){return {v:l.id,l:l.name+(l.license_number?' ('+l.license_number+')':'')};}),value:s.license_ids,onChange:function(v){setS({...s,license_ids:v.length?v:props.licenses.map(function(l){return l.id;}).slice(0,1)});}})),
-      specs.length>0&&el('div',{className:'secth'},'Production settings'),
-      specs.length>0&&el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}},specs.map(function(sp){
-        return sp.t==='multi'?el('div',{key:sp.k,style:{gridColumn:'1/-1'}},el(Field,{label:sp.l,plain:true},el(Checks,{options:sp.o.map(function(o){return {v:o,l:o};}),value:s.spec[sp.k]||[],onChange:function(v){setS({...s,spec:{...s.spec,[sp.k]:v}});}})))
-          :el(Field,{key:sp.k,label:sp.l},specInput(sp,s.spec[sp.k],function(v){setS({...s,spec:{...s.spec,[sp.k]:v}});}));})),
+      el(SpecFields,{type:s.product_type,spec:s.spec,setSpec:function(v){setS(function(x){return {...x,spec:v};});},opts:props.opts,canAdd:!!props.onAddOpt,onAdd:props.onAddOpt}),
       el('div',{className:'secth'},'Flavors'),
       el('label',{className:'ck',style:{marginBottom:8}},el('input',{type:'checkbox',checked:s.has_flavors,onChange:function(e){setS({...s,has_flavors:e.target.checked});}}),el('span',null,'This SKU has flavors')),
       s.has_flavors&&el(Field,{label:'Flavors - one per line (you can add more later)'},el('textarea',{value:s.flavors,style:{minHeight:120},placeholder:'Honey Melon\nBlue Dream\nStrawberry Lava',onChange:function(e){setS({...s,flavors:e.target.value});}})),
@@ -2383,13 +2472,11 @@ function SkuEditor(props){
   const k=props.sku;
   const[s,setS]=useState({name:k.name,license_ids:k.license_ids||[],spec:{...(k.spec||{})}});
   const[err,setErr]=useState('');
-  const specs=SKU_SPECS[k.product_type]||[];
   async function save(){
     setErr('');
     if(!s.name.trim()){setErr('Enter the SKU name.');return;}
-    const spec={};
-    specs.forEach(function(sp){const v=s.spec[sp.k];if(sp.t==='multi'){if(v&&v.length)spec[sp.k]=v;}else if(v!==undefined&&String(v).trim()!==''){if(sp.num&&!numOk(v))throw 0;spec[sp.k]=sp.num?num(v):String(v).trim();}});
-    if(s.spec.no_flavor)spec.no_flavor=true;
+    const sc=specClean(k.product_type,s.spec);if(sc.err){setErr(sc.err);return;}
+    const spec=sc.spec;
     try{await db.update('hx_skus',k.id,{name:s.name.trim(),license_ids:s.license_ids,spec:spec});props.onDone();}catch(e){setErr(niceErr(e));}
   }
   return el(Modal,{title:'Edit SKU',wide:true,onClose:props.onClose},
@@ -2398,14 +2485,11 @@ function SkuEditor(props){
     el(Field,{label:'Made under',plain:true},
       el('label',{className:'ck'},el('input',{type:'checkbox',checked:!s.license_ids.length,onChange:function(e){setS({...s,license_ids:e.target.checked?[]:props.licenses.map(function(l){return l.id;}).slice(0,1)});}}),el('span',null,'Every license in '+props.state.name)),
       s.license_ids.length>0&&el(Checks,{options:props.licenses.map(function(l){return {v:l.id,l:l.name+(l.license_number?' ('+l.license_number+')':'')};}),value:s.license_ids,onChange:function(v){setS({...s,license_ids:v.length?v:props.licenses.map(function(l){return l.id;}).slice(0,1)});}})),
-    specs.length>0&&el('div',{className:'secth'},'Production settings'),
-    specs.length>0&&el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}},specs.map(function(sp){
-      return sp.t==='multi'?el('div',{key:sp.k,style:{gridColumn:'1/-1'}},el(Field,{label:sp.l,plain:true},el(Checks,{options:sp.o.map(function(o){return {v:o,l:o};}),value:s.spec[sp.k]||[],onChange:function(v){setS({...s,spec:{...s.spec,[sp.k]:v}});}})))
-        :el(Field,{key:sp.k,label:sp.l},specInput(sp,s.spec[sp.k],function(v){setS({...s,spec:{...s.spec,[sp.k]:v}});}));})),
+    el(SpecFields,{type:k.product_type,spec:s.spec,setSpec:function(v){setS(function(x){return {...x,spec:v};});},opts:props.opts,canAdd:!!props.onAddOpt,onAdd:props.onAddOpt}),
     el('label',{className:'ck',style:{margin:'10px 0'}},el('input',{type:'checkbox',checked:!s.spec.no_flavor,onChange:function(e){setS({...s,spec:{...s.spec,no_flavor:!e.target.checked}});}}),el('span',null,'This SKU has flavors')),
     err&&el('div',{className:'msg err'},err),
     el('div',{className:'row',style:{justifyContent:'flex-end'}},el('button',{className:'btn ghost',onClick:props.onClose},'Cancel'),
-      el('button',{className:'btn',onClick:function(){save().catch(function(){setErr('Production settings must be numbers.');});}},'Save')));
+      el('button',{className:'btn',onClick:function(){save().catch(function(e){setErr(niceErr(e));});}},'Save')));
 }
 
 /* One formulation: pick product type -> SKU -> flavor (or base), then the recipe */
@@ -2559,7 +2643,8 @@ function Products(props){
       const r=await Promise.all([db.get('hx_skus',f+'&select=*&order=sort,name'),db.get('hx_flavors',f+'&select=*&order=sort,name'),
         F1?db.get('hx_formulations',f+'&select=*&order=name'):Promise.resolve([]),C1?db.get('hx_cost_library',f+'&select=*&order=category,name'):Promise.resolve([])]);
       const only=function(a){return (a||[]).filter(function(x){return x.state_id===sid;});};
-      setData({skus:only(r[0]),flavors:only(r[1]),forms:only(r[2]),lib:only(r[3])});
+      const op=await db.get('hx_sku_options',f+'&select=*&order=kind,sort,name').catch(function(){return [];});   // step 61; empty until it is run
+      setData({skus:only(r[0]),flavors:only(r[1]),forms:only(r[2]),lib:only(r[3]),opts:only(op)});
     }catch(e){setErr(niceErr(e));setData({skus:[],flavors:[],forms:[],lib:[]});}
   },[sid,F1,C1]);
   useEffect(function(){setData(null);setErr('');load();},[load]);
@@ -2570,6 +2655,7 @@ function Products(props){
   const skuName=function(id){const k=data.skus.find(function(x){return x.id===id;});return k?k.name:'?';};
   const flavName=function(id){const x=data.flavors.find(function(y){return y.id===id;});return x?x.name:'';};
   function closeReload(){setModal(null);load();}
+  async function addOpt(kind,name){await db.insert('hx_sku_options',{id:newId('so'),state_id:st.id,kind:kind,name:name,active:true,sort:(data.opts||[]).length});await load();}
   async function del(fn,msg){if(!window.confirm(msg))return;setErr('');try{await fn();await load();}catch(e){setErr(niceErr(e));}}
   async function toggle(k){setErr('');try{await db.update('hx_skus',k.id,{active:!k.active});await load();}catch(e){setErr(niceErr(e));}}
   function openFormula(f,skuId,flavorId){setModal({formula:f||null,skuId:skuId,flavorId:flavorId});}
@@ -2600,7 +2686,8 @@ function Products(props){
       el('div',{className:'tabs'},PRODUCT_TYPES.map(function(t){const n=data.skus.filter(function(k){return k.product_type===t.id;}).length;
         return el('button',{key:t.id,className:t.id===pt?'on':'',onClick:function(){setPt(t.id);lsSet('hx_ptype',t.id);setErr('');}},t.name+(n?' ('+n+')':''));})),
       el('div',{className:'row',style:{marginBottom:14}},el('input',{style:{maxWidth:300},placeholder:'Search SKUs and flavors...',value:q,onChange:function(e){setQ(e.target.value);}}),
-        el('span',{style:{flex:1}}),P2&&F2&&el('button',{className:'btn',onClick:function(){setModal({wizard:true});}},'+ New SKU')),
+        el('span',{style:{flex:1}}),pt==='pre_rolls'&&el('button',{className:'btn ghost',onClick:function(){setModal({opts:true});}},'Infused with / Coated with lists'),
+        P2&&F2&&el('button',{className:'btn',onClick:function(){setModal({wizard:true});}},'+ New SKU')),
       !typeSkus.length?el('div',{className:'empty'},'No '+ptName(pt)+' SKUs in '+st.name+' yet.'+(P2&&F2?' Click "+ New SKU". It starts blank, and the formulation is entered as part of creating it.':'')):
       el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(330px,1fr))'}},typeSkus.map(function(k){
         const fl=data.flavors.filter(function(x){return x.sku_id===k.id&&x.active;});
@@ -2632,8 +2719,9 @@ function Products(props){
     needs>0&&F1&&el('div',{className:'msg err'},needs+' SKU'+(needs===1?' needs':'s need')+' a formulation before '+(needs===1?'it':'they')+' can be used.'),
     tabs.length>1&&el('div',{className:'tabs'},tabs.map(function(t){return el('button',{key:t[0],className:tab===t[0]?'on':'',onClick:function(){setTab(t[0]);setQ('');setErr('');}},t[1]);})),
     body,
-    modal&&modal.wizard&&el(SkuWizard,{state:st,licenses:lics,skus:data.skus,library:data.lib,productType:pt,onClose:function(){setModal(null);load();},onDone:closeReload}),
-    modal&&modal.edit&&el(SkuEditor,{sku:modal.edit,state:st,licenses:lics,onClose:function(){setModal(null);},onDone:closeReload}),
+    modal&&modal.opts&&el(SkuOptionsModal,{state:st,opts:data.opts,canEdit:P2,onAdd:addOpt,reload:load,onClose:function(){setModal(null);}}),
+    modal&&modal.wizard&&el(SkuWizard,{state:st,licenses:lics,skus:data.skus,library:data.lib,productType:pt,opts:data.opts,onAddOpt:P2?addOpt:null,onClose:function(){setModal(null);load();},onDone:closeReload}),
+    modal&&modal.edit&&el(SkuEditor,{sku:modal.edit,state:st,licenses:lics,opts:data.opts,onAddOpt:P2?addOpt:null,onClose:function(){setModal(null);},onDone:closeReload}),
     modal&&modal.flavors&&el(FlavorManager,{sku:modal.flavors,state:st,flavors:data.flavors,formulations:data.forms,canEdit:P2,canDel:P3,canF1:F1,canF2:F2,reload:load,onClose:function(){setModal(null);},
       openFormula:function(f,skuId,flavorId){setModal({formula:f,skuId:skuId,flavorId:flavorId,back:modal.flavors});}}),
     modal&&modal.hasOwnProperty('formula')&&el(FormulationEditor,{state:st,skus:data.skus,flavors:data.flavors,formulations:data.forms,library:data.lib,productType:pt,
@@ -2788,6 +2876,11 @@ function bTail(st){return [bSel('status','Status',st||BT_STATUS),{k:'notes',l:'N
 const PR_ING={'THCA':['thca_metrc','thca_qty'],'Terpene':['terp_qty'],'Live Resin':['live_resin_metrc','live_resin_qty'],'HTE':['hte_metrc','hte_qty'],
   'Decarbed Cured Resin':['decarbed_resin_metrc','decarbed_resin_qty'],'Distillate':['distillate_metrc','distillate_qty'],'Trim':['trim_metrc','trim_qty'],'THCA (internal)':['thca_internal_metrc','thca_internal_qty']};
 function prIng(k){for(const n in PR_ING){if(PR_ING[n].indexOf(k)>=0)return n;}return '';}
+// infusion ingredients a state added itself (Products > Infused with): each gets a METRC # and an amount on the Pre-Roll batch form
+function prCustomIngs(spec){return ((spec&&spec.ingredients)||[]).filter(function(n){return n!=='Flower'&&!PR_ING[n];});}
+function xiKey(n){return 'xi_'+String(n).toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,40);}
+// coating name for labels: built-in Kief keeps the Kief wording; anything else replaces it
+function prCoatName(spec){return (spec&&spec.coating)||'Kief';}
 const BATCH_TYPES=[
   {id:'ethanol_extraction',name:'Ethanol Extraction',fields:bHead('e.g. ETH-2026-014',false,false).concat([
     bS('Extraction'),{k:'biomass_tags',l:'Biomass Tags',t:'tags'},bA('total_biomass_used','Total Biomass Used'),
@@ -2831,6 +2924,7 @@ const BATCH_TYPES=[
     bT('distillate_metrc','Distillate METRC #','METRC tag for the distillate used',{ing:1}),bT('distillate_qty','Distillate Used','e.g. 80g',{ing:1}),
     bT('trim_metrc','Trim METRC #','METRC tag for the trim used',{ing:1}),bT('trim_qty','Trim Used','e.g. 500g',{ing:1}),
     bT('thca_internal_metrc','THCA METRC #','METRC tag for the THCA used',{ing:1}),bT('thca_internal_qty','THCA Used','e.g. 200g',{ing:1}),
+    {k:'_xing',l:'Other infusion ingredients',t:'xing',nolm:1},
     bT('infused_flower_number','Infused Flower #','Infused flower batch/lot #'),bT('infused_flower_total_wt','Infused Flower Total WT','e.g. 1,240g'),bC('flower_metrc_confirmed'),
     bS('System Check'),bD('flower_check_result','System Check'),
     bS('Infused Joints'),bT('infused_flower_used','Infused Flower Used','Amount used for this run'),bT('infused_flower_waste','Infused Flower Waste','Amount wasted'),bC('infused_flower_waste_metrc_confirmed'),
@@ -2937,7 +3031,7 @@ function btRecalc(type,f,sku){
     const used=n0(f.infused_flower_used),filled=numOk(spec.grams_filled)?num(spec.grams_filled):0.55,kief=prKief(spec);
     const e1=filled?used/filled:0;
     const e2=kief?(spec.coating==='Diamond'?(used+n0(f.kief_qty_used))/kief:used/kief):0;
-    const sum=['flower_qty','thca_qty','terp_qty','live_resin_qty','hte_qty','decarbed_resin_qty','distillate_qty','trim_qty','thca_internal_qty'].reduce(function(s,k){return s+n0(f[k]);},0);
+    const sum=['flower_qty','thca_qty','terp_qty','live_resin_qty','hte_qty','decarbed_resin_qty','distillate_qty','trim_qty','thca_internal_qty'].concat(prCustomIngs(spec).map(function(n){return xiKey(n)+'_qty';})).reduce(function(s,k){return s+n0(f[k]);},0);
     const o={...f,joints_check_expected:r2(e1),joints_check_status:btCount(e1,n0(f.total_joint_filled)),kiefed_check_expected:r2(e2),kiefed_check_status:btCount(e2,n0(f.total_kiefed_infused_joints)),
       flower_check_expected:r2(sum),flower_check_status:btDirect(sum,n0(f.infused_flower_total_wt))};
     if(numOk(spec.units_per_package)&&num(spec.units_per_package)>0){
@@ -2988,7 +3082,7 @@ function btCheck(type,key,f,sku){
   if(key==='flower_check_result'){const w=spec.flower_type==='Ground'?'Ground':'Infused';
     return cnt(f.flower_check_status,{pass:w+' flower weight matches ingredients',under:w+' flower weighs less than the ingredients that went in',over:w+' flower weighs more than the ingredients that went in'},f.flower_check_expected,f.infused_flower_total_wt);}
   if(key==='joints_check_result'||key==='kiefed_check_result'){
-    const j=key==='joints_check_result',noun=j?'joint':(spec.coating==='Diamond'?'diamond coated joint':'kiefed joint');
+    const j=key==='joints_check_result',noun=j?'joint':(spec.coating==='Diamond'?'diamond coated joint':prCoatName(spec)!=='Kief'?prCoatName(spec).toLowerCase()+' coated joint':'kiefed joint');
     return cnt(j?f.joints_check_status:f.kiefed_check_status,{pass:'Weight per '+noun+' is on target',under:'More '+noun+'s than expected \u2014 weight per '+noun+' is under target',over:'Fewer '+noun+'s than expected \u2014 weight per '+noun+' is over target'},
       j?f.joints_check_expected:f.kiefed_check_expected,j?f.total_joint_filled:f.total_kiefed_infused_joints);}
   if(key==='packaging_check_result'&&type==='pre_rolls'){
@@ -3005,6 +3099,7 @@ function btCheck(type,key,f,sku){
 function btLabel(type,f,ts,sku){
   const spec=btSpec(sku);let l=f.l;
   if(type==='pre_rolls'&&spec.coating==='Diamond')l=l.replace(/Kiefed/g,'Diamond Coated').replace(/KIEFED/g,'DIAMOND COATED').replace(/Kief/g,'Diamond Coating').replace(/KIEF/g,'DIAMOND COATING');
+  else if(type==='pre_rolls'&&prCoatName(spec)!=='Kief'){const c=prCoatName(spec);l=l.replace(/Kiefed/g,c+' Coated').replace(/KIEFED/g,(c+' Coated').toUpperCase()).replace(/Kief/g,c).replace(/KIEF/g,c.toUpperCase());}
   if(type==='pre_rolls'&&spec.flower_type==='Ground')l=l.replace(/Infused Flower/g,'Ground Flower').replace(/Infused flower/g,'Ground flower');
   if(type==='pre_rolls'&&spec.package_name)l=l.replace(/Jar/g,spec.package_name);
   if(type==='butane_extraction'&&f.single&&f.t!=='checkbox')l=(sku&&sku.name&&spec.dual!=='Yes'?sku.name:'Product')+' '+l;
@@ -3013,6 +3108,7 @@ function btLabel(type,f,ts,sku){
 function btRdPassed(f){return f.rd1_result==='Passed'||f.rd2_result==='Passed';}
 function btVisible(type,fd,f,sku,initial){
   const spec=btSpec(sku);
+  if(fd.t==='xing')return type==='pre_rolls'&&prCustomIngs(spec).length>0;
   if(fd.ing&&type==='pre_rolls'&&(spec.ingredients||[]).indexOf(prIng(fd.k))<0)return false;
   if(fd.ing&&type==='pre_rolls'&&spec.coating==='Diamond'&&prIng(fd.k)==='THCA (internal)')return false;   // diamond coating tag is the THCA (Bodega Boyz)
   if(fd.kief&&!prKief(spec))return false;
@@ -3166,6 +3262,9 @@ function BatchForm(props){
     if(!btVisible(def.id,f,fd,sku,init))return null;
     const key=f.k||('s'+i),lab=btLabel(def.id,f,ts,sku),lk=f.k&&locked(f.k);
     if(f.t==='section')return el('div',{key:key,className:'secth'},lab);
+    if(f.t==='xing')return el(React.Fragment,{key:key},prCustomIngs(btSpec(sku)).map(function(n){const xk=xiKey(n);
+      return [[xk+'_metrc',n+' '+(ts||'METRC')+' #','METRC tag for the '+n.toLowerCase()+' used'],[xk+'_qty',n+' Used','e.g. 100g']].map(function(x){const l2=locked(x[0]);
+        return el(Field,{key:x[0],label:x[1]},el('input',{value:fd[x[0]]||'',placeholder:x[2],disabled:l2,inputMode:/_qty$/.test(x[0])?'decimal':undefined,onChange:function(e){setF(x[0],e.target.value);}}),l2&&lockNote);});}));
     if(f.t==='batchno')return el(Field,{key:key,label:lab+' *'},el('input',{value:top.batch_number,placeholder:f.ph,disabled:lk,onChange:function(e){setTop({...top,batch_number:e.target.value});}}),lk&&lockNote);
     if(f.t==='sku'){
       const opts=props.skus;
@@ -3251,6 +3350,8 @@ function batchHtml(def,st,lic,b,sig,hist,sku){
     const l=btLabel(def.id,fd,ts,sku);
     if(fd.t==='section'){rows.push('<tr class="sec"><td colspan="2">'+e(l.toUpperCase())+'</td></tr>');return;}
     if(fd.t==='testinfo')return;
+    if(fd.t==='xing'){prCustomIngs(btSpec(sku)).forEach(function(n){const xk=xiKey(n);
+      rows.push('<tr><th>'+e(n+' '+ts+' #')+'</th><td>'+e(f[xk+'_metrc']||'-')+'</td></tr>');rows.push('<tr><th>'+e(n+' Used')+'</th><td>'+e(f[xk+'_qty']||'-')+'</td></tr>');});return;}
     let v;
     if(fd.t==='batchno')v=b.batch_number;else if(fd.t==='sku')v=b.sku;else if(fd.t==='flavor')v=b.flavor;
     else if(fd.t==='checkbox')v=f[fd.k]?'Yes':'No';
@@ -3349,7 +3450,9 @@ function BatchTracker(props){
     const lines=[['State','License','License #','Batch type','Batch / Lot Number','SKU','Flavor','Status','Void'].concat(cols.map(function(f){return f.l.replace(/METRC/g,ts);})).concat(['Created','Submitted by']).map(e).join(',')];
     list.forEach(function(b){const d=b.data||{};
       lines.push([st.name,lic.name,lic.license_number,def.name,b.batch_number,b.sku,b.flavor,b.status,b.voided?'VOID: '+(b.void_reason||''):''].concat(cols.map(function(f){
-        const v=d[f.k];if(f.t==='checkbox')return v?'Yes':'No';if(f.t==='tags')return (v||[]).map(function(r){return r.tag+' ('+r.weight+')';}).join('; ');return v;})).concat([b.created_at,b.performed_by]).map(e).join(','));});
+        const v=d[f.k];if(f.t==='checkbox')return v?'Yes':'No';
+        if(f.t==='xing')return Object.keys(d).filter(function(k){return /^xi_.+_qty$/.test(k)||/^xi_.+_metrc$/.test(k);}).sort().map(function(k){return k.replace(/^xi_/,'').replace(/_/g,' ')+': '+d[k];}).join('; ');
+        if(f.t==='tags')return (v||[]).map(function(r){return r.tag+' ('+r.weight+')';}).join('; ');return v;})).concat([b.created_at,b.performed_by]).map(e).join(','));});
     const blob=new Blob([lines.join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=type+'_batches_'+(lic.license_number||lic.id)+'.csv';document.body.appendChild(a);a.click();a.remove();
   }
   // records what the batch used from each inventory lot (once per field; a later save never records it twice)

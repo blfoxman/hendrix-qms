@@ -321,7 +321,7 @@ with sync_playwright() as pw:
     md.get_by_role('button', name='Next: formulation').click()
     md.get_by_role('button', name='+ Add Material').click(); md.locator('.li input').nth(0).fill('Flower'); md.locator('.li input').nth(1).fill('1000')
     md.get_by_role('button', name='Save SKU and formulation').click(); pg.wait_for_selector('.card >> text=No flavors (plain SKU)')
-    check(sku('Muha Meds 1G Plain Pre Roll')['spec'] == {'grams_filled': 1.0, 'units_per_package': 1, 'no_flavor': True}, 'pre-roll production settings saved')
+    check(sku('Muha Meds 1G Plain Pre Roll')['spec'] == {'grams_filled': 1.0, 'flower_type': 'Infused', 'coated': 'No', 'units_per_package': 1, 'no_flavor': True}, 'pre-roll production settings saved')
     pg.screenshot(path=OUT + 'products.png', full_page=True)
     # Michigan isolation
     pg.locator('.ctx select').first.select_option(label='Michigan'); pg.wait_for_selector('h1 >> text=Michigan')

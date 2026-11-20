@@ -12,6 +12,7 @@
 --     every change is in the Audit Trail.
 --   Access module 'batch' (Batch Tracker): View sees runs / Edit records runs and adds items /
 --   Full voids runs and manages the item list.
+--   * Products > Pre-Rolls: each state's own "Infused with" and "Coated with" choices (hx_sku_options).
 --
 -- Run in the Hendrix Supabase project (bqrncllndvzbhmxanitq) AFTER steps 1-60.
 -- Safe to run more than once.
@@ -154,5 +155,50 @@ create policy hx_mp_runs_read on hx_mp_runs for select to authenticated using (h
 create policy hx_mp_runs_insert on hx_mp_runs for insert to authenticated with check (hx_can('batch', 2, license_id));
 create policy hx_mp_runs_update on hx_mp_runs for update to authenticated using (hx_can('batch', 2, license_id)) with check (hx_can('batch', 2, license_id));
 grant select, insert, update on hx_mp_runs to authenticated;
+
+-- ---------- SKU option lists (Products > Pre-Rolls: "Infused with" and "Coated with") ----------
+--   Built-in choices (Flower, THCA, Terpene, Live Resin, HTE, Decarbed Cured Resin, Distillate, Trim,
+--   THCA (internal) / Kief, Diamond) stay in the app. Each state adds its own here; anyone who can Edit
+--   products adds, renames or switches them off. Never deleted (SKUs keep the name).
+create table if not exists hx_sku_options (
+  id          text primary key,
+  state_id    text not null references hx_states(id),
+  kind        text not null check (kind in ('infusion','coating')),
+  name        text not null check (length(trim(name)) between 1 and 60),
+  active      boolean not null default true,
+  sort        int not null default 0,
+  created_by  text not null default '',
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+create unique index if not exists hx_sku_options_name on hx_sku_options(state_id, kind, lower(trim(name)));
+
+create or replace function hx_sku_option_guard() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if tg_op = 'DELETE' then raise exception 'List items are not deleted - switch the item off. SKUs keep the name.'; end if;
+  if not hx_can('products', 2) then raise exception 'Edit access to products is needed to change these lists.'; end if;
+  new.name := trim(new.name);
+  if tg_op = 'INSERT' then
+    new.created_by := coalesce(hx_me(), ''); new.created_at := now();
+  else
+    if new.state_id <> old.state_id or new.kind <> old.kind then raise exception 'A list item cannot move to another state or list.'; end if;
+    new.created_by := old.created_by; new.created_at := old.created_at;
+  end if;
+  new.updated_at := now();
+  return new;
+end $$;
+drop trigger if exists hx_sku_option_guard on hx_sku_options;
+create trigger hx_sku_option_guard before insert or update or delete on hx_sku_options for each row execute function hx_sku_option_guard();
+drop trigger if exists hx_sku_options_audit on hx_sku_options;
+create trigger hx_sku_options_audit after insert or update on hx_sku_options for each row execute function hx_audit();
+alter table hx_sku_options enable row level security;
+drop policy if exists hx_sku_options_read on hx_sku_options;
+drop policy if exists hx_sku_options_insert on hx_sku_options;
+drop policy if exists hx_sku_options_update on hx_sku_options;
+create policy hx_sku_options_read on hx_sku_options for select to authenticated using (hx_fl_is_approved());
+create policy hx_sku_options_insert on hx_sku_options for insert to authenticated with check (hx_can('products', 2));
+create policy hx_sku_options_update on hx_sku_options for update to authenticated using (hx_can('products', 2)) with check (hx_can('products', 2));
+grant select, insert, update on hx_sku_options to authenticated;
 
 notify pgrst, 'reload schema';
