@@ -20,7 +20,10 @@ with sync_playwright() as pw:
     b = pw.chromium.launch(**LAUNCH)
     ctx = b.new_context(viewport={'width': 1400, 'height': 1000}); ctx.route('**/*', handle)
     pg = start(ctx, 'lic-mo')
-    pg.locator('.nav').get_by_role('button', name='Manufacturing Process').click()
+    check(pg.locator('.nav').get_by_role('button', name='Manufacturing Process').count() == 0, 'no separate sidebar entry - it lives in Batch Tracker')
+    pg.locator('.nav').get_by_role('button', name='Batch Tracker').click(); pg.wait_for_selector('.tabs >> text=Pre-Rolls')
+    pg.locator('.tabs').get_by_role('button', name='Manufacturing Process').click()
+    check(pg.locator('h1', has_text='Tracker').count() == 1, 'Manufacturing Process opens as a Batch Tracker tab')
     pg.wait_for_selector('text=No runs yet.')
     check(pg.get_by_role('button', name='+ New run').count() == 1, 'New run button')
     pg.get_by_role('button', name='+ New run').click(); md = pg.locator('.md').first
@@ -71,10 +74,15 @@ with sync_playwright() as pw:
     # void
     pg.get_by_role('button', name='Void').click(); pg.locator('.md textarea').fill('wrong license'); pg.locator('.md').get_by_role('button', name='Void').last.click()
     pg.wait_for_selector('.msg >> text=Voided'); check(T['hx_mp_runs'][-1]['voided'] is True and T['hx_mp_runs'][-1]['void_reason'] == 'wrong license', 'run voided with a reason')
+    pg.reload(); pg.wait_for_selector('text=Dashboard'); pg.locator('.nav').get_by_role('button', name='Batch Tracker').click()
+    pg.wait_for_selector('.tabs button.on:has-text("Manufacturing Process")')
+    check(pg.locator('text=What went in, what came out').count() == 1, 'Batch Tracker reopens on the Manufacturing Process tab')
+    pg.locator('.tabs').get_by_role('button', name='Pre-Rolls').click(); pg.wait_for_selector('input[placeholder="Search batches..."]')
+    check(pg.locator('tr', has_text='Rosin 280 g').count() == 0, 'other tabs show their batches again')
     pg.close(); ctx.close()
     # a cultivation license has no Manufacturing Process tab
     ctx2 = b.new_context(viewport={'width': 1400, 'height': 1000}); ctx2.route('**/*', handle)
     pg = start(ctx2, 'lic-cul')
-    check(pg.locator('.nav').get_by_role('button', name='Manufacturing Process').count() == 0, 'no Manufacturing Process tab on a cultivation license')
+    check(pg.locator('.nav').get_by_role('button', name='Manufacturing Process').count() == 0 and pg.locator('.nav').get_by_role('button', name='Batch Tracker').count() == 0, 'no Batch Tracker / Manufacturing Process on a cultivation license')
     b.close()
 print('FAIL' if errors else 'ALL PASS'); sys.exit(1 if errors else 0)

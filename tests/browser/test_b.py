@@ -42,7 +42,7 @@ with sync_playwright() as pw:
     ctx.add_init_script('localStorage.setItem("hx_session",%s);localStorage.setItem("hx_state","st-mo");localStorage.setItem("hx_btype","pre_rolls");' % json.dumps(json.dumps(sess)))
     pg = ctx.new_page(); pg.on('pageerror', lambda e: errors.append('JS: ' + str(e))); pg.on('dialog', lambda d: d.accept())
     pg.goto(BASE); pg.get_by_role('button', name='Batch Tracker').click(); pg.wait_for_selector('h1 >> text=Tracker')
-    check(pg.locator('.tabs button').count() == 9, '9 batch types (Solventless added)')
+    check(pg.locator('.tabs button').count() == 10, '9 batch types (Solventless added) + the Manufacturing Process tab')
     pg.get_by_role('button', name='+ New Batch').click(); md = pg.locator('.md')
     opts = field(md, 'SKU').locator('option').all_inner_texts()
     check('Mates THCA 5 x 0.6g' in opts and 'Off SKU' not in opts, 'only switched-on SKUs offered')

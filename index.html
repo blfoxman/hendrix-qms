@@ -3373,7 +3373,8 @@ function BatchTracker(props){
   const st=props.state,lic=props.license,isAdmin=can('batch',3),canAdd=can('batch',2),canF=can('formbank',1),canAudit=can('audit',1);
   const ts=(st&&st.tracking_system)||'METRC';
   const sid=st?st.id:'',lid=lic?lic.id:'';
-  const[type,setType]=useState(lsGet('hx_btype')||BATCH_TYPES[0].id);
+  const[type,setType]=useState(props.initialType||lsGet('hx_btype')||BATCH_TYPES[0].id);
+  const mfg=licOp(lic)==='manufacturing',isMp=type==='process'&&mfg;   // Manufacturing Process lives here as the last tab
   const[cat,setCat]=useState(null);
   const[rows,setRows]=useState(null);
   const[q,setQ]=useState('');
@@ -3391,7 +3392,7 @@ function BatchTracker(props){
     }catch(e){setErr(niceErr(e));setCat({skus:[],flavors:[],forms:[]});}
   },[sid,canF]);
   const loadRows=useCallback(function(){
-    if(!lid||!sid){setRows([]);return Promise.resolve();}
+    if(!lid||!sid||type==='process'){setRows([]);return Promise.resolve();}
     let qs='license_id=eq.'+encodeURIComponent(lid)+'&state_id=eq.'+encodeURIComponent(sid)+'&batch_type=eq.'+type+'&select=id,state_id,license_id,batch_type,batch_number,sku_id,sku,flavor_id,flavor,status,data,attachments,performed_by,created_at,updated_at,voided,void_reason,voided_at&order=created_at.desc&limit=1000';
     if(from)qs+='&created_at=gte.'+encodeURIComponent(from);
     if(to)qs+='&created_at=lte.'+encodeURIComponent(to+'T23:59:59');
@@ -3491,11 +3492,15 @@ function BatchTracker(props){
     try{const x=await db.get('hx_batches','id=eq.'+encodeURIComponent(b.id)+'&select=*');if(x&&x[0])setModal({form:mode,b:x[0]});}catch(e){setErr(String(e.message||e));}
   }
   const tone={ok:'ok',bad:'bad',warn:'bad'};
+  const head=el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
+      el('div',null,el('h1',null,'Batch ',el('span',{className:'g'},'Tracker')),el('div',{className:'sub'},st.name+'  \u00b7  '+lic.name+(lic.license_number?'  \u00b7  '+lic.license_number:'')+'  \u00b7  Batch production records')));
+  const tabs=el('div',{className:'tabs'},BATCH_TYPES.map(function(t){return el('button',{key:t.id,className:t.id===type?'on':'',onClick:function(){setType(t.id);lsSet('hx_btype',t.id);setQ('');}},t.name);}),
+    mfg&&el('button',{key:'process',className:isMp?'on':'',style:{marginLeft:6,borderLeft:'1px solid var(--line)'},onClick:function(){setType('process');lsSet('hx_btype','process');setQ('');}},'Manufacturing Process'));
+  if(isMp)return el('div',null,head,tabs,el(MfgProcessPage,{key:lid,state:st,license:lic,profile:props.profile,embedded:true}));
   return el('div',null,
-    el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
-      el('div',null,el('h1',null,'Batch ',el('span',{className:'g'},'Tracker')),el('div',{className:'sub'},st.name+'  \u00b7  '+lic.name+(lic.license_number?'  \u00b7  '+lic.license_number:'')+'  \u00b7  Batch production records'))),
+    head,
     err&&el('div',{className:'msg err'},err),
-    el('div',{className:'tabs'},BATCH_TYPES.map(function(t){return el('button',{key:t.id,className:t.id===type?'on':'',onClick:function(){setType(t.id);lsSet('hx_btype',t.id);setQ('');}},t.name);})),
+    tabs,
     el('div',{className:'row',style:{marginBottom:12}},
       el('input',{style:{maxWidth:260},placeholder:'Search batches...',value:q,onChange:function(e){setQ(e.target.value);}}),
       el('span',{className:'muted'},'From'),el('input',{type:'date',style:{width:'auto'},value:from,onChange:function(e){setFrom(e.target.value);}}),
@@ -13677,8 +13682,8 @@ function MfgProcessPage(props){
   const sum=function(rows){return (rows||[]).map(function(r){return r.item+' '+r.weight+' '+(MP_UNITS[r.unit]||'g');}).join(', ');};
   return el('div',null,
     el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-end',gap:10,flexWrap:'wrap'}},
-      el('div',null,el('h1',null,el('span',{className:'g'},'Manufacturing Process')),
-        el('div',{className:'muted'},lic.name+' · what went in, what came out and the waste, run by run. Further processes are added to the same run.')),
+      el('div',null,!props.embedded&&el('h1',null,el('span',{className:'g'},'Manufacturing Process')),
+        el('div',{className:'muted'},(props.embedded?'':lic.name+' · ')+'What went in, what came out and the waste, run by run. Further processes are added to the same run.')),
       el('div',{className:'row',style:{gap:8}},el('button',{className:'btn ghost',onClick:function(){setItemsOpen(true);}},'Items ('+items.filter(function(i){return i.active!==false;}).length+')'),
         canE&&el('button',{className:'btn',onClick:function(){setEd({});}},'+ New run'))),
     err&&el('div',{className:'msg err'},err),msg&&el('div',{className:'msg'},msg),
@@ -13795,7 +13800,7 @@ function MfgNewItem(props){
 }
 const MFG_ONLY=['planner','batches','process','products','stickers','linemap','lineclear'];
 const SIDE_GROUPS=[
-  ['production','Production',['planner','batches','process','testing','stickers','products','metrc','linemap','lineclear']],
+  ['production','Production',['planner','batches','testing','stickers','products','metrc','linemap','lineclear']],
   ['inventory','Inventory and shipping',['receiving','holds','shipping','recall','suppliers']],
   ['facility','Facility',['facmap','rooms','logs','equipment','chemicals','envtests','visitors','timeclock','cultivation']],
   ['quality','Quality',['qms','complaints','intaudits','haccp','risks','changes','verification']],
@@ -13921,7 +13926,7 @@ function App(){
   if(isAdmin)nav.push({id:'health',label:'System Health'});
   if(['suppliers','equipment','chemicals','products','complaints','risks','orgchart'].some(function(m){return can(m,2);}))nav.push({id:'import',label:'Import (Excel / Sheets)'});
   const anyLog=LOG_TYPES.some(function(t){return can(LOG_MOD[t.id],1);});
-  const mods=[can('linemap',1)&&['linemap','Line Map'],can('qms',1)&&['qms','QMS'],can('complaints',1)&&['complaints','Complaints'],can('intaudits',1)&&['intaudits','Internal Audits'],can('haccp',1)&&['haccp','HACCP'],can('risks',1)&&['risks','Risk Register'],can('changes',1)&&['changes','Change Control'],can('orgchart',1)&&['orgchart','Org Chart'],can('objectives',1)&&['objectives','Quality Objectives'],can('mgmtreview',1)&&['mgmtreview','Management Review'],can('verification',1)&&['verification','Verification Schedule'],can('timeclock',1)&&['timeclock','Time Clock and Badges'],can('training',1)&&['training','Training'],can('sops',1)&&['sops','SOPs'],can('suppliers',1)&&['suppliers','Suppliers'],can('receiving',1)&&['receiving','Receiving'],can('holds',1)&&['holds','Hold and Release'],can('shipping',1)&&['shipping','Shipping'],can('recall',1)&&['recall','Traceability and Recall'],can('equipment',1)&&['equipment','Equipment'],can('chemicals',1)&&['chemicals','Chemicals and SDS'],(can('lineclear',1)||can('rework',1))&&['lineclear','Line Clearance and Rework'],can('envtests',1)&&['envtests','Facility Tests'],can('cultivation',1)&&licOp(lic)==='cultivation'&&['cultivation','Cultivation'],can('facmap',1)&&['facmap','Facility Map'],can('rooms',1)&&['rooms','Rooms'],can('logs_visitor',1)&&['visitors','Visitor Log'],anyLog&&['logs','Facility Logs'],(can('products',1)||can('formbank',1)||can('cogs',1))&&['products','Products'],can('metrc',1)&&['metrc','METRC Check'],can('planner',1)&&['planner','Production Planner'],can('batch',1)&&['batches','Batch Tracker'],can('batch',1)&&licOp(lic)==='manufacturing'&&['process','Manufacturing Process'],can('testing',1)&&['testing','Testing'],can('stickers',1)&&['stickers','Compliance Stickers']].filter(function(m){return m&&!(licOp(lic)==='cultivation'&&MFG_ONLY.indexOf(m[0])>=0);});
+  const mods=[can('linemap',1)&&['linemap','Line Map'],can('qms',1)&&['qms','QMS'],can('complaints',1)&&['complaints','Complaints'],can('intaudits',1)&&['intaudits','Internal Audits'],can('haccp',1)&&['haccp','HACCP'],can('risks',1)&&['risks','Risk Register'],can('changes',1)&&['changes','Change Control'],can('orgchart',1)&&['orgchart','Org Chart'],can('objectives',1)&&['objectives','Quality Objectives'],can('mgmtreview',1)&&['mgmtreview','Management Review'],can('verification',1)&&['verification','Verification Schedule'],can('timeclock',1)&&['timeclock','Time Clock and Badges'],can('training',1)&&['training','Training'],can('sops',1)&&['sops','SOPs'],can('suppliers',1)&&['suppliers','Suppliers'],can('receiving',1)&&['receiving','Receiving'],can('holds',1)&&['holds','Hold and Release'],can('shipping',1)&&['shipping','Shipping'],can('recall',1)&&['recall','Traceability and Recall'],can('equipment',1)&&['equipment','Equipment'],can('chemicals',1)&&['chemicals','Chemicals and SDS'],(can('lineclear',1)||can('rework',1))&&['lineclear','Line Clearance and Rework'],can('envtests',1)&&['envtests','Facility Tests'],can('cultivation',1)&&licOp(lic)==='cultivation'&&['cultivation','Cultivation'],can('facmap',1)&&['facmap','Facility Map'],can('rooms',1)&&['rooms','Rooms'],can('logs_visitor',1)&&['visitors','Visitor Log'],anyLog&&['logs','Facility Logs'],(can('products',1)||can('formbank',1)||can('cogs',1))&&['products','Products'],can('metrc',1)&&['metrc','METRC Check'],can('planner',1)&&['planner','Production Planner'],can('batch',1)&&['batches','Batch Tracker'],can('testing',1)&&['testing','Testing'],can('stickers',1)&&['stickers','Compliance Stickers']].filter(function(m){return m&&!(licOp(lic)==='cultivation'&&MFG_ONLY.indexOf(m[0])>=0);});
   let body;
   if(licOp(lic)==='cultivation'&&MFG_ONLY.indexOf(page)>=0)body=el('div',null,el('h1',null,el('span',{className:'g'},(mods.find(function(m){return m[0]===page;})||[0,{linemap:'Line Map',products:'Products',planner:'Production Planner',batches:'Batch Tracker',process:'Manufacturing Process',stickers:'Compliance Stickers',lineclear:'Line Clearance and Rework'}[page]])[1])),
     el('div',{className:'empty'},(lic?lic.name:'This license')+' is a cultivation license. This module is for manufacturing licenses; plant batches, harvest, dry, cure and packaging are in Cultivation.'),
@@ -13930,7 +13935,7 @@ function App(){
   else if(page==='visitors'&&can('logs_visitor',1))body=el(VisitorLog,{key:licId,state:st,license:lic});
   else if(page==='stickers'&&can('stickers',1))body=el(StickersPage,{key:licId,state:st,license:lic});
   else if(page==='testing'&&can('testing',1))body=el(TestingPage,{key:licId,state:st,license:lic,licenses:licenses,profile:profile});
-  else if(page==='process'&&can('batch',1)&&licOp(lic)==='manufacturing')body=el(MfgProcessPage,{key:licId,state:st,license:lic,profile:profile});
+  else if(page==='process'&&can('batch',1)&&licOp(lic)==='manufacturing')body=el(BatchTracker,{key:licId+'-mp',state:st,license:lic,profile:profile,initialType:'process'});
   else if(page==='batches'&&can('batch',1))body=el(BatchTracker,{key:licId,state:st,license:lic,profile:profile});
   else if(page==='products')body=el(Products,{key:stateId,state:st,licenses:licenses,profile:profile});
   else if(page==='logs')body=el(FacilityLogs,{key:licId,state:st,license:lic,profile:profile});
