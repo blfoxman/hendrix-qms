@@ -6,7 +6,7 @@ The Dashboard is your home page. It shows the state and license you are working 
 **Where:** left menu → Dashboard (always shown). **Who:** everyone who is approved. Each person sees only the cards and menu items for the modules they have access to. Only a system admin sees **Team and Access** and **Roles** in the menu.
 **CSQ:** 1.1 (one documented safety and quality system)
 
-![The Dashboard for Black Fox (MAN000109), Missouri, signed in as a system admin](shots/found_dashboard.png)
+![The Dashboard for Northfield Labs (MFG-48213), Colorado, signed in as a system admin](shots/found_dashboard.png)
 
 ### When to use it
 | Situation | What you do in Hendrix |
@@ -84,7 +84,7 @@ This is where the company's states and licenses are set up. Every record in Hend
 **Where:** left menu → States and Licenses. **Who:** everyone can view the page. Only a system admin can add, change, deactivate or delete states and licenses (other people see "View only. Only an admin can add or change states and licenses.").
 **CSQ:** 1.3 (regulatory compliance), 3A.1.2 (cultivation sites)
 
-![States and Licenses: Missouri with three licenses, Michigan with one](shots/found_locations_page.png)
+![States and Licenses: Colorado with three licenses, Oregon with one](shots/found_locations_page.png)
 
 ### When to use it
 | Situation | What you do in Hendrix |
@@ -106,9 +106,9 @@ This is where the company's states and licenses are set up. Every record in Hend
 
 | Field | What to enter | Required |
 |---|---|---|
-| State name | For example Missouri | Yes (Save stays greyed out until it is filled) |
-| Regulatory agency | For example Division of Cannabis Regulation (DCR) | No |
-| Governing code / act | For example 19 CSR 100-1 | No |
+| State name | For example Colorado | Yes (Save stays greyed out until it is filled) |
+| Regulatory agency | For example Marijuana Enforcement Division (MED) | No |
+| Governing code / act | For example the title of your state's cannabis regulations | No |
 | Track-and-trace system | Default METRC. Used in batch record labels, for example "Recorded on METRC?" | No (blank becomes METRC) |
 
 > **Hendrix checks:** You cannot delete a state that still has licenses ("Delete or move this state's licenses first."). Deleting a state asks you to confirm, because its rulebook goes with it.
@@ -121,8 +121,8 @@ This is where the company's states and licenses are set up. Every record in Hend
 
 | Field | What to enter | Required |
 |---|---|---|
-| License / facility name | For example Black Fox | Yes |
-| License number | For example MAN000109 or CUL000412 | No |
+| License / facility name | For example Northfield Labs | Yes |
+| License number | For example MFG-48213 or CUL-71542 | No |
 | License type | For example Manufacturer, Processor, Cultivation | No |
 | Operation (decides which CSQ standards apply) | **Automatic** (Hendrix guesses from the number and type), **Manufacturing (processing, extraction, infusion)**, **Cultivation (CUL)** or **Other (dispensary, lab, transport...)** | No (Automatic by default) |
 
@@ -140,12 +140,12 @@ The **CSQ** column in the licenses table shows the result for each license.
 - Deactivate rather than delete a license that has records.
 
 ## Rulebook
-The Rulebook holds one state's cannabis rules, for example Missouri 19 CSR 100. You can load the official rules PDF and Hendrix splits it into rules and sorts them by category. Inspectors care because it shows staff can find and follow the current state rules.
+The Rulebook holds one state's cannabis rules, for example your state's cannabis regulations. You can load the official rules PDF and Hendrix splits it into rules and sorts them by category. Inspectors care because it shows staff can find and follow the current state rules.
 
-**Where:** left menu → <State> Rulebook (for example **Missouri Rulebook**). **Who:** View can read and search the rules. Edit can upload a rules PDF, add rules and edit them. Full can also delete rules and remove rules from an earlier PDF.
+**Where:** left menu → <State> Rulebook (for example **Colorado Rulebook**). **Who:** View can read and search the rules. Edit can upload a rules PDF, add rules and edit them. Full can also delete rules and remove rules from an earlier PDF.
 **CSQ:** 1.1 (local regulations kept in the system), 1.3 (regulatory compliance)
 
-![The Missouri Rulebook after importing the official PDF](shots/found_rulebook_page.png)
+![The Colorado Rulebook after importing the official PDF](shots/found_rulebook_page.png)
 
 ### When to use it
 | Situation | What you do in Hendrix |
@@ -162,14 +162,14 @@ Each state has its own Rulebook. Switching the state at the top loads that state
 
 ### Upload the official rules PDF
 1. Click **Upload rules PDF** and choose the PDF.
-2. Hendrix reads every page. A review window opens with the file name, the number of pages, the rule format it found (for example "Missouri Code of State Regulations (CSR)") and the number of rules found.
+2. Hendrix reads every page. A review window opens with the file name, the number of pages, the rule format it found (for example "Code of State Regulations (CSR)") and the number of rules found.
 3. Check each row. Use the filter buttons **All**, **New**, **Changed**, **Same** and **To import**, or click a category badge to see one category.
 4. Change a title or category if needed. Click **Text** to read the rule text as it came from the PDF.
 5. If you want each numbered section (1), (2)... as its own rule, tick **Split each rule into its numbered sections (1), (2)...**.
 6. If you want the AI to choose the categories, click **Sort categories with AI**.
 7. Click **Import N rules**. Hendrix shows "Imported from <file>: N new, N updated." and lists the PDF under **Source PDFs**.
 
-![Reviewing the rules found in the Missouri PDF before import](shots/found_rulebook_import.png)
+![Reviewing the rules found in the Colorado PDF before import](shots/found_rulebook_import.png)
 
 | Field (per row) | What to enter | Required |
 |---|---|---|
@@ -180,7 +180,7 @@ Each state has its own Rulebook. Switching the state at the top loads that state
 > **Hendrix checks:**
 > - Only PDF files are accepted ("Choose a PDF file.").
 > - A scanned PDF with no text is refused: "This PDF has no readable text (it looks like a scan or a picture). Download the official text PDF from the state website and upload that one."
-> - Hendrix recognizes Missouri CSR numbers, Michigan R numbers, numbered sections and numbered rules. Only when none of these are found does it ask the AI where each rule starts. The rule text itself is always kept word for word.
+> - Hendrix recognizes the usual ways states number their rules (for example CSR, CCR and R numbers), numbered sections and numbered rules. Only when none of these are found does it ask the AI where each rule starts. The rule text itself is always kept word for word.
 > - Page headers, footers and page numbers are removed. Two-column pages are read left column first.
 > - Rows with very little text are probably table-of-contents lines. They are left unticked.
 > - Nothing is saved until you click **Import**. Importing a changed rule replaces its title and text.
@@ -196,7 +196,7 @@ Each state has its own Rulebook. Switching the state at the top loads that state
 | Field | What to enter | Required |
 |---|---|---|
 | Category | Pick from the list or type your own | No (blank becomes Other) |
-| Citation (section / rule number) | For example 19 CSR 100-1.100 or Company policy QA-12 | No |
+| Citation (section / rule number) | For example a rule number such as 3.405, or Company policy QA-12 | No |
 | Title | A short name for the rule | Yes |
 | Rule text / what it requires | The rule text | No |
 
@@ -212,7 +212,7 @@ This page holds the CSQ (Cannabis Safety & Quality) standard clause by clause, a
 **Where:** left menu → Standards (CSQ). **Who:** View can read the standard and the conformance. Edit can also record and update conformance (status, owner, evidence, files). Full can also add or update the standard, adopt it for a license, set the target level and certification details, and upload the standard PDFs.
 **CSQ:** all clauses in scope; in particular 1.1 (documented system covering the CSQ requirements) and 1.4 (documentation and records)
 
-![The Standards page for Black Fox: alerts, adoption and progress](shots/found_standards_page.png)
+![The Standards page for Northfield Labs: alerts, adoption and progress](shots/found_standards_page.png)
 
 ### When to use it
 | Situation | What you do in Hendrix |
@@ -322,7 +322,10 @@ This is where a system admin approves new people, gives them roles, chooses whic
 | Someone changes job | **Manage** → change their roles |
 | Someone should only work at one license | **Manage** → untick **All licenses, in every state** and tick their license |
 | One person needs more or less access than their role gives | **Manage** → **Custom access** → pick a level for that module |
-| Someone leaves the company | **Manage** → untick **Approved** → **Save** |
+| Someone leaves the company | **Manage** → **Remove from Hendrix** → write the reason → **Remove from Hendrix** |
+| Someone who left comes back | **Removed (N)** → **Restore**, then approve them again |
+| A stranger or a duplicate account asks to join | In **waiting for approval**, **Manage** → **Delete request** |
+| Someone forgot their password and can't use email or security questions | **Manage** → **Set a temporary password** |
 | Someone needs to run Hendrix | **Manage** → tick **System admin** |
 
 The table shows each person's roles, licenses, access ("From roles", "Custom (N)" or "Full") and status (Approved or Waiting).
@@ -352,9 +355,28 @@ The table shows each person's roles, licenses, access ("From roles", "Custom (N)
 > - A person's level for a module is their custom setting if one is set, otherwise the highest level any of their roles gives. A single facility log with no setting of its own follows **Facility Logs (all)**.
 > - These rules are enforced by the database, not only on screen.
 
+### Remove someone who left
+When a person leaves, remove them the same day. A person who left must never be able to sign in again.
+1. Click **Manage** next to the person.
+2. At the bottom, in **Remove from Hendrix**, click **Remove...**.
+3. Write the **Reason**, for example "Left the company on 11/14/2026", and click **Remove from Hendrix**. Confirm.
+
+Hendrix signs them out everywhere, takes away their approval, roles, custom access and admin rights, and blocks their sign-in. If they try, they see "Your access to Hendrix was removed. Ask a system admin if this is a mistake." Everything they recorded or signed stays, with their name. They move to the **Removed (N)** list, where **Restore** lets them sign in again once you approve them.
+
+A sign-up request from someone who should not have an account (never approved) can be deleted completely with **Delete request**. Hendrix refuses this if the person already has records.
+
+### Set a temporary password
+Most people reset their own password with **Forgot your password?** on the sign-in screen (by email or with their security questions; see *My account*). When that isn't possible:
+1. Click **Manage** next to the person → **Set a temporary password**. Hendrix suggests a random one; **Generate** makes another.
+2. Click **Set password**.
+3. Give the password to the person **in person**, not by text or email.
+
+Their other sessions are signed out. At their next sign-in Hendrix makes them choose their own new password.
+
 ### Tips
 - Give access through roles. Use custom access only for exceptions.
-- Unapproving someone does not delete anything they recorded. Their records and their Audit Trail history stay.
+- Review who has access at least every quarter. Remove people who left and lower access that's no longer needed.
+- Removing someone never deletes anything they recorded. Their records and their Audit Trail history stay.
 
 ## Roles
 Roles are access templates, for example Production Lead or Compliance Officer. Each role carries a View, Edit or Full level per module, plus the duties and requirements of the job. Inspectors care because CSQ asks for written roles, responsibilities and requirements.
@@ -362,19 +384,19 @@ Roles are access templates, for example Production Lead or Compliance Officer. E
 **Where:** left menu → Roles. **Who:** system admins only.
 **CSQ:** 2A.13.1 (personnel roles, duties and requirements), 2A.13.2 (training by role), 1.9 (product defense: controlled access), 5.1.1
 
-![The Roles page with the Black Fox starter roles](shots/found_roles_page.png)
+![The Roles page with the Northfield Labs starter roles](shots/found_roles_page.png)
 
 ### When to use it
 | Situation | What you do in Hendrix |
 |---|---|
-| Hendrix is new | **Add Black Fox roles** to start from 12 job titles with suggested access |
+| Hendrix is new | **Add Northfield Labs roles** to start from 12 job titles with suggested access |
 | A new job title is created | **+ New role** |
 | A role is similar to an existing one | **Duplicate** on that role, then change it |
 | A role needs more or less access | **Edit** on the role |
 | The auditor asks for job requirements | **Edit** → fill **Requirements (CSQ 2A.13.1)**. Cards without it show **Requirements not set** |
 | A role is no longer used | **Delete** (Hendrix warns how many people lose the access it gives) |
 
-The starter roles are: General Manager, Assistant of General Manager, Compliance Officer, Security Manager, Security Officer, Sanitation, Team Member, Inventory Manager, Extraction Manager, Production Manager, Sales Manager and Production Lead. Clicking **Add Black Fox roles** again only adds the ones that are missing.
+The starter roles are: General Manager, Assistant of General Manager, Compliance Officer, Security Manager, Security Officer, Sanitation, Team Member, Inventory Manager, Extraction Manager, Production Manager, Sales Manager and Production Lead. Clicking **Add Northfield Labs roles** again only adds the ones that are missing.
 
 Each card shows the number of people with the role, its duties, its requirements and its access per module.
 
@@ -405,7 +427,7 @@ The Audit Trail is the permanent history of every change in Hendrix: who, when, 
 **Where:** left menu → Audit Trail. **Who:** anyone with View on Audit Trail (it has no Edit or Full level). Nobody, including admins, can change or delete it.
 **CSQ:** 1.4 (documentation and records), 5.1.5 (change management)
 
-![The Audit Trail for Missouri, last 30 days](shots/found_audit_page.png)
+![The Audit Trail for Colorado, last 30 days](shots/found_audit_page.png)
 
 ### When to use it
 | Situation | What you do in Hendrix |
@@ -448,23 +470,25 @@ Settings are kept per license: the business details and logo printed on records,
 | A new license is set up | **General**: legal name, DBA, address, phone, email, footer, logo |
 | The logo changes | **General** → **Replace logo** |
 | Break rules change | **Time clock** → change the break minutes |
-| Sanitation must be logged every day, not every 2 days | **Facility logs** → Sanitation Log → 1 |
+| Sanitation must be logged every day, not every 48 hours | **Facility logs** → Sanitation Log → 24 (hours) |
+| The staff are employed by a separate management company | **General** → **Management / HR company** |
 | High risks must be reviewed more often | **Review cycles** → High (10-14) |
 | You look for where something else is set | **Everything else** → **Open** on the right card |
 
-The page always manages the license chosen at the top ("Managing Black Fox · MAN000109"). Switch the license at the top to manage another. After changes, click **Save settings** (top right). Hendrix says "Settings saved for <license>."
+The page always manages the license chosen at the top ("Managing Northfield Labs · MFG-48213"). Switch the license at the top to manage another. After changes, click **Save settings** (top right). Hendrix says "Settings saved for <license>."
 
 ### General
 The **License** card shows the name, number, type, operation and state (these are changed in States and Licenses).
 
 | Field | What to enter | Required |
 |---|---|---|
-| Legal name | For example Black Fox Manufacturing LLC | No |
-| Doing business as (shown first) | For example Black Fox | No |
+| Legal name | For example Northfield Labs LLC | No |
+| Doing business as (shown first) | For example Northfield Labs | No |
 | Address | Street, city, state, ZIP | No |
 | Phone | Main phone | No |
 | Email | Main email | No |
 | Footer on printouts (optional) | For example Controlled copy - printed from Hendrix QMS | No |
+| Management / HR company (employs the staff) | Only when the staff are employed by a separate management company, for example Northfield Management Inc. It prints as "Employer" on the time clock sign-in sheet, the roll call and training records. Leave it blank when the license owner employs the staff | No (120 characters at most) |
 | Logo (badges, kiosks, printouts) | **Upload logo** (PNG, JPG, WEBP or SVG). **Remove** takes it off | No |
 
 The **Printout header preview** shows what will print at the top and bottom of every record. The logo also shows on badges and the time clock kiosk.
@@ -481,19 +505,20 @@ A return later than the limit is flagged late, with the minutes over, on the kio
 ### Facility logs
 ![Settings → Facility logs: days without an entry before a log is flagged](shots/found_settings_logs.png)
 
-One number per log: after how many days without an entry the log is flagged as not kept up (on the Dashboard and on Standards). Leave it blank to use the default.
+One number per log: after how long without an entry the log is flagged as not kept up (on the Dashboard and on Standards). The sanitation log is counted in **hours**; the others in days. Leave it blank to use the default.
 
-| Log | Default (days) |
+| Log | Default |
 |---|---|
-| Sanitation Log | 2 |
-| Temp / Humidity Log | 2 |
-| Waste Destruction Log | 31 |
-| Scale Calibration Log | 35 |
-| Security Equipment Inspection | 35 |
-| Pest Control Log | 35 |
-| Environmental Monitoring Log | 35 |
-| Equipment Maintenance Log | 95 |
-| Security Malfunction Log | 120 |
+| Sanitation Log | 48 hours |
+| Temp / Humidity Log | 2 days |
+| GMP Hygiene Walk | 2 days |
+| Waste Destruction Log | 31 days |
+| Scale Calibration Log | 35 days |
+| Security Equipment Inspection | 35 days |
+| Pest Control Log | 35 days |
+| Environmental Monitoring Log | 35 days |
+| Equipment Maintenance Log | 95 days |
+| Security Malfunction Log | 120 days |
 
 ### Review cycles
 The default review cycle for a new risk in the Risk Register, by its rating. Each risk can still be changed on its own.

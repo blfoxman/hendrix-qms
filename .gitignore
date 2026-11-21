@@ -1,2 +1,7 @@
 tests/browser/work/
 __pycache__/
+documentation/manual/shots/
+documentation/manual/shots_jpg/
+documentation/manual/_work/
+documentation/manual/_*.pdf
+documentation/manual/_*.html

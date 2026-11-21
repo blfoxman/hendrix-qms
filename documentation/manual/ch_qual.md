@@ -156,6 +156,7 @@ Complaints holds every consumer and dispensary complaint, product return, advers
 | A complaint needs corrective action | Open the complaint → **Raise deviation** |
 | Two complaints arrive on the same lot | Hendrix shows a red "Repeat complaints on the same lot" warning at the top |
 | Inspector asks for the complaint log | **Complaint log** prints every complaint |
+| You want dispensaries to report problems themselves | Print the **Store complaint QR** sign and give it to your dispensaries (see below) |
 
 ### Read the Complaints page
 Cards at the top show **Open** and **Overdue** complaints, **Complaints (12 months)** with the number of adverse events, **Average days to close**, and **Customer satisfaction** (average feedback rating over 12 months). Feedback does not count as a complaint in these numbers. A red banner lists any lot with more than one complaint in 12 months.
@@ -216,6 +217,15 @@ When you pick *Adverse event*, Hendrix shows: "Adverse event: report it to the s
 Other buttons: **Edit details** reopens the logging form; **Print** prints the complaint record; **Cancel** (Full) cancels with a reason; **Reopen** (Full) reopens a closed or cancelled complaint. Feedback records have no investigation section and close without these checks.
 
 > **Hendrix checks:** Hendrix will not close a complaint without an investigator ("Name who investigated the complaint (CSQ 1.7 a)."), the investigation, the resolution, and — when you have a contact or customer — the date the complainant was answered ("Record when the complainant was answered before closing (CSQ 1.7 a)."). "An adverse event must be reported to the state regulator before it is closed." A closed or cancelled complaint cannot be changed until someone with Full access reopens it. View users see the investigation fields greyed out. Complaints are never deleted.
+
+### Store complaints by QR code
+Dispensaries can file a complaint themselves, without a Hendrix account. The **Store complaint QR** card at the top of Complaints has the license's QR code and link.
+- **Print QR sign** prints a one-page sign: scan, tell us, send. **Copy link** lets you email the link to a buyer.
+- The store fills in the store name, their name, a phone number or email, the **METRC package tag** (24 characters, starting with 1A, from the package label), the product, what is wrong, up to 3 photos, and ticks *Someone got sick or hurt using this product* when that happened.
+- While they type the tag, Hendrix checks it against your shipments, tests and batches, and fills in the product when it finds it. If the tag isn't found, they must check the label or tick *The tag is correct* to send anyway.
+- They get a complaint number on screen. The complaint arrives as an open **Dispensary complaint** (an **Adverse event** when someone got sick or hurt), ready to investigate like any other.
+
+> **Why the METRC tag is required:** the tag tells you exactly which package and batch the complaint is about. Without it, you can't trace the complaint to a batch, check for repeat complaints on the same lot, or decide whether to hold product.
 
 ### Review trends and print the log
 Open the **Trends** tab for the charts, and click **Complaint log** to print every complaint with its investigator, resolution, corrective action, deviation and status.
@@ -342,6 +352,9 @@ SOPs is your controlled document library: every Standard Operating Procedure is 
 | An SOP is no longer used | Open it → **Archive** (Full access) |
 | Inspector asks for the document list | **Master list** prints every SOP with number, revision, dates, approver and signatures |
 | You need a printed copy for the floor | Open it → **📄 Download PDF** |
+| An inspector wants the SOPs with who signed them | **⬇ Download SOPs** → *With acknowledgements*, tick the SOPs |
+| SOPs were signed on paper before they were in Hendrix | **Paper records** (Full access): the paper date, the SOPs and the people who signed |
+| You make edibles or infused products and need the food safety SOPs | The banner offers the **Food safety SOP pack**: add the missing ones as drafts, review and publish |
 
 ### Read the SOPs page
 Cards show **Total SOPs**, **Published**, **Needs my signature**, **I've signed**, and for Edit access **Review overdue** and **Signatures complete** (percent of required signatures done). A red banner tells you how many SOPs are waiting for your signature. Folder tabs filter the list: *All*, *General*, *Production*, *HR*, *Compliance*, *Security*, *Distribution*, *Sales*, and *Archived* (Full access only). Each card shows status, folder, version, number, badges (*Needs my signature*, *✓ Signed*, *Review overdue*), number of steps and signatures.
@@ -427,6 +440,9 @@ The **Signatures · v…** box shows the progress bar, who signed (with date) an
 - **Archive** (Full): moves the SOP to *Archived*, visible only to Full access. **Restore** puts it back in its folder.
 - **📄 Download PDF**: a controlled-document PDF with number, revision, status, effective and review dates, approver, the procedure (critical steps marked "CRITICAL STEP — Verify and document before proceeding"), revision history, and the signatures for the current revision. Drafts print blank signature lines. The footer says printed copies are uncontrolled.
 - **Master list**: prints the SOP master list with number, title, folder, revision, status, effective date, next review (overdue marked), approver and signatures.
+- **⬇ Download SOPs**: one PDF of many SOPs, with a contents page and each SOP on its own pages. Choose *Without acknowledgements* (to read, train with or hand out) or *With acknowledgements* (each SOP with everyone who signed its current revision and who hasn't yet, for inspections and audits), then tick the SOPs (**All** / **None**). Inside one SOP, **✍ Download PDF with acknowledgements** does the same for that SOP.
+- **Paper records** (Full): for SOPs that were in use and signed on paper before they were in Hendrix. Enter the **Date on the paper** and where the paper is kept, tick the SOPs and the people who signed the paper, and click **Record paper records**. Each SOP gets the paper date as its effective date (next review one year later), and each person shows as "signed on paper <date>" in the signature list, the PDF and the training matrix. Only tick people who really signed the paper; recently hired staff must sign in Hendrix.
+- **Food safety SOP pack** (manufacturing licenses): a banner offers the food safety SOPs that edible and infused product makers need (person in charge, access and visitors, sick policy, handwashing, cleaning and sanitizing, allergens, dress code, eating and drinking, warewashing, chemicals, water and hand sinks, receiving, the daily GMP walk). They're added as drafts, numbered SOP-CFS-001 and up: adapt each one to your facility, publish it and have staff sign it.
 
 ![First page of an SOP PDF](shots/qual_sops_pdf.png)
 
@@ -451,7 +467,8 @@ Training is your training program and matrix: which courses each role must take,
 | A new hire must learn hygiene rules | They open **My training** → **Take course** on *Personnel hygiene, handwashing and PPE* |
 | A manager gets HACCP certified | **+ Record training** on *HACCP certification*, method *External certification*, attach the certificate |
 | A gap shows red in the matrix | Click the red cell to record that training for that person |
-| The Missouri rules change | Courses → *Missouri regulatory compliance* → **Online course** → **Draft from the Missouri Rulebook with AI**, review, publish |
+| Your state's rules change | Courses → *<State> regulatory compliance* → **Online course** → **Draft from the <State> Rulebook with AI**, review, publish |
+| Someone wants to watch how a page works | Send them to the **Training Center** (hendrixqms.com/training): videos picked for their job |
 | A job task is trained by reading an SOP | **+ Course**, *Met by signing an SOP* |
 | A record was entered for the wrong person | Records → **Void**, give the reason, then record it again |
 | An inspector asks for one employee's training | Matrix → **PDF** on that person's row |
@@ -461,15 +478,18 @@ The first time someone with Full access opens Training on a license with no cour
 
 | Course | Who must take it | Refresher | Notes |
 |---|---|---|---|
-| *State* regulatory compliance (state rules), for example "Missouri regulatory compliance" | Everyone | 12 months | Only for that state's licenses |
+| *State* regulatory compliance (state rules), for example "Colorado regulatory compliance" | Everyone | 12 months | Only for that state's licenses |
 | Current Good Manufacturing Practices (cGMP) | Everyone | 12 months | Assessment required |
 | Cannabis safety principles | Everyone | 12 months | Assessment required |
 | Personnel hygiene, handwashing and PPE | Everyone | 12 months | |
 | Product defense and security awareness | Everyone | 12 months | |
 | Chemical safety and SDS | Manager roles and Sanitation roles (Optional when no such roles exist) | 12 months | |
-| CSQ Certification Program Overview | Manager roles; at least 1 certified | One time | Outside certification |
+| CSQ Certification Program Overview | Manager roles; at least 1 certified | One time | Outside certification, or the Hendrix online equivalent (9 lessons, 15 questions from the CSQ standard) |
 | HACCP certification (International HACCP Alliance) | Manager roles; at least 2 certified | One time | Outside certification |
+| HACCP basics (Hendrix online course) | Manager roles | 12 months | Online, 8 lessons and a 15-question quiz. Awareness and refresher; it does **not** replace the HACCP certificate |
 | Extraction safety and solvent controls (manufacturing licenses) or cGACP (cultivation licenses) | Extraction roles (Optional otherwise) / Everyone | 12 months | Assessment required |
+| Food safety and employee health (21 CFR 117) (manufacturing licenses) | Everyone | 12 months | Online, 8 lessons and a 15-question quiz: illness reporting, handwashing, dress code, eating and drinking, cleaning, chemicals, water, receiving |
+| *State* security manager training (state rules) | Only roles named Security Manager | 12 months | Online: the state's facility security rules. Some states also require on-site and classroom hours; record those separately |
 
 Manager roles are any role whose name contains manager, compliance, director, supervisor or owner. Hendrix also loads Hendrix starter lessons and quizzes, written from the CSQ standard, as **drafts** for six courses. A banner **Online courses ready** lists them: review them (Courses → **Online course**) and click **Publish all** so people can take them. **Add missing CSQ starter courses** on the Courses tab adds any starter course you do not have.
 
@@ -497,7 +517,7 @@ Edit users can click any cell that is not current to open **Record training** pr
 **My training:** your required courses with status and **Take course** buttons, other online courses, your quiz attempts, SOPs waiting for your signature (with **Open SOPs**), and **Download my training record (PDF)**.
 
 ### Manage courses
-The **Courses** tab lists each course with its topic, badges (*Online · v1 · pass 80%*, *Online draft*, *Outside certification*, *Shared · all licenses* or *Shared · all Missouri licenses*), who must take it, the refresher, and whether an assessment is required.
+The **Courses** tab lists each course with its topic, badges (*Online · v1 · pass 80%*, *Online draft*, *Outside certification*, *Shared · all licenses* or *Shared · all Colorado licenses*), who must take it, the refresher, and whether an assessment is required.
 
 ![Courses tab with online and shared badges](shots/qual_training_courses.png)
 
@@ -573,10 +593,20 @@ To add one, click **+ Course** (Full access); to change one, click **Edit**. Cli
 
 > **Hendrix checks:** Hendrix will not publish without at least one lesson and one question, each question with text and at least two filled options, and a correct answer for every question. Publishing makes the assessment required. Every change to published content creates a new content version, stamped with who published it. Only Full access can change content or the answers. If the state Rulebook is empty, the AI draft is refused ("The … Rulebook is empty. Add the state rules first; the course is written from them.").
 
+### The Training Center
+The **Training Center** is a separate page at **hendrixqms.com/training** with short narrated videos on how to use Hendrix: getting started, facility logs and QR codes, the visitor log, the Line Map, receiving to release, the cultivation map, chemicals and SDS, taking training, the SOP creator and the audit trail. It also has this user manual, to read online or download as a PDF.
+1. Open **hendrixqms.com/training** (or **Training videos** at the top of the Training page).
+2. Enter your company address (the word after hendrixqms.com/), your Hendrix email and password, and your authenticator code if you use two-step sign-in.
+3. **Picked for your role** shows the videos for your job title. **All your videos** shows every video for the areas you have access to. A bar shows how many you've watched.
+
+![The Training Center: videos picked for the person's job title and access](shots/qual_training_center.png)
+
+Watching a video is learning, not a training record. Training that counts for an inspector is recorded in **Training** (a course you passed or a session someone recorded).
+
 ### Training shared across licenses
 The CSQ starter courses are shared across all your licenses in both states; the state regulatory course is shared across all licenses of the same state; a custom course is shared when you tick *Same course at all my licenses*. For a shared course:
 - A person's valid training at one license counts at the others. It appears in the matrix and on the Records tab under **Counted from your other licenses**, showing where it was done. The record itself stays at the license where it was done.
-- Missouri law training does not count in Michigan, and the other way round.
+- One state's law training does not count in another state.
 - Publishing new online content at one license updates the course at every license that shares it where you have Full access. A new license's copy starts from the latest published version.
 
 ### Tips

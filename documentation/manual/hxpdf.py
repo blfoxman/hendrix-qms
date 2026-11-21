@@ -4,7 +4,8 @@ from playwright.sync_api import sync_playwright
 from pypdf import PdfReader, PdfWriter
 
 DIR = os.path.dirname(os.path.abspath(__file__))
-CHROME = '/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell'
+import glob
+CHROME = os.environ.get('HX_CHROME') or (sorted(glob.glob('/opt/pw-browsers/chromium_headless_shell-*/chrome-linux*/headless_shell')) or [None])[-1]
 
 LOGO = ('<svg viewBox="0 0 40 40" width="{s}" height="{s}"><defs><linearGradient id="lg{i}" x1="0" y1="0" x2="1" y2="1">'
         '<stop offset="0" stop-color="#f1d57a"/><stop offset=".5" stop-color="#d4af37"/><stop offset="1" stop-color="#a8841c"/></linearGradient></defs>'
@@ -110,14 +111,18 @@ body { margin: 0; font-family: 'Inter', sans-serif; }
 
 def img_uri(path):
     p = path if os.path.isabs(path) else os.path.join(DIR, path)
+    if not os.path.exists(p):   # screenshots are not kept in git: fall back to the published web copy
+        alt = os.path.join(DIR, '..', '..', 'site', 'training', 'manual', 'img', os.path.splitext(os.path.basename(p))[0] + '.jpg')
+        if os.path.exists(alt): return 'file://' + os.path.abspath(alt)
     if p.endswith('.png') and os.path.exists(p):
         from PIL import Image
-        j = os.path.join(DIR, 'shots_jpg', os.path.basename(p)[:-4] + '.jpg')
+        W, Q = int(os.environ.get('HX_PDF_IMG_W', 1250)), int(os.environ.get('HX_PDF_IMG_Q', 76))
+        j = os.path.join(DIR, 'shots_jpg', os.path.basename(p)[:-4] + '_%d_%d.jpg' % (W, Q))
         if not os.path.exists(j) or os.path.getmtime(j) < os.path.getmtime(p):
             os.makedirs(os.path.dirname(j), exist_ok=True)
             im = Image.open(p).convert('RGB')
-            if im.width > 1400: im = im.resize((1400, round(im.height * 1400 / im.width)), Image.LANCZOS)
-            im.save(j, quality=82, optimize=True, progressive=True)
+            if im.width > W: im = im.resize((W, round(im.height * W / im.width)), Image.LANCZOS)
+            im.save(j, quality=Q, optimize=True, progressive=True)
         p = j
     return 'file://' + p
 
@@ -130,7 +135,7 @@ def md_to_html(md):
         if isli(ln) and R and R[-1].strip() and not isli(R[-1]) and not R[-1].lstrip().startswith('|'): R.append('')
         R.append(ln)
     md = '\n'.join(R)
-    out = markdown.markdown(md, extensions=['tables', 'sane_lists', 'attr_list', 'fenced_code'])
+    out = markdown.markdown(md, extensions=['tables', 'sane_lists', 'attr_list', 'fenced_code', 'md_in_html'])
     def fig(m):
         alt, src = H.unescape(m.group(1)), m.group(2)
         cls = 'form' if re.search(r'(form|modal|_new|_edit|dialog)', src) else ''

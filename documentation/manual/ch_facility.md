@@ -1,7 +1,7 @@
 # Facility, equipment and people on site
 
 ## Facility Logs
-The nine daily facility records in one place: sanitation, waste destruction, scale calibration, security malfunctions, weekly security inspections, pest control, equipment maintenance, temperature / humidity and environmental monitoring. Inspectors ask for these first, because they show the building is clean, secure, pest-free and under control every day.
+The routine facility records in one place: sanitation, waste destruction, scale calibration, security malfunctions, weekly security inspections, pest control, equipment maintenance, temperature / humidity, environmental monitoring and the GMP hygiene walk, plus maintenance and purchase requests and the private employee illness and exclusion log. Inspectors ask for these first, because they show the building is clean, secure, pest-free and under control every day.
 
 **Where:** left menu → **Facility Logs**. **Who:** each log has its own access level (the "Facility Logs (all)" setting is the default for any log without its own; the two security logs share one setting). View can read the log, search it, export CSV and print. Edit can also add entries and sees the log's kiosk QR code. Full can also manage the log's pick lists, correct entries (with a reason) and void entries (with a reason).
 **CSQ:** 1.1, 1.9, 2A.1.2, 2A.2.2, 2A.2.3, 2A.3, 2A.4, 2A.4.1, 2A.5.1, 2A.6, 2A.8, 2A.9.3, 3A.1.1, 3A.1.4, 3A.1.14, 3A.1.16, 3A.2.2, 3B.1.2, 3B.1.3, 3B.1.11, 3B.2.1, 3C.1.9
@@ -21,6 +21,10 @@ The nine daily facility records in one place: sanitation, waste destruction, sca
 | Start of every shift: room conditions | **Temp / Humidity** → **+ New entry**, or scan the room's QR sign with a phone. |
 | A swab, air or water sample is taken in-house | **Environmental Monitoring** → **+ New entry**. |
 | A result is Fail, Flag or Open | Click **Deviation** on that row to open a deviation linked to the entry. |
+| Start of every production shift | The person in charge does the **GMP Hygiene Walk**: people and areas, Pass or Fail. |
+| Something is broken or needs fixing | **Maintenance Request**, usually by scanning its QR code. A manager updates the status. |
+| Something must be bought | **Purchase Request**, usually by QR. A manager approves, orders and marks it received. |
+| An employee reports vomiting, diarrhea or another reportable symptom | The person in charge records it in the **Employee Illness and Exclusion Log** (private). |
 
 ### Find and read entries
 1. Pick the log tab at the top (Sanitation, Waste Destruction, Scale Calibration, Security Malfunction, Security Equipment Inspection, Pest Control, Equipment Maintenance, Temp / Humidity, Environmental Monitoring). Hendrix remembers the last tab you used.
@@ -191,6 +195,22 @@ The **Calibration check** box on the form shows each point's difference, OK or F
 | Corrective Action (if fail) | Immediate action | Yes, if Fail |
 | Retest Date, Notes | Details | No |
 
+### GMP hygiene walk, requests and the illness log
+**GMP Hygiene Walk** (start of every production shift; overdue after 2 days). The person in charge walks the production areas and marks each line **Pass** or **Fail**:
+- *People:* hair nets and beard covers worn; no jewelry, watches or piercings (plain band under a glove only); nails short and clean; clean outer garments and personal items in lockers; gloves intact and changed between tasks; no one working with reportable symptoms and wounds covered; handwashing at entry and after breaks.
+- *Areas:* no food, drinks, gum or tobacco in production or storage; hand sinks stocked and unblocked; warewashing sink set up and sanitizer strength checked; chemicals approved, labeled and stored away from product; equipment and food-contact surfaces clean before use; no signs of pests; no hoses left in buckets or sinks.
+
+Any Fail makes the walk **Fail** and needs a **Corrective Action** ("What was done, product held?").
+
+**Maintenance Request** and **Purchase Request** are for everyone: staff scan the QR code (or use **+ New entry**) and say what needs fixing or buying.
+- A maintenance request has the area or room, the equipment, what needs fixing, the priority (*Normal*, *High - affects production*, *Urgent - safety or production stopped*, *Low - when there is time*) and the production impact. Its status goes **Open → In progress → Done** (or *Cancelled*).
+- A purchase request has what is needed, quantity and unit, department, the date needed by, priority, where to buy it, the estimated cost and what it's for. Its status goes **Requested → Approved → Ordered → Received** (or *Rejected*).
+- New requests appear in **My Tasks** of the managers with Full access on that request log, who update the status.
+
+**Employee Illness and Exclusion Log** (private). Food safety rules require that anyone with symptoms that could contaminate product is kept away from it. The person in charge records each time an employee is excluded, restricted or returns: the employee, **when reported** (before the shift, during the shift, found by the PIC), the **reason as a category only** (vomiting, diarrhea, jaundice, sore throat with fever, infected cut or sore, diagnosed reportable illness, household member with a reportable illness, other symptom), the **action** (excluded, restricted from exposed product, or allowed to work with the wound covered), whether **product was exposed** (if yes, the product is held and a deviation opened), the areas cleaned, and later the **return to work**: date, why cleared and by whom.
+
+> **Privacy:** this log has its own access setting, **Employee Illness and Exclusion Log**. It never follows *Facility Logs (all)* or the *All* buttons, and it has no QR code. Give it only to the person in charge, the backup and HR. Never write medical details: the category is enough. Doctor's notes are kept by HR, not in Hendrix.
+
 ### Manage the pick lists (Full access)
 1. Open the log tab and click **Manage lists**. The lists belong to this license only; other licenses keep their own.
 2. Type an item and click **+ Add**. Some lists also take details: scales (location, make / model, model number, serial, capacity, NTEP number, last annual certification, certified by, tolerance), temp / humidity rooms (min / max °F, min / max RH %), pest stations (type, location), equipment (ID / serial).
@@ -202,15 +222,19 @@ The **Calibration check** box on the form shows each point's difference, OK or F
 
 > **Hendrix checks:** only Full access on that log can add, change or delete list items, and only for its own license.
 
-### Use the kiosk (QR) on a phone or tablet
-1. On the log tab, the gold card shows the **Kiosk QR** for this log and this license. Click **Print QR sign** to print a letter-size sign, or **Copy link**.
-2. Staff scan the code with a phone camera. No login is needed. The page shows the state, license and log name.
-3. They fill the same form, sign with a finger and tap **Submit entry**. The screen confirms "Saved. Thank you, <name>." and warns them to tell a supervisor when the result is Fail, Flag or Open. **Fill another** starts a new entry.
-4. Kiosk entries show a **QR** tag in the list.
+### Use the QR code on a phone or tablet
+1. On the log tab, the gold card shows the **QR code** for this log and this license. Click **Print QR sign** to print a letter-size sign, or **Copy link**.
+2. Staff scan the code with a phone camera. The page shows the state, license and log name.
+3. **They sign in with their own Hendrix account** ("Sign in with your own Hendrix account to fill this form. Your name is added from your sign-in."). Two-step sign-in applies as usual. Only the **Pest Control** and **Security Malfunction** forms work without signing in, for the outside pest company and for urgent security reports; those ask for the person's name.
+4. They fill the same form, sign with a finger and tap **Submit entry**. The screen confirms "Sent. Thank you, <name>." and warns them to tell a supervisor when the result is Fail, Flag or Open. **Fill another** starts a new entry; **Done - sign out** signs them out.
+5. On a shared phone or tablet, Hendrix signs the person out after 3 minutes without activity.
+6. QR entries show a **QR** tag in the list.
 
-![The Temp / Humidity kiosk on a phone: no login, signature required](shots/facility_logs_kiosk.png)
+![The Pest Control QR form on a phone: the license, the log and the form](shots/facility_logs_kiosk.png)
 
-> **Hendrix checks:** a kiosk entry needs a name and a signature ("Please sign in the box."). The link carries the log, the state and the license; Hendrix refuses a link with a missing state or license, an unknown log, or a license that is not active in that state ("This QR code is not linked to an active license in this state. Please ask a manager for the current code.").
+> **Why sign in:** an entry must show who really made it. With a shared, no-login form anyone can type any name. Signing in makes every QR entry carry the person's verified name, the same as an entry made at a desk.
+
+> **Hendrix checks:** a QR entry needs a signature ("Please sign in the box."). The link carries the log, the state and the license; Hendrix refuses a link with a missing state or license, an unknown log, or a license that is not active in that state ("This QR code is not linked to an active license in this state. Please ask a manager for the current code.").
 
 ### Correct or void an entry (Full access)
 1. **Edit** on a row opens the entry. Change what is wrong, write the **Reason for change** and click **Save changes**. The old values, who changed them and when go to the Audit Trail.
@@ -219,7 +243,7 @@ The **Calibration check** box on the form shows each point's difference, OK or F
 > **Hendrix checks:** entries are never deleted. A change without a reason is refused ("A reason for the change is required."), a void without a reason is refused ("A reason is required to void an entry."), and a voided entry cannot be changed. The license, state, log type, signature and source of an entry can never be changed.
 
 ### Tips
-- Put a printed QR sign next to every room thermometer and in the cleaning closet; most entries then come from the kiosk.
+- Put a printed QR sign next to every room thermometer, in the cleaning closet and at the maintenance board; most entries then come from phones.
 - Settings → **Facility logs** sets after how many days without an entry a log is flagged as not kept up on the dashboard and in Standards.
 - Add every scale in **Manage lists** with its tolerance; a 30 kg floor scale should not use the 0.1 g default.
 
@@ -286,6 +310,72 @@ The sign-in record of every visitor and contractor, with their agreement to the 
 - **Signature** shows the visitor's signature. **Export CSV** includes state, license, GMP acceptance and declared illness.
 
 > **Hendrix checks:** signing a visitor out needs only Edit access and no reason. Any other change needs Full access and a reason ("You can sign visitors out. Other changes need Full access to the Visitor Log."). Visitor entries are never deleted.
+
+## Rooms
+The list of rooms at the license: storage rooms, freezers, coolers, vaults, production rooms, labs and quarantine areas, each with its storage conditions. Other pages pick from it, so every record names a room the same way.
+
+**Where:** left menu → Facility → **Rooms**. **Who:** everyone at the license can see the rooms; Full access adds, renames and switches rooms off.
+
+### When to use it
+| Situation | What you do in Hendrix |
+|---|---|
+| You set up Hendrix, or build a new room | **+ Add room** |
+| A freezer is now used for rosin only | **Edit** → change the name or storage conditions |
+| A room is no longer used | **Edit** → untick **Room in use** |
+
+### Add a room
+1. Click **+ Add room**.
+2. Fill in the fields and click **Save**.
+
+| Field | What to enter | Required |
+|---|---|---|
+| Room name | For example Freezer 2, Rosin storage, Vault. Unique at the license | Yes |
+| Type | Storage, Freezer, Cooler, Vault, Production, Lab, Quarantine or Other | Yes (default Storage) |
+| Storage conditions | For example -20 °F, 35-40 °F, room temperature, dark | No |
+| Notes | Anything else | No |
+| Room in use | Shown when editing. Untick to switch the room off; records keep its name | — |
+
+Rooms are used as the **Storage location** of received lots and the **Storage Room** of solventless batches. **Show rooms that are switched off** lists the old ones.
+
+> **Hendrix checks:** two rooms can't have the same name ("There is already a room called …"). Rooms are switched off, never deleted.
+
+## Facility Map
+A drawing of the building, with its houses, rooms, beds and equipment, colored by what's happening now. Cultivation licenses only.
+
+**Where:** left menu → Facility → **Facility Map**. **Who:** View sees the map and its overlays; Edit can also log temperature and humidity readings and place and edit equipment pins; Full can also draw and import maps and zones, set targets, remove pins and void readings.
+
+![The Facility Map colored by plant stage](shots/facility_map_stage.png)
+
+### When to use it
+| Situation | What you do in Hendrix |
+|---|---|
+| You want to see which beds are flowering or ready to harvest | **Stage** overlay |
+| A room feels warm | **Temperature** overlay; click the zone to see its readings |
+| You take a reading by hand | Click the zone → log the temperature and humidity |
+| You add a fan, light or camera | **Equipment** overlay → place a pin |
+| You check the electrical load | **Power** overlay and the power table |
+| You set up the map | **Edit map** (Full): draw zones, or import a zone file |
+
+### Read the map
+- A **zone** is a rectangle on the drawing: a house or room, a bed, bay or table inside it, or another room (dry, cure, vault, manufacturing).
+- The **overlays** recolor the same drawing: **Stage** (seedling, vegetative, flowering, late flower = the last 14 days before the harvest window, harvest ready, harvested, empty), **Plants**, **Temperature**, **Power** and **Equipment**. The legend follows the overlay. A hatched zone isn't linked to a grow area yet.
+- Stage and plants come from the plant batches in the grow area the zone is linked to. A house shows the most common stage of its beds.
+- **Temperature** compares the latest reading with the zone's day (6 am to 8 pm) or night target: cold (more than 5 °F below), cool, on target (within 2 °F), warm, hot (more than 5 °F above). A bed without its own reading or target uses its house's, marked with *. Readings older than 24 hours fade.
+- The strip at the top shows plants in the ground on mapped beds, beds planted now, zones with a reading in the last 24 hours, and the connected electrical load.
+- Click a zone to see its plants, strains and batches, temperature and humidity with a small chart and the last readings, and its equipment. Dry and cure rooms list what's drying or curing, with days against the target.
+- Zoom and move: drag, **+** / **−** / **Fit**, Ctrl or Cmd + scroll, pinch, or double-click.
+
+![Click a bed: its plants, batches, readings and equipment](shots/facility_map_bed.png)
+
+![The Temperature overlay](shots/facility_map_temperature.png)
+
+### Equipment pins and power
+On the **Equipment** overlay, place a pin for a camera (with its coverage cone), grow light, fan, HVAC unit, dehumidifier, heater, pump, sensor, machine, chiller, generator or storage. Drag it to move it; Hendrix finds the zone it's in. Each pin can have its watts, quantity, hours a day and model, and a link to the Equipment register. The **Power** overlay and table show each zone's load and kWh a day, and generators' load against their capacity. A red dot means a pin has no watts yet.
+
+### Draw or import the map (Full access)
+**Edit map** lets you draw, move and resize zones and fill in each zone: its code, label, name, kind, license, parent house, linked grow area, capacity and targets. **Map settings** can show the building's blueprint image under the zones, to trace over. **Import zones** reads a zone list file (JSON); importing again updates zones by their code. **Export JSON** saves the map.
+
+> **Hendrix checks:** zones that have readings can't be deleted. Readings are never edited or deleted: a wrong one is voided with a reason. Maps are switched off, never deleted.
 
 ## Equipment
 The equipment register: every machine and instrument with its preventive maintenance schedule, calibrations and certificates, IQ / OQ / PQ validation, temporary repairs and out-of-service history. Inspectors use it to check that equipment is maintained, measuring devices are calibrated on time and nothing broken is in use.
@@ -396,8 +486,9 @@ The approved chemical list for the license: every cleaner, sanitizer, lubricant,
 
 ### Add, review and approve a chemical
 1. Click **+ Chemical** (or **Review** / **Edit** on a row).
-2. Fill the form and attach the SDS with **+ SDS**.
-3. Click **Save** to keep it as **Waiting for approval**, or (Full access) **Save and approve**. Hendrix numbers it CHEM-001, CHEM-002...
+2. Attach the SDS with **+ SDS** (a PDF or a photo). The AI reads it and fills the form: name, manufacturer, hazards, PPE, first aid, spill, disposal, EPA number and date. Empty fields are filled; fields you already filled are offered for replacement, and **Undo** puts the form back. **Read attached SDS with AI** reads it again.
+3. **Check every field against the SDS.** The AI helps you type; it doesn't approve anything. Fill in the storage area and anything it missed.
+4. Click **Save** to keep it as **Waiting for approval**, or (Full access) **Save and approve**. Hendrix numbers it CHEM-001, CHEM-002...
 
 ![Reviewing a pesticide: the EPA registration number is required before approval](shots/facility_chemicals_form.png)
 
@@ -405,8 +496,8 @@ The approved chemical list for the license: every cleaner, sanitizer, lubricant,
 |---|---|---|
 | Product name | Name on the label | Yes |
 | Manufacturer, Product code | From the label | No |
-| Used for | Cleaner, Sanitizer, Food-contact sanitizer, Lubricant (food grade H1), Lubricant / maintenance (non-food), Pesticide / crop protection, Nutrient / fertilizer, Extraction solvent or gas, Lab reagent, Other | No |
-| Grade | Food grade, Food-contact sanitizer, Not food grade (set automatically for food-contact sanitizers and H1 lubricants) | No |
+| Used for | Cleaner, Sanitizer, Food-contact sanitizer, Lubricant (food grade H1), Lubricant / maintenance (non-food), Pesticide / crop protection, Nutrient / fertilizer, Extraction solvent or gas, Terpenes, Lab reagent, Other | No |
+| Grade | Food grade, Food-contact sanitizer, Not food grade (set automatically for food-contact sanitizers, H1 lubricants and terpenes; you can change it) | No |
 | Supplier | From your approved suppliers | No |
 | EPA registration # | Shown for Pesticide / crop protection | Yes, to approve a pesticide |
 | SDS file | **+ SDS** | Yes, to approve |

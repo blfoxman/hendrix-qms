@@ -229,6 +229,7 @@ async function hxTakeLink(){   // turns the link's sign-in into the session
 }
 function hxHere(){return location.origin+location.pathname;}
 // hendrixqms.com/training: the video Training Center, opened for this company (the folder this Hendrix lives in)
+function hxManualUrl(){const u=hxTrainingCenterUrl();return u.replace(/\/training\/.*$/,'/training/manual/');}
 function hxTrainingCenterUrl(){const seg=(location.pathname.split('/').filter(Boolean)[0]||'');const onSite=/(^|\.)hendrixqms\.com$/i.test(location.hostname);
   return (onSite?location.origin:'https://hendrixqms.com')+'/training/'+(/^[a-z0-9-]{2,40}$/.test(seg)&&seg!=='index.html'?'?company='+seg:'');}
 
@@ -10346,7 +10347,7 @@ function TrainingPage(props){
     el('style',null,'.trcell{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;color:#000;font-weight:800;font-size:12px;border:0;cursor:default}button.trcell{cursor:pointer}'),
     el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
       el('div',null,el('h1',null,el('span',{className:'g'},'Training')),el('div',{className:'sub'},'Training matrix \u00b7 '+lic.name+' \u00b7 required training per role, refreshers, qualified trainers, assessments and SOP signatures (CSQ 2A.13.2)')),
-      el('div',{className:'row'},el('a',{className:'btn ghost',href:hxTrainingCenterUrl(),target:'_blank',rel:'noopener'},'Training videos'),canE&&el('button',{className:'btn',disabled:!active.length,onClick:function(){setModal({t:'rec'});}},'+ Record training'),canF&&el('button',{className:'btn ghost',onClick:function(){setModal({t:'course'});}},'+ Course'))),
+      el('div',{className:'row'},el('a',{className:'btn ghost',href:hxTrainingCenterUrl(),target:'_blank',rel:'noopener'},'Training videos'),el('a',{className:'btn ghost',href:hxManualUrl(),target:'_blank',rel:'noopener'},'User manual'),canE&&el('button',{className:'btn',disabled:!active.length,onClick:function(){setModal({t:'rec'});}},'+ Record training'),canF&&el('button',{className:'btn ghost',onClick:function(){setModal({t:'course'});}},'+ Course'))),
     msg&&el('div',{className:/^(Added|Saved|Recorded|Voided|Created|Regulatory|Published|Draft|Passed|\d+ (online )?course)/.test(msg)?'msg':'msg err'},msg),
     canF&&C.some(function(c){return c.content_status==='draft'&&/^Hendrix starter/.test(c.content_source||'');})&&el('div',{className:'card',style:{borderColor:'var(--gold)',padding:'10px 14px',marginBottom:12}},
       el('div',{className:'row',style:{justifyContent:'space-between'}},el('div',null,el('b',null,'Online courses ready: '),C.filter(function(c){return c.content_status==='draft'&&/^Hendrix starter/.test(c.content_source||'');}).map(function(c){return c.name;}).join(', '),

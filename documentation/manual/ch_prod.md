@@ -5,9 +5,9 @@ This chapter covers the production side of Hendrix: the product catalog and reci
 **Products** (SKU + formulation) → **Production Planner** (how much of each ingredient) → **Batch Tracker** (the batch record) → **Testing** (lab result and COA) → **Compliance Stickers** (the printed label).
 
 ## Line Map
-A live "subway map" of production for general managers and executives. Every batch of the license sits at its real station, from plan to shipment. A batch that is stopped turns red, and Hendrix tells you why, which record stopped it, who owns it and what clears it. Inspectors and owners see at a glance what is moving, what is stuck and for how long.
+A live "subway map" of production for general managers and executives. Every batch of the license sits at its real station, from plan to completed. A batch that is stopped turns red, and Hendrix tells you why, which record stopped it, who owns it and what clears it. Inspectors and owners see at a glance what is moving, what is stuck and for how long.
 
-**Where:** left menu → Line Map (top of Modules), and the **Line map** card on the Dashboard. **Who:** View is all it needs. People with View on Line Map see the whole map even without access to the modules behind it. The **Open …** buttons only appear for modules they can open. Admins change the idle time in Settings → Line Map.
+**Where:** left menu → Production → Line Map, and the **Line map** card on the Dashboard. Manufacturing licenses only. **Who:** View is all it needs. People with View on Line Map see the whole map even without access to the modules behind it. The **Open …** buttons only appear for modules they can open. Admins change the idle time in Settings → Line Map.
 **CSQ:** no clause of its own; it shows, in one place, the evidence kept in the modules behind it.
 
 ![The Line Map: one line per product type, stations from the batch record, and the shared trunk to lab, release, labels and shipping](shots/prod_linemap_overview.png)
@@ -24,11 +24,14 @@ A live "subway map" of production for general managers and executives. Every bat
 | Batches show "No update" too soon or too late | Settings → **Line Map** → change the hours (default 4) |
 
 ### Read the map
-- **Lines** are product types (Cartridges, Gummies, Pre-Rolls, extraction and so on). Only product types with a batch or a plan in the last 45 days are drawn.
-- **Stations** on each line are **Planned**, **Line clearance** and then the sections of that product's batch record (for cartridges: Source Oil / Distillate, Primed Oil, Packaged). All lines then join the shared trunk: **Lab testing → QC release → Labels → Shipped**.
-- **Where a batch sits** comes from its records: the last batch-record section with something filled in; Lab testing once a test is submitted; QC release once it passed; Labels once compliance stickers were printed; Shipped once it is on a shipment. A plan from the Production Planner sits on **Planned** until it is started.
-- **Colors:** gold or the line color = moving · pulsing dot = worked on in the last 30 minutes · red = stopped · dashed = waiting at the lab · outlined = planned · grey = shipped (shown for 3 days).
-- **KPI cards:** in production, moving, stopped (with the longest stop), at the lab, shipped in the last 3 days (and plans waiting) and people on the floor from the Time Clock.
+- **Lines** are product types (Cartridges, Gummies, Pre-Rolls, extraction, Solventless and so on), plus **Manufacturing Process** runs. Only product types with a batch or a plan in the last 45 days are drawn.
+- **Stations** on each line are **Planned**, **Line clearance** and then the sections of that product's batch record (for cartridges: Source Oil / Distillate, Primed Oil, Packaged). All lines then join the shared trunk: **Lab testing → QC release → Labels → Completed**. Manufacturing Process runs go Planned → Material used → Product produced → Additional process.
+- **Each line's own steps:** at manufacturing licenses in some states, each line has named steps that match the batch **Status** list, for example Pre-Rolls: Line Clearance → Infused Flower → Infused Joints → Infused Kiefed Joints → Final Packaging, and the trunk is **Testing → Passed / Failed → QC Release → Labels → Completed**.
+- **Where a batch sits** comes from its records and its status, whichever is furthest: the last batch-record section with something filled in (a dropdown still on its first choice doesn't count); Lab testing once a test is submitted; QC release once it passed; **Labels** when the status is Labels or stickers were printed; **Completed** when the status is Completed or it is on a shipment. Completed batches leave the map 3 days later. A plan from the Production Planner sits on **Planned** until it is started.
+- **Colors:** gold or the line color = moving · pulsing dot = worked on in the last 30 minutes · red = stopped · dashed = waiting at the lab · outlined = planned · grey = completed.
+- **KPI tiles:** in production, moving, stopped (with the longest stop), at the lab, completed, **low yield** (extraction batches with a bad yield grade) and people on the floor from the Time Clock.
+- **Live line flow:** below the map, one row per product line with a ring for each station and the number of batches there. A stopped station turns red. Click a ring to pick its batches.
+- **Yield:** each extraction batch shows its yield and grade in its detail and when you point at its station.
 
 ![Click a batch: why it is stopped, the source record, who owns it, what clears it and its journey](shots/prod_linemap_detail.png)
 
@@ -55,7 +58,6 @@ A batch at the lab whose test is still Pending or Submitted is **waiting**, not 
 2. Enter the hours a batch in production can go without an update before it shows as stopped.
 3. Click **Save settings**.
 
-![Settings → Line Map](shots/prod_linemap_settings.png)
 
 | Field | What to enter | Required |
 |---|---|---|
@@ -113,7 +115,7 @@ A red banner at the top counts the SKUs that still need a formulation. Use the s
 | Field | What to enter | Required |
 |---|---|---|
 | Product type | One of the 8 product types. You cannot change it after saving. | Yes |
-| SKU name | The product name, for example "Muha Meds 2G AIO". It must be unique for that product type in the state. | Yes |
+| SKU name | The product name, for example "Brightline 2G AIO". It must be unique for that product type in the state. | Yes |
 | Made under | Leave **Every license in [state]** ticked, or untick it and tick the licenses that make it. | Yes (default: every license) |
 | Production settings | These depend on the type (see the table below). They drive the Batch Tracker checks and the Planner. Number fields must be numbers. | No |
 | This SKU has flavors | Untick it for a plain SKU with no flavors. | - |
@@ -124,6 +126,7 @@ Production settings by product type:
 | Product type | Settings |
 |---|---|
 | Pre-Rolls | Grams per joint, filled / infused; Grams per joint after coating (blank = no coating step); Coating step (Kief or Diamond); Flower used (Infused or Ground); Package name (for example Jar or Mylar); Joints per package (blank = no packaging check); Infusion ingredients used (THCA, Terpene, Live Resin, HTE, Decarbed Cured Resin, Distillate, Trim, THCA (internal)) |
+| Solventless | **Fresh Frozen:** Fresh Frozen Tags (a row per tag with its weight; **+ Add Fresh Frozen Tag**), Total Fresh Frozen Weight (auto). **Hash:** Hash METRC Tag, Total Hash Produced (usual amount 6% of the fresh frozen), Hash Yield. **Rosin:** Total Hash Used, Total Rosin Produced (usual amount 4%), Rosin METRC Tag, Rosin Yield. **Testing:** the lab test of the rosin tag. **Storage Room:** picked from Rooms. No SKU or flavor. |
 | BHO Extraction | Makes two products (THCA + HTE): No or Yes |
 | Cartridges | Oil per cartridge (g) |
 | Gummies | Grams per gummy; Gummies per package |
@@ -272,7 +275,7 @@ The **Plans** tab lists every plan for the license with its number, planned date
 - If an ingredient shows "not in inventory", check that the lot's item name in Receiving matches the recipe name, for example "THCA" and "THCA isolate".
 
 ## Batch Tracker
-The Batch Tracker is the batch production record for the 8 Black Fox product types. It holds the batch number, SKU and flavor, every input and output with its METRC tag, built-in weight checks, R&D and mandatory testing status, attachments and a signature. It is the core traceability record an inspector asks for.
+The Batch Tracker is the batch production record for every product type you make: extraction (ethanol, BHO, solventless), pre-rolls, cartridges, gummies, infused flower, moon rocks and snow caps, plus the **Manufacturing Process** tab for other runs. It holds the batch number, SKU and flavor, every input and output with its METRC tag, built-in weight checks, R&D and mandatory testing status, attachments and a signature. It is the core traceability record an inspector asks for.
 
 **Where:** left menu → Batch Tracker. Batches belong to the license picked at the top. **Who:** View can see, view and print batches and export CSV. Edit can create batches and **Continue** a batch (fill in blank fields only). Full can **Edit** filled values with a reason and **Void** batches. Seeing the formulation card on the form needs View on the Formulation Bank.
 **CSQ:** 1.8, 2A.10.1, 2A.12.1, 2A.12.9, 3A.1.19, 3A.2.3, 3B.1.1, 3B.1.2, 3B.1.4, 3B.1.6, 3B.1.12, 3B.2.2, 3C.1.1, 3C.1.2, 3C.1.4, 3C.1.10, 3C.2.1, 3C.2.2, 3C.2.3, 3C.2.6, 4A.4, 4A.8, 5.4.3
@@ -283,6 +286,9 @@ The Batch Tracker is the batch production record for the 8 Black Fox product typ
 | Situation | What you do in Hendrix |
 |---|---|
 | A new pre-roll run starts | Pre-Rolls tab → **+ New Batch** (or **Start batch** from a Production Planner plan). |
+| You use flower, distillate or kief from inventory | In its METRC tag box, type the last digits of the lot's tag; Hendrix finds the lot and deducts the amount you enter |
+| The lab result is in and the batch is labeled | Change **Status** to **Labels**, then **Completed** when it's done |
+| A distillate, hash or rosin yield comes out low | Check the yield grade; managers get a low yield alert. Report a deviation if the cause isn't clear |
 | The next shift continues a batch | **Continue** on the batch. Fill in the blank fields and click **Save**. |
 | A filled-in weight was wrong | Someone with Full access → **Edit** → change the value → enter the **Reason for change** → **Save changes**. |
 | A batch was entered twice | Full access → **Void** → enter the reason. |
@@ -292,7 +298,7 @@ The Batch Tracker is the batch production record for the 8 Black Fox product typ
 | An inspector asks for batch records for a period | Set **From** / **To**, then **Print / PDF** or **CSV**. |
 
 ### Read the batch list
-- The tabs across the top are the 8 batch types. Hendrix remembers the last one you used.
+- The tabs across the top are the batch types, with **Manufacturing Process** last. Hendrix remembers the last one you used.
 - Use the search box (it searches every field), the **From** / **To** dates and **Clear**. **CSV** exports the list. **Print / PDF** prints up to 200 full records.
 - The summary bar shows the number of batches and the date of the last one.
 - Each card shows the batch number, the status (or **Void**), the date and operator, a **METRC x/y** badge (how many "Recorded on METRC?" boxes are ticked), and the SKU and flavor. Below that come the system checks (PASS, UNDER WEIGHT or OVER WEIGHT), test status badges, the line clearance badge (**Line cleared · LC-…** or **No line clearance**) and, when a HACCP plan covers the batch type, a **CCP x/y** badge.
@@ -322,7 +328,7 @@ The Batch Tracker is the batch production record for the 8 Black Fox product typ
 | SKU | Only switched-on SKUs of this type made under this license are offered. Ethanol Extraction has no SKU. | Yes (except Ethanol Extraction) |
 | Flavor | A flavor of the SKU. If the SKU has no flavor list, type it. Hidden for SKUs set to "no flavors". BHO and Ethanol have no flavor. | No |
 | Recorded on METRC? | Tick after each step is entered in the state tracking system | No |
-| Status | In Progress, QC Hold, Passed, Failed, Completed. Ethanol also has Winterization and Filtration, and BHO has Purging. | Yes (default In Progress) |
+| Status | In Progress, QC Hold, Passed, Failed, Labels, Completed. Ethanol also has Winterization and Filtration, BHO has Purging, and Solventless has Washing, Freeze Drying and Pressing. The status is where the batch shows on the Line Map | Yes (default In Progress) |
 | Notes | Any observations or issues | No |
 | Attachments | Files or photos, max 5 MB each | No |
 | Signature | Your drawn signature, stored with the record | No |
@@ -336,13 +342,13 @@ The Batch Tracker is the batch production record for the 8 Black Fox product typ
 | Pre-Rolls | **Infused Flower:** Flower METRC #, Flower Used, the infusion ingredients chosen on the SKU (METRC # and amount used), Infused Flower #, Infused Flower Total WT, check. **Infused Joints:** Infused Flower Used, Waste, Total Joint Filled, Infused Pre Roll METRC Tag, check. **Infused Kiefed Preroll** (only if the SKU has a coating step): pre-rolls used and wasted, Kief METRC #, Kief QTY Used, Total Kiefed Infused Joints, its METRC #, check. **Final Packaging:** joints used and wasted, Total Jar Packaged, Final Packaged Tag #, packaging check, R&D 1, R&D 2, Mandatory Testing. |
 | Cartridges | **Source Oil / Distillate:** Source Batch #, Input Oil Weight, Amount Terpene Added. **Primed Oil:** Total Weight, METRC #, Used, R&D Test, R&D Test 2, check. **Packaged:** Total Cart Packaged, its METRC #, Mandatory Test. |
 | Gummies | **Gummy Mixture Batch:** Distillate METRC #, Distillate Used, Batch Weight, Gummy Mixture METRC #. **Production Batch (Eaches):** Mixture Used (auto), Mixture Waste, Total Gummies Produced, METRC #. **Sugared Gummies:** Gummies Used, Waste before sugaring, Total Sugar Coated (auto), METRC #, R&D Test, R&D Test 2. **Final Packaging:** Sugar Coated Used and Waste, Total Packaged Gummies (auto), Final Packaged Gummies METRC#, Mandatory Testing, gummy weight check. |
-| Infused Flower | **Infused Flower:** flower and each infusion input with METRC # and amount, Infused Flower METRC Tag, Total WT, check, R&D Test, R&D Test 2. **Filling & Packaging** (unlocks once an R&D test is Passed): Infused Flower Used, Total Bags Filled, Waste, Final Packaging METRC Tag, validation, Mandatory Testing. |
+| Infused Flower | **Infused Flower:** flower and each infusion input with METRC # and amount, Infused Flower METRC Tag, Total WT, check, R&D Test, R&D Test 2. **Filling & Packaging** (opens once an R&D test is Passed): Infused Flower Used, Total Bags Filled, Waste, Total Infused Flower Packaged (auto: bags × the SKU's unit size), Packaged METRC Tag, validation, Mandatory Testing. |
 | Moon Rocks | Base Flower METRC# and Weight, Hash Oil METRC# and Used, Kief METRC# and Used, Total Moon Rocks Produced, Final METRC Tag#. |
 | Snow Caps | Base Flower METRC# and Weight, Kief METRC# and Used, Total Snow Caps Produced, Final METRC Tag#. |
 
 **R&D and mandatory testing:** R&D results are **Passed** / **Failed** buttons. **R&D 2** appears only after R&D 1 is marked Failed. On Pre-Rolls and Infused Flower, **Mandatory Testing** appears only after an R&D test is Passed. Mandatory testing values are Not Submitted, Submitted, Passed or Failed.
 
-**System checks** compare what you entered with what the SKU's settings predict, with a ±10% tolerance:
+**System checks** compare what you entered with what the SKU's settings predict, with a **±3%** tolerance (the discrepancy the state allows):
 
 | Check | How it is worked out |
 |---|---|
@@ -353,9 +359,27 @@ The Batch Tracker is the batch production record for the 8 Black Fox product typ
 | Primed oil (cartridges) | Input oil + terpene vs. Primed Oil Total Weight |
 | Gummy weight | (Mixture used ÷ grams per gummy) ÷ gummies per package vs. Total Packaged Gummies |
 | Packaging (infused flower) | Infused flower used ÷ unit size vs. Total Bags Filled |
-| Ethanol yield | Distillate ÷ biomass: 16–19% VERY GOOD, 13–16% GOOD, 10–13% BAD, 7–10% VERY BAD, otherwise OUT OF RANGE |
+| Ethanol yield | Distillate ÷ biomass: 20–24% EXCELLENT, 15–20% VERY GOOD, 12–15% GOOD, 10–12% NORMAL, 6–10% BAD, 3–6% VERY BAD, otherwise OUT OF RANGE |
+| Hash yield (solventless) | Hash ÷ fresh frozen: 6–8% VERY GOOD, 5–6% GOOD, 3–5% BAD, 1–3% VERY BAD, otherwise OUT OF RANGE |
+| Rosin yield (solventless) | Rosin ÷ fresh frozen: 4–6% VERY GOOD, 3–4% GOOD, 2–3% BAD, 1–2% VERY BAD, otherwise OUT OF RANGE. Hendrix also shows the press return (rosin ÷ hash used) |
 
-More units than expected shows **UNDER WEIGHT** (red). Fewer units shows **OVER WEIGHT**. The results are saved on the record and shown on the batch card.
+More units than expected shows **UNDER WEIGHT** (red). Fewer units shows **OVER WEIGHT**. The results are saved on the record and shown on the batch card. Batches saved before a tolerance change keep the result they were saved with until someone edits them.
+
+> **Why the checks matter:** every gram of cannabis must be accounted for. If 500 g of infused flower should make 1,000 half-gram joints and the record says 1,100, either the weights are wrong or the joints are underweight. Either way the product and METRC don't match. A failed check is a signal to stop and find out, and to report a deviation, not to change the numbers until they pass.
+
+### Inputs from inventory: type the METRC tag
+Cannabis inputs (flower, distillate, live resin, HTE, kief, trim and others) come from lots in Receiving. When you fill in an input's METRC tag box:
+1. Type the **last digits** of the tag (4 or more), or the whole tag, or the lot number. Hendrix lists the matching accepted lots with what's left in each; when only one lot matches, it picks it.
+2. Under the box Hendrix shows "✓ Found in inventory: <tag> · <item> · <amount> left".
+3. Enter the amount used in its box. Write the unit if it differs from the lot's (for example "1.2 kg" for a lot kept in grams).
+4. When you save, Hendrix records the use against that lot and lowers what's left, once per amount.
+
+If the tag isn't in Receiving, Hendrix says "Not in Receiving inventory - nothing will be deducted." You can still save the tag, but nothing is deducted, so check the tag: an input with no lot breaks the trace back to the supplier. Hendrix refuses to use more than is left: "Only 250 g left in <tag>".
+
+### Low yield alerts
+Each extraction batch shows its yield and grade, on the batch card and on the Line Map. When a distillate, hash or rosin yield is **BAD**, **VERY BAD** or below the range, Hendrix raises a **Low yield** card on the Dashboard of the general manager, production and extraction managers, anyone with "Director" in their role name and system admins, and sends them an email alert. Each person can mark it **Seen**. The alert closes by itself when the yield is corrected or the batch is voided.
+
+> **Why it matters:** a low yield means material was lost, mis-weighed or processed wrongly. It costs money and it must be explained to METRC. The alert makes sure a manager looks at it the same day.
 
 > **Hendrix checks:**
 > - Batch / Lot Number, Date and (except Ethanol) SKU are required.
@@ -396,6 +420,43 @@ When the final package tag is filled in (for example **Final Packaged Tag #** on
 ### Tips
 - Set up the SKU's production settings in Products first. The system checks use them.
 - Use **Start batch** from a saved plan so the plan shows the batch.
+- Fill in the record as you work. A batch record written at the end of the shift from memory is the most common finding in batch record audits.
+
+## Manufacturing Process
+The **Manufacturing Process** tab, the last tab of the Batch Tracker, records a run that turns one material into another when it doesn't fit a fixed batch type: what was used, what was made, the waste, and any additional processes after that. Runs move through a status and show on the Line Map.
+
+**Where:** Batch Tracker → **Manufacturing Process** tab. **Who:** View can see runs; Edit can add runs, save unfinished runs and finish them; Full can change a completed run (with a reason), void runs and manage the item list.
+
+### When to use it
+| Situation | What you do in Hendrix |
+|---|---|
+| A run turns trim into crude, or any other material into another product | **+ New run** |
+| You don't have every weight yet | Leave it blank, **Save run**, open it again later |
+| The run's product goes to the lab | Status **Testing**, then **Passed** or **Failed** |
+| The run is finished | Status **Complete** (every weight must be filled in) |
+| The material you use isn't in the list | **+ Add a new item...** in the item box |
+
+### Record a run
+1. Click **+ New run**. Enter the **Run date**, the **Status** (In process, Testing, Passed, Failed or Complete) and a note if you like.
+2. **Part 1 · Material used:** a row for each material: the item, its **METRC tag #** and the **Weight** with its unit. **+ Add row** adds another.
+3. **Product produced:** the item made, its METRC tag # and weight, the **Waste** and a **Waste note**.
+4. If the product goes through more steps (for example winterizing, then distilling), click **+ Required additional process**. Each adds a Part with its own product and waste.
+5. Click **Save run**. Hendrix shows the totals in, out and waste, and the yield.
+
+![A new run: hash pressed into rosin, with the waste and an additional process](shots/prod_mp_form.png)
+
+| Field | What to enter | Required |
+|---|---|---|
+| Run date | The day of the run | Yes |
+| Status | In process, Testing, Passed, Failed, Complete | Yes (default In process) |
+| Item | Pick from this license's item list, or **+ Add a new item...** | Yes, on every row |
+| METRC tag # | The package tag of that material or product | No, but needed for traceability |
+| Weight | The weighed amount and unit (g, kg, oz, lb, mL, L, each) | Before **Complete** |
+| Waste, Waste note | What was lost, and why | No |
+
+> **Hendrix checks:** every row needs an item. A run can't be marked **Complete** until every weight is filled in: "enter every weight before marking the run Complete - or save it as In process". Changing a completed run needs a **Reason for the change**, saved in the Audit Trail. Runs are voided with a reason, never deleted.
+
+**Items:** the **Items** list holds the materials and products of this license (for example Trim, Crude oil, Distillate), each used as *Material and product*, *Material only* or *Product only*. Switch off an item you no longer use; records keep its name.
 
 ## Testing
 Testing tracks every mandatory lab test per final package tag: submission, lab, result, the stored COA and a reading of the COA by Hendrix AI. It is the evidence that product was tested and passed before release.
@@ -495,7 +556,7 @@ Compliance Stickers holds the label template for each SKU (and flavor) under a l
 | Situation | What you do in Hendrix |
 |---|---|
 | A new SKU or flavor goes to market | Compliance Stickers → **+ New template**. |
-| You set up a new license from the Black Fox catalog | **Import Black Fox templates**. Only SKUs and flavors that exist in Products are imported. |
+| You set up a new license from the Northfield Labs catalog | **Import Northfield Labs templates**. Only SKUs and flavors that exist in Products are imported. |
 | An ingredient or allergen changes | **Edit** on the template → change **Active and other ingredients** / **Allergen declaration** → **Save template**. |
 | A batch passed testing and needs labels | Testing → **Compliance Sticker** → set the count → **Download PDF**. |
 | The labels print off-center | In the sticker window: **Alignment test sheet**, then adjust **Shift right / Shift down**. |
@@ -586,6 +647,22 @@ Cultivation keeps the grow records for cultivation (CUL) licenses: grow areas, p
 | Plants are hung, then cured | **Drying** (room conditions), then **Cured (dry weight)**. |
 | A batch must be destroyed | Full access → **Destroy** (reason and method). |
 | The inspector asks for spray records | **Applications** tab → **Print application records**. |
+
+### The tabs
+| Tab | What it shows |
+|---|---|
+| **Batch tracker** (opens first) | Every running plant batch from veg to shipped, one row each: a lifecycle bar (Veg, Flower, Harvest, Dry, Cure, Test + Trim, Package, Ship), how many days it has been in its step, the next step and its date, plants, wet and dry weight. A red left edge means it's **late**. Click a step card at the top to show only that step. The **Seed vault** card shows the accepted seed lots from Receiving: on hand = received, minus used, minus plants started from the lot (low under 100 seeds). Refreshes every minute |
+| **Capacity** | Houses, tables and bays: how full each is, and the planting schedule: *Late*, *Behind*, *Due this week* or *On track*, so beds are refilled on time |
+| **Harvest batches** | Each harvest batch followed tag by tag to its yield: harvested → dry → cure → test + trim → package → ship, with wet weight, tagged amount, dry, cure and tagged yields. **Low yield only** filters the batches below target. Click a batch to see its METRC packages |
+| **Plant batches** | The plant batches and their grow records (below) |
+| **Grow areas** | Rooms, greenhouses, fields, dry and cure rooms |
+| **Applications** | Every nutrient and crop protection record |
+| **Approved inputs** | The approved nutrients and pesticides |
+| **Import** (Full access) | Load METRC exports (Harvests, Packages, Plants or Plant Batches) or a takeover file from your previous system |
+
+**How the tracker dates a batch:** the harvest window starts on the planned harvest start set on the batch, or else on the planted date plus the cycle days. Veg is late after the veg days plus 1. Dry, cure, test + trim, package and ship each have a target number of days. Set these per license with **Targets** (Full access). After the cure, a batch goes to **Test + trim**: record *Sent to the lab*, then *Test passed* with the COA number, then *Packaged*, then *Shipped / transferred*, which closes the batch.
+
+**Import from METRC:** on **Import**, choose a METRC export file. Hendrix recognizes the kind of export from its header row, shows what it found for each license (matched by the METRC license number in the file) and what it will add: areas, harvest batches, packages, plants in the ground. Click **Import**. A Harvests export lists every active harvest batch, so harvest batches not in the file are marked no longer active. Import again whenever you want to bring Hendrix up to date with METRC; it never changes METRC.
 
 ### Read the Cultivation page
 - Summary cards: **Active plant batches** (with plants growing), **Harvest on hold (PHI)**, **Harvests (30 days)**, **Applications (7 days)** and, if you have outdoor or greenhouse areas, **Site risk assessment due** (yearly).
@@ -682,3 +759,4 @@ Fields in **bold** are required.
 ### Tips
 - Approve nutrients and pesticides in Chemicals and SDS (with their SDS and EPA number) before you need them. They will not appear in the forms otherwise.
 - Receive clones, seeds and grow media in Receiving so the plant batch can be traced to its lot.
+- Each cultivation license is shown on its own. Pick the license at the top to see its batches, capacity and map.

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Hendrix Training Center</title>
-<meta name="description" content="Short videos on how to use Hendrix QMS, picked for your job and your access.">
+<meta name="description" content="Videos and the user manual for Hendrix QMS, picked for your job and your access.">
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
 <link rel="icon" href="../favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="../apple-touch-icon.png">
@@ -77,6 +77,20 @@ label{display:block;font-size:14px;color:#cfc8b6;margin:14px 0 8px}
 .thumb .play{position:absolute;inset:0;display:grid;place-items:center;opacity:0;transition:opacity .2s}
 .vid:hover .thumb .play,.vid:focus-visible .thumb .play{opacity:1}
 .thumb .play svg{width:64px;height:64px}
+.man{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:28px;margin-top:18px;background:var(--panel);border:1px solid var(--rule);border-radius:16px;padding:24px 26px}
+.man p{margin:0;color:#cfc8b6}
+.man-acts{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.man h3{margin:0 0 10px;font-size:17px;font-weight:750}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips a{border:1px solid #3a372f;border-radius:999px;padding:5px 12px;font-size:14px;text-decoration:none;color:var(--bone)}
+.chips a:hover{border-color:var(--gold)}
+@media (max-width:760px){.man{grid-template-columns:minmax(0,1fr);padding:20px}}
+.shelf.manual{padding-bottom:56px}
+.shelf-sub{margin:8px 0 0;color:#cfc8b6;max-width:46em}
+.deep-acts{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+h3.grp{margin:34px 0 0;font-size:20px;font-weight:750;color:var(--gold-hi);font-variation-settings:"wdth" 106}
+#shelf-deep .grid{margin-top:14px}
+.p-man{margin:6px 0 0}.p-man a{color:var(--gold-hi);font-size:15px}
 .vid .body{padding:16px 18px 18px;display:flex;flex-direction:column;gap:8px;flex:1}
 .vid h3{margin:0;font-size:18px;font-weight:750;line-height:1.25;font-variation-settings:"wdth" 106}
 .vid p{margin:0;color:#bfb8a6;font-size:15px;line-height:1.45}
@@ -118,12 +132,13 @@ footer{border-top:1px solid var(--rule);margin-top:72px;padding:26px 0 40px;colo
   <div class="wrap gate" id="gate">
     <div>
       <h1>Training Center</h1>
-      <p class="lede">Short videos on how to use Hendrix. Sign in with your company's Hendrix account and you'll see the videos for your job and the areas you work in.</p>
+      <p class="lede">Videos and the user manual for Hendrix. Sign in with your company's Hendrix account and you'll see the videos and manual pages for your job and the areas you work in.</p>
       <ul>
         <li>The same email and password you use for Hendrix</li>
         <li>Videos picked from your job title and your access</li>
-        <li>Each video is a few minutes or less, with captions</li>
+        <li>The full user manual: what each page is for, why, and how to fill it in</li>
       </ul>
+      <p class="small" style="margin-top:22px">The user manual is open to everyone: <a href="manual/">read it online</a> or <a href="manual/Hendrix_QMS_User_Manual.pdf" download>download the PDF</a>.</p>
     </div>
     <form class="card" id="signin" novalidate>
       <h3>Sign in</h3>
@@ -165,6 +180,22 @@ footer{border-top:1px solid var(--rule);margin-top:72px;padding:26px 0 40px;colo
       <div class="grid" id="grid-all"></div>
       <p class="empty" id="empty" hidden>No videos fit your access yet. Ask a Hendrix admin to check your role.</p>
     </section>
+    <section class="wrap shelf" id="shelf-deep" hidden>
+      <h2>In depth<small id="deep-count"></small></h2>
+      <p class="shelf-sub">Every page of Hendrix explained, a few minutes each: what it is, why we do it, when to use it and how to fill it in. Picked for the areas you can open.</p>
+      <div class="deep-acts"><button class="btn solid" id="deep-all" type="button">Play all in order</button><a class="btn" href="manual/">Read the same in the manual</a></div>
+      <div id="deep-groups"></div>
+    </section>
+    <section class="wrap shelf manual" id="shelf-manual">
+      <h2>User manual<small id="man-rel"></small></h2>
+      <div class="man">
+        <div>
+          <p>Everything about each page: what it is for, why we do it, when to use it, and how to fill in every field. Start with <b>How it all fits together</b>, then read the pages for your job.</p>
+          <div class="man-acts"><a class="btn solid" href="manual/">Read the manual</a><a class="btn" href="manual/#ch-flow">How it all fits together</a><a class="btn" id="man-pdf" href="manual/Hendrix_QMS_User_Manual.pdf" download>Download PDF</a></div>
+        </div>
+        <div id="man-mine" hidden><h3>Your pages</h3><div class="chips" id="man-chips"></div></div>
+      </div>
+    </section>
   </div>
 </main>
 
@@ -172,23 +203,27 @@ footer{border-top:1px solid var(--rule);margin-top:72px;padding:26px 0 40px;colo
   <div class="box">
     <video id="p-video" controls playsinline preload="metadata"></video>
     <div class="row">
-      <div><h3 id="p-title"></h3><p id="p-sum"></p></div>
+      <div><h3 id="p-title"></h3><p id="p-sum"></p><p class="p-man" id="p-man-wrap" hidden><a id="p-man" href="manual/">Read this in the user manual</a></p></div>
       <div class="acts"><button class="btn" id="p-next" type="button">Next video</button><button class="btn solid" id="p-close" type="button">Close</button></div>
     </div>
   </div>
 </div>
 
-<footer class="wrap">Hendrix QMS Training Center. Videos use a made-up company and made-up people.</footer>
+<footer class="wrap">Hendrix QMS Training Center. Videos and the manual use a made-up company and made-up people.</footer>
 
 <script src="companies.js"></script>
 <script src="catalog.js"></script>
+<script src="manual/toc.js"></script>
+<script src="deep.js"></script>
 <script>
 (function(){
   var C = window.HX_COMPANIES || {}, V = window.HX_VIDEOS || [];
   var $ = function(id){ return document.getElementById(id); };
-  var S = null, P = null, SHOWN = [];
+  var S = null, P = null, SHOWN = [], LIST = [], AUTO = false, DEEP = window.HX_DEEP || [], DSHOWN = [];
   // every area the catalog asks about
   var MODS = []; V.forEach(function(v){ (v.access || []).forEach(function(a){ if (MODS.indexOf(a[0]) < 0) MODS.push(a[0]); }); });
+  var MAN = (window.HX_MANUAL || {}).modules || [];
+  MAN.forEach(function(m){ if (m.a && m.a !== 'admin' && MODS.indexOf(m.a) < 0) MODS.push(m.a); });
 
   function codeOf(raw){ return String(raw || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^(www\.)?hendrixqms\.com\/?/, '').replace(/\/.*$/, ''); }
   function save(){ try { if (S) sessionStorage.setItem('hxtc', JSON.stringify(S)); else sessionStorage.removeItem('hxtc'); } catch (e) {} }
@@ -298,6 +333,23 @@ footer{border-top:1px solid var(--rule);margin-top:72px;padding:26px 0 40px;colo
     var gp = $('grid-pick'); gp.innerHTML = ''; picks.forEach(function(v){ gp.appendChild(card(v, w)); });
     var ga = $('grid-all'); ga.innerHTML = ''; SHOWN.forEach(function(v){ ga.appendChild(card(v, w)); });
     $('all-count').textContent = SHOWN.length + (SHOWN.length === 1 ? ' video' : ' videos');
+    // the manual pages for this person's access (the manual page reads the same profile to list them)
+    try { sessionStorage.setItem('hxtc_profile', JSON.stringify({ name: P.name || '', title: P.title || '', admin: !!P.admin, access: P.access || {} })); } catch (e) {}
+    $('man-rel').textContent = (window.HX_MANUAL || {}).release || '';
+    var mine = MAN.filter(function(m){ if (!m.a) return false; if (m.a === 'admin') return !!P.admin; return P.admin || level(m.a) >= 1; });
+    var mc = $('man-chips'); mc.innerHTML = '';
+    mine.forEach(function(m){ var a = document.createElement('a'); a.href = 'manual/#' + m.id; a.textContent = m.t; mc.appendChild(a); });
+    $('man-mine').hidden = !mine.length;
+    // in depth: one video per manual section, for the areas this person can open
+    DSHOWN = DEEP.filter(function(d){ if (!d.a) return true; if (d.a === 'admin') return !!P.admin; return P.admin || level(d.a) >= 1; });
+    var dg = $('deep-groups'); dg.innerHTML = ''; var last = null, grid = null;
+    DSHOWN.forEach(function(d){
+      if (d.chapter !== last) { last = d.chapter; var h = document.createElement('h3'); h.className = 'grp'; h.textContent = d.chapter; dg.appendChild(h); grid = document.createElement('div'); grid.className = 'grid'; dg.appendChild(grid); }
+      grid.appendChild(deepCard(d, w));
+    });
+    var dn = DSHOWN.filter(function(d){ return w.indexOf(d.id) >= 0; }).length, mins = Math.round(DSHOWN.reduce(function(a, d){ return a + d.seconds; }, 0) / 60);
+    $('deep-count').textContent = DSHOWN.length + ' videos · ' + mins + ' min · ' + dn + ' watched';
+    $('shelf-deep').hidden = !DSHOWN.length;
     $('empty').hidden = SHOWN.length > 0;
     var n = SHOWN.filter(function(v){ return w.indexOf(v.id) >= 0; }).length;
     $('bar').style.width = (SHOWN.length ? Math.round(n * 100 / SHOWN.length) : 0) + '%';
@@ -306,23 +358,32 @@ footer{border-top:1px solid var(--rule);margin-top:72px;padding:26px 0 40px;colo
 
   // ---------- player ----------
   var cur = null;
-  function play(v){
-    cur = v; var vid = $('p-video'); vid.src = v.file; vid.poster = v.poster;
+  function deepCard(d, w){
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'vid'; b.setAttribute('data-id', d.id);
+    b.innerHTML = '<div class="thumb" style="background-image:url(\'' + esc(d.poster) + '\')">' + (w.indexOf(d.id) >= 0 ? '<span class="done">Watched</span>' : '') +
+      '<span class="len">' + fmt(d.seconds) + '</span></div><div class="body"><h3>' + esc(d.title) + '</h3><p>' + esc(d.summary) + '</p></div>';
+    b.addEventListener('click', function(){ AUTO = false; play(d, DSHOWN); });
+    return b;
+  }
+  function play(v, list){
+    cur = v; LIST = list || SHOWN; var vid = $('p-video'); vid.src = v.file; vid.poster = v.poster;
     $('p-title').textContent = v.title; $('p-sum').textContent = v.summary;
-    var i = SHOWN.indexOf(v); $('p-next').hidden = i < 0 || i >= SHOWN.length - 1;
+    $('p-man-wrap').hidden = !v.manual; if (v.manual) $('p-man').href = v.manual;
+    var i = LIST.indexOf(v); $('p-next').hidden = i < 0 || i >= LIST.length - 1;
     $('player').hidden = false; document.body.style.overflow = 'hidden';
     var p = vid.play(); if (p && p.catch) p.catch(function(){});
     $('p-close').focus();
   }
   function closeP(){ var vid = $('p-video'); vid.pause(); vid.removeAttribute('src'); vid.load(); $('player').hidden = true; document.body.style.overflow = ''; if (P) render(); }
   $('p-close').addEventListener('click', closeP);
-  $('p-next').addEventListener('click', function(){ var i = SHOWN.indexOf(cur); if (i >= 0 && i < SHOWN.length - 1) play(SHOWN[i + 1]); });
+  $('p-next').addEventListener('click', function(){ var i = LIST.indexOf(cur); if (i >= 0 && i < LIST.length - 1) play(LIST[i + 1], LIST); });
+  $('deep-all').addEventListener('click', function(){ if (DSHOWN.length) { AUTO = true; play(DSHOWN[0], DSHOWN); } });
   $('p-video').addEventListener('timeupdate', function(){ var v = this; if (cur && v.duration && v.currentTime / v.duration > 0.9) markWatched(cur.id); });
-  $('p-video').addEventListener('ended', function(){ if (cur) markWatched(cur.id); });
+  $('p-video').addEventListener('ended', function(){ if (cur) markWatched(cur.id); var i = LIST.indexOf(cur); if (AUTO && i >= 0 && i < LIST.length - 1) play(LIST[i + 1], LIST); });
   document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && !$('player').hidden) closeP(); });
 
   function showGate(msg){ $('lib').hidden = true; $('nav-in').hidden = true; $('gate').hidden = false; $('nav-out').hidden = false; $('signin').hidden = false; $('mfa').hidden = true; $('err').textContent = msg || ''; }
-  function signOut(msg){ S = null; P = null; save(); showGate(msg); }
+  function signOut(msg){ S = null; P = null; save(); try { sessionStorage.removeItem('hxtc_profile'); } catch (e) {} showGate(msg); }
   $('signout').addEventListener('click', function(){ signOut(''); });
 
   // ---------- start ----------

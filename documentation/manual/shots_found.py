@@ -80,8 +80,8 @@ def eshot(loc, name): loc.page.wait_for_timeout(300); loc.screenshot(path=SH + '
 from PIL import Image, ImageDraw, ImageFont
 im = Image.new('RGB', (360, 120), (255, 255, 255)); d = ImageDraw.Draw(im)
 d.polygon([(60, 10), (100, 32), (100, 88), (60, 110), (20, 88), (20, 32)], outline=(168, 132, 28), width=6)
-d.text((44, 38), 'BF', fill=(30, 30, 30), font=ImageFont.truetype('/usr/share/fonts/truetype/google-fonts/Poppins-Bold.ttf', 34))
-d.text((118, 30), 'BLACK FOX', fill=(20, 20, 20), font=ImageFont.truetype('/usr/share/fonts/truetype/google-fonts/Poppins-Bold.ttf', 40))
+d.text((44, 38), 'NL', fill=(30, 30, 30), font=ImageFont.truetype('/usr/share/fonts/truetype/google-fonts/Poppins-Bold.ttf', 34))
+d.text((118, 30), 'NORTHFIELD', fill=(20, 20, 20), font=ImageFont.truetype('/usr/share/fonts/truetype/google-fonts/Poppins-Bold.ttf', 40))
 d.text((120, 78), 'MANUFACTURING', fill=(168, 132, 28), font=ImageFont.truetype('/usr/share/fonts/truetype/google-fonts/Poppins-Bold.ttf', 20))
 LOGO = OUT + 'manual/bf_logo.png'; im.save(LOGO)
 

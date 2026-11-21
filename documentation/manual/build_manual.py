@@ -5,18 +5,25 @@ D = os.path.dirname(os.path.abspath(__file__))
 SP = os.path.dirname(D)
 e = lambda s: H.escape(str(s))
 
+RELEASE = 'Release 68 · November 2026'
 CHAPS = [
  ('front', 'Getting started', 'How Hendrix is organized, your access, the rules for good records, routines, and where to find what you need.'),
+ ('flow', 'How it all fits together', 'The life of a batch from supplier to customer, what to do when something goes wrong, the five rules of good records, who does what, and the rules and standards behind every record.'),
  ('found', 'Setting up and running Hendrix', 'States and licenses, the state rulebook, the CSQ standard, people and access, the audit trail, settings and importing your lists.'),
  ('qual', 'Quality system', 'Deviations and CAPA, complaints, internal audits, SOPs and training: the core of CSQ Module 1 and the quality culture behind it.'),
  ('mgmt', 'HACCP and the management system', 'HACCP plans and CCP monitoring (CSQ Level 2) and the Level 3 management tools: risk, change control, org chart, objectives, management review and verification.'),
  ('supply', 'Suppliers, materials and traceability', 'From approved supplier to accepted lot, holds and releases, shipments, traces and recalls.'),
- ('facility', 'Facility, equipment and people on site', 'Daily logs, visitors, equipment, chemicals, facility tests, line clearance and rework, the time clock and badges.'),
- ('prod', 'Products, production and cultivation', 'The live Line Map, products and formulations, planning, batch records, testing, compliance stickers and cultivation records.'),
- ('secure', 'Tasks, security, kiosks and METRC', 'My Tasks and email alerts, two-step sign-in and electronic signatures, kiosks that keep working without internet, METRC Check and System Health (releases 37 to 41).'),
+ ('facility', 'Facility, equipment and people on site', 'Daily logs and the GMP hygiene walk, requests, visitors, rooms, the facility map, equipment, chemicals, facility tests, line clearance and rework, the time clock and badges.'),
+ ('prod', 'Products, production and cultivation', 'The live Line Map, products and formulations, planning, batch records and manufacturing runs, testing, compliance stickers and cultivation records.'),
+ ('secure', 'Tasks, security, kiosks and METRC', 'My Tasks and email alerts, your account, passwords and security questions, two-step sign-in and electronic signatures, kiosks that keep working without internet, METRC Check and System Health.'),
 ]
 
 EXTRA = """
+.why { margin: 8pt 0 12pt; padding: 10pt 13pt 6pt; background: #10100d; color: #ece6d6; border-radius: 7px; border-left: 4pt solid #d4af37; break-inside: avoid; }
+.why h3 { margin: 0 0 6pt; color: #e9c964; font-size: 11pt; }
+.why p { margin: 0 0 5pt; color: #e6dfcd; }
+.why strong { color: #f1d57a; }
+.why ul { margin: 0 0 5pt; } .why li { color: #e6dfcd; }
 .sit td:first-child { width: 42%; }
 .sit td:last-child { white-space: nowrap; color: #6f540c; font-weight: 650; text-align: right; width: 38pt; }
 .sit h3 { margin-top: 12pt; }
@@ -45,7 +52,24 @@ def inline(md):
     h = markdown.markdown(md)
     return re.sub(r'^<p>|</p>$', '', h.strip())
 
-def build_manual():
+def load_understand():
+    p = os.path.join(D, 'understand.md')
+    if not os.path.exists(p): return {}
+    md = re.sub(r'<!--.*?-->', '', open(p).read(), flags=re.S)
+    parts = re.split(r'^## (.+)$', md, flags=re.M)
+    return {parts[i].strip(): parts[i + 1].strip() for i in range(1, len(parts), 2)}
+
+def with_understand(title, body, U):
+    """put the 'Understand it first' box after the module's opening paragraph"""
+    u = U.get(title)
+    if not u: return body
+    box = '\n\n<div class="why" markdown="1">\n\n### Understand it first\n\n' + u + '\n\n</div>\n\n'
+    b = body.lstrip('\n')
+    k = b.find('\n\n')
+    return (b + box) if k < 0 else (b[:k] + box + b[k + 2:])
+
+def build_manual(out=None):
+    U = load_understand()
     body = '<style>%s</style><div class="toc"><h1>Contents</h1>{{TOC}}</div>' % EXTRA
     toc = []; sit_all = []; mid = 0
     chapter_html = []
@@ -67,7 +91,7 @@ def build_manual():
             cls = 'mod' if (g != 'front' and k > 0) else ''
             # front: keep flowing, but start some sections on new page
             if g == 'front' and mt.startswith(('Routines', 'How Hendrix is organized')): cls = 'mod'
-            h += '<div class="%s"><h2>%s<span class="mk">@@%s@@</span></h2>%s</div>' % (cls, e(mt), m_id, md_to_html(mb))
+            h += '<div class="%s"><h2>%s<span class="mk">@@%s@@</span></h2>%s</div>' % (cls, e(mt), m_id, md_to_html(with_understand(mt, mb, U)))
         chapter_html.append((g, h))
     # situation index goes right after Getting started
     sit = '<div class="mod sit"><h2>What do I fill in when…<span class="mk">@@sit@@</span></h2><p>Find the situation, then go to the page shown. The list is grouped by chapter.</p>'
@@ -93,13 +117,13 @@ def build_manual():
     # page refs inside the situation index: two-step: build once to learn pages, then fill
     cov = cover('User manual', 'The <em>Hendrix QMS</em><br>user manual',
                 'Every page, every form and every field: what to fill in, when, and why. For production, QA, compliance and management.',
-                'Release 41 · October 2026', 'Missouri · Michigan', os.path.join(D, 'shots', 'prod_linemap_overview.png'))
-    out = os.path.join(SP, 'Hendrix_QMS_User_Manual.pdf')
+                RELEASE, 'Any state · manufacturing and cultivation', os.path.join(D, 'shots', 'prod_linemap_overview.png'))
+    out = out or os.path.join(SP, 'Hendrix_QMS_User_Manual.pdf')
     body1 = re.sub(r'\{\{P:(m\d+)\}\}', '00', body)
-    pages = build(out, cov, body1, toc, 'User Manual · Release 41', 'Hendrix QMS: User Manual')
+    pages = build(out, cov, body1, toc, 'User Manual · ' + RELEASE.split(' · ')[0], 'Hendrix QMS: User Manual')
     body2 = re.sub(r'\{\{P:(m\d+)\}\}', lambda m: pages.get(m.group(1), ''), body)
-    pages2 = build(out, cov, body2, toc, 'User Manual · Release 41', 'Hendrix QMS: User Manual')
+    pages2 = build(out, cov, body2, toc, 'User Manual · ' + RELEASE.split(' · ')[0], 'Hendrix QMS: User Manual')
     print('modules', mid, 'situations', len(sit_all), 'pages same:', pages == pages2)
 
 if __name__ == '__main__':
-    build_manual()
+    build_manual(sys.argv[1] if len(sys.argv) > 1 else None)

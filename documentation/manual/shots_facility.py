@@ -297,12 +297,7 @@ with sync_playwright() as pw:
     field(md, 'Corrective Action').fill('Back-left reading 0.20 g high: re-leveled, re-zeroed and re-checked 500.00 g')
     field(md, 'Reviewed / Verified By').fill('Maria Gonzalez')
     mshot(pg, 'facility_logs_scale_form.png'); close_modal(pg)
-    # kiosk on a phone
-    kc = newctx(430, 1260, True); k = kc.new_page(); k.on('pageerror', lambda e: errors.append('KJS: ' + str(e)))
-    k.goto(BASE + '?kiosk=log&type=temperature&state=st-mo&lic=lic-mo'); k.wait_for_selector('text=Temp / Humidity Log')
-    bx = k.locator('.box'); field(bx, 'Recorded By').fill('Devon Brooks'); field(bx, 'Location / Room').select_option(label='Packaging Room')
-    field(bx, 'Temperature').fill('71.2'); field(bx, 'Relative Humidity').fill('49'); sign(k)
-    vshot(k, 'facility_logs_kiosk.png'); kc.close()
+    # kiosk on a phone: QR forms now need the person's own sign-in; the phone shots come from the film kit (k_pest_*, logs_*)
 
     # ===== 2. Visitor Log =====
     nav(pg, 'Visitor Log'); pg.wait_for_selector('td >> text=Rachel Ortiz')

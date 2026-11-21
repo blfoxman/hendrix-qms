@@ -56,7 +56,7 @@ Use the search box and the **All types** / **Every status** filters to narrow th
 
 | Field | What to enter | Required |
 |---|---|---|
-| Supplier name | Company name, e.g. "Futurola USA". Must be unique for this license. | Yes |
+| Supplier name | Company name, e.g. "Coneline Supply". Must be unique for this license. | Yes |
 | Category / type | Cones/Pre-roll Supplies, Packaging, Distillate/Extract, Terpenes, Ingredients, Testing Lab, Equipment, Labels, Co-manufacturer, Pest Control, Waste Disposal, Chemicals / Sanitation, Gases / Solvents, Transport / Distribution, Service Provider, Biomass / Flower (cannabis), Nutrients / Fertilizers, Grow Media / Soil, Clones / Seeds, Crop Protection Products, Other | No (default Other) |
 | Risk | Low, Medium or High. High-risk suppliers are reviewed every 6 months, the others every 12 months. | No (default Medium) |
 | Status (new suppliers only) | **Pending approval**, or **Emergency (temporary, not yet approved)** | No (default Pending) |
@@ -188,7 +188,10 @@ When anything is on hold, a red banner at the top of these tabs lists the open h
 | QA has checked the lot and its COA | Open the lot → **Accept** |
 | Cartons are wet, seals are broken or the COA is wrong | Open the lot → **Reject** (the lot goes on hold automatically) |
 | An accepted lot is moved to another shelf | Open the lot → **Location / files** |
-| Production pulls material for a batch | Inventory → **+ Record use** (or open the lot → **Record use**) |
+| Production pulls material for a batch | Usually nothing here: in the batch record, type the lot's METRC tag and the amount, and Hendrix records the use. For other uses: Inventory → **+ Record use** |
+| A cannabis lot in stock has no METRC tag | Inventory → filter *Cannabis without a METRC tag* → **+ Add tag** |
+| You counted the stock | Inventory → **Download current inventory**, change *On hand*, **Upload inventory** |
+| You're moving to Hendrix with stock already on the shelves | Inventory → **Upload inventory** from the blank template |
 | A use was recorded against the wrong batch | Inventory → **Void** on the use record, then record it again |
 | You suspect a problem with a lot after acceptance | Open the lot → **Put on hold** and/or **Deviation** |
 | An inspector asks for receiving records | **Receiving log** (prints) |
@@ -213,9 +216,9 @@ When anything is on hold, a red banner at the top of these tabs lists the open h
 | Unit | each, g, kg, mL, L, lb, oz, case, roll, box | No (default each) |
 | Supplier lot # | The supplier's own lot number | No |
 | Expiry / best before | Expiry date | No |
-| METRC tag (cannabis) | Package tag for cannabis inputs | No |
+| METRC tag | The METRC package tag (24 characters, starting with 1A). The label shows **METRC tag \*** for cannabis categories (Cannabis, Distillate / extract and the cannabis METRC categories such as Bud/Flower, Ground Shake/Trim, Concentrate, Kief, Live Resin) | Yes for cannabis; no for anything else |
 | PO / invoice # | Purchase order or invoice number | No |
-| Storage location | For example: Quarantine shelf Q1 | No |
+| Storage location | Pick a room from **Rooms**, or type a place, for example: Quarantine shelf Q1 | No |
 | Receiving inspection | Seven checks: Matches the order, invoice or manifest · Packaging intact: no damage, leaks or wet cartons · Clean: no pests, dirt, odors or foreign matter · Seals / tamper evidence intact · Labeled with item, lot and expiry · Temperature and condition OK on arrival · Delivery vehicle clean and secure | No (unticked checks are recorded as failed) |
 | COA or certificate of conformance received and reviewed against the specs | Tick when the COA is in hand and checked | No (but needed to accept) |
 | Documents | Upload the COA, invoice, manifest or photos | No |
@@ -227,6 +230,7 @@ When anything is on hold, a red banner at the top of these tabs lists the open h
 > - Every new lot starts in **Quarantine**. It can't be used until someone with Full access accepts it.
 > - Lots are numbered RCV-year-### per license, and the number can't be changed.
 > - The number, supplier, the person who received it and the license can never be changed.
+> - **Every cannabis lot needs its METRC package tag**: "Enter the METRC package tag. Every cannabis lot needs one." One tag can belong to only one live lot at the license (Hendrix ignores capitals, spaces and dashes when it compares tags).
 
 ### Accept or reject a lot
 **Accept** and **Reject** appear on a lot in quarantine for people with Full access.
@@ -249,6 +253,7 @@ When anything is on hold, a red banner at the top of these tabs lists the open h
 > - If any receiving check failed, you must write why the lot is still accepted, or reject it.
 > - A lot from an emergency supplier needs a note on how it was verified.
 > - A lot past its expiry date can't be accepted.
+> - A cannabis lot can't be accepted without its METRC tag: "This cannabis lot has no METRC tag. Edit the lot and add its METRC package tag before accepting." 
 > - **A rejected lot is put on hold automatically** (source "Receiving inspection") and kept apart until it is returned to the supplier or destroyed. It can never be released.
 > - Hendrix records who decided and when.
 > - After the decision, only the storage location, files and inspection notes can change.
@@ -262,6 +267,8 @@ The tab shows these totals:
 - Expired in stock;
 - Expiring in 30 days;
 - Uses recorded in the last 30 days.
+
+The Inventory tab also has a **METRC tag** column, a search that finds a lot by the last 4 or more digits of its tag, and a filter: *All stock*, *Cannabis (METRC)*, *Cannabis without a METRC tag* or *Everything else*. The total **Cannabis lots without a METRC tag** should always be 0: use **+ Add tag** on the row to add a missing tag. Changing a tag that is already on a lot needs Full access and a reason; both go into the Audit Trail.
 
 For each item, the oldest accepted lot that hasn't expired gets a **Use first** badge. The expiry badge is gold when a lot expires within a month and red when it has expired. Below the stock list, **Use records** lists every use with its date, lot, batch, quantity and who recorded it.
 
@@ -291,8 +298,20 @@ To record use:
 > - A use record can't be changed. To fix one, someone with Full access to Receiving clicks **Void**, writes a reason, and the quantity goes back to the lot. Then record the use again.
 > - Use records are never deleted.
 
+### Update inventory from Excel
+Use this for stock counts, and to load the stock you already have when you start using Hendrix. It needs Full access to Receiving.
+1. Inventory → **Download current inventory**. You get a spreadsheet with every lot in stock. The first column, **Hendrix Lot # (keep it to update)**, links each row to its lot. *On hand* is what Hendrix says is left now.
+2. Change **On hand** to what you counted, change **Location**, or add a missing METRC tag. Add new lots as new rows with no Hendrix Lot # (for a first upload, use **Blank template**).
+3. **Upload inventory** → **Choose the filled file**. Hendrix shows a preview: each row as *New*, *Update* (with each change listed) or *No change*, and every row that needs fixing, with its row number.
+4. When every row is right, click **Save N changes**. Nothing is saved until every row is right.
+
+A changed *On hand* is saved as an **inventory count**: the before and after, the unit, the file, who uploaded it and when. Counts are never changed or deleted, and each one shows in the Audit Trail, for example "Inventory count from count_nov.xlsx: 1000 → 900 each". The received quantity stays as it was; 0 means used up. New accepted rows need a COA on file, and cannabis rows need their METRC tag.
+
+> **Why count:** recorded use only covers what people remember to record. A count catches spills, mistakes and loss, and keeps Hendrix matching the shelf and METRC. A large difference between the count and Hendrix is a deviation worth reporting.
+
 ### Tips
 - Always pick the batch when recording use. That link is what lets Traceability and Recall trace a batch back to its supplier lots.
+- In the batch record, typing the last digits of a lot's METRC tag finds the lot and records the use for you, so the batch and the lot stay linked.
 - Keep lots in quarantine on a marked shelf, and put that shelf in **Storage location**.
 
 ---
@@ -610,7 +629,7 @@ Contacts are grouped by type: Recall team, Emergency services, Regulators, Certi
 | Type | Recall team, Emergency services, Regulators, Certification body, Customers, Suppliers, Testing lab, Other | Yes (default Recall team) |
 | Name | Person or office | Yes |
 | Recall role (team) / Role / title (others) | For the team, suggestions are: Recall coordinator, Quality / compliance, Production, Inventory and distribution, Communications, Management, Legal | No |
-| Organization | For example: DCR, CSQ certification body, Dispensary A | No |
+| Organization | For example: the state regulator, CSQ certification body, Dispensary A | No |
 | Phone, After-hours phone, Email | Contact details | No |
 | Verified on | Defaults to today. It can't be in the future. | No |
 | Backup / alternate | Tick for a backup person | No |

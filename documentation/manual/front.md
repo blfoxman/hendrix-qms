@@ -2,25 +2,35 @@
 This book explains every page of Hendrix QMS: what each page is for, when to use it, and exactly what to fill in.
 
 You don't need to read it front to back:
-- **New to Hendrix?** Read this chapter first: how Hendrix is organized, your access, and the rules for good records.
+- **New to Hendrix?** Read this chapter first: how Hendrix is organized, your access, and the rules for good records. Then read **How it all fits together**: the life of a batch, what to do when something goes wrong, and which pages are yours.
 - **Something just happened?** Look it up in **What do I fill in when…** at the end of this chapter, for example "a delivery arrived", "a customer complained" or "the temperature was out of range". It sends you to the right page and section.
-- **Learning a module?** Go to its chapter. Each module starts with *When to use it*, then explains each form field by field. **Hendrix checks** boxes show what Hendrix will not let you do and why.
+- **Learning a module?** Go to its chapter. Each module starts with **Understand it first**: what it is in plain words, why we do it, and what goes wrong without it. Then *When to use it*, then each form field by field. **Hendrix checks** boxes show what Hendrix will not let you do and why.
+- **Prefer to watch?** The Training Center at **hendrixqms.com/training** has short videos for each area, picked for your job.
 
-Hendrix is used every day by production technicians, QA, compliance staff, managers and owners. Visitors and staff also use it at kiosk tablets, to sign in, fill in logs and clock in.
+Hendrix is used every day by production technicians, QA, compliance staff, managers and owners. Visitors and staff also use it at kiosk tablets and by scanning QR codes with a phone, to sign in, fill in logs and clock in.
+
+The examples and screenshots in this book use a made-up company, **Northfield Labs** (license MFG-48213), with made-up people, so what you see on your own screen will have your company's names. Your admin may also have customized lists, roles and timings.
 
 ![The dashboard: everything that needs attention at the selected license](shots/found_dashboard.png)
 
 ## How Hendrix is organized
+**Your company's address.** Each company has its own Hendrix at its own address, for example **hendrixqms.com/yourcompany**. Bookmark it, or add it to your phone's home screen. Kiosks and QR codes open the same address.
+
 **States and licenses.** Everything in Hendrix belongs to one **state** and one **license**. Each state has its own rules, products and law training. Each license has its own logs, batches, people and records. Choose the state and license in the top bar. Every page then shows, and saves to, that license only. Records of different licenses never mix.
 
-**The left menu** has two parts:
+**The left menu** starts with **Dashboard** and **My Tasks**, then a **Find a module** box (type a few letters to jump to any page), then the modules in groups. Click a group name to open or close it; Hendrix remembers which groups you keep open on each device.
 
-| Part | What is in it |
+| Group | What is in it |
 |---|---|
-| **Hendrix** (top) | Dashboard, States and Licenses, the state's Rulebook, Standards (CSQ), Team and Access, Roles, Audit Trail, Settings and Import. Mostly used by admins and QA. |
-| **Modules** | The daily work. Overview: Line Map. Quality system: QMS, Complaints, Internal Audits, HACCP, Risk Register, Change Control, Org Chart, Quality Objectives, Management Review, Verification Schedule. People: Time Clock and Badges, Training, SOPs. Materials: Suppliers, Receiving, Hold and Release, Shipping, Traceability and Recall. Facility: Equipment, Chemicals and SDS, Line Clearance and Rework, Facility Tests, Cultivation, Visitor Log, Facility Logs. Production: Products, Production Planner, Batch Tracker, Testing, Compliance Stickers. |
+| **Production** | Production Planner, Batch Tracker (with the Manufacturing Process tab), Testing, Compliance Stickers, Products, METRC Check, Line Map, Line Clearance and Rework |
+| **Inventory and shipping** | Receiving (with the Inventory tab), Hold and Release, Shipping, Traceability and Recall, Suppliers |
+| **Facility** | Facility Map, Rooms, Facility Logs, Equipment, Chemicals and SDS, Facility Tests, Visitor Log, Time Clock and Badges, Cultivation |
+| **Quality** | QMS (deviations and CAPA), Complaints, Internal Audits, HACCP, Risk Register, Change Control, Verification Schedule |
+| **SOPs and training** | SOPs, Training, Org Chart, the state's Rulebook |
+| **Management** | Quality Objectives, Management Review, Standards (CSQ) |
+| **Admin** | States and Licenses, Team and Access, Roles, Audit Trail, Settings, System Health, Import |
 
-You only see the modules you have access to. **Cultivation** appears only at cultivation licenses.
+You only see the modules you have access to. **Cultivation** and **Facility Map** appear only at cultivation licenses, and the manufacturing pages (Production Planner, Batch Tracker, Products, Compliance Stickers, Line Map, Line Clearance) only at manufacturing licenses.
 
 **The Dashboard** shows what needs attention at the selected license: overdue logs, open deviations, holds, due reviews, training gaps, expiring documents and more. Each card opens its page. **Start every shift here.**
 
@@ -38,7 +48,7 @@ An admin gives each person a level for each module, either through a role (for e
 If a button you expect is missing, you probably don't have the level for it. Ask your admin.
 
 ## The rules for good records
-Hendrix is built so that inspectors and auditors can trust every record. These rules are enforced by Hendrix itself, not only by habit:
+Hendrix is built so that inspectors and auditors can trust every record. These rules are enforced by Hendrix itself, not only by habit. The chapter *How it all fits together* explains why they matter.
 
 1. **Sign in as yourself.** Never share an account or use someone else's session. Everything you save is stamped with your name and the time. On a shared tablet, sign out when you're done.
 2. **Enter it when it happens.** Hendrix stamps every save with the server time, next to the date and time you enter for the event. If you enter something late, the two will differ, so say why in the notes.
@@ -55,11 +65,12 @@ The defaults below are Hendrix's built-in timings. An admin can change them per 
 
 | How often | What | Where in Hendrix |
 |---|---|---|
-| **Every shift** | Check the Dashboard and the Line Map; fill in the sanitation log and the temperature / humidity log | Dashboard; Facility Logs (overdue after 2 days) |
+| **Every shift** | Check the Dashboard and the Line Map; the person in charge does the GMP hygiene walk; fill in the sanitation log and the temperature / humidity log | Dashboard; Facility Logs (sanitation overdue after 48 hours by default) |
 | **Every batch** | Line clearance before the batch; the batch record as you go; rework, if any | Line Clearance and Rework; Batch Tracker |
-| **Every delivery** | Receive the lot into quarantine, inspect it, then accept or reject it | Receiving |
+| **Every delivery** | Receive the lot into quarantine with its METRC tag (cannabis), inspect it, then accept or reject it | Receiving |
 | **Every shipment** | Pre-load inspection and shipment record | Shipping |
-| **When it happens** | Deviations, complaints, holds, visitor sign-in, security malfunctions | QMS, Complaints, Hold and Release, Visitor Log, Facility Logs |
+| **When it happens** | Deviations, complaints, holds, visitor sign-in, security malfunctions, maintenance and purchase requests, employee illness | QMS, Complaints, Hold and Release, Visitor Log, Facility Logs |
+| **Weekly (suggested)** | METRC Check: compare Hendrix with METRC and fix differences | METRC Check |
 | **Monthly** | Waste, pest control, environmental monitoring, scale calibration and security equipment inspection logs; objective results | Facility Logs (overdue after 31–35 days); Quality Objectives |
 | **Quarterly** | Equipment maintenance log; access review of who can do what | Facility Logs (overdue after 95 days); Team and Access |
 | **As planned** | Calibration and maintenance, facility tests, supplier reviews, HACCP verification | Equipment, Facility Tests, Suppliers, HACCP |

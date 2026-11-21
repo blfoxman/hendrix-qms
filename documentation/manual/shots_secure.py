@@ -46,7 +46,7 @@ def jwt(aal):
     return 'h.' + base64.urlsafe_b64encode(json.dumps({'sub': ADMIN, 'aal': aal}).encode()).decode().rstrip('=') + '.s'
 def jr(route, j, st=200): return route.fulfill(status=st, content_type='application/json', body=json.dumps(j))
 def psql_json(sql):
-    out = subprocess.run(['psql', '-X', '-q', '-At', '-h', '/tmp/hxpg', '-U', 'postgres', '-d', 'hxtest', '-c', "set test.uid='" + ADMIN + "'; " + sql], capture_output=True, text=True)
+    out = subprocess.run(['psql', '-X', '-q', '-At', '-U', 'postgres', '-d', 'hxtest', '-c', "set test.uid='" + ADMIN + "'; " + sql], capture_output=True, text=True)
     return json.loads(out.stdout.strip().split('\n')[-1])
 _h = handle
 def handle(route, request):

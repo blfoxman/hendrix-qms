@@ -14,6 +14,14 @@ check('"summitsolutions"' in comp and '"Summit Solutions"' in comp and 'bqrnclln
 cat = json.loads(open(os.path.join(out, 'training', 'catalog.js')).read().split('window.HX_VIDEOS=', 1)[1].rstrip().rstrip(';'))
 ids = [v['id'] for v in cat]
 check(len(cat) >= 10 and all(os.path.getsize(os.path.join(out, 'training', v['file'])) > 200000 and os.path.exists(os.path.join(out, 'training', v['poster'])) and v['seconds'] > 20 for v in cat), 'every video and its poster are published (%d videos)' % len(cat))
+MAN = json.loads(open(os.path.join(out, 'training', 'manual', 'toc.js')).read().split('window.HX_MANUAL=', 1)[1].rstrip().rstrip(';'))
+mtitles = [m['t'] for m in MAN['modules']]
+check(os.path.getsize(os.path.join(out, 'training', 'manual', 'Hendrix_QMS_User_Manual.pdf')) > 2000000 and os.path.exists(os.path.join(out, 'training', 'manual', 'index.html'))
+      and len(MAN['modules']) >= 60 and all(t in mtitles for t in ('Batch Tracker', 'QMS', 'Line Clearance and Rework', 'The life of a batch', 'Manufacturing Process', 'Facility Map', 'Rooms')),
+      'user manual published: web page, PDF and %d sections' % len(MAN['modules']))
+DEEP = json.loads(open(os.path.join(out, 'training', 'deep.js')).read().split('window.HX_DEEP=', 1)[1].rstrip().rstrip(';'))
+check(len(DEEP) >= 55 and all(os.path.getsize(os.path.join(out, 'training', d['file'])) > 100000 and os.path.exists(os.path.join(out, 'training', d['poster'])) and d['seconds'] > 15 and d['manual'].startswith('manual/#') for d in DEEP),
+      'in-depth videos: %d, one per manual section, each with its poster and manual link' % len(DEEP))
 SBU = 'https://bqrncllndvzbhmxanitq.supabase.co'
 ALL = {}
 for v in cat:
@@ -65,12 +73,43 @@ with sync_playwright() as pw:
     # technician: only the videos for their access, the role picks first
     sign_in(pg, 'summitsolutions', 'tech@x.com', 'Tech-Pass-26'); pg.wait_for_selector('#lib:not([hidden])')
     got = visible_ids(pg, 'grid-all'); picks = visible_ids(pg, 'grid-pick')
-    check(set(ST['mods'] or []) == set(ALL), 'Hendrix is asked about every area the videos need (%d)' % len(ST['mods'] or []))
+    MA = set(m['a'] for m in MAN['modules'] if m['a'] and m['a'] != 'admin')
+    check(set(ST['mods'] or []) == set(ALL) | MA, 'Hendrix is asked about every area the videos and the manual need (%d)' % len(ST['mods'] or []))
+    chips = [a.inner_text() for a in pg.locator('#man-chips a').all()]
+    check(chips == ['Facility Logs', 'Line Map'] and pg.locator('#man-chips a', has_text='Line Map').get_attribute('href') == 'manual/#line-map'
+          and pg.locator('#shelf-manual a', has_text='Read the manual').get_attribute('href') == 'manual/', 'user manual shelf: the manual, the PDF and the pages for this access: %s' % chips)
     check(got == [i for i in ids if i in ('getting-started', 'facility-logs', 'line-map', 'taking-training')], 'technician sees getting started, facility logs, line map and training only: %s' % got)
     check(picks == ['facility-logs', 'line-map'] and not pg.locator('#shelf-pick').is_hidden(), 'picked for the role (Extraction Technician): %s' % picks)
     check(pg.locator('#who-name').inner_text() == 'Lee Park' and pg.locator('#who-title').inner_text() == 'Extraction Technician' and 'Lee, here are your videos' in pg.locator('#lib-title').inner_text(), 'name and title shown')
     check(pg.locator('#prog-txt').inner_text() == '0 of 4 watched', 'progress starts at 0 of 4')
     pg.screenshot(path=OUT + 'trc_tech.png', full_page=True)
+    # in depth: the sections for this person's access, grouped by chapter, played as a list
+    want = [d['id'] for d in DEEP if not d['a'] or d['a'] in ('linemap', 'logs')]
+    got_d = [x.get_attribute('data-id') for x in pg.locator('#deep-groups .vid').all()]
+    check(got_d == want and not pg.locator('#shelf-deep').is_hidden() and pg.locator('#deep-groups h3.grp').first.inner_text() == 'How it all fits together',
+          'in depth: %d videos for this access (overview chapter first, no Batch Tracker)' % len(got_d))
+    pg.locator('#deep-groups .vid[data-id="deep-line-map"]').click(); pg.wait_for_selector('#player:not([hidden])')
+    check(pg.locator('#p-video').get_attribute('src') == 'media/deep/line-map.mp4' and pg.locator('#p-man').get_attribute('href') == 'manual/#line-map' and pg.locator('#p-man-wrap').is_visible(), 'an in-depth video plays with a link to its manual section')
+    nxt = got_d[got_d.index('deep-line-map') + 1] if got_d.index('deep-line-map') + 1 < len(got_d) else None
+    if nxt: pg.locator('#p-next').click(); check(pg.locator('#p-video').get_attribute('src') == 'media/deep/' + nxt[5:] + '.mp4', 'Next plays the next in-depth video')
+    pg.keyboard.press('Escape'); pg.wait_for_selector('#player[hidden]', state='attached')
+    pg.locator('#deep-all').click(); pg.wait_for_selector('#player:not([hidden])')
+    first = pg.locator('#p-video').get_attribute('src')
+    pg.evaluate("document.getElementById('p-video').dispatchEvent(new Event('ended'))"); pg.wait_for_timeout(300)
+    check(first == 'media/deep/' + want[0][5:] + '.mp4' and pg.locator('#p-video').get_attribute('src') == 'media/deep/' + want[1][5:] + '.mp4', 'Play all in order: the next one starts by itself')
+    pg.keyboard.press('Escape'); pg.wait_for_selector('#player[hidden]', state='attached')
+    pg.evaluate("localStorage.clear()"); pg.reload(); pg.wait_for_selector('#lib:not([hidden])')
+    # the manual page knows the person from the Training Center sign-in
+    mp = pg   # same tab, as the Training Center's links open it (the sign-in profile is kept per tab)
+    mp.goto('file://' + out + '/training/manual/index.html'); mp.wait_for_selector('#mine:not([hidden])')
+    check([a.inner_text() for a in mp.locator('#mine-chips a').all()] == ['Facility Logs', 'Line Map'] and 'Lee, your pages' in mp.locator('#mine-h').inner_text(), 'manual page: your pages for this access')
+    check(mp.locator('section#batch-tracker .why h3', has_text='Understand it first').count() == 1 and mp.locator('section#qms .why').count() == 1 and mp.locator('header#ch-flow').count() == 1, 'manual page: Understand it first on each module, and How it all fits together')
+    mp.locator('#q').fill('line clearance'); mp.wait_for_timeout(500)
+    vis = mp.evaluate("Array.from(document.querySelectorAll('section.mod')).filter(s=>!s.hidden).map(s=>s.id)")
+    check('line-clearance-and-rework' in vis and 'gloss' not in vis and len(vis) < 30 and mp.locator('#status a', has_text='Line Clearance and Rework').count() == 1, 'manual search: matching sections and the best match (%d shown)' % len(vis))
+    mp.locator('#q').fill(''); mp.wait_for_timeout(400)
+    check(mp.evaluate("Array.from(document.querySelectorAll('section.mod')).every(s=>!s.hidden)"), 'clearing the search shows the whole manual')
+    pg.goto(url); pg.wait_for_selector('#lib:not([hidden])')
     # play, next, watched
     pg.locator('#grid-all .vid[data-id="line-map"]').click(); pg.wait_for_selector('#player:not([hidden])')
     check(pg.locator('#p-video').get_attribute('src') == 'media/line-map.mp4' and pg.locator('#p-title').inner_text() == next(v['title'] for v in cat if v['id'] == 'line-map'), 'player opens the video')
@@ -82,7 +121,8 @@ with sync_playwright() as pw:
     pg.keyboard.press('Escape'); pg.wait_for_selector('#player[hidden]', state='attached')
     # stays signed in on reload, then sign out
     pg.reload(); pg.wait_for_selector('#lib:not([hidden])'); check(visible_ids(pg, 'grid-all') == got, 'still signed in after a reload')
-    pg.locator('#signout').click(); pg.wait_for_selector('#gate:not([hidden])'); check(pg.locator('#lib').is_hidden(), 'Sign out goes back to the sign-in form')
+    pg.locator('#signout').click(); pg.wait_for_selector('#gate:not([hidden])'); check(pg.locator('#lib').is_hidden() and pg.evaluate("sessionStorage.getItem('hxtc_profile')") is None, 'Sign out goes back to the sign-in form (and forgets the profile)')
+    check(pg.locator('#gate a[href="manual/"]').count() == 1, 'the manual is linked for everyone on the sign-in page')
     # admin: everything
     sign_in(pg, 'summitsolutions', 'qa@x.com', 'Qa-Pass-2026'); pg.wait_for_selector('#lib:not([hidden])')
     check(visible_ids(pg, 'grid-all') == ids and 'You are a Hendrix admin' in pg.locator('#lib-sub').inner_text(), 'an admin sees every video (%d)' % len(ids))
@@ -104,6 +144,10 @@ with sync_playwright() as pw:
     pg.goto(url); pg.wait_for_selector('#signin'); check(pg.evaluate('document.documentElement.scrollWidth') <= 390, 'sign-in fits a phone')
     sign_in(pg, 'summitsolutions', 'tech@x.com', 'Tech-Pass-26'); pg.wait_for_selector('#lib:not([hidden])')
     check(pg.evaluate('document.documentElement.scrollWidth') <= 390, 'video list fits a phone'); pg.screenshot(path=OUT + 'trc_phone.png', full_page=True)
+    pg.goto('file://' + out + '/training/manual/index.html'); pg.wait_for_selector('#toc-btn')
+    check(pg.evaluate('document.documentElement.scrollWidth') <= 390, 'manual fits a phone'); pg.locator('#toc-btn').click(); pg.wait_for_timeout(300)
+    pg.locator('nav.toc a', has_text='Batch Tracker').click(); pg.wait_for_timeout(400)
+    check(not pg.evaluate("document.body.classList.contains('toc-open')") and pg.evaluate("location.hash") == '#batch-tracker', 'manual on a phone: Contents opens, a section link jumps there and closes it')
     ctx.close()
     # home page tab
     ctx = b.new_context(viewport={'width': 1300, 'height': 900}); ctx.route('**/*', handle); pg = ctx.new_page()

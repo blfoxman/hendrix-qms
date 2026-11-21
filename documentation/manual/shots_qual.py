@@ -398,7 +398,7 @@ with sync_playwright() as pw:
     pg.locator('.md').get_by_role('button', name='Close', exact=True).click()
 
     # ===================== Training =====================
-    nav(pg, 'Training'); pg.wait_for_selector('.msg >> text=Created the 9 CSQ training courses', timeout=20000)
+    nav(pg, 'Training'); pg.wait_for_selector('.msg >> text=/Created the \d+ CSQ training courses/', timeout=20000)
     pg.wait_for_selector('.card >> text=Online courses ready'); pg.get_by_role('button', name='Publish all').click(); pg.wait_for_selector('.msg >> text=/Published \\d+ online course/')
     # SOP-linked read-and-sign course
     T['hx_training_courses'].append({'id': 'crs-cart', 'state_id': S, 'license_id': L, 'license_ids': [L], 'name': 'Cart filling (read and sign SOP-PRD-001)', 'topic': 'Job-specific', 'description': 'Met by signing the current version of SOP-PRD-001.',

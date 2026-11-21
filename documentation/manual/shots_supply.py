@@ -213,7 +213,7 @@ with sync_playwright() as pw:
     pg.get_by_role('button', name='+ Receive lot').click(); md = pg.locator('.md')
     field(md, 'Supplier').select_option('s-mdp'); field(md, 'Item received').fill('THC distillate'); field(md, 'Category').select_option('Distillate / extract')
     field(md, 'Quantity').fill('500'); field(md, 'Unit').select_option('g'); field(md, 'Supplier lot #').fill('MDP-DST-1019'); field(md, 'Expiry / best before').fill('2027-10-15')
-    field(md, 'METRC tag (cannabis)').fill('1A40A0300001234000000512'); field(md, 'PO / invoice #').fill('PO-4502'); field(md, 'Storage location').fill('Quarantine fridge Q2')
+    field(md, 'METRC tag').fill('1A40A0300001234000000512'); field(md, 'PO / invoice #').fill('PO-4502'); field(md, 'Storage location').fill('Quarantine fridge Q2')
     for c in md.locator('label.ck input[type=checkbox]').all(): c.check()
     md.locator('input[type=file]').set_input_files({'name': 'COA MDP-DST-1019.pdf', 'mimeType': 'application/pdf', 'buffer': b'%PDF-1.4'}); pg.wait_for_selector('.md >> text=COA MDP-DST-1019.pdf')
     field(md, 'Inspection notes').fill('Seal intact, 1 x 500 g jar, received at 4 C')

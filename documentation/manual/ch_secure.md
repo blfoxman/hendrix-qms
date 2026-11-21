@@ -41,7 +41,7 @@ Names are matched to your name in Team and Access, without regard to capitals or
 > - "My Tasks is not set up yet - run hendrix_step39.sql" when the database step is missing.
 
 ## My account and two-step sign-in
-My account is your own page: turn on two-step sign-in, choose whether you get the daily task email, and change your password.
+My account is your own page: turn on two-step sign-in, choose whether you get the daily task email, change your email address, set your security questions and change your password. The sign-in screen has **Forgot your password?** for when you can't sign in.
 
 **Where:** click your name at the top right. **Who:** everyone, for their own account.
 **CSQ:** supports 1.4 (documentation and recordkeeping); 21 CFR Part 11 benchmark 11.300 (password controls)
@@ -56,6 +56,10 @@ My account is your own page: turn on two-step sign-in, choose whether you get th
 | You got a new phone | Ask an admin to turn two-step off for you, then set it up again |
 | You do not want the daily email | Untick **Email me my task list on work days** |
 | Your password may be known to someone | **Change password** |
+| You forgot your password | Sign-in screen → **Forgot your password?** → **Email me a reset link** |
+| You can't get into your email either | Sign-in screen → **Forgot your password?** → **No access to that email? Answer your security questions** |
+| Your email address changed | **Email address** → **Change my email**, then confirm from the new inbox |
+| You want different security questions | **Security questions** → **Change my questions** |
 
 ### Set up two-step sign-in
 1. Install an authenticator app on your phone (Google Authenticator, Microsoft Authenticator, 1Password or similar).
@@ -66,13 +70,35 @@ From now on, Hendrix asks for the code after your password every time you sign i
 
 ![Two-step sign-in at sign-in](shots/sec_gate.png)
 
-### Forgot password (temporary password from an admin)
-Until password-reset email is set up, a person who forgot their password asks a system admin:
+### Forgot your password?
+There are three ways back in, from the easiest:
+
+**1. By email.** On the sign-in screen, click **Forgot your password?**, enter the email you sign in with and click **Email me a reset link**. Open the email and click the link. Hendrix opens **Choose a new password**: type it twice and save. If you use two-step sign-in, Hendrix also asks for your authenticator code.
+
+**2. With your security questions.** If you can't get into that email, click **No access to that email? Answer your security questions**. Enter your email, answer your three questions, choose a new password and save. For your safety, you have 5 tries per hour; after that, wait or ask an admin. Resetting this way signs you out on every device, and it's recorded in the Audit Trail.
+
+**3. From an admin.** If neither works, ask a system admin for a temporary password:
 1. Admin: **Team and Access** → **Manage** on the person → **Set a temporary password**. Hendrix suggests a readable one (for example `WPYt-vF8F-Uktn`); **Generate** makes another, or type your own (at least 8 characters). Click **Set password**.
 2. Give the temporary password to the person **in person** (not by text or email). Their other open sessions are signed out.
 3. The person signs in with it. Hendrix shows **Choose a new password** before anything else opens; they type their own password twice and click **Save my new password**.
 
-The reset is in the Audit Trail ("Password reset by an admin"). Hendrix never stores passwords, only the secure hash kept by the sign-in service. On the sign-in page, **Forgot your password?** tells people to ask an admin.
+The reset is in the Audit Trail ("Password reset by an admin"). Hendrix never stores passwords, only the secure hash kept by the sign-in service.
+
+![Forgot your password: a reset link by email, or the security questions](shots/sec_forgot.png)
+
+### Security questions
+Hendrix asks everyone to choose **three security questions** and answers, at their next sign-in and any time in **My account → Security questions**. They're your way back in when you forget your password and can't use your email.
+1. Pick three different questions from the lists (or write your own), and type an answer for each.
+2. Click **Save and continue**.
+
+Choose answers only you know and will remember exactly; avoid answers someone could find online. Answers aren't case sensitive, and extra spaces don't matter. Hendrix keeps only a scrambled copy (a hash) of each answer: nobody can read your answers, not even an admin.
+
+![Choosing the three security questions](shots/sec_secq.png)
+
+### Change your email address
+1. **My account → Email address**: type the new address and click **Change my email**.
+2. Hendrix sends a confirmation email. Click the link in it (your company may also ask you to confirm from the old address).
+3. From then on you sign in with the new address, and the task list and alerts go there.
 
 ### Change password
 | Field | What to enter | Required |
@@ -157,15 +183,17 @@ Hendrix sends two kinds of email: a daily task list to each person (the same as 
 | A deviation is reported (or raised) as critical | QMS (Deviations, CAPA) |
 | A complaint is critical | Complaints |
 | A real recall or withdrawal is started (not a mock) | Traceability and Recall |
+| A distillate, hash or rosin yield is graded bad or below range | General manager, production and extraction managers, directors and admins |
 
-Every email is written to the email log (when, to whom, subject, sent or failed with the reason). An alert that could not be sent stays waiting and is tried again.
+Every email is written to the email log (when, to whom, subject, sent or failed with the reason). An alert that could not be sent stays waiting and is tried again. An alert still waiting after 3 days is old news: it is logged as expired instead of emailed, and the item stays on My Tasks.
 
 ### Set-up (once, by the system owner)
 1. At resend.com, verify the company email domain and create an API key.
 2. In Supabase → Edge Functions, deploy `hendrix-notify.ts` with the name **hendrix-notify** (Verify JWT off).
-3. In Edge Functions → Secrets, add `RESEND_API_KEY`, `HX_MAIL_FROM` (for example Hendrix QMS <qms@blackfoxmfg.com>) and `HX_CRON_SECRET` (a long random text).
+3. In Edge Functions → Secrets, add `RESEND_API_KEY`, `HX_MAIL_FROM` (for example Hendrix QMS <noreply@hendrixqms.com>) and `HX_CRON_SECRET` (a long random text).
 4. Run the two `cron.schedule` lines at the end of `hendrix_step39.sql`, with the same secret.
 5. Test: My Tasks → **Email me this list**.
+6. For password-reset and email-change emails: in Supabase → Authentication, set the SMTP sender to the same email service, and under URL Configuration set the Site URL to your company's Hendrix address and allow redirects to it.
 
 > **Hendrix checks:**
 > - "Email is not set up: add RESEND_API_KEY and HX_MAIL_FROM in Supabase > Edge Functions > Secrets."
@@ -211,6 +239,7 @@ METRC Check compares what METRC says about the license's packages with what Hend
 | Situation | What you do in Hendrix |
 |---|---|
 | Weekly, and before an inspection | Export active packages from METRC; **Upload METRC export** |
+| You want Hendrix's stock to match METRC | Tick **Also update the Hendrix inventory** before you upload |
 | METRC keys are set up | **Read from METRC now** |
 | A difference is listed | **Open** the record and fix Hendrix or METRC |
 | QA signs off the reconciliation | **Print report**, fix, initial and date each line |
@@ -225,6 +254,8 @@ METRC Check compares what METRC says about the license's packages with what Hend
 | Fix | An accepted lot with quantity left in Hendrix that METRC no longer lists |
 | Check | The quantity left differs by more than 2% (same unit, g = Grams, ea = Each) |
 | Info | Active METRC packages Hendrix does not know at all |
+
+**Also update the Hendrix inventory** (needs Full access to Receiving): when ticked, the upload also sets each Hendrix lot's on-hand quantity and location from METRC, matched by METRC tag, and tagged lots that are no longer active in METRC go to 0. Each change is recorded as an inventory count in the Audit Trail. Use it after you've checked the differences: METRC is the state's record, but a difference can also mean METRC is the one that's wrong.
 
 Tags are compared without spaces or dashes, in any case. The METRC export can be CSV or Excel; title rows, quantities like "700 Grams" and dates like 10/18/2026 are understood. Each check is kept; pick an older one from **Check of**.
 
