@@ -10,6 +10,7 @@ cp site/index.html site/404.html site/sw.js "$OUT"/
 for f in $ASSETS; do cp "$f" "$OUT"/; done
 if [ -f CNAME ]; then cp CNAME "$OUT"/; fi
 touch "$OUT/.nojekyll"
+if [ -d site/media ]; then cp -r site/media "$OUT"/; fi
 n=0
 while read -r code; do
   code=$(echo "$code" | tr -d '[:space:]'); [ -z "$code" ] && continue; case "$code" in \#*) continue;; esac

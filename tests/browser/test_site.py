@@ -13,6 +13,7 @@ for f in ['index.html', '404.html', 'sw.js', 'favicon.svg', 'og-image.png', 'sit
     check(os.path.exists(os.path.join(out, f)), 'built: ' + f)
 check(filecmp.cmp(os.path.join(ROOT, 'index.html'), os.path.join(out, 'summitsolutions', 'index.html'), shallow=False), 'hendrixqms.com/summitsolutions is the Hendrix app itself')
 check(open(os.path.join(out, 'CNAME')).read().strip() == 'hendrixqms.com', 'custom domain kept')
+check(os.path.getsize(os.path.join(out, 'media', 'hendrix-demo.mp4')) > 1000000 and os.path.exists(os.path.join(out, 'media', 'hendrix-demo-poster.jpg')), 'demo video and its poster are published')
 with sync_playwright() as pw:
     b = pw.chromium.launch(**LAUNCH)
     ctx = b.new_context(viewport={'width': 1280, 'height': 900})
@@ -20,6 +21,9 @@ with sync_playwright() as pw:
     pg = ctx.new_page(); pg.on('pageerror', lambda e: errors.append('JS: ' + str(e)) if 'React' not in str(e) and 'is not defined' not in str(e) else None)
     pg.goto('file://' + out + '/index.html'); pg.wait_for_selector('h1')
     check('every step on the record' in pg.locator('h1').inner_text() and pg.locator('#inside dt').count() == 6, 'intro page: what Hendrix is and what it keeps')
+    check(pg.locator('#demo video source').get_attribute('src') == 'media/hendrix-demo.mp4' and pg.locator('#demo video').get_attribute('poster') == 'media/hendrix-demo-poster.jpg'
+          and pg.locator('.hero a[href="#demo"]', has_text='Watch the demo').count() == 1, 'demo video section, linked from the top of the page')
+    pg.locator('#demo').scroll_into_view_if_needed(); pg.wait_for_timeout(300); pg.locator('#demo').screenshot(path=OUT + 'site_demo.png'); pg.evaluate('window.scrollTo(0,0)')
     check(pg.locator('#csq h2').inner_text() == 'Built for CSQ certification' and pg.locator('#csq .csq-points dt').count() == 4 and pg.locator('.stds li').count() == 6, 'CSQ and standards section')
     pg.wait_for_timeout(2600)
     check(pg.locator('#trains g').count() == 5 and 'translate' in (pg.locator('#trains g').first.get_attribute('transform') or ''), 'line map batches placed')

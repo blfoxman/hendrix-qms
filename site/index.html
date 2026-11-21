@@ -74,6 +74,7 @@ h1{margin:0;font-weight:800;font-size:clamp(40px,6.2vw,76px);line-height:.98;let
 
 /* sections */
 section{border-top:1px solid var(--rule);padding:72px 0}
+.demo-video{display:block;width:100%;height:auto;aspect-ratio:16/9;background:#000;border:1px solid var(--rule);border-radius:16px}
 h2{margin:0 0 10px;font-weight:800;font-size:clamp(28px,3.4vw,40px);line-height:1.08;font-variation-settings:"wdth" 112}
 .intro{margin:0 0 40px;max-width:40em;color:#cfc8b6}
 .areas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:40px 48px;margin:0}
@@ -165,7 +166,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
     <p class="lede">Hendrix is the quality management system for licensed cannabis manufacturers and cultivators who answer to CSQ, cGMP and their state regulator. Batch records, METRC checks, SOPs, training, holds and facility logs live in one place, signed, audited and ready to show. It works in any state, and you can customize it to the way you operate.</p>
     <div class="actions">
       <a class="btn solid" href="#sign-in">Client sign-in</a>
-      <a class="btn" href="#csq">How Hendrix meets CSQ</a>
+      <a class="btn" href="#demo">Watch the demo</a>
     </div>
     <ul class="stds" aria-label="Standards and rules Hendrix is built around">
       <li>CSQ v2.0</li><li>cGMP</li><li>HACCP</li><li>21 CFR 117</li><li>METRC</li><li>Any state's cannabis rules</li>
@@ -200,6 +201,17 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
     <g id="trains"></g>
   </svg>
 </div>
+
+<section id="demo" class="demo">
+  <div class="wrap">
+    <h2>See Hendrix in 90 seconds</h2>
+    <p class="intro">The line map, the cultivation map, QR logs on a phone, SDS reading, training, the SOP creator and the audit trail, with sound on.</p>
+    <video class="demo-video" controls playsinline preload="none" poster="media/hendrix-demo-poster.jpg" aria-label="Hendrix QMS demo video">
+      <source src="media/hendrix-demo.mp4" type="video/mp4">
+      Your browser cannot play this video. <a href="media/hendrix-demo.mp4">Download it</a>.
+    </video>
+  </div>
+</section>
 
 <section id="csq" class="csq">
   <div class="wrap csq-grid">
