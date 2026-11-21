@@ -194,6 +194,8 @@ function tr(s){return s;}
 /* ---------- Supabase connection (a NEW, separate project) ---------- */
 // Optional: paste the new project's URL and anon key here so every browser is pre-connected.
 const HX_URL='https://bqrncllndvzbhmxanitq.supabase.co';
+// the company this Hendrix belongs to (hendrixqms.com/<code>/): remembered so the intro page can offer "Continue to your Hendrix"
+try{const seg=(location.pathname.split('/').filter(Boolean)[0]||'');if(/^[a-z0-9-]{2,40}$/.test(seg)&&['hendrix-qms','hendrix'].indexOf(seg)<0)localStorage.setItem('hx_tenant',seg);}catch(e){}
 const HX_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxcm5jbGxuZHZ6YmhteGFuaXRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1OTI0MTgsImV4cCI6MjEwODE2ODQxOH0.OLIy8RzGxYSGulp7m2IdpD7KA5NiGDuEFYfWYT99_Bc';
 
 function lsGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}

@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script>
+// Old kiosk, badge and QR links (hendrixqms.com/?kiosk=... and blfoxman.github.io/hendrix-qms/?kiosk=...)
+// belong to the Summit Solutions platform: send them there with the link unchanged.
+(function(){var q=location.search||'';if(/[?&](kiosk|badge|state|lic)=/.test(q))location.replace('summitsolutions/'+q+(location.hash||''));})();
+</script>
+<title>Hendrix QMS: quality records for licensed cannabis operators</title>
+<meta name="description" content="Hendrix is a quality management system for licensed cannabis manufacturers and cultivators: batch records, METRC checks, SOPs, training, holds and facility logs in one place, signed and audited.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#000000">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Hendrix QMS">
+<meta property="og:title" content="Hendrix QMS">
+<meta property="og:description" content="Quality records for licensed cannabis manufacturers and cultivators.">
+<meta property="og:url" content="https://hendrixqms.com/">
+<meta property="og:image" content="https://hendrixqms.com/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --black:#000;
+  --panel:#12110e;
+  --gold:#d4af37;
+  --gold-hi:#f1d57a;
+  --gold-lo:#a8841c;
+  --bone:#ece6d6;
+  --stone:#8c877a;
+  --rule:#2a2822;
+  --go:#5fbf8a;
+  --stop:#e5705a;
+  --gold-grad:linear-gradient(135deg,var(--gold-hi) 0%,var(--gold) 45%,var(--gold-lo) 100%);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--black);color:var(--bone);font-family:Archivo,"Helvetica Neue",Arial,sans-serif;font-size:17px;line-height:1.6;font-variation-settings:"wdth" 100}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--gold-hi);outline-offset:3px;border-radius:2px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+
+/* top bar */
+.top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:22px;padding-bottom:22px}
+.mark{display:flex;align-items:center;gap:12px;text-decoration:none}
+.mark b{font-weight:800;font-size:17px;letter-spacing:.24em;font-variation-settings:"wdth" 125;background:var(--gold-grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.top nav{display:flex;gap:10px;align-items:center}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 20px;border-radius:999px;font:inherit;font-size:15px;font-weight:650;text-decoration:none;cursor:pointer;border:1px solid var(--gold);background:transparent;color:var(--gold-hi)}
+.btn.solid{background:var(--gold-grad);color:#1a1405;border-color:transparent}
+.btn:hover{border-color:var(--gold-hi)}
+.btn.solid:hover{filter:brightness(1.06)}
+
+/* hero */
+.hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:48px;align-items:center;padding-top:56px;padding-bottom:88px}
+h1{margin:0;font-weight:800;font-size:clamp(40px,6.2vw,76px);line-height:.98;letter-spacing:-.01em;font-variation-settings:"wdth" 118}
+.lede{margin:26px 0 0;max-width:34em;color:#cfc8b6;font-size:19px}
+.hero .actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:34px}
+.map{width:100%;height:auto;display:block}
+.map text{font-family:Archivo,Arial,sans-serif;font-variation-settings:"wdth" 100}
+.map .lbl{fill:var(--stone);font-size:12.5px}
+.map .line-name{font-size:14px;font-weight:700}
+.map .st{fill:var(--black);stroke-width:3}
+
+/* sections */
+section{border-top:1px solid var(--rule);padding:72px 0}
+h2{margin:0 0 10px;font-weight:800;font-size:clamp(28px,3.4vw,40px);line-height:1.08;font-variation-settings:"wdth" 112}
+.intro{margin:0 0 40px;max-width:40em;color:#cfc8b6}
+.areas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:40px 48px;margin:0}
+.areas div{border-left:2px solid var(--gold);padding-left:18px}
+.areas dt{font-weight:750;font-size:19px;margin:0 0 6px;font-variation-settings:"wdth" 108}
+.areas dd{margin:0;color:#c3bcaa;font-size:16px}
+
+.proof{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;margin:0;border:1px solid var(--rule);border-radius:18px;overflow:hidden}
+.proof div{padding:30px 32px;background:var(--panel)}
+.proof div:nth-child(odd){border-right:1px solid var(--rule)}
+.proof div:nth-child(-n+2){border-bottom:1px solid var(--rule)}
+.proof dt{font-weight:750;font-size:19px;margin:0 0 8px;color:var(--gold-hi);font-variation-settings:"wdth" 108}
+.proof dd{margin:0;color:#c3bcaa;font-size:16px}
+
+.yours{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:56px;align-items:start}
+.yours ul{margin:0;padding:0;list-style:none}
+.yours li{padding:14px 0;border-bottom:1px solid var(--rule);color:#cfc8b6}
+.yours li:first-child{padding-top:0}
+.addr{font-weight:700;color:var(--bone);font-variation-settings:"wdth" 100;overflow-wrap:anywhere}
+.signin{background:var(--panel);border:1px solid var(--rule);border-radius:18px;padding:30px}
+.signin h3{margin:0 0 6px;font-size:21px;font-weight:750;font-variation-settings:"wdth" 108}
+.signin p{margin:0 0 18px;color:var(--stone);font-size:15px}
+.signin label{display:block;font-size:14px;color:#cfc8b6;margin-bottom:8px}
+.field{display:flex;align-items:center;border:1px solid #3a372f;border-radius:12px;background:var(--black);overflow:hidden}
+.field:focus-within{border-color:var(--gold)}
+.field span{padding:0 4px 0 14px;color:var(--stone);font-size:15px;white-space:nowrap}
+.field input{flex:1;min-width:0;border:0;background:transparent;color:var(--bone);font:inherit;font-size:16px;padding:13px 14px 13px 0;outline:none}
+.signin .btn{width:100%;margin-top:14px}
+.err{min-height:22px;margin:10px 0 0;color:var(--stop);font-size:14px}
+.cont{margin-top:16px;font-size:15px;color:var(--stone)}
+.cont a{color:var(--gold-hi)}
+
+footer{border-top:1px solid var(--rule);padding:28px 0 40px;color:var(--stone);font-size:14px}
+footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+
+@media (max-width:900px){
+  .hero{grid-template-columns:minmax(0,1fr);padding-top:40px;padding-bottom:64px;gap:36px}
+  .areas{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .yours{grid-template-columns:minmax(0,1fr);gap:36px}
+}
+@media (max-width:600px){
+  .wrap{padding:0 20px}
+  .top nav .btn:not(.solid){display:none}
+  .areas{grid-template-columns:1fr}
+  .proof{grid-template-columns:1fr}
+  .proof div:nth-child(odd){border-right:0}
+  .proof div:not(:last-child){border-bottom:1px solid var(--rule)}
+  section{padding:56px 0}
+}
+</style>
+</head>
+<body>
+<header class="wrap top">
+  <a class="mark" href="./" aria-label="Hendrix QMS home">
+    <svg width="34" height="34" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="hx" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f1d57a"/><stop offset=".5" stop-color="#d4af37"/><stop offset="1" stop-color="#a8841c"/></linearGradient></defs><polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="none" stroke="url(#hx)" stroke-width="2.4" stroke-linejoin="round"/><path d="M13 12v16M27 12v16M13 20h14" stroke="url(#hx)" stroke-width="3" stroke-linecap="round" fill="none"/></svg>
+    <b>HENDRIX</b>
+  </a>
+  <nav>
+    <a class="btn" href="#inside">What's inside</a>
+    <a class="btn solid" href="#sign-in">Client sign-in</a>
+  </nav>
+</header>
+
+<main>
+<div class="wrap hero">
+  <div>
+    <h1>From receiving to release, every step on the record.</h1>
+    <p class="lede">Hendrix is a quality management system for licensed cannabis manufacturers and cultivators. Batch records, METRC checks, SOPs, training, holds and facility logs live in one place, signed and audited.</p>
+    <div class="actions">
+      <a class="btn solid" href="#sign-in">Client sign-in</a>
+      <a class="btn" href="#inside">See what's inside</a>
+    </div>
+  </div>
+  <svg class="map" id="map" viewBox="0 0 640 380" role="img" aria-labelledby="map-t">
+    <title id="map-t">A production line map: Pre-Rolls, Infused Flower and Manufacturing Process lines join into Testing, Passed and Released. One batch is on hold at Testing.</title>
+    <!-- branch lines -->
+    <path id="l1" d="M40 70 H250 Q300 70 330 120 L360 170" fill="none" stroke="#5fbf8a" stroke-width="6" stroke-linecap="round"/>
+    <path id="l2" d="M40 190 H360" fill="none" stroke="#4fc1c9" stroke-width="6" stroke-linecap="round"/>
+    <path id="l3" d="M40 310 H250 Q300 310 330 260 L360 210" fill="none" stroke="#9ccc65" stroke-width="6" stroke-linecap="round"/>
+    <!-- trunk -->
+    <path id="tr" d="M360 190 H610" fill="none" stroke="#ece6d6" stroke-width="10" stroke-linecap="round"/>
+    <text class="line-name" x="40" y="52" fill="#5fbf8a">Pre-Rolls</text>
+    <text class="line-name" x="40" y="172" fill="#4fc1c9">Infused Flower</text>
+    <text class="line-name" x="40" y="292" fill="#9ccc65">Manufacturing Process</text>
+    <!-- stations -->
+    <g>
+      <circle class="st" cx="60" cy="70" r="7" stroke="#5fbf8a"/><text class="lbl" x="60" y="94" text-anchor="middle">Received</text>
+      <circle class="st" cx="160" cy="70" r="7" stroke="#5fbf8a"/><text class="lbl" x="160" y="94" text-anchor="middle">Filled</text>
+      <circle class="st" cx="250" cy="70" r="7" stroke="#5fbf8a"/><text class="lbl" x="250" y="94" text-anchor="middle">Packaged</text>
+      <circle class="st" cx="60" cy="190" r="7" stroke="#4fc1c9"/><text class="lbl" x="60" y="214" text-anchor="middle">Received</text>
+      <circle class="st" cx="170" cy="190" r="7" stroke="#4fc1c9"/><text class="lbl" x="170" y="214" text-anchor="middle">Infused</text>
+      <circle class="st" cx="270" cy="190" r="7" stroke="#4fc1c9"/><text class="lbl" x="270" y="214" text-anchor="middle">Cured</text>
+      <circle class="st" cx="60" cy="310" r="7" stroke="#9ccc65"/><text class="lbl" x="60" y="334" text-anchor="middle">Material used</text>
+      <circle class="st" cx="170" cy="310" r="7" stroke="#9ccc65"/><text class="lbl" x="170" y="334" text-anchor="middle">Product made</text>
+      <circle class="st" cx="400" cy="190" r="9" stroke="#ece6d6"/><text class="lbl" x="400" y="226" text-anchor="middle">Testing</text>
+      <circle class="st" cx="500" cy="190" r="9" stroke="#ece6d6"/><text class="lbl" x="500" y="226" text-anchor="middle">Passed</text>
+      <circle class="st" cx="600" cy="190" r="9" stroke="#ece6d6"/><text class="lbl" x="600" y="226" text-anchor="middle">Released</text>
+    </g>
+    <!-- batches (moved once on load) -->
+    <g id="trains"></g>
+  </svg>
+</div>
+
+<section id="inside">
+  <div class="wrap">
+    <h2>What Hendrix keeps</h2>
+    <p class="intro">Each license gets the pages it needs: production pages on manufacturing licenses, plant batches and capacity on cultivation licenses. Everyone sees only the licenses they work at.</p>
+    <dl class="areas">
+      <div><dt>Production</dt><dd>Batch records for extraction, pre-rolls, cartridges, gummies and infused flower. Manufacturing runs with material used, product made and waste. A planner and a live line map of every batch.</dd></div>
+      <div><dt>METRC and inventory</dt><dd>Receiving by METRC tag, a check of Hendrix counts against your METRC export, holds and release, shipping, and trace-forward for recalls.</dd></div>
+      <div><dt>Quality</dt><dd>Deviations and CAPA, complaints, internal audits, HACCP, risk register, change control and management review.</dd></div>
+      <div><dt>SOPs and training</dt><dd>Approved SOP versions, acknowledgements signed by each person, training courses with quizzes, and a training matrix by role.</dd></div>
+      <div><dt>Facility</dt><dd>Sanitation, pest, temperature and visitor logs on QR kiosks that keep working without internet. Time clock with badges, equipment and chemical records.</dd></div>
+      <div><dt>Cultivation</dt><dd>Plant batches from clone to harvest, room and bed capacity, then dry, cure and packaging.</dd></div>
+    </dl>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Ready when the inspector is</h2>
+    <p class="intro">The records are built to be shown, not reconstructed the night before.</p>
+    <dl class="proof">
+      <div><dt>An audit trail nobody can edit</dt><dd>Every change is kept with who made it, when and why. Records are voided with a reason, never deleted.</dd></div>
+      <div><dt>A password at every signature</dt><dd>Approvals, releases and SOP acknowledgements are signed by the person, with their password, at the moment they sign.</dd></div>
+      <div><dt>METRC stays the source</dt><dd>Hendrix reads your METRC data to check counts and tags. It never writes to METRC.</dd></div>
+      <div><dt>Paperwork on demand</dt><dd>Batch records, training records and SOP packs, with or without signed acknowledgements, ready to print or save as PDF.</dd></div>
+    </dl>
+  </div>
+</section>
+
+<section id="sign-in">
+  <div class="wrap yours">
+    <div>
+      <h2>Your company's own Hendrix</h2>
+      <p class="intro">Each company signs in at its own address and runs its own platform.</p>
+      <ul>
+        <li>Your address: <span class="addr">hendrixqms.com/yourcompany</span></li>
+        <li>Your admins approve your team and set who can see and sign what.</li>
+        <li>Your licenses, your states, your legal names on every printout.</li>
+      </ul>
+    </div>
+    <form class="signin" id="go" novalidate>
+      <h3>Client sign-in</h3>
+      <p>Enter the company code from your Hendrix address.</p>
+      <label for="code">Company code</label>
+      <div class="field"><span>hendrixqms.com/</span><input id="code" name="code" autocomplete="off" autocapitalize="none" spellcheck="false" inputmode="url"></div>
+      <button class="btn solid" type="submit">Open my Hendrix</button>
+      <p class="err" id="err" role="alert"></p>
+      <p class="cont" id="cont" hidden>Signed in on this device before? <a id="cont-a" href="#">Continue to your Hendrix</a></p>
+    </form>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap"><span>Hendrix QMS</span><span>Quality management for licensed cannabis operators</span></div>
+</footer>
+
+<script>
+// client sign-in: the company code is the first part of the address
+(function(){
+  var f=document.getElementById('go'),i=document.getElementById('code'),e=document.getElementById('err');
+  f.addEventListener('submit',function(ev){
+    ev.preventDefault();
+    var c=(i.value||'').trim().toLowerCase().replace(/^https?:\/\/[^/]+\//,'').replace(/\/.*$/,'');
+    if(!c){e.textContent='Enter your company code, the word after hendrixqms.com/ in your Hendrix address.';i.focus();return;}
+    if(!/^[a-z0-9-]{2,40}$/.test(c)){e.textContent='A company code uses only letters, numbers and dashes.';i.focus();return;}
+    e.textContent='';location.href=c+'/';
+  });
+  try{var t=localStorage.getItem('hx_tenant');if(t&&/^[a-z0-9-]{2,40}$/.test(t)){var a=document.getElementById('cont-a');a.href=t+'/';a.textContent='Continue to hendrixqms.com/'+t;document.getElementById('cont').hidden=false;}}catch(x){}
+})();
+
+// the line map: batches move to their station once, then stay
+(function(){
+  var svg=document.getElementById('map'),g=document.getElementById('trains');
+  var trains=[
+    {path:'l1',to:.42,c:'#5fbf8a',label:'B-118'},
+    {path:'l3',to:.56,c:'#9ccc65',label:'Run 41'},
+    {path:'tr',to:.16,c:'#e5705a',label:'Hold',stop:1},
+    {path:'tr',to:.56,c:'#5fbf8a',label:'IF-207'},
+    {path:'l2',to:.47,c:'#4fc1c9',label:'IF-212'}
+  ];
+  var els=trains.map(function(t){
+    var p=document.getElementById(t.path),n=document.createElementNS('http://www.w3.org/2000/svg','g');
+    n.innerHTML='<rect x="-15" y="-9" width="30" height="18" rx="9" fill="'+t.c+'"'+(t.stop?'':' fill-opacity=".95"')+'/>'+
+      '<text x="0" y="-16" text-anchor="middle" font-size="12.5" font-weight="700" fill="'+(t.stop?'#e5705a':'#ece6d6')+'">'+t.label+'</text>';
+    g.appendChild(n);return {t:t,p:p,n:n,L:p.getTotalLength()};
+  });
+  function place(k){els.forEach(function(o){var pt=o.p.getPointAtLength(o.L*o.t.to*k);o.n.setAttribute('transform','translate('+pt.x+' '+pt.y+')');});}
+  var still=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(still){place(1);return;}
+  var t0=null,D=2200;place(0);
+  function step(ts){if(!t0)t0=ts;var k=Math.min(1,(ts-t0)/D);k=1-Math.pow(1-k,3);place(k);if(k<1)requestAnimationFrame(step);}
+  requestAnimationFrame(step);
+})();
+</script>
+</body>
+</html>

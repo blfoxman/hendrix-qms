@@ -1,0 +1,43 @@
+# hendrixqms.com: intro page at the root, each company's Hendrix at /<code>/, old kiosk / QR links forwarded
+import os, subprocess, tempfile, filecmp
+exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mock_c.py')).read())
+errors = []
+def check(cond, msg):
+    print(('PASS ' if cond else 'FAIL ') + msg)
+    if not cond: errors.append(msg)
+ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
+out = tempfile.mkdtemp(prefix='hxsite_')
+r = subprocess.run([os.path.join(ROOT, 'tools', 'build_site.sh'), out], capture_output=True, text=True)
+check(r.returncode == 0, 'site builds: ' + (r.stdout + r.stderr).strip())
+for f in ['index.html', '404.html', 'sw.js', 'favicon.svg', 'og-image.png', 'site.webmanifest', 'CNAME', 'summitsolutions/index.html', 'summitsolutions/sw.js', 'summitsolutions/favicon.svg']:
+    check(os.path.exists(os.path.join(out, f)), 'built: ' + f)
+check(filecmp.cmp(os.path.join(ROOT, 'index.html'), os.path.join(out, 'summitsolutions', 'index.html'), shallow=False), 'hendrixqms.com/summitsolutions is the Hendrix app itself')
+check(open(os.path.join(out, 'CNAME')).read().strip() == 'hendrixqms.com', 'custom domain kept')
+with sync_playwright() as pw:
+    b = pw.chromium.launch(**LAUNCH)
+    ctx = b.new_context(viewport={'width': 1280, 'height': 900})
+    ctx.route('http*://**/*', lambda route, req: route.abort())     # no fonts / CDN: only the files on disk
+    pg = ctx.new_page(); pg.on('pageerror', lambda e: errors.append('JS: ' + str(e)) if 'React' not in str(e) and 'is not defined' not in str(e) else None)
+    pg.goto('file://' + out + '/index.html'); pg.wait_for_selector('h1')
+    check('every step on the record' in pg.locator('h1').inner_text() and pg.locator('#inside dt').count() == 6, 'intro page: what Hendrix is and what it keeps')
+    pg.wait_for_timeout(2600)
+    check(pg.locator('#trains g').count() == 5 and 'translate' in (pg.locator('#trains g').first.get_attribute('transform') or ''), 'line map batches placed')
+    pg.screenshot(path=OUT + 'site_home.png', full_page=True)
+    pg.get_by_role('button', name='Open my Hendrix').click()
+    check('Enter your company code' in pg.locator('#err').inner_text(), 'sign-in asks for the company code')
+    pg.fill('#code', 'Summit Solutions'); pg.get_by_role('button', name='Open my Hendrix').click()
+    check('letters, numbers and dashes' in pg.locator('#err').inner_text(), 'a code with spaces is refused with a reason')
+    pg.fill('#code', 'https://hendrixqms.com/SummitSolutions/'); pg.get_by_role('button', name='Open my Hendrix').click()
+    pg.wait_for_url('**/summitsolutions/', timeout=5000)
+    check(pg.url.endswith('/summitsolutions/'), 'sign-in goes to the company Hendrix (pasted address and capitals are fine)')
+    pg.goto('file://' + out + '/index.html?kiosk=clock&state=st-mo&lic=lic-mo')
+    pg.wait_for_url('**/summitsolutions/?kiosk=clock&state=st-mo&lic=lic-mo', timeout=5000)
+    check(pg.url.endswith('/summitsolutions/?kiosk=clock&state=st-mo&lic=lic-mo'), 'an old kiosk link at the root forwards to Summit Solutions unchanged')
+    pg.goto('file://' + out + '/index.html?badge=AB12CD')
+    pg.wait_for_url('**/summitsolutions/?badge=AB12CD', timeout=5000)
+    check(True, 'an old badge link forwards too')
+    pg.set_viewport_size({'width': 390, 'height': 800}); pg.goto('file://' + out + '/index.html'); pg.wait_for_selector('h1')
+    check(pg.evaluate('document.documentElement.scrollWidth') <= 390, 'no sideways scrolling on a phone')
+    pg.screenshot(path=OUT + 'site_phone.png', full_page=True)
+    b.close()
+print('FAIL' if errors else 'ALL PASS'); sys.exit(1 if errors else 0)
