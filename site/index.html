@@ -9,7 +9,7 @@
 (function(){var q=location.search||'';if(/[?&](kiosk|badge|state|lic)=/.test(q))location.replace('summitsolutions/'+q+(location.hash||''));})();
 </script>
 <title>Hendrix QMS: quality records for licensed cannabis operators</title>
-<meta name="description" content="Hendrix is a quality management system for licensed cannabis manufacturers and cultivators: batch records, METRC checks, SOPs, training, holds and facility logs in one place, signed and audited.">
+<meta name="description" content="Hendrix is the quality management system built for CSQ certification, cGMP and state compliance: batch records, METRC checks, SOPs, training, holds and facility logs in one place, signed and audited.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -18,7 +18,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Hendrix QMS">
 <meta property="og:title" content="Hendrix QMS">
-<meta property="og:description" content="Quality records for licensed cannabis manufacturers and cultivators.">
+<meta property="og:description" content="The quality management system built for CSQ certification, cGMP and state compliance.">
 <meta property="og:url" content="https://hendrixqms.com/">
 <meta property="og:image" content="https://hendrixqms.com/og-image.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -67,6 +67,11 @@ h1{margin:0;font-weight:800;font-size:clamp(40px,6.2vw,76px);line-height:.98;let
 .map .line-name{font-size:14px;font-weight:700}
 .map .st{fill:var(--black);stroke-width:3}
 
+/* standards row under the hero */
+.stds{display:flex;flex-wrap:wrap;gap:8px;list-style:none;margin:30px 0 0;padding:0}
+.stds li{border:1px solid #3a372f;border-radius:8px;padding:6px 12px;font-size:14px;font-weight:650;color:var(--bone);font-variation-settings:"wdth" 108}
+.stds li:first-child{border-color:var(--gold);color:var(--gold-hi)}
+
 /* sections */
 section{border-top:1px solid var(--rule);padding:72px 0}
 h2{margin:0 0 10px;font-weight:800;font-size:clamp(28px,3.4vw,40px);line-height:1.08;font-variation-settings:"wdth" 112}
@@ -101,6 +106,24 @@ h2{margin:0 0 10px;font-weight:800;font-size:clamp(28px,3.4vw,40px);line-height:
 .cont{margin-top:16px;font-size:15px;color:var(--stone)}
 .cont a{color:var(--gold-hi)}
 
+/* CSQ */
+.csq{background:linear-gradient(180deg,#0d0c09 0%,#000 100%)}
+.csq-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:56px;align-items:start}
+.csq-points{margin:0;display:grid;gap:22px}
+.csq-points dt{font-weight:750;font-size:19px;margin:0 0 4px;color:var(--gold-hi);font-variation-settings:"wdth" 108}
+.csq-points dd{margin:0;color:#c3bcaa;font-size:16px}
+.ledger{margin:8px 0 0;background:var(--panel);border:1px solid var(--rule);border-radius:18px;padding:10px 22px 18px}
+.ledger table{width:100%;border-collapse:collapse;font-size:15px}
+.ledger th{text-align:left;font-weight:650;color:var(--stone);font-size:13px;padding:12px 8px 10px;border-bottom:1px solid var(--rule)}
+.ledger td{padding:14px 8px;border-bottom:1px solid var(--rule);vertical-align:top}
+.ledger td:first-child{font-weight:800;color:var(--gold-hi);font-variation-settings:"wdth" 112;width:3.2em}
+.ledger td small{display:block;color:var(--stone);font-size:13px;margin-top:3px}
+.ledger tr:last-child td{border-bottom:0}
+.chip{display:inline-block;border-radius:999px;padding:3px 10px;font-size:13px;font-weight:700;white-space:nowrap}
+.chip.ok{background:rgba(95,191,138,.14);color:#7fd4a2}
+.chip.due{background:rgba(229,112,90,.16);color:#f0907c}
+.ledger figcaption{color:var(--stone);font-size:13px;margin-top:12px}
+
 footer{border-top:1px solid var(--rule);padding:28px 0 40px;color:var(--stone);font-size:14px}
 footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 
@@ -108,11 +131,14 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
   .hero{grid-template-columns:minmax(0,1fr);padding-top:40px;padding-bottom:64px;gap:36px}
   .areas{grid-template-columns:repeat(2,minmax(0,1fr))}
   .yours{grid-template-columns:minmax(0,1fr);gap:36px}
+  .csq-grid{grid-template-columns:minmax(0,1fr);gap:36px}
 }
 @media (max-width:600px){
   .wrap{padding:0 20px}
   .top nav .btn:not(.solid){display:none}
   .areas{grid-template-columns:1fr}
+  .ledger{padding:6px 12px 14px}
+  .ledger td,.ledger th{padding-left:4px;padding-right:4px}
   .proof{grid-template-columns:1fr}
   .proof div:nth-child(odd){border-right:0}
   .proof div:not(:last-child){border-bottom:1px solid var(--rule)}
@@ -127,7 +153,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
     <b>HENDRIX</b>
   </a>
   <nav>
-    <a class="btn" href="#inside">What's inside</a>
+    <a class="btn" href="#csq">CSQ and standards</a>
     <a class="btn solid" href="#sign-in">Client sign-in</a>
   </nav>
 </header>
@@ -136,11 +162,14 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 <div class="wrap hero">
   <div>
     <h1>From receiving to release, every step on the record.</h1>
-    <p class="lede">Hendrix is a quality management system for licensed cannabis manufacturers and cultivators. Batch records, METRC checks, SOPs, training, holds and facility logs live in one place, signed and audited.</p>
+    <p class="lede">Hendrix is the quality management system for licensed cannabis manufacturers and cultivators who answer to CSQ, cGMP and their state regulator. Batch records, METRC checks, SOPs, training, holds and facility logs live in one place, signed, audited and ready to show.</p>
     <div class="actions">
       <a class="btn solid" href="#sign-in">Client sign-in</a>
-      <a class="btn" href="#inside">See what's inside</a>
+      <a class="btn" href="#csq">How Hendrix meets CSQ</a>
     </div>
+    <ul class="stds" aria-label="Standards and rules Hendrix is built around">
+      <li>CSQ v2.0</li><li>cGMP</li><li>HACCP</li><li>21 CFR 117</li><li>Missouri DCR</li><li>Michigan CRA</li>
+    </ul>
   </div>
   <svg class="map" id="map" viewBox="0 0 640 380" role="img" aria-labelledby="map-t">
     <title id="map-t">A production line map: Pre-Rolls, Infused Flower and Manufacturing Process lines join into Testing, Passed and Released. One batch is on hold at Testing.</title>
@@ -171,6 +200,34 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
     <g id="trains"></g>
   </svg>
 </div>
+
+<section id="csq" class="csq">
+  <div class="wrap csq-grid">
+    <div>
+      <h2>Built for CSQ certification</h2>
+      <p class="intro">CSQ (Cannabis Safety &amp; Quality) is the accredited certification for licensed cannabis operations, audited by an independent certification body. Hendrix holds the CSQ v2.0 standard for your operation clause by clause, so every requirement has a way you meet it and the evidence to prove it.</p>
+      <dl class="csq-points">
+        <div><dt>The standard, clause by clause</dt><dd>Cultivation, extraction and manufacturing standards, with how you meet each clause, the evidence and the files, kept for each license.</dd></div>
+        <div><dt>Audits that cover everything</dt><dd>Internal audits record the clauses they checked. Hendrix shows any clause that hasn't been audited in 12 months, before the auditor does.</dd></div>
+        <div><dt>State rules first</dt><dd>CSQ expects you to meet Missouri DCR or Michigan CRA rules and show it. Each state's rulebook sits next to the standard.</dd></div>
+        <div><dt>cGMP and food safety</dt><dd>HACCP plans with critical control points, monitoring and verification. The 21 CFR 117 checklist CFS inspectors use, hygiene training and the employee illness log.</dd></div>
+      </dl>
+    </div>
+    <figure class="ledger" aria-labelledby="ledger-cap">
+      <table>
+        <thead><tr><th scope="col">Clause</th><th scope="col">Requirement</th><th scope="col">Status</th></tr></thead>
+        <tbody>
+          <tr><td>1.3</td><td>Meet your state's cannabis rules<small>Evidence: Missouri DCR rulebook</small></td><td><span class="chip ok">Met</span></td></tr>
+          <tr><td>1.4</td><td>Control documents and records<small>Evidence: SOP master list, approved versions</small></td><td><span class="chip ok">Met</span></td></tr>
+          <tr><td>1.5</td><td>Audit the system internally<small>Last audited 3 months ago</small></td><td><span class="chip ok">Audited</span></td></tr>
+          <tr><td>2A</td><td>cGMP prerequisite programs<small>Evidence: sanitation, pest and hygiene logs</small></td><td><span class="chip ok">Met</span></td></tr>
+          <tr><td>2A</td><td>Pest control program<small>Not audited in 12 months</small></td><td><span class="chip due">Audit due</span></td></tr>
+        </tbody>
+      </table>
+      <figcaption id="ledger-cap">An example of the conformance view: each clause, the evidence behind it, and what needs attention.</figcaption>
+    </figure>
+  </div>
+</section>
 
 <section id="inside">
   <div class="wrap">

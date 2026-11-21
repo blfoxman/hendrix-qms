@@ -20,6 +20,7 @@ with sync_playwright() as pw:
     pg = ctx.new_page(); pg.on('pageerror', lambda e: errors.append('JS: ' + str(e)) if 'React' not in str(e) and 'is not defined' not in str(e) else None)
     pg.goto('file://' + out + '/index.html'); pg.wait_for_selector('h1')
     check('every step on the record' in pg.locator('h1').inner_text() and pg.locator('#inside dt').count() == 6, 'intro page: what Hendrix is and what it keeps')
+    check(pg.locator('#csq h2').inner_text() == 'Built for CSQ certification' and pg.locator('#csq .csq-points dt').count() == 4 and pg.locator('.stds li').count() == 6, 'CSQ and standards section')
     pg.wait_for_timeout(2600)
     check(pg.locator('#trains g').count() == 5 and 'translate' in (pg.locator('#trains g').first.get_attribute('transform') or ''), 'line map batches placed')
     pg.screenshot(path=OUT + 'site_home.png', full_page=True)
