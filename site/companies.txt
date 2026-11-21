@@ -1,2 +1,2 @@
-# One line per company: its Hendrix lives at hendrixqms.com/<code>/ (letters, numbers and dashes).
-summitsolutions
+# One line per company: the code (its Hendrix lives at hendrixqms.com/<code>/; letters, numbers and dashes), then the company name.
+summitsolutions Summit Solutions

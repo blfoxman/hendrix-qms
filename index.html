@@ -228,6 +228,9 @@ async function hxTakeLink(){   // turns the link's sign-in into the session
   catch(e){HX_LINK.type='';HX_LINK.err='That link has expired or was already used. Ask for a new one.';}
 }
 function hxHere(){return location.origin+location.pathname;}
+// hendrixqms.com/training: the video Training Center, opened for this company (the folder this Hendrix lives in)
+function hxTrainingCenterUrl(){const seg=(location.pathname.split('/').filter(Boolean)[0]||'');const onSite=/(^|\.)hendrixqms\.com$/i.test(location.hostname);
+  return (onSite?location.origin:'https://hendrixqms.com')+'/training/'+(/^[a-z0-9-]{2,40}$/.test(seg)&&seg!=='index.html'?'?company='+seg:'');}
 
 async function authCall(path,body){
   const c=cfg();
@@ -266,7 +269,7 @@ async function sb(path,opt){
       const step=/hx_mp_/.test(m)?'hendrix_step61.sql':/hx_metrc_inventory_sync|hx_metrc_syncs/.test(m)?'hendrix_step60.sql':/hx_harvests|hx_cul_packages|hx_cul_import|plant_cap|next_area_id|reset_days|overplant_pct/.test(m)?'hendrix_step59.sql':/hx_complaint_qr|qr_photos/.test(m)?'hendrix_step58.sql':/hx_rooms/.test(m)?'hendrix_step57.sql':/hx_inventory_upload|hx_lot_counts/.test(m)?'hendrix_step56.sql':/hx_lot_set_tag|hx_lot_tag/.test(m)?'hendrix_step55.sql':/hx_site_maps|hx_map_zones|hx_zone_readings|hx_map_pins/.test(m)?'hendrix_step54.sql':/hx_lots_import/.test(m)?'hendrix_step53.sql':/hx_notify_row/.test(m)?'hendrix_step48.sql':/hx_batch_lots/.test(m)?'hendrix_step47.sql':/hx_fl_types|hx_fl_private_guard/.test(m)?'hendrix_step46.sql':/hx_set_own_password/.test(m)?'hendrix_step45.sql':/hx_course_cert_only|This course is an outside certification\. Record it/.test(m)?'hendrix_step44.sql':/hx_kiosk_log_add_user|hx_kiosk_login_free|maintenance_request|purchase_request|logs_maintenance|logs_purchase/.test(m)?'hendrix_step43.sql':/hx_admin_set_password|hx_password_changed|must_change_password/.test(m)?'hendrix_step42.sql':/hx_metrc/.test(m)?'hendrix_step41.sql':/hx_my_tasks|hx_notify|task_email/.test(m)?'hendrix_step39.sql':/hx_esignatures|mfa_required|esig_password|idle_signout/.test(m)?'hendrix_step38.sql':/hx_system_health/.test(m)?'hendrix_step37.sql':/hx_line_map|linemap_idle/.test(m)?'hendrix_step36.sql':/hx_license_settings/.test(m)?'hendrix_step34.sql':/hx_production_plans|hx_planner_recipes/.test(m)?'hendrix_step33.sql':/hx_time_clock|hx_badge|hx_kiosk_clock|hx_clock_fix/.test(m)?'hendrix_step32.sql':/hx_mgmt_reviews|hx_verification_/.test(m)?'hendrix_step31.sql':/hx_org_positions|hx_objective|hx_qms_settings/.test(m)?'hendrix_step30.sql':/hx_risk|hx_changes/.test(m)?'hendrix_step29.sql':/hx_haccp/.test(m)?'hendrix_step28.sql':/hx_grow_|hx_plant_batches/.test(m)?'hendrix_step27.sql':/hx_env_/.test(m)?'hendrix_step26.sql':/hx_line_clearances|hx_rework/.test(m)?'hendrix_step25.sql':/hx_equipment|hx_chemicals/.test(m)?'hendrix_step24.sql':/share_key|hx_training_shared/.test(m)?'hendrix_step23.sql':/hx_rule_sources/.test(m)?'hendrix_step22.sql':/hx_training_keys|hx_training_attempts|hx_course_submit|content_status/.test(m)?'hendrix_step20.sql':/hx_complaints|hx_audits|hx_audit_findings/.test(m)?'hendrix_step19.sql':/hx_recall|hx_trace_data/.test(m)?'hendrix_step18.sql':/hx_lots|hx_lot_uses|hx_holds|hx_shipments/.test(m)?'hendrix_step17.sql':/hx_supplier/.test(m)?'hendrix_step16.sql':/hx_training/.test(m)?'hendrix_step15.sql':/hx_deviations|hx_capas|hx_qms/.test(m)?'hendrix_step14.sql':/hx_sop/.test(m)?'hendrix_step13.sql':/hx_label_prints|gmp_ack|retention_|allergens|requirements/.test(m)?'hendrix_step12.sql':/hx_standard|hx_conformance|hx_license_standards/.test(m)?'hendrix_step11.sql':/hx_label_templates/.test(m)?'hendrix_step10.sql':/hx_tests|hendrix-files/.test(m)?'hendrix_step9.sql':/hx_roles|role_ids|license_ids|hx_perm|hx_can/.test(m)?'hendrix_step8.sql':/hx_batches|tracking_system/.test(m)?'hendrix_step7.sql':/hx_audit_log|edit_reason|voided/.test(m)?'hendrix_step6.sql':/hx_skus|hx_flavors|hx_formulations|hx_cost_library/.test(m)?'hendrix_step5.sql':/hx_facility_log|hx_log_lists/.test(m)?'hendrix_step4.sql':/hx_visitor_log/.test(m)?'hendrix_step3.sql':/hx_rules/.test(m)?'hendrix_step2.sql':'hendrix_setup.sql';
       throw new Error('Database tables are missing - run '+step+' in the Hendrix Supabase project.');
     }
-    if(/has no field "priority"/.test(m))throw new Error('The database needs a fix before this can be saved - an admin must run hendrix_step48.sql (or hendrix_install_13_to_67.sql) in the Hendrix Supabase project.');
+    if(/has no field "priority"/.test(m))throw new Error('The database needs a fix before this can be saved - an admin must run hendrix_step48.sql (or hendrix_install_13_to_68.sql) in the Hendrix Supabase project.');
     if(/hx_facility_log_log_type_check/.test(m))throw new Error('This log is not set up in the database yet - run hendrix_step46.sql in the Hendrix Supabase project.');
     if(/row-level security|permission denied/i.test(m))throw new Error('Not allowed - your access level does not allow this here. Ask a system admin.');
     throw new Error(m);
@@ -4255,7 +4258,7 @@ function InventoryUpload(props){
         props.onDone('Saved from '+file+': '+[out.added?out.added+' new lot'+(out.added===1?'':'s'):'',out.counted?out.counted+' count'+(out.counted===1?'':'s')+' recorded':'',out.moved?out.moved+' location'+(out.moved===1?'':'s'):'',out.tagged?out.tagged+' METRC tag'+(out.tagged===1?'':'s')+' added':''].filter(Boolean).join(', ')+(same?' ('+same+' lots unchanged)':'')+'.');}
       else{const out=await sb('rpc/hx_lots_import',{method:'POST',body:{p_lic:lic.id,p_file:file,p_rows:rows.map(function(x){return x.r;})}});
         props.onDone('Uploaded '+out.count+' lot'+(out.count===1?'':'s')+' from '+file+(out.first?' ('+out.first+(out.last&&out.last!==out.first?' to '+out.last:'')+')':'')+'.');}}
-    catch(e){const m=String((e&&e.message)||e);setErr(/hx_inventory_upload|hx_lots_import/.test(m)&&/does not exist|schema cache|Could not find/i.test(m)?'Updating inventory from Excel needs hendrix_step56.sql (or hendrix_install_13_to_67.sql) in the Hendrix Supabase project.':m);}setBusy('');}
+    catch(e){const m=String((e&&e.message)||e);setErr(/hx_inventory_upload|hx_lots_import/.test(m)&&/does not exist|schema cache|Could not find/i.test(m)?'Updating inventory from Excel needs hendrix_step56.sql (or hendrix_install_13_to_68.sql) in the Hendrix Supabase project.':m);}setBusy('');}
   const bad=rows?rows.filter(function(x){return x.err.length;}):[],acc=newR.filter(function(x){return x.r.status==='accepted';}).length,shown=rows?(only?bad:rows):[],nCh=newR.length+updR.length;
   return el(Modal,{title:'Upload inventory · '+lic.name,wide:true,onClose:props.onClose},
     el('div',{className:'muted',style:{fontSize:13,marginBottom:10}},'To update stock: Download current inventory, change On hand (what you counted), Location or a missing METRC tag, add new lots as rows with no Hendrix Lot #, and upload it here. Nothing is saved until every row is right.'),
@@ -8611,7 +8614,7 @@ function SettingsPage(props){
     const so=parseInt(f.so,10);if(isNaN(so)||so<0||so>480){setErr('Automatic sign-out must be between 0 and 480 minutes (0 = never).');return;}if(f.hasSec||f.esig!==f.esig0||String(so)!==f.so0){rec.esig_password=!!f.esig;rec.idle_signout_min=so;}
     const hr=String(f.hr_company||'').trim();if(hr.length>120){setErr('Management / HR company: 120 characters at most.');return;}if(f.hasHr||hr)rec.hr_company=hr;
     setBusy(true);try{if(row)await sb('hx_license_settings?license_id=eq.'+encodeURIComponent(lid),{method:'PATCH',body:rec,prefer:'return=representation'});else await db.insert('hx_license_settings',{...rec,license_id:lid,state_id:st.id});
-      setMsg('Settings saved for '+lic.name+'.');load();if(props.onSaved)props.onSaved();}catch(e){const m=String(e.message||e);setErr(/hr_company/.test(m)?'The Management / HR company needs hendrix_step62.sql (or hendrix_install_13_to_67.sql) in the Hendrix Supabase project.':m);}setBusy(false);}
+      setMsg('Settings saved for '+lic.name+'.');load();if(props.onSaved)props.onSaved();}catch(e){const m=String(e.message||e);setErr(/hr_company/.test(m)?'The Management / HR company needs hendrix_step62.sql (or hendrix_install_13_to_68.sql) in the Hendrix Supabase project.':m);}setBusy(false);}
   const tabs=[['general','General'],['timeclock','Time clock'],['logs','Facility logs'],['reviews','Review cycles'],['linemap','Line Map'],['security','Security']].concat(ACC.profile&&ACC.profile.role==='admin'?[['email','Email']]:[]).concat([['more','Everything else']]);
   const dis=!canF,inp=function(k,ph,type){return el('input',{type:type||'text',value:f[k],placeholder:ph||'',disabled:dis,onChange:function(e){set(k,e.target.value);}});};
   const link=function(page,title,what){return el('div',{key:page,className:'card',style:{marginBottom:0}},el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'center'}},el('b',null,title),
@@ -9232,7 +9235,7 @@ function SystemHealthPage(props){
   function add(group,label,state,detail,fix){checks.push({group:group,label:label,state:state,detail:detail||'',fix:fix||''});}
   if(h){
     const steps=h.steps||[],missing=steps.filter(function(s){return !s.ok;});
-    add('Database','Database steps installed',missing.length?'bad':'ok',missing.length?'Missing: '+missing.map(function(s){return s.step+' '+s.name;}).join(', '):'All '+steps.length+' steps (4 to '+(steps.length?steps[steps.length-1].step:'')+') are installed.',missing.length?'Run hendrix_install_13_to_67.sql (or the missing step files) in the Supabase SQL editor.':'');
+    add('Database','Database steps installed',missing.length?'bad':'ok',missing.length?'Missing: '+missing.map(function(s){return s.step+' '+s.name;}).join(', '):'All '+steps.length+' steps (4 to '+(steps.length?steps[steps.length-1].step:'')+') are installed.',missing.length?'Run hendrix_install_13_to_68.sql (or the missing step files) in the Supabase SQL editor.':'');
     const drift=at?Math.abs(new Date(h.checked_at).getTime()-at)/1000:0;
     add('Database','Clock',drift>120?'warn':'ok','Database time zone '+h.db_time_zone+'; this device is '+Math.round(drift)+' s '+(drift>120?'off':'in step')+'.',drift>120?'Set this device to the correct time (automatic time).':'');
     add('Security','Row level security on every table',(h.rls_off||[]).length?'bad':'ok',(h.rls_off||[]).length?'Off on: '+h.rls_off.join(', '):'On for all '+h.tables+' Hendrix tables.',(h.rls_off||[]).length?'Run the step file that creates those tables again, or turn on RLS for them in Supabase > Table editor.':'');
@@ -9267,7 +9270,7 @@ function SystemHealthPage(props){
       el('div',{className:'row',style:{gap:8}},el('button',{className:'btn ghost',disabled:busy,onClick:run},busy?'Checking...':'Run checks again'),
         el('button',{className:'btn ghost',disabled:ai&&ai.busy,onClick:testAi},ai&&ai.busy?'Testing...':'Test the AI connection'),
         h&&el('button',{className:'btn',onClick:print},'Print IQ evidence'))),
-    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'System Health is not set up yet - run hendrix_step37.sql (or hendrix_install_13_to_67.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
+    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'System Health is not set up yet - run hendrix_step37.sql (or hendrix_install_13_to_68.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
     h&&el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',gap:10,marginBottom:14}},
       el('div',{className:'card',style:{marginBottom:0,borderTop:'2px solid '+(nBad?'var(--red)':(nWarn?'var(--gold)':'#5fbf8a'))}},el('div',{className:'k'},'Overall'),el('div',{style:{fontSize:22,fontWeight:700,marginTop:4,color:nBad?'var(--red)':(nWarn?'var(--gold-hi)':'#5fbf8a')}},nBad?nBad+' to fix':(nWarn?nWarn+' to check':'Ready')),el('div',{className:'muted',style:{fontSize:12}},nOk+' of '+checks.length+' checks pass')),
       el('div',{className:'card',style:{marginBottom:0}},el('div',{className:'k'},'Steps installed'),el('div',{style:{fontSize:22,fontWeight:700,marginTop:4}},(h.steps||[]).filter(function(s){return s.ok;}).length+' / '+(h.steps||[]).length),el('div',{className:'muted',style:{fontSize:12}},'database steps 4 to '+((h.steps||[]).slice(-1)[0]||{}).step)),
@@ -9489,7 +9492,7 @@ function MyTasksPage(props){
       el('div',null,el('h1',null,el('span',{className:'g'},'My Tasks')),el('div',{className:'sub'},(lic?lic.name+' · ':'')+'everything waiting for you, kept up to date by Hendrix from the records')),
       el('div',{className:'row',style:{gap:8}},el('button',{className:'btn ghost',onClick:load},'Refresh'),lic&&el('button',{className:'btn ghost',disabled:busy,onClick:emailMe},busy?'Sending...':'Email me this list'))),
     msg&&el('div',{className:'msg'},msg),
-    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'My Tasks is not set up yet - run hendrix_step39.sql (or hendrix_install_13_to_67.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
+    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'My Tasks is not set up yet - run hendrix_step39.sql (or hendrix_install_13_to_68.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
     list===null?el('div',{className:'muted'},'Loading...'):el('div',null,
       el('div',{className:'grid',style:{gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',gap:10,marginBottom:14}},
         stat('All',L.length,'open tasks',undefined,'all'),stat('Waiting for you',mine.length,'assigned to you',undefined,'mine'),
@@ -9648,7 +9651,7 @@ function MetrcPage(props){
     el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-end',gap:12,flexWrap:'wrap',marginBottom:16}},
       el('div',null,el('h1',null,el('span',{className:'g'},'METRC Check')),el('div',{className:'sub'},lic.name+(lic.license_number?' · '+lic.license_number:'')+' · what METRC says compared with Hendrix; read only, nothing is changed in METRC')),
       el('div',{className:'row',style:{gap:8}},res&&el('button',{className:'btn ghost',onClick:print},'Print report'))),
-    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'METRC Check is not set up yet - run hendrix_step41.sql (or hendrix_install_13_to_67.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
+    err==='NOT_INSTALLED'?el('div',{className:'msg err'},'METRC Check is not set up yet - run hendrix_step41.sql (or hendrix_install_13_to_68.sql) in the Hendrix Supabase project.'):(err&&el('div',{className:'msg err'},err)),
     busy&&el('div',{className:'msg'},busy),
     canE&&el('div',{className:'card'},el('div',{className:'k',style:{marginBottom:8}},'Get what METRC says'),
       el('div',{className:'row',style:{gap:10,alignItems:'center',flexWrap:'wrap'}},
@@ -9712,7 +9715,7 @@ function SecQForm(props){
     const lq=qs.map(function(q){return q.toLowerCase();});if(lq[0]===lq[1]||lq[0]===lq[2]||lq[1]===lq[2]){setErr('Choose 3 different questions.');return;}
     setBusy(true);
     try{await sb('rpc/hx_set_security_questions',{method:'POST',body:{p_questions:qs,p_answers:rows.map(function(r){return r.ans;})}});setBusy(false);props.onSaved(qs);}
-    catch(e){const m=secqErr(e);setErr(m==='NOT_INSTALLED'?'Security questions are not set up yet - an admin must run hendrix_step67.sql (or hendrix_install_13_to_67.sql).':m);setBusy(false);}
+    catch(e){const m=secqErr(e);setErr(m==='NOT_INSTALLED'?'Security questions are not set up yet - an admin must run hendrix_step67.sql (or hendrix_install_13_to_68.sql).':m);setBusy(false);}
   }
   return el('div',null,
     rows.map(function(r,i){
@@ -10343,7 +10346,7 @@ function TrainingPage(props){
     el('style',null,'.trcell{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;color:#000;font-weight:800;font-size:12px;border:0;cursor:default}button.trcell{cursor:pointer}'),
     el('div',{className:'row',style:{justifyContent:'space-between',alignItems:'flex-start'}},
       el('div',null,el('h1',null,el('span',{className:'g'},'Training')),el('div',{className:'sub'},'Training matrix \u00b7 '+lic.name+' \u00b7 required training per role, refreshers, qualified trainers, assessments and SOP signatures (CSQ 2A.13.2)')),
-      el('div',{className:'row'},canE&&el('button',{className:'btn',disabled:!active.length,onClick:function(){setModal({t:'rec'});}},'+ Record training'),canF&&el('button',{className:'btn ghost',onClick:function(){setModal({t:'course'});}},'+ Course'))),
+      el('div',{className:'row'},el('a',{className:'btn ghost',href:hxTrainingCenterUrl(),target:'_blank',rel:'noopener'},'Training videos'),canE&&el('button',{className:'btn',disabled:!active.length,onClick:function(){setModal({t:'rec'});}},'+ Record training'),canF&&el('button',{className:'btn ghost',onClick:function(){setModal({t:'course'});}},'+ Course'))),
     msg&&el('div',{className:/^(Added|Saved|Recorded|Voided|Created|Regulatory|Published|Draft|Passed|\d+ (online )?course)/.test(msg)?'msg':'msg err'},msg),
     canF&&C.some(function(c){return c.content_status==='draft'&&/^Hendrix starter/.test(c.content_source||'');})&&el('div',{className:'card',style:{borderColor:'var(--gold)',padding:'10px 14px',marginBottom:12}},
       el('div',{className:'row',style:{justifyContent:'space-between'}},el('div',null,el('b',null,'Online courses ready: '),C.filter(function(c){return c.content_status==='draft'&&/^Hendrix starter/.test(c.content_source||'');}).map(function(c){return c.name;}).join(', '),
@@ -13837,7 +13840,7 @@ function RoomsPage(props){
   const st=props.state,lic=props.license,canF=can('rooms',3);
   const[rows,setRows]=useState(null);const[err,setErr]=useState('');const[msg,setMsg]=useState('');const[ed,setEd]=useState(null);const[off,setOff]=useState(false);
   const load=useCallback(function(){if(!lic)return;db.get('hx_rooms','license_id=eq.'+encodeURIComponent(lic.id)+'&select=*&order=sort,name').then(function(r){setRows((r||[]).filter(function(x){return x.license_id===lic.id;}));setErr('');})
-    .catch(function(e){const m=String(e.message||e);setErr(/hx_rooms/.test(m)&&/does not exist|schema cache/i.test(m)?'Rooms are not set up yet - run hendrix_step57.sql (or hendrix_install_13_to_67.sql) in the Hendrix Supabase project.':m);setRows([]);});},[lic&&lic.id]);
+    .catch(function(e){const m=String(e.message||e);setErr(/hx_rooms/.test(m)&&/does not exist|schema cache/i.test(m)?'Rooms are not set up yet - run hendrix_step57.sql (or hendrix_install_13_to_68.sql) in the Hendrix Supabase project.':m);setRows([]);});},[lic&&lic.id]);
   useEffect(function(){load();},[load]);
   if(!st||!lic)return el('div',null,el('h1',null,el('span',{className:'g'},'Rooms')),el('div',{className:'empty'},'Pick a state and a license at the top first.'));
   const list=(rows||[]).filter(function(r){return off||r.active!==false;}),nOff=(rows||[]).filter(function(r){return r.active===false;}).length;
@@ -13882,7 +13885,7 @@ function mpBlank(){return {tag:'',item:'',weight:'',unit:'g'};}
 const MP_STATUS=[['in_process','In process','warn'],['testing','Testing','warn'],['passed','Passed','ok'],['failed','Failed','bad'],['complete','Complete','ok']];
 function mpStatus(k){return MP_STATUS.find(function(x){return x[0]===(k||'in_process');})||MP_STATUS[0];}
 function mpMissing(r){let n=(r.materials||[]).filter(function(x){return x.weight===''||x.weight==null;}).length;(r.produced||[]).forEach(function(s){n+=(s.rows||[]).filter(function(x){return x.weight===''||x.weight==null;}).length;});return n;}
-function mpErr(e){const m=String((e&&e.message)||e);if(/status|completed_at/.test(m)&&/schema cache|does not exist|Could not find/i.test(m))return 'Run status needs hendrix_step63.sql (or hendrix_install_13_to_67.sql) in the Hendrix Supabase project.';return m;}
+function mpErr(e){const m=String((e&&e.message)||e);if(/status|completed_at/.test(m)&&/schema cache|does not exist|Could not find/i.test(m))return 'Run status needs hendrix_step63.sql (or hendrix_install_13_to_68.sql) in the Hendrix Supabase project.';return m;}
 function mpWaste(x){const w=x&&x.waste;return w&&w.weight!==''&&w.weight!=null?parseFloat(w.weight)||0:0;}
 function MfgProcessPage(props){
   const st=props.state,lic=props.license,canE=can('batch',2),canF=can('batch',3);
@@ -13891,7 +13894,7 @@ function MfgProcessPage(props){
   const load=useCallback(function(){if(!lic)return;const L='license_id=eq.'+encodeURIComponent(lic.id);
     Promise.all([db.get('hx_mp_runs',L+'&select=*&order=run_date.desc,created_at.desc&limit=500'),db.get('hx_mp_items',L+'&select=*&order=sort,name')])
       .then(function(r){setRuns((r[0]||[]).filter(function(x){return x.license_id===lic.id;}));setItems((r[1]||[]).filter(function(x){return x.license_id===lic.id;}));setErr('');})
-      .catch(function(e){const m=String((e&&e.message)||e);setErr(/hx_mp_/.test(m)&&/does not exist|schema cache|Could not find/i.test(m)?'Manufacturing Process is not set up yet - run hendrix_step61.sql (or hendrix_install_13_to_67.sql) in the Hendrix Supabase project.':m);setRuns([]);});},[lic&&lic.id]);
+      .catch(function(e){const m=String((e&&e.message)||e);setErr(/hx_mp_/.test(m)&&/does not exist|schema cache|Could not find/i.test(m)?'Manufacturing Process is not set up yet - run hendrix_step61.sql (or hendrix_install_13_to_68.sql) in the Hendrix Supabase project.':m);setRuns([]);});},[lic&&lic.id]);
   useEffect(function(){load();},[load]);
   if(!st||!lic)return el('div',null,el('h1',null,el('span',{className:'g'},'Manufacturing Process')),el('div',{className:'empty'},'Pick a state and a license at the top first.'));
   const list=(runs||[]).filter(function(r){return (showVoid||!r.voided)&&(!fs||(fs==='open'?(r.status||'in_process')!=='complete':(r.status||'in_process')===fs));}),nVoid=(runs||[]).filter(function(r){return r.voided;}).length;

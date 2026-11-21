@@ -559,5 +559,17 @@ e67(r'^L1 locked\|.*"locked": true', 'locked after 5 wrong tries in an hour, eve
 e67(r'^L2 password kept\|t$', 'a locked try does not change the password')
 e67(r'^A1 admin\|\{"22222222-2222-2222-2222-222222222222": true\}$', 'admins see who has set their questions')
 e67(r'Only a system admin can see this', 'members cannot see that list')
+# ---- step 68: Training Center profile
+r68 = subprocess.run(['psql', '-X', '-q', '-At', '-d', DB, '-f', os.path.join(HERE, 't68.sql')], capture_output=True, text=True)
+o68 = r68.stdout + r68.stderr
+def e68(pattern, msg): chk(re.search(pattern, o68, re.M) is not None, msg)
+e68(r'^P1 member\|Mem\|Extraction Technician\|false\|1\|2\|0$', 'training profile: name, badge title, view/edit/none per area (a log follows Facility Logs)')
+e68(r'^P2 odd names dropped\|\{\}$', 'only real area names are looked up')
+e68(r'^P3 admin\|QA Manager\|true\|3$', 'no badge title: the Org Chart position; admins have full access')
+e68(r'^P4 waiting\|false$', 'someone waiting for approval gets nothing')
+e68(r'^P5 mfa\|true\|0$', 'two-step required: no access until the authenticator code')
+e68(r'^P6 aal2\|false\|1$', 'after the authenticator code: access back')
+e68(r'Sign in first', 'signed out: refused')
+e68(r'permission denied for function hx_my_training_profile', 'anonymous callers cannot ask')
 print('\nDB checks:', 'all passed' if not fails else '%d failed' % len(fails))
 sys.exit(1 if fails else 0)

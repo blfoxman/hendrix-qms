@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hendrix Training Center</title>
+<meta name="description" content="Short videos on how to use Hendrix QMS, picked for your job and your access.">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<meta name="theme-color" content="#000000">
+<meta property="og:title" content="Hendrix Training Center">
+<meta property="og:image" content="https://hendrixqms.com/og-image.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&display=swap" rel="stylesheet">
+<style>
+:root{--black:#000;--panel:#12110e;--panel2:#181610;--gold:#d4af37;--gold-hi:#f1d57a;--gold-lo:#a8841c;--bone:#ece6d6;--stone:#8c877a;--rule:#2a2822;--go:#5fbf8a;--stop:#e5705a;
+  --gold-grad:linear-gradient(135deg,var(--gold-hi) 0%,var(--gold) 45%,var(--gold-lo) 100%)}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--black);color:var(--bone);font-family:Archivo,"Helvetica Neue",Arial,sans-serif;font-size:17px;line-height:1.6;font-variation-settings:"wdth" 100}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--gold-hi);outline-offset:3px;border-radius:2px}
+[hidden]{display:none!important}
+.wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:22px;padding-bottom:22px}
+.mark{display:flex;align-items:center;gap:12px;text-decoration:none}
+.mark b{font-weight:800;font-size:17px;letter-spacing:.24em;font-variation-settings:"wdth" 125;background:var(--gold-grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.mark span{color:var(--stone);font-size:15px;font-weight:600;letter-spacing:0}
+.top nav{display:flex;gap:10px;align-items:center;min-width:0}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 20px;border-radius:999px;font:inherit;font-size:15px;font-weight:650;text-decoration:none;cursor:pointer;border:1px solid #3a372f;background:transparent;color:var(--bone)}
+.btn.solid{background:var(--gold-grad);color:#1a1405;border-color:transparent}
+.btn{white-space:nowrap}
+.btn:hover{border-color:var(--gold-hi)}
+.btn[disabled]{opacity:.6;cursor:default}
+h1{margin:0;font-weight:800;font-size:clamp(38px,5.6vw,68px);line-height:1;letter-spacing:-.01em;font-variation-settings:"wdth" 118}
+h2{margin:0 0 6px;font-weight:800;font-size:clamp(24px,2.8vw,32px);line-height:1.1;font-variation-settings:"wdth" 112}
+.lede{margin:22px 0 0;max-width:32em;color:#cfc8b6;font-size:19px}
+/* sign-in */
+.gate{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:56px;align-items:center;padding-top:48px;padding-bottom:88px}
+.gate ul{margin:28px 0 0;padding:0;list-style:none;display:grid;gap:12px;color:#cfc8b6}
+.gate li{display:flex;gap:12px;align-items:baseline}
+.gate li::before{content:"";flex:0 0 8px;height:8px;border-radius:50%;background:var(--gold);transform:translateY(-2px)}
+.card{background:var(--panel);border:1px solid var(--rule);border-radius:18px;padding:30px}
+.card h3{margin:0 0 6px;font-size:21px;font-weight:750;font-variation-settings:"wdth" 108}
+.card p{margin:0 0 18px;color:var(--stone);font-size:15px}
+label{display:block;font-size:14px;color:#cfc8b6;margin:14px 0 8px}
+.field{display:flex;align-items:center;border:1px solid #3a372f;border-radius:12px;background:var(--black);overflow:hidden}
+.field:focus-within{border-color:var(--gold)}
+.field span{padding:0 4px 0 14px;color:var(--stone);font-size:15px;white-space:nowrap}
+.field input{flex:1;min-width:0;border:0;background:transparent;color:var(--bone);font:inherit;font-size:16px;padding:13px 14px;outline:none}
+.field span+input{padding-left:0}
+.card .btn{width:100%;margin-top:20px}
+.err{min-height:22px;margin:12px 0 0;color:var(--stop);font-size:14px}
+.small{font-size:14px;color:var(--stone)}
+.small a{color:var(--gold-hi)}
+/* library */
+.who{display:flex;align-items:center;gap:14px;min-width:0}
+.who .name{text-align:right;line-height:1.25;min-width:0}
+.who .name b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.who .name span{display:block;font-size:13px;color:var(--stone);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lib-head{padding-top:36px;padding-bottom:8px}
+.lib-head p{margin:10px 0 0;color:#cfc8b6;max-width:44em}
+.progress{display:flex;align-items:center;gap:14px;margin-top:22px;max-width:520px}
+.bar{flex:1;height:6px;border-radius:6px;background:#2a2822;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--gold-grad);width:0;transition:width .4s}
+.progress span{font-size:14px;color:var(--stone);white-space:nowrap}
+.shelf{padding-top:40px}
+.shelf h2 small{font-size:15px;font-weight:600;color:var(--stone);margin-left:10px;letter-spacing:0;font-variation-settings:"wdth" 100}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px;margin-top:20px}
+.vid{display:flex;flex-direction:column;text-align:left;background:var(--panel);border:1px solid var(--rule);border-radius:16px;overflow:hidden;color:inherit;font:inherit;cursor:pointer;padding:0}
+.vid:hover{border-color:#4a4536}
+.thumb{position:relative;aspect-ratio:16/9;background:#000 center/cover no-repeat;border-bottom:1px solid var(--rule)}
+.thumb .len{position:absolute;right:10px;bottom:10px;background:rgba(0,0,0,.78);border-radius:6px;padding:2px 8px;font-size:13px;font-weight:650}
+.thumb .done{position:absolute;left:10px;top:10px;background:var(--go);color:#06140c;border-radius:999px;padding:2px 10px;font-size:12.5px;font-weight:750}
+.thumb .play{position:absolute;inset:0;display:grid;place-items:center;opacity:0;transition:opacity .2s}
+.vid:hover .thumb .play,.vid:focus-visible .thumb .play{opacity:1}
+.thumb .play svg{width:64px;height:64px}
+.vid .body{padding:16px 18px 18px;display:flex;flex-direction:column;gap:8px;flex:1}
+.vid h3{margin:0;font-size:18px;font-weight:750;line-height:1.25;font-variation-settings:"wdth" 106}
+.vid p{margin:0;color:#bfb8a6;font-size:15px;line-height:1.45}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto;padding-top:6px}
+.tags span{border:1px solid #3a372f;border-radius:999px;padding:1px 10px;font-size:12.5px;color:#cfc8b6}
+.tags span.pick{border-color:var(--gold);color:var(--gold-hi)}
+.empty{margin-top:16px;color:var(--stone)}
+footer{border-top:1px solid var(--rule);margin-top:72px;padding:26px 0 40px;color:var(--stone);font-size:14px}
+/* player */
+.player{position:fixed;inset:0;background:rgba(0,0,0,.92);display:grid;place-items:center;padding:24px;z-index:10}
+.player .box{width:min(1180px,100%);max-height:100%;overflow:auto}
+.player video{display:block;width:100%;aspect-ratio:16/9;background:#000;border-radius:14px;border:1px solid var(--rule)}
+.player .row{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-top:16px}
+.player h3{margin:0;font-size:22px;font-weight:750;font-variation-settings:"wdth" 108}
+.player p{margin:4px 0 0;color:#cfc8b6;font-size:15px}
+.player .acts{display:flex;gap:10px;flex-shrink:0}
+@media (max-width:980px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.gate{grid-template-columns:minmax(0,1fr);gap:36px;padding-top:24px}}
+@media (max-width:620px){.wrap{padding:0 18px}.who .name span{display:none}.top .btn{padding:0 14px}.grid{grid-template-columns:minmax(0,1fr)}.top nav .btn.home{display:none}.who .name{max-width:46vw}.player .row{flex-direction:column}.mark span{display:none}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header class="wrap top">
+  <a class="mark" href="../" aria-label="Hendrix QMS home">
+    <svg width="34" height="34" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="hx" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f1d57a"/><stop offset=".5" stop-color="#d4af37"/><stop offset="1" stop-color="#a8841c"/></linearGradient></defs><polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="none" stroke="url(#hx)" stroke-width="2.4" stroke-linejoin="round"/><path d="M13 12v16M27 12v16M13 20h14" stroke="url(#hx)" stroke-width="3" stroke-linecap="round" fill="none"/></svg>
+    <b>HENDRIX</b><span>Training Center</span>
+  </a>
+  <nav id="nav-out">
+    <a class="btn home" href="../">Home</a>
+  </nav>
+  <nav id="nav-in" hidden>
+    <div class="who"><div class="name"><b id="who-name"></b><span id="who-title"></span></div></div>
+    <button class="btn" id="signout" type="button">Sign out</button>
+  </nav>
+</header>
+
+<main>
+  <!-- signed out -->
+  <div class="wrap gate" id="gate">
+    <div>
+      <h1>Training Center</h1>
+      <p class="lede">Short videos on how to use Hendrix. Sign in with your company's Hendrix account and you'll see the videos for your job and the areas you work in.</p>
+      <ul>
+        <li>The same email and password you use for Hendrix</li>
+        <li>Videos picked from your job title and your access</li>
+        <li>Each video is a few minutes or less, with captions</li>
+      </ul>
+    </div>
+    <form class="card" id="signin" novalidate>
+      <h3>Sign in</h3>
+      <p>Use your company's Hendrix address and your Hendrix account.</p>
+      <label for="code">Company address</label>
+      <div class="field"><span>hendrixqms.com/</span><input id="code" autocomplete="organization" autocapitalize="none" spellcheck="false" inputmode="url" placeholder="yourcompany"></div>
+      <label for="email">Email</label>
+      <div class="field"><input id="email" type="email" autocomplete="username" autocapitalize="none" spellcheck="false"></div>
+      <label for="pw">Password</label>
+      <div class="field"><input id="pw" type="password" autocomplete="current-password"></div>
+      <button class="btn solid" type="submit" id="go">Sign in</button>
+      <p class="err" id="err" role="alert"></p>
+      <p class="small" id="forgot">Forgot your password? Use <b>Forgot your password?</b> on your company's Hendrix sign-in screen.</p>
+    </form>
+    <form class="card" id="mfa" novalidate hidden>
+      <h3>Two-step sign-in</h3>
+      <p>Your account uses an authenticator app. Enter the 6-digit code it shows for Hendrix.</p>
+      <label for="code6">Code</label>
+      <div class="field"><input id="code6" inputmode="numeric" autocomplete="one-time-code" maxlength="8"></div>
+      <button class="btn solid" type="submit" id="go6">Continue</button>
+      <p class="err" id="err6" role="alert"></p>
+      <p class="small"><a href="#" id="mfa-back">Back</a></p>
+    </form>
+  </div>
+
+  <!-- signed in -->
+  <div id="lib" hidden>
+    <div class="wrap lib-head">
+      <h1 id="lib-title">Your training videos</h1>
+      <p id="lib-sub"></p>
+      <div class="progress" id="progress"><div class="bar"><i id="bar"></i></div><span id="prog-txt"></span></div>
+    </div>
+    <section class="wrap shelf" id="shelf-pick" hidden>
+      <h2>Picked for your role<small id="pick-for"></small></h2>
+      <div class="grid" id="grid-pick"></div>
+    </section>
+    <section class="wrap shelf" id="shelf-all">
+      <h2>All your videos<small id="all-count"></small></h2>
+      <div class="grid" id="grid-all"></div>
+      <p class="empty" id="empty" hidden>No videos fit your access yet. Ask a Hendrix admin to check your role.</p>
+    </section>
+  </div>
+</main>
+
+<div class="player" id="player" hidden role="dialog" aria-modal="true" aria-labelledby="p-title">
+  <div class="box">
+    <video id="p-video" controls playsinline preload="metadata"></video>
+    <div class="row">
+      <div><h3 id="p-title"></h3><p id="p-sum"></p></div>
+      <div class="acts"><button class="btn" id="p-next" type="button">Next video</button><button class="btn solid" id="p-close" type="button">Close</button></div>
+    </div>
+  </div>
+</div>
+
+<footer class="wrap">Hendrix QMS Training Center. Videos use a made-up company and made-up people.</footer>
+
+<script src="companies.js"></script>
+<script src="catalog.js"></script>
+<script>
+(function(){
+  var C = window.HX_COMPANIES || {}, V = window.HX_VIDEOS || [];
+  var $ = function(id){ return document.getElementById(id); };
+  var S = null, P = null, SHOWN = [];
+  // every area the catalog asks about
+  var MODS = []; V.forEach(function(v){ (v.access || []).forEach(function(a){ if (MODS.indexOf(a[0]) < 0) MODS.push(a[0]); }); });
+
+  function codeOf(raw){ return String(raw || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^(www\.)?hendrixqms\.com\/?/, '').replace(/\/.*$/, ''); }
+  function save(){ try { if (S) sessionStorage.setItem('hxtc', JSON.stringify(S)); else sessionStorage.removeItem('hxtc'); } catch (e) {} }
+  function load(){ try { return JSON.parse(sessionStorage.getItem('hxtc') || 'null'); } catch (e) { return null; } }
+  function co(){ return C[S.code]; }
+
+  async function auth(path, body, token){
+    var c = co(), h = { 'apikey': c.key, 'Content-Type': 'application/json' };
+    if (token) h['Authorization'] = 'Bearer ' + token;
+    var r = await fetch(c.url + '/auth/v1/' + path, { method: body ? 'POST' : 'GET', headers: h, body: body ? JSON.stringify(body) : undefined });
+    var j = await r.json().catch(function(){ return {}; });
+    if (!r.ok) throw new Error(j.error_description || j.msg || j.message || ('Error ' + r.status));
+    return j;
+  }
+  async function rpc(name, args){
+    var c = co();
+    var r = await fetch(c.url + '/rest/v1/rpc/' + name, { method: 'POST', headers: { 'apikey': c.key, 'Authorization': 'Bearer ' + S.token, 'Content-Type': 'application/json' }, body: JSON.stringify(args || {}) });
+    var t = await r.text(), j = null; try { j = t ? JSON.parse(t) : null; } catch (e) {}
+    if (!r.ok) { var m = (j && (j.message || j.msg)) || t || ('Error ' + r.status); var er = new Error(m); er.status = r.status; throw er; }
+    return j;
+  }
+  function setTok(j){ S.token = j.access_token; S.refresh = j.refresh_token; S.exp = Math.floor(Date.now() / 1000) + (j.expires_in || 3600); if (j.user) S.uid = j.user.id; save(); }
+
+  // ---------- sign-in ----------
+  $('signin').addEventListener('submit', async function(ev){
+    ev.preventDefault(); var e = $('err'); e.textContent = '';
+    var code = codeOf($('code').value), email = $('email').value.trim(), pw = $('pw').value;
+    if (!code) { e.textContent = 'Enter your company address, the word after hendrixqms.com/ in your Hendrix address.'; $('code').focus(); return; }
+    if (!/^[a-z0-9-]{2,40}$/.test(code)) { e.textContent = 'A company address uses only letters, numbers and dashes.'; $('code').focus(); return; }
+    if (!C[code]) { e.textContent = 'There is no Hendrix at hendrixqms.com/' + code + '. Check the address your company uses.'; $('code').focus(); return; }
+    if (!email || !pw) { e.textContent = 'Enter your email and password.'; return; }
+    $('go').disabled = true; $('go').textContent = 'Signing in...';
+    S = { code: code };
+    try {
+      var j = await auth('token?grant_type=password', { email: email, password: pw });
+      setTok(j); try { localStorage.setItem('hx_tenant', code); } catch (x) {}
+      $('pw').value = ''; await enter();
+    } catch (x) {
+      S = null; save();
+      var m = String(x.message || x);
+      e.textContent = /invalid login|invalid_grant|invalid credentials/i.test(m) ? 'That email and password do not match a Hendrix account at ' + code + '.' : /banned/i.test(m) ? 'Your access to Hendrix was removed. Ask a system admin if this is a mistake.' : m;
+    }
+    $('go').disabled = false; $('go').textContent = 'Sign in';
+  });
+
+  // ---------- two-step ----------
+  $('mfa').addEventListener('submit', async function(ev){
+    ev.preventDefault(); var e = $('err6'); e.textContent = '';
+    var code6 = $('code6').value.replace(/\s/g, '');
+    if (!/^\d{6,8}$/.test(code6)) { e.textContent = 'Enter the 6-digit code.'; return; }
+    $('go6').disabled = true;
+    try {
+      var u = await auth('user', null, S.token);
+      var f = ((u && u.factors) || []).filter(function(x){ return x.factor_type === 'totp' && x.status === 'verified'; })[0];
+      if (!f) throw new Error('No authenticator app is set up on this account. Set it up in My account in your Hendrix first.');
+      var ch = await auth('factors/' + f.id + '/challenge', {}, S.token);
+      var j = await auth('factors/' + f.id + '/verify', { challenge_id: ch.id, code: code6 }, S.token);
+      setTok(j); $('code6').value = ''; await enter();
+    } catch (x) {
+      var m = String(x.message || x); e.textContent = /invalid|code|totp|expired|challenge/i.test(m) && !/set it up/i.test(m) ? 'That code is not right or has expired. Enter the current code.' : m;
+    }
+    $('go6').disabled = false;
+  });
+  $('mfa-back').addEventListener('click', function(ev){ ev.preventDefault(); signOut(); });
+
+  // ---------- who is this, what can they open ----------
+  async function enter(){
+    try { P = await rpc('hx_my_training_profile', { p_modules: MODS }); }
+    catch (x) {
+      var m = String(x.message || x);
+      if (x.status === 401 || /jwt|expired/i.test(m)) { signOut('Please sign in again.'); return; }
+      showGate(/hx_my_training_profile/.test(m) && /schema cache|does not exist|Could not find/i.test(m) ? 'The Training Center is not set up for this company yet. An admin must run hendrix_step68.sql.' : m);
+      return;
+    }
+    if (!P || P.approved === false) { signOut('Your Hendrix account is waiting for an admin to approve it.'); return; }
+    if (P.mfa_needed) { $('signin').hidden = true; $('mfa').hidden = false; $('code6').focus(); return; }
+    render();
+  }
+
+  function level(a){ return (P.access && P.access[a]) || 0; }
+  function allowed(v){ if (P.admin) return true; if (!v.access || !v.access.length) return true; return v.access.some(function(a){ return level(a[0]) >= (a[1] || 1); }); }
+  function picked(v){ return !!(P.title && v.titles && new RegExp(v.titles, 'i').test(P.title)); }
+  function watchedKey(){ return 'hxtc_seen_' + S.code + '_' + (S.uid || ''); }
+  function watched(){ try { return JSON.parse(localStorage.getItem(watchedKey()) || '[]'); } catch (e) { return []; } }
+  function markWatched(id){ var w = watched(); if (w.indexOf(id) < 0) { w.push(id); try { localStorage.setItem(watchedKey(), JSON.stringify(w)); } catch (e) {} } }
+  function fmt(s){ s = Math.round(s || 0); return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
+  function esc(t){ return String(t).replace(/[&<>"]/g, function(c){ return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+  function card(v, w){
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'vid'; b.setAttribute('data-id', v.id);
+    b.innerHTML = '<div class="thumb" style="background-image:url(\'' + esc(v.poster) + '\')">' + (w.indexOf(v.id) >= 0 ? '<span class="done">Watched</span>' : '') +
+      '<span class="len">' + fmt(v.seconds) + '</span><span class="play"><svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="31" fill="rgba(0,0,0,.6)" stroke="#f1d57a" stroke-width="2"/><path d="M26 20l20 12-20 12z" fill="#f1d57a"/></svg></span></div>' +
+      '<div class="body"><h3>' + esc(v.title) + '</h3><p>' + esc(v.summary) + '</p><div class="tags">' +
+      (picked(v) ? '<span class="pick">Your role</span>' : '') + '<span>' + esc(v.forWho) + '</span></div></div>';
+    b.addEventListener('click', function(){ play(v); });
+    return b;
+  }
+  function render(){
+    $('gate').hidden = true; $('nav-out').hidden = true; $('lib').hidden = false; $('nav-in').hidden = false;
+    var c = co(); $('who-name').textContent = P.name || ''; $('who-title').textContent = P.title || (P.admin ? 'Admin' : '');
+    SHOWN = V.filter(allowed);
+    var picks = SHOWN.filter(picked), w = watched();
+    var first = (P.name || '').split(' ')[0];
+    $('lib-title').textContent = first ? first + ', here are your videos' : 'Your training videos';
+    $('lib-sub').textContent = c.name + '. ' + (P.admin ? 'You are a Hendrix admin, so every video is here.' : 'Picked from your job title' + (P.title ? ' (' + P.title + ')' : '') + ' and the areas of Hendrix you can open.');
+    $('shelf-pick').hidden = !picks.length || picks.length === SHOWN.length; $('pick-for').textContent = P.title ? 'for ' + P.title : '';
+    var gp = $('grid-pick'); gp.innerHTML = ''; picks.forEach(function(v){ gp.appendChild(card(v, w)); });
+    var ga = $('grid-all'); ga.innerHTML = ''; SHOWN.forEach(function(v){ ga.appendChild(card(v, w)); });
+    $('all-count').textContent = SHOWN.length + (SHOWN.length === 1 ? ' video' : ' videos');
+    $('empty').hidden = SHOWN.length > 0;
+    var n = SHOWN.filter(function(v){ return w.indexOf(v.id) >= 0; }).length;
+    $('bar').style.width = (SHOWN.length ? Math.round(n * 100 / SHOWN.length) : 0) + '%';
+    $('prog-txt').textContent = n + ' of ' + SHOWN.length + ' watched';
+  }
+
+  // ---------- player ----------
+  var cur = null;
+  function play(v){
+    cur = v; var vid = $('p-video'); vid.src = v.file; vid.poster = v.poster;
+    $('p-title').textContent = v.title; $('p-sum').textContent = v.summary;
+    var i = SHOWN.indexOf(v); $('p-next').hidden = i < 0 || i >= SHOWN.length - 1;
+    $('player').hidden = false; document.body.style.overflow = 'hidden';
+    var p = vid.play(); if (p && p.catch) p.catch(function(){});
+    $('p-close').focus();
+  }
+  function closeP(){ var vid = $('p-video'); vid.pause(); vid.removeAttribute('src'); vid.load(); $('player').hidden = true; document.body.style.overflow = ''; if (P) render(); }
+  $('p-close').addEventListener('click', closeP);
+  $('p-next').addEventListener('click', function(){ var i = SHOWN.indexOf(cur); if (i >= 0 && i < SHOWN.length - 1) play(SHOWN[i + 1]); });
+  $('p-video').addEventListener('timeupdate', function(){ var v = this; if (cur && v.duration && v.currentTime / v.duration > 0.9) markWatched(cur.id); });
+  $('p-video').addEventListener('ended', function(){ if (cur) markWatched(cur.id); });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && !$('player').hidden) closeP(); });
+
+  function showGate(msg){ $('lib').hidden = true; $('nav-in').hidden = true; $('gate').hidden = false; $('nav-out').hidden = false; $('signin').hidden = false; $('mfa').hidden = true; $('err').textContent = msg || ''; }
+  function signOut(msg){ S = null; P = null; save(); showGate(msg); }
+  $('signout').addEventListener('click', function(){ signOut(''); });
+
+  // ---------- start ----------
+  var q = new URLSearchParams(location.search), pre = codeOf(q.get('company') || '');
+  if (!pre) { try { pre = localStorage.getItem('hx_tenant') || ''; } catch (e) {} }
+  if (pre && C[pre]) $('code').value = pre;
+  S = load();
+  if (S && C[S.code] && S.token && S.exp > Date.now() / 1000 + 30) enter(); else { S = null; save(); }
+})();
+</script>
+</body>
+</html>

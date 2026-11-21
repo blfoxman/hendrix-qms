@@ -9,7 +9,7 @@
 (function(){var q=location.search||'';if(/[?&](kiosk|badge|state|lic)=/.test(q))location.replace('summitsolutions/'+q+(location.hash||''));})();
 </script>
 <title>Hendrix QMS: quality records for licensed cannabis operators</title>
-<meta name="description" content="Hendrix is the quality management system built for CSQ certification, cGMP and state compliance: batch records, METRC checks, SOPs, training, holds and facility logs in one place, signed and audited.">
+<meta name="description" content="Hendrix is the quality management system for licensed cannabis: compliance, product safety, CSQ, cGMP, HACCP and state rules: batch records, METRC checks, SOPs, training, holds and facility logs in one place, signed and audited.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -66,6 +66,16 @@ h1{margin:0;font-weight:800;font-size:clamp(40px,6.2vw,76px);line-height:.98;let
 .map .lbl{fill:var(--stone);font-size:12.5px}
 .map .line-name{font-size:14px;font-weight:700}
 .map .st{fill:var(--black);stroke-width:3}
+.map .st.pulse{animation:stpulse .9s ease-out}
+@keyframes stpulse{0%{stroke-width:7}100%{stroke-width:3}}
+.map .tl{font-size:12px;font-weight:750}
+.live{min-width:0}
+.map-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:10px;border-top:1px solid var(--rule);padding-top:14px}
+.map-stats div{display:flex;flex-direction:column;gap:2px}
+.map-stats b{font-size:26px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;color:var(--bone);font-variation-settings:"wdth" 112}
+.map-stats b.hold{color:var(--stop)}
+.map-stats span{font-size:13px;color:var(--stone)}
+@media (prefers-reduced-motion:reduce){.map .st.pulse{animation:none}}
 
 /* standards row under the hero */
 .stds{display:flex;flex-wrap:wrap;gap:8px;list-style:none;margin:30px 0 0;padding:0}
@@ -74,6 +84,17 @@ h1{margin:0;font-weight:800;font-size:clamp(40px,6.2vw,76px);line-height:.98;let
 
 /* sections */
 section{border-top:1px solid var(--rule);padding:72px 0}
+.tc .sm{display:none}
+.top nav .tc .sm{display:none}
+@media (max-width:600px){.top nav .tc .sm{display:inline}}
+@media (max-width:380px){.mark b{display:none}}
+.pillars{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:56px;margin:0}
+.pillars article{border-top:1px solid var(--rule);padding:30px 0 34px}
+.pillars h3{margin:0;font-size:clamp(26px,2.8vw,34px);font-weight:800;line-height:1.05;font-variation-settings:"wdth" 116;background:var(--gold-grad);-webkit-background-clip:text;background-clip:text;color:transparent;display:inline-block}
+.pillars .pl{margin:10px 0 16px;color:var(--bone);font-size:18px;max-width:30em}
+.pillars ul{margin:0;padding:0;list-style:none;display:grid;gap:10px}
+.pillars li{position:relative;padding-left:22px;color:#c3bcaa;font-size:16px;line-height:1.5}
+.pillars li::before{content:"";position:absolute;left:0;top:.62em;width:10px;height:2px;background:var(--gold)}
 .demo-video{display:block;width:100%;height:auto;aspect-ratio:16/9;background:#000;border:1px solid var(--rule);border-radius:16px}
 h2{margin:0 0 10px;font-weight:800;font-size:clamp(28px,3.4vw,40px);line-height:1.08;font-variation-settings:"wdth" 112}
 .intro{margin:0 0 40px;max-width:40em;color:#cfc8b6}
@@ -129,6 +150,7 @@ footer{border-top:1px solid var(--rule);padding:28px 0 40px;color:var(--stone);f
 footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 
 @media (max-width:900px){
+  .pillars{grid-template-columns:minmax(0,1fr)}
   .hero{grid-template-columns:minmax(0,1fr);padding-top:40px;padding-bottom:64px;gap:36px}
   .areas{grid-template-columns:repeat(2,minmax(0,1fr))}
   .yours{grid-template-columns:minmax(0,1fr);gap:36px}
@@ -136,7 +158,12 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 }
 @media (max-width:600px){
   .wrap{padding:0 20px}
-  .top nav .btn:not(.solid){display:none}
+  .top nav .btn:not(.solid):not(.tc){display:none}
+  .top nav .btn{padding:0 12px;white-space:nowrap;font-size:14px}
+  .top nav{gap:8px}
+  .top{gap:10px}
+  .mark b{letter-spacing:.16em;font-size:16px}
+  .top nav .tc .lg{display:none}
   .areas{grid-template-columns:1fr}
   .ledger{padding:6px 12px 14px}
   .ledger td,.ledger th{padding-left:4px;padding-right:4px}
@@ -155,6 +182,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
   </a>
   <nav>
     <a class="btn" href="#csq">CSQ and standards</a>
+    <a class="btn tc" href="training/"><span class="lg">Training Center</span><span class="sm">Training</span></a>
     <a class="btn solid" href="#sign-in">Client sign-in</a>
   </nav>
 </header>
@@ -172,34 +200,19 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
       <li>CSQ v2.0</li><li>cGMP</li><li>HACCP</li><li>21 CFR 117</li><li>METRC</li><li>Any state's cannabis rules</li>
     </ul>
   </div>
-  <svg class="map" id="map" viewBox="0 0 640 380" role="img" aria-labelledby="map-t">
-    <title id="map-t">A production line map: Pre-Rolls, Infused Flower and Manufacturing Process lines join into Testing, Passed and Released. One batch is on hold at Testing.</title>
-    <!-- branch lines -->
-    <path id="l1" d="M40 70 H250 Q300 70 330 120 L360 170" fill="none" stroke="#5fbf8a" stroke-width="6" stroke-linecap="round"/>
-    <path id="l2" d="M40 190 H360" fill="none" stroke="#4fc1c9" stroke-width="6" stroke-linecap="round"/>
-    <path id="l3" d="M40 310 H250 Q300 310 330 260 L360 210" fill="none" stroke="#9ccc65" stroke-width="6" stroke-linecap="round"/>
-    <!-- trunk -->
-    <path id="tr" d="M360 190 H610" fill="none" stroke="#ece6d6" stroke-width="10" stroke-linecap="round"/>
-    <text class="line-name" x="40" y="52" fill="#5fbf8a">Pre-Rolls</text>
-    <text class="line-name" x="40" y="172" fill="#4fc1c9">Infused Flower</text>
-    <text class="line-name" x="40" y="292" fill="#9ccc65">Manufacturing Process</text>
-    <!-- stations -->
-    <g>
-      <circle class="st" cx="60" cy="70" r="7" stroke="#5fbf8a"/><text class="lbl" x="60" y="94" text-anchor="middle">Received</text>
-      <circle class="st" cx="160" cy="70" r="7" stroke="#5fbf8a"/><text class="lbl" x="160" y="94" text-anchor="middle">Filled</text>
-      <circle class="st" cx="250" cy="70" r="7" stroke="#5fbf8a"/><text class="lbl" x="250" y="94" text-anchor="middle">Packaged</text>
-      <circle class="st" cx="60" cy="190" r="7" stroke="#4fc1c9"/><text class="lbl" x="60" y="214" text-anchor="middle">Received</text>
-      <circle class="st" cx="170" cy="190" r="7" stroke="#4fc1c9"/><text class="lbl" x="170" y="214" text-anchor="middle">Infused</text>
-      <circle class="st" cx="270" cy="190" r="7" stroke="#4fc1c9"/><text class="lbl" x="270" y="214" text-anchor="middle">Cured</text>
-      <circle class="st" cx="60" cy="310" r="7" stroke="#9ccc65"/><text class="lbl" x="60" y="334" text-anchor="middle">Material used</text>
-      <circle class="st" cx="170" cy="310" r="7" stroke="#9ccc65"/><text class="lbl" x="170" y="334" text-anchor="middle">Product made</text>
-      <circle class="st" cx="400" cy="190" r="9" stroke="#ece6d6"/><text class="lbl" x="400" y="226" text-anchor="middle">Testing</text>
-      <circle class="st" cx="500" cy="190" r="9" stroke="#ece6d6"/><text class="lbl" x="500" y="226" text-anchor="middle">Passed</text>
-      <circle class="st" cx="600" cy="190" r="9" stroke="#ece6d6"/><text class="lbl" x="600" y="226" text-anchor="middle">Released</text>
-    </g>
-    <!-- batches (moved once on load) -->
+  <div class="live">
+  <svg class="map" id="map" viewBox="0 0 700 470" role="img" aria-labelledby="map-t">
+    <title id="map-t">A live production line map: Pre-Rolls, Cartridges, Infused Flower, Gummies and Manufacturing Process batches move through their stations into Testing, Passed, QC Release and Released. A batch that fails testing goes on hold, then rejoins after a retest.</title>
+    <g id="rails"></g>
     <g id="trains"></g>
   </svg>
+  <div class="map-stats" aria-live="off">
+    <div><b id="ms-prod">0</b><span>in production</span></div>
+    <div><b id="ms-lab">0</b><span>at the lab</span></div>
+    <div><b id="ms-hold" class="hold">0</b><span>on hold</span></div>
+    <div><b id="ms-rel">0</b><span>released today</span></div>
+  </div>
+  </div>
 </div>
 
 <section id="demo" class="demo">
@@ -210,6 +223,57 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
       <source src="media/hendrix-demo.mp4" type="video/mp4">
       Your browser cannot play this video. <a href="media/hendrix-demo.mp4">Download it</a>.
     </video>
+  </div>
+</section>
+
+<section id="quality" class="quality">
+  <div class="wrap">
+    <h2>Compliance, product safety and quality, on every record</h2>
+    <p class="intro">Licensed cannabis is held to food and drug standards. Hendrix turns those standards into the daily work your team already does, so the proof builds itself as you go.</p>
+    <div class="pillars">
+      <article>
+        <h3>Compliance</h3>
+        <p class="pl">Meet your state's rules and be able to show it on any day an inspector walks in.</p>
+        <ul>
+          <li>Your state's rulebook loaded from the official PDF, organized by topic and linked to the records that meet each rule</li>
+          <li>METRC tags on every lot and package. METRC Check compares Hendrix with your METRC export: lab status, holds, shipments and counts</li>
+          <li>The 21 CFR 117 checklist food-safety inspectors use, with your evidence next to each item</li>
+          <li>Printouts with your legal name and license number, and an audit trail you can export</li>
+        </ul>
+      </article>
+      <article>
+        <h3>Product safety</h3>
+        <p class="pl">Nothing unsafe leaves the building, and anything that does can be found fast.</p>
+        <ul>
+          <li>A failed test blocks release and shipping. Returns and failures go on hold until QA decides</li>
+          <li>HACCP plans with critical control points, limits, corrective actions and a second person verifying</li>
+          <li>Line clearance before every run, and no clearance while equipment is out of service or past calibration</li>
+          <li>One step back to suppliers, one step forward to customers, and timed mock recalls</li>
+          <li>Approved chemicals with their SDS, approved suppliers, employee illness and hygiene checks</li>
+        </ul>
+      </article>
+      <article>
+        <h3>Standards</h3>
+        <p class="pl">Built around the standards cannabis operators are audited against.</p>
+        <ul>
+          <li>CSQ v2.0 for manufacturing, extraction and cultivation, clause by clause with evidence</li>
+          <li>cGMP and 21 CFR 117: hazard analysis, preventive controls, sanitation and records</li>
+          <li>HACCP plans built on its seven principles</li>
+          <li>Data you can trust: every record attributable, time-stamped and kept, with changes and the reason on file</li>
+        </ul>
+      </article>
+      <article>
+        <h3>Quality</h3>
+        <p class="pl">A quality system that runs every day, not a binder that comes out before an audit.</p>
+        <ul>
+          <li>Deviations and CAPA with root cause and an effectiveness check</li>
+          <li>Complaints, internal audits that show any clause not checked in 12 months, and management review</li>
+          <li>Risk register, change control, quality objectives with KPIs, and a verification schedule</li>
+          <li>Controlled SOPs with versions and read-and-sign, and training by role with quizzes</li>
+          <li>Approvals signed with the person's password, and two-step sign-in</li>
+        </ul>
+      </article>
+    </div>
   </div>
 </section>
 
@@ -324,28 +388,118 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
   try{var t=localStorage.getItem('hx_tenant');if(t&&/^[a-z0-9-]{2,40}$/.test(t)){var a=document.getElementById('cont-a');a.href=t+'/';a.textContent='Continue to hendrixqms.com/'+t;document.getElementById('cont').hidden=false;}}catch(x){}
 })();
 
-// the line map: batches move to their station once, then stay
+// the live line map: batches keep moving through their line, into Testing, Passed, QC Release and Released.
+// A batch that fails testing goes red into the Hold siding and rejoins after its retest.
 (function(){
-  var svg=document.getElementById('map'),g=document.getElementById('trains');
-  var trains=[
-    {path:'l1',to:.42,c:'#5fbf8a',label:'B-118'},
-    {path:'l3',to:.56,c:'#9ccc65',label:'Run 41'},
-    {path:'tr',to:.16,c:'#e5705a',label:'Hold',stop:1},
-    {path:'tr',to:.56,c:'#5fbf8a',label:'IF-207'},
-    {path:'l2',to:.47,c:'#4fc1c9',label:'IF-212'}
-  ];
-  var els=trains.map(function(t){
-    var p=document.getElementById(t.path),n=document.createElementNS('http://www.w3.org/2000/svg','g');
-    n.innerHTML='<rect x="-15" y="-9" width="30" height="18" rx="9" fill="'+t.c+'"'+(t.stop?'':' fill-opacity=".95"')+'/>'+
-      '<text x="0" y="-16" text-anchor="middle" font-size="12.5" font-weight="700" fill="'+(t.stop?'#e5705a':'#ece6d6')+'">'+t.label+'</text>';
-    g.appendChild(n);return {t:t,p:p,n:n,L:p.getTotalLength()};
+  var NS='http://www.w3.org/2000/svg', rails=document.getElementById('rails'), g=document.getElementById('trains');
+  if(!rails||!g)return;
+  var LINES=[
+    {name:'Pre-Rolls',c:'#5fbf8a',y:62,st:['Received','Filled','Packaged'],code:'PR'},
+    {name:'Cartridges',c:'#d4af37',y:146,st:['Received','Filled','Capped'],code:'CT'},
+    {name:'Infused Flower',c:'#4fc1c9',y:230,st:['Received','Infused','Cured'],code:'IF'},
+    {name:'Gummies',c:'#e59a4f',y:314,st:['Mixed','Deposited','Packaged'],code:'GM'},
+    {name:'Manufacturing Process',c:'#9ccc65',y:398,st:['Material used','Pressed','Product made'],code:'RUN'}];
+  var SX=[60,145,230], TR={x0:380,y:230,x1:676}, TS=[{x:430,l:'Testing'},{x:530,l:'Passed'},{x:600,l:'QC Release'},{x:662,l:'Released'}];
+  function el(t,a,txt){var e=document.createElementNS(NS,t);for(var k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;return e;}
+  // rails
+  LINES.forEach(function(L,i){
+    var d=L.y===TR.y?'M28 '+L.y+' H'+TR.x0:'M28 '+L.y+' H250 C318 '+L.y+' 328 '+TR.y+' '+TR.x0+' '+TR.y;
+    L.path=el('path',{d:d,fill:'none',stroke:L.c,'stroke-width':6,'stroke-linecap':'round'});rails.appendChild(L.path);L.len=L.path.getTotalLength();
+    rails.appendChild(el('text',{'class':'line-name',x:28,y:L.y-30,fill:L.c},L.name));
+    L.dots=SX.map(function(x,k){var c=el('circle',{'class':'st',cx:x,cy:L.y,r:7,stroke:L.c});rails.appendChild(c);rails.appendChild(el('text',{'class':'lbl',x:x,y:L.y+24,'text-anchor':'middle'},L.st[k]));return c;});
   });
-  function place(k){els.forEach(function(o){var pt=o.p.getPointAtLength(o.L*o.t.to*k);o.n.setAttribute('transform','translate('+pt.x+' '+pt.y+')');});}
+  var trunk=el('path',{d:'M'+TR.x0+' '+TR.y+' H'+TR.x1,fill:'none',stroke:'#ece6d6','stroke-width':10,'stroke-linecap':'round'});
+  var hold=el('path',{d:'M430 230 C440 288 452 300 480 300 C508 300 520 288 530 230',fill:'none',stroke:'#e5705a','stroke-width':5,'stroke-linecap':'round','stroke-dasharray':'2 9'});
+  rails.appendChild(hold);rails.appendChild(trunk);
+  var holdLen=hold.getTotalLength();
+  var tdots=TS.map(function(t){var c=el('circle',{'class':'st',cx:t.x,cy:TR.y,r:9,stroke:'#ece6d6'});rails.appendChild(c);rails.appendChild(el('text',{'class':'lbl',x:t.x,y:TR.y+30,'text-anchor':'middle'},t.l));return c;});
+  var hdot=el('circle',{'class':'st',cx:480,cy:300,r:7,stroke:'#e5705a'});rails.appendChild(hdot);rails.appendChild(el('text',{'class':'lbl',x:480,y:324,'text-anchor':'middle',fill:'#e5705a'},'Hold'));
+  // batches
+  var B=[],seq={PR:118,CT:207,IF:212,GM:41,RUN:41},released=37,rnd=Math.random;
+  function pulse(c){if(!c)return;c.classList.remove('pulse');void c.getBoundingClientRect();c.classList.add('pulse');}
+  function spawn(li,adv){
+    var L=LINES[li],n=++seq[L.code],node=el('g',{});
+    var r=el('rect',{x:-14,y:-8,width:28,height:16,rx:8,fill:L.c});var t=el('text',{'class':'tl',x:0,y:-13,'text-anchor':'middle',fill:'#ece6d6'},L.code==='RUN'?'Run '+n:L.code+'-'+n);
+    node.appendChild(r);node.appendChild(t);g.appendChild(node);
+    var b={L:L,node:node,r:r,t:t,leg:0,pos:0,wait:0,fails:rnd()<0.22,state:'line',alpha:0};
+    b.legs=[{path:L.path,len:L.len,stops:SX.map(function(x){return x-28;}),dots:L.dots,end:L.len},
+            {path:trunk,len:TR.x1-TR.x0,stops:[50],dots:[tdots[0]],end:50,lab:true}];
+    if(b.fails)b.legs.push({path:hold,len:holdLen,stops:[holdLen/2],dots:[hdot],end:holdLen,hold:true},{path:trunk,len:TR.x1-TR.x0,start:150,stops:[150,220,282],dots:[tdots[1],tdots[2],tdots[3]],end:296});
+    else b.legs.push({path:trunk,len:TR.x1-TR.x0,start:50,stops:[150,220,282],dots:[tdots[1],tdots[2],tdots[3]],end:296});
+    b.si=0;B.push(b);
+    if(adv){var steps=Math.floor(adv*60);for(var i=0;i<steps;i++)step(b,1/60,true);}
+    return b;
+  }
+  function ahead(b){ // nearest batch in front on the same path
+    var leg=b.legs[b.leg],best=1e9;
+    B.forEach(function(o){if(o===b||o.done)return;var ol=o.legs[o.leg];if(ol.path!==leg.path)return;if(o.pos>b.pos&&o.pos-b.pos<best)best=o.pos-b.pos;});
+    return best;
+  }
+  var GAP=46, LAST=SX[2]-28;   // only one batch at a time on the curve into the trunk
+  function mergeBusy(b){return B.some(function(o){if(o===b||o.done)return false;var l=o.legs[o.leg];return (o.leg===0&&o.pos>LAST+0.001&&(o.pos-LAST)<0.55*(o.L.len-LAST))||(l.path===trunk&&o.pos<GAP*0.6);});}
+  function step(b,dt,quiet){
+    if(b.done)return;
+    var leg=b.legs[b.leg];
+    if(b.wait>0){b.wait-=dt;return;}
+    var target=b.si<leg.stops.length?leg.stops[b.si]:leg.end, sp=leg.hold?28:(leg.path===trunk?60:(b.pos>LAST?64:42));
+    var room=ahead(b)-GAP; if(room<0)return;
+    var nx=Math.min(target,b.pos+sp*dt,b.pos+room);
+    if(b.leg===0&&b.pos<=LAST+0.5&&nx>LAST&&mergeBusy(b))nx=Math.min(nx,LAST);
+    b.pos=nx;
+    if(b.pos>=target-0.01){
+      if(b.si<leg.stops.length){
+        if(!quiet)pulse(leg.dots[b.si]);
+        b.wait=leg.lab?1.5+rnd()*0.9:leg.hold?3.2+rnd()*1.6:0.4+rnd()*0.7;
+        if(leg.lab){b.state=b.fails?'fail':'lab';}
+        if(leg.hold)b.state='hold';
+        if(leg.path===trunk&&b.leg>=2&&b.si===2){b.state='released';}
+        b.si++;
+      }else if(b.leg<b.legs.length-1){
+        b.leg++;var nl=b.legs[b.leg];b.pos=nl.start||0;b.si=0;
+        if(nl.stops[0]<=b.pos+0.01)b.si=0;
+        if(b.state==='hold')b.state='retest';
+        if(b.state==='lab')b.state='passed';
+      }else{b.done=true;b.fade=1;if(!quiet)released++;}
+    }
+  }
+  function draw(b){
+    var leg=b.legs[b.leg],p=leg.path.getPointAtLength(Math.max(0,Math.min(b.pos,leg.len)));
+    b.node.setAttribute('transform','translate('+p.x.toFixed(1)+' '+p.y.toFixed(1)+')');
+    var col=b.L.c;
+    if(b.state==='lab'||(b.state==='fail'&&b.wait>0.9)){b.r.setAttribute('fill','#0b0b0b');b.r.setAttribute('stroke','#ece6d6');b.r.setAttribute('stroke-dasharray','3 3');}
+    else if(b.state==='fail'||b.state==='hold'){b.r.setAttribute('fill','#e5705a');b.r.removeAttribute('stroke');b.t.setAttribute('fill','#e5705a');}
+    else{b.r.setAttribute('fill',col);b.r.removeAttribute('stroke');b.t.setAttribute('fill','#ece6d6');}
+    b.alpha=Math.min(1,b.alpha+0.08);
+    if(b.done){b.fade-=0.05;b.node.setAttribute('opacity',Math.max(0,b.fade));}else b.node.setAttribute('opacity',b.alpha);
+  }
+  var ms={prod:document.getElementById('ms-prod'),lab:document.getElementById('ms-lab'),hold:document.getElementById('ms-hold'),rel:document.getElementById('ms-rel')};
+  function stats(){
+    var prod=0,lab=0,hold=0;
+    B.forEach(function(b){if(b.done)return;if(b.leg===0)prod++;else if(b.legs[b.leg].hold||b.state==='fail')hold++;else if(b.legs[b.leg].lab)lab++;});
+    ms.prod.textContent=prod;ms.lab.textContent=lab;ms.hold.textContent=hold;ms.rel.textContent=released;
+  }
+  // start with a busy floor
+  var start=[[0,9],[1,4],[2,12],[3,2],[4,6],[0,20],[1,15],[2,1],[3,18],[4,24],[1,26]];
+  start.forEach(function(s){spawn(s[0],s[1]);});
+  B.forEach(draw);stats();
   var still=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if(still){place(1);return;}
-  var t0=null,D=2200;place(0);
-  function step(ts){if(!t0)t0=ts;var k=Math.min(1,(ts-t0)/D);k=1-Math.pow(1-k,3);place(k);if(k<1)requestAnimationFrame(step);}
-  requestAnimationFrame(step);
+  if(still)return;
+  var last=null,acc=0,next=1.2,visible=true;
+  if('IntersectionObserver' in window)new IntersectionObserver(function(es){visible=es[0].isIntersecting;}).observe(document.getElementById('map'));
+  function frame(ts){
+    if(last===null)last=ts;var dt=Math.min(0.05,(ts-last)/1000);last=ts;
+    if(visible){
+      B.forEach(function(b){step(b,dt,false);});
+      for(var i=B.length-1;i>=0;i--){if(B[i].done&&B[i].fade<=0){g.removeChild(B[i].node);B.splice(i,1);}}
+      acc+=dt;if(acc>next&&B.filter(function(b){return !b.done;}).length<14){
+        // a new batch starts on a line with room at its first station, the least busy first
+        var c=LINES.map(function(L,i){var on=B.filter(function(b){return !b.done&&b.leg===0&&b.L===L;});return {i:i,n:on.length,free:!on.some(function(b){return b.pos<GAP+4;})};}).filter(function(x){return x.free&&x.n<3;});
+        if(c.length){var m=Math.min.apply(null,c.map(function(x){return x.n;}));c=c.filter(function(x){return x.n===m;});acc=0;next=1.8+rnd()*1.4;spawn(c[Math.floor(rnd()*c.length)].i,0);}}
+      B.forEach(draw);stats();
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
 })();
 </script>
 </body>
