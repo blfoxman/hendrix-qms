@@ -521,5 +521,16 @@ e63(r'^S5 complete\|complete\|t$', 'Complete once every weight is in (completed 
 e63(r'A reason for the change is required', 'a Complete run needs a reason to change')
 e63(r'^S6 reopened\|testing\|t\|first weights$', 'reopened with a reason (the change without a reason was not saved)')
 e63(r'hx_mp_runs_status_chk', 'only the five statuses are allowed')
+# ---- step 66: own sign-in email change reaches the profile
+r66 = subprocess.run(['psql', '-X', '-q', '-At', '-d', DB, '-f', os.path.join(HERE, 't66.sql')], capture_output=True, text=True)
+o66 = r66.stdout + r66.stderr
+def e66(pattern, msg): chk(re.search(pattern, o66, re.M) is not None, msg)
+e66(r'^M1 trigger copied\|mem\.new@x\.com$', 'a confirmed email change is copied to the Hendrix profile')
+e66(r'^M2 auth still changed\|blocked@x\.com$', 'a profile problem never blocks the sign-in service')
+e66(r'^M2b profile kept\|mem\.new@x\.com$', 'the profile keeps its last good email if the copy fails')
+e66(r'^M3 sync\|blocked@x\.com$', 'the app can copy your own email (fallback without the trigger)')
+e66(r'^M3b profile\|blocked@x\.com$', 'fallback updates the profile')
+e66(r'^M4 other user untouched\|s@x$', 'the fallback only touches your own profile')
+e66(r'^M5 signed out\|null$', 'signed out: nothing changes')
 print('\nDB checks:', 'all passed' if not fails else '%d failed' % len(fails))
 sys.exit(1 if fails else 0)

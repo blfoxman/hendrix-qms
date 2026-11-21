@@ -37,8 +37,8 @@ with sync_playwright() as pw:
     b = pw.chromium.launch(**LAUNCH)
     # sign-in page: forgot password
     ctx, pg = ctx_for(b, None); pg.goto(BASE); pg.wait_for_selector('text=Forgot your password?')
-    pg.get_by_text('Forgot your password?').click(); pg.wait_for_selector('text=Ask a Hendrix admin to set a temporary password')
-    check(True, 'sign-in page: forgot password tells people to ask an admin'); ctx.close()
+    pg.get_by_text('Forgot your password?').click(); pg.wait_for_selector('text=Email me a reset link')
+    check(pg.locator('text=A Hendrix admin can set a temporary password for you').count() == 1, 'sign-in page: forgot password asks for the email; an admin can still set a temporary password'); ctx.close()
     # admin sets a temporary password
     ctx, pg = ctx_for(b, ADMIN); pg.goto(BASE); pg.wait_for_selector('.nav')
     pg.locator('.nav').get_by_role('button', name='Team and Access').click(); pg.locator('tr', has_text='Maria Lopez').get_by_role('button', name='Manage').click()
