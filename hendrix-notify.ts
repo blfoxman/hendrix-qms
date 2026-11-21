@@ -12,9 +12,9 @@
 //   1. Edge Functions > Deploy a new function > Via Editor. Name it exactly: hendrix-notify
 //   2. Paste this whole file, Deploy. Settings: turn "Verify JWT" OFF (it checks its own secret
 //      and the Hendrix sign-in itself).
-//   3. Edge Functions > Secrets: RESEND_API_KEY, HX_MAIL_FROM (e.g. Hendrix QMS <qms@blackfox.com>),
+//   3. Edge Functions > Secrets: RESEND_API_KEY, HX_MAIL_FROM (e.g. Hendrix QMS <noreply@hendrixqms.com>),
 //      HX_CRON_SECRET (a long random text, the same one used in the schedule),
-//      optional HX_APP_URL (default https://blfoxman.github.io/hendrix-qms/).
+//      optional HX_APP_URL (default https://hendrixqms.com/).
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: { message: "POST only" } }, 405);
   try {
-    const url = Deno.env.get("SUPABASE_URL")!, appUrl = Deno.env.get("HX_APP_URL") || "https://blfoxman.github.io/hendrix-qms/";
+    const url = Deno.env.get("SUPABASE_URL")!, appUrl = Deno.env.get("HX_APP_URL") || "https://hendrixqms.com/";
     const admin = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
     const body = await req.json().catch(() => ({}));
     const mode = String(body.mode || "");

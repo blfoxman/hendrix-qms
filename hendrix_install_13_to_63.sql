@@ -6054,8 +6054,8 @@ select 'Hendrix step 39 (My Tasks inbox + email alerts) installed' as result;
 --  1. resend.com: add and verify your domain, create an API key.
 --  2. Supabase > Edge Functions > Deploy new function "hendrix-notify" with hendrix-notify.ts
 --     (turn OFF "Verify JWT" for it - it checks its own secret).
---  3. Edge Functions > Secrets: RESEND_API_KEY = the key, HX_MAIL_FROM = Hendrix QMS <qms@yourdomain.com>,
---     HX_CRON_SECRET = a long random text, HX_APP_URL = https://blfoxman.github.io/hendrix-qms/
+--  3. Edge Functions > Secrets: RESEND_API_KEY = the key, HX_MAIL_FROM = Hendrix QMS <noreply@hendrixqms.com>,
+--     HX_CRON_SECRET = a long random text, HX_APP_URL = https://hendrixqms.com/
 --  4. Database > Extensions: enable pg_cron and pg_net. Then run (put your secret in both places):
 --
 --  select cron.schedule('hendrix-alerts', '*/10 * * * *', $c$
