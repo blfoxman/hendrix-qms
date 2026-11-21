@@ -60,7 +60,7 @@ with sync_playwright() as pw:
         ['Pending stuff', '', 1, 'each', 'Pending Co', '', '', '', '', '', '', 'Yes', '', ''],
         ['Future', '', 1, 'each', 'Greenway Packaging', '', '', '2099-01-01', '', '', '', 'Yes', '', '']], 'inv_bad.xlsx')
     pg.get_by_role('button', name='Upload inventory').click(); md = pg.locator('.md')
-    md.locator('input[aria-label="Inventory file"]').set_input_files(bad); md.locator('.msg').first.wait_for()
+    md.locator('input[aria-label="Inventory file"]').set_input_files(bad); md.locator('.msg', has_text=re.compile('rows? need fixing')).first.wait_for(timeout=20000)
     txt = md.inner_text()
     check('7 of 8 rows need fixing' in txt, 'preview counts the rows to fix')
     check('Quantity must be a number above 0' in txt and 'Supplier "Nobody Inc" is not on file' in txt and 'Accepted needs COA on file = Yes' in txt, 'quantity, unknown supplier, COA rules shown per row')
