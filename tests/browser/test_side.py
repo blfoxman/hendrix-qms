@@ -14,6 +14,10 @@ with sync_playwright() as pw:
     ctx.add_init_script('if(!sessionStorage.getItem("s1")){sessionStorage.setItem("s1","1");localStorage.setItem("hx_session",%s);localStorage.setItem("hx_state","st-mo");localStorage.setItem("hx_lic","lic-mo");localStorage.setItem("hx_side_shut",%s);}' % (json.dumps(json.dumps(sess)), json.dumps(shut)))
     pg = ctx.new_page(); pg.on('pageerror', lambda e: errors.append('JS: ' + str(e)))
     pg.goto(BASE); pg.wait_for_selector('text=Dashboard')
+    _root = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..')
+    _icons = pg.evaluate("() => [...document.querySelectorAll('link[rel~=icon],link[rel=apple-touch-icon],link[rel=manifest]')].map(l => l.getAttribute('href'))")
+    check(len(_icons) == 5 and all(os.path.exists(os.path.join(_root, h)) for h in _icons) and pg.evaluate("() => document.querySelector('meta[property=\"og:image\"]').content") == 'https://hendrixqms.com/og-image.png',
+          'logo on the browser tab, home screen and link previews (files in the repo)')
     nav = pg.locator('.side .nav')
     heads = nav.locator('button.gbtn').all_inner_texts()
     check([re.sub(r'[\s›\d]+', ' ', h).strip() for h in heads][:5] == ['PRODUCTION', 'INVENTORY AND SHIPPING', 'FACILITY', 'QUALITY', 'SOPS AND TRAINING'], 'groups in order: ' + ' | '.join(h.replace('\n', ' ') for h in heads))
