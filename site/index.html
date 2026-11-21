@@ -146,6 +146,27 @@ h2{margin:0 0 10px;font-weight:800;font-size:clamp(28px,3.4vw,40px);line-height:
 .chip.due{background:rgba(229,112,90,.16);color:#f0907c}
 .ledger figcaption{color:var(--stone);font-size:13px;margin-top:12px}
 
+/* work with us */
+.work{background:linear-gradient(180deg,#000 0%,#0d0c09 100%)}
+.work-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:56px;align-items:start}
+.steps{margin:0;padding:0;list-style:none;counter-reset:st;display:grid;gap:20px}
+.steps li{counter-increment:st;display:grid;grid-template-columns:44px minmax(0,1fr);gap:4px 14px}
+.steps li::before{content:counter(st);grid-row:span 2;width:36px;height:36px;border-radius:50%;border:1px solid var(--gold);color:var(--gold-hi);font-weight:800;display:flex;align-items:center;justify-content:center;font-size:16px}
+.steps b{font-weight:750;font-size:18px;color:var(--bone);font-variation-settings:"wdth" 108}
+.steps span{color:#c3bcaa;font-size:16px}
+.reach{background:var(--panel);border:1px solid var(--rule);border-radius:18px;padding:30px}
+.reach h3{margin:0 0 6px;font-size:21px;font-weight:750;font-variation-settings:"wdth" 108}
+.reach p{margin:0 0 18px;color:#c3bcaa;font-size:16px}
+.mailto{display:block;font-weight:800;font-size:clamp(22px,2.6vw,30px);line-height:1.15;text-decoration:none;overflow-wrap:anywhere;background:var(--gold-grad);-webkit-background-clip:text;background-clip:text;color:transparent;font-variation-settings:"wdth" 112}
+.reach .row{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+.reach .row .btn{flex:1 1 180px}
+.reach ul{margin:18px 0 0;padding:0;list-style:none;display:grid;gap:8px;border-top:1px solid var(--rule);padding-top:16px}
+.reach li{position:relative;padding-left:22px;color:#c3bcaa;font-size:15px}
+.reach li::before{content:"";position:absolute;left:0;top:.62em;width:10px;height:2px;background:var(--gold)}
+.copied{min-height:20px;margin:10px 0 0;color:var(--go);font-size:14px}
+footer a{color:var(--gold-hi);text-decoration:none}
+footer a:hover{text-decoration:underline}
+
 footer{border-top:1px solid var(--rule);padding:28px 0 40px;color:var(--stone);font-size:14px}
 footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 
@@ -155,6 +176,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
   .areas{grid-template-columns:repeat(2,minmax(0,1fr))}
   .yours{grid-template-columns:minmax(0,1fr);gap:36px}
   .csq-grid{grid-template-columns:minmax(0,1fr);gap:36px}
+  .work-grid{grid-template-columns:minmax(0,1fr);gap:36px}
 }
 @media (max-width:600px){
   .wrap{padding:0 20px}
@@ -182,6 +204,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
   </a>
   <nav>
     <a class="btn" href="#csq">CSQ and standards</a>
+    <a class="btn" href="#work-with-us">Work with us</a>
     <a class="btn tc" href="training/"><span class="lg">Training Center</span><span class="sm">Training</span></a>
     <a class="btn solid" href="#sign-in">Client sign-in</a>
   </nav>
@@ -195,6 +218,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
     <div class="actions">
       <a class="btn solid" href="#sign-in">Client sign-in</a>
       <a class="btn" href="#demo">Watch the demo</a>
+      <a class="btn" href="#work-with-us">Work with us</a>
     </div>
     <ul class="stds" aria-label="Standards and rules Hendrix is built around">
       <li>CSQ v2.0</li><li>cGMP</li><li>HACCP</li><li>21 CFR 117</li><li>METRC</li><li>Any state's cannabis rules</li>
@@ -368,13 +392,53 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
     </form>
   </div>
 </section>
+
+<section id="work-with-us" class="work">
+  <div class="wrap work-grid">
+    <div>
+      <h2>Bring Hendrix to your company</h2>
+      <p class="intro">For licensed cannabis manufacturers, extractors and cultivators in any state. Tell us about your licenses and how you work, and we'll show you Hendrix on your own processes.</p>
+      <ol class="steps">
+        <li><b>Email us</b><span>Your company, your state or states, your license types, and what you want to fix first.</span></li>
+        <li><b>See it on your work</b><span>A walkthrough built around your products, your SOPs and the audit or inspection you're preparing for.</span></li>
+        <li><b>Get your own Hendrix</b><span>Your address at hendrixqms.com/yourcompany, your licenses and state rules loaded, your roles and access set up.</span></li>
+        <li><b>Train your team</b><span>Training videos and role-based courses with quizzes in the Training Center, so everyone knows what each record is for and how to fill it in.</span></li>
+      </ol>
+    </div>
+    <div class="reach">
+      <h3>Talk to us</h3>
+      <p>Write to us and we'll set up a time to show you Hendrix.</p>
+      <a class="mailto" id="mail-addr" href="mailto:sales@hendrixqms.com?subject=Hendrix%20QMS%20for%20our%20company&amp;body=Hello%20Hendrix%20team%2C%0A%0AWe%20would%20like%20to%20see%20Hendrix%20QMS%20for%20our%20company.%0A%0ACompany%20name%3A%0AState%28s%29%3A%0ALicense%20types%20%28manufacturing%2C%20extraction%2C%20cultivation%29%3A%0ANumber%20of%20people%20who%20would%20use%20it%3A%0AWhat%20we%20want%20to%20improve%20first%3A%0ABest%20phone%20number%20and%20time%20to%20reach%20us%3A%0A%0AThank%20you%2C%0A">sales@hendrixqms.com</a>
+      <div class="row">
+        <a class="btn solid" id="mail-btn" href="mailto:sales@hendrixqms.com?subject=Hendrix%20QMS%20for%20our%20company&amp;body=Hello%20Hendrix%20team%2C%0A%0AWe%20would%20like%20to%20see%20Hendrix%20QMS%20for%20our%20company.%0A%0ACompany%20name%3A%0AState%28s%29%3A%0ALicense%20types%20%28manufacturing%2C%20extraction%2C%20cultivation%29%3A%0ANumber%20of%20people%20who%20would%20use%20it%3A%0AWhat%20we%20want%20to%20improve%20first%3A%0ABest%20phone%20number%20and%20time%20to%20reach%20us%3A%0A%0AThank%20you%2C%0A">Email us</a>
+        <button class="btn" type="button" id="copy-mail">Copy the address</button>
+      </div>
+      <p class="copied" id="copied" role="status"></p>
+      <ul>
+        <li>Manufacturing, extraction and cultivation licenses</li>
+        <li>One license or many, in one state or several</li>
+        <li>Moving from paper, spreadsheets or another system</li>
+      </ul>
+    </div>
+  </div>
+</section>
 </main>
 
 <footer>
-  <div class="wrap"><span>Hendrix QMS</span><span>Quality management for licensed cannabis operators</span></div>
+  <div class="wrap"><span>Hendrix QMS</span><span>Quality management for licensed cannabis operators</span><a href="mailto:sales@hendrixqms.com">sales@hendrixqms.com</a></div>
 </footer>
 
 <script>
+// work with us: copy the sales address for people without an email app
+(function(){
+  var b=document.getElementById('copy-mail'),m=document.getElementById('copied'),a='sales@hendrixqms.com';
+  if(!b)return;
+  b.addEventListener('click',function(){
+    function done(){m.textContent='Copied: '+a;}
+    function fallback(){try{var t=document.createElement('textarea');t.value=a;t.setAttribute('readonly','');t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.select();var ok=document.execCommand('copy');document.body.removeChild(t);if(ok)done();else m.textContent='Our address is '+a;}catch(x){m.textContent='Our address is '+a;}}
+    try{if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(a).then(done,fallback);}else fallback();}catch(x){fallback();}
+  });
+})();
 // client sign-in: the company code is the first part of the address
 (function(){
   var f=document.getElementById('go'),i=document.getElementById('code'),e=document.getElementById('err');

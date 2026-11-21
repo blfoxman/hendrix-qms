@@ -25,6 +25,14 @@ with sync_playwright() as pw:
           and pg.locator('.hero a[href="#demo"]', has_text='Watch the demo').count() == 1, 'demo video section, linked from the top of the page')
     pg.locator('#demo').scroll_into_view_if_needed(); pg.wait_for_timeout(300); pg.locator('#demo').screenshot(path=OUT + 'site_demo.png'); pg.evaluate('window.scrollTo(0,0)')
     check([h.inner_text() for h in pg.locator('#quality .pillars h3').all()] == ['Compliance', 'Product safety', 'Standards', 'Quality'] and pg.locator('#quality li').count() >= 16, 'compliance, product safety, standards and quality section')
+    check(pg.locator('#work-with-us h2').inner_text() == 'Bring Hendrix to your company' and pg.locator('#work-with-us .steps li').count() == 4
+          and pg.locator('#mail-btn').get_attribute('href').startswith('mailto:sales@hendrixqms.com?subject=')
+          and 'Company name' in __import__('urllib.parse').parse.unquote(pg.locator('#mail-btn').get_attribute('href'))
+          and pg.locator('.top nav a[href="#work-with-us"]').count() == 1 and pg.locator('.hero a[href="#work-with-us"]').count() == 1
+          and pg.locator('footer a[href="mailto:sales@hendrixqms.com"]').count() == 1, 'work with us: sales@hendrixqms.com with a filled-in email, linked from the top and the footer')
+    pg.locator('#copy-mail').click(); pg.wait_for_timeout(300)
+    check('sales@hendrixqms.com' in pg.locator('#copied').inner_text(), 'copy the address works without an email app')
+    pg.locator('#work-with-us').scroll_into_view_if_needed(); pg.wait_for_timeout(200); pg.locator('#work-with-us').screenshot(path=OUT + 'site_work.png'); pg.evaluate('window.scrollTo(0,0)')
     check(pg.locator('#csq h2').inner_text() == 'Built for CSQ certification' and pg.locator('#csq .csq-points dt').count() == 4 and pg.locator('.stds li').count() == 6, 'CSQ and standards section')
     pg.wait_for_timeout(2600)
     pos = lambda: pg.evaluate("[...document.querySelectorAll('#trains g')].map(g=>g.getAttribute('transform')).join('|')")
@@ -47,6 +55,10 @@ with sync_playwright() as pw:
     check(True, 'an old badge link forwards too')
     pg.set_viewport_size({'width': 390, 'height': 800}); pg.goto('file://' + out + '/index.html'); pg.wait_for_selector('h1')
     check(pg.evaluate('document.documentElement.scrollWidth') <= 390, 'no sideways scrolling on a phone')
+    for w in (320, 700, 1024):
+        pg.set_viewport_size({'width': w, 'height': 800}); pg.wait_for_timeout(150)
+        check(pg.evaluate('document.documentElement.scrollWidth') <= w and pg.evaluate("document.querySelector('.top').getBoundingClientRect().height") < 120, 'header fits on one row at %d px' % w)
+    pg.set_viewport_size({'width': 390, 'height': 800}); pg.wait_for_timeout(150)
     pg.screenshot(path=OUT + 'site_phone.png', full_page=True)
     b.close()
 print('FAIL' if errors else 'ALL PASS'); sys.exit(1 if errors else 0)
