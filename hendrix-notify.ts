@@ -14,7 +14,7 @@
 //      and the Hendrix sign-in itself).
 //   3. Edge Functions > Secrets: RESEND_API_KEY, HX_MAIL_FROM (e.g. Hendrix QMS <noreply@hendrixqms.com>),
 //      HX_CRON_SECRET (a long random text, the same one used in the schedule),
-//      optional HX_APP_URL (default https://hendrixqms.com/).
+//      optional HX_APP_URL (default https://hendrixqms.com/summitsolutions/).
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: { message: "POST only" } }, 405);
   try {
-    const url = Deno.env.get("SUPABASE_URL")!, appUrl = Deno.env.get("HX_APP_URL") || "https://hendrixqms.com/";
+    const url = Deno.env.get("SUPABASE_URL")!, appUrl = Deno.env.get("HX_APP_URL") || "https://hendrixqms.com/summitsolutions/";
     const admin = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
     const body = await req.json().catch(() => ({}));
     const mode = String(body.mode || "");
